@@ -1,0 +1,50 @@
+import React from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { Minus, X } from 'lucide-react-native';
+
+import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors } from '@/mobile/app/shared/theme/tokens';
+
+type PlaceEditorModalHeaderProps = {
+  existingPlaceListName?: string;
+  isEditing: boolean;
+  onClose: () => void;
+  onMinimize?: () => void;
+  subtitle: string;
+};
+
+export function PlaceEditorModalHeader({
+  existingPlaceListName,
+  isEditing,
+  onClose,
+  onMinimize,
+  subtitle,
+}: PlaceEditorModalHeaderProps) {
+  return (
+    <View style={styles.panelTopArea}>
+      <View style={styles.handle} />
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>
+            {isEditing ? tr.placeEditor.editTitle : tr.placeEditor.createTitle}
+          </Text>
+          <Text style={styles.headerSubtitle}>{subtitle}</Text>
+          {existingPlaceListName ? (
+            <Text style={styles.headerMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</Text>
+          ) : null}
+        </View>
+        <View style={styles.headerActions}>
+          {onMinimize ? (
+            <Pressable onPress={onMinimize} style={styles.closeButton}>
+              <Minus color={colors.textMuted} size={20} />
+            </Pressable>
+          ) : null}
+          <Pressable onPress={onClose} style={styles.closeButton}>
+            <X color={colors.textMuted} size={20} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}

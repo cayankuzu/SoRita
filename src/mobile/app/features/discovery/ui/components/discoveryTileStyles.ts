@@ -1,0 +1,194 @@
+import { StyleSheet } from 'react-native';
+
+import { colors, layout, radius } from '@/mobile/app/shared/theme/tokens';
+
+export const discoveryTileStyles = StyleSheet.create({
+  tile: {
+    width: layout.discoveryTileWidth,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  tilePressable: {
+    flex: 1,
+  },
+  ownerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  ownerBody: {
+    flex: 1,
+  },
+  ownerName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  ownerUsername: {
+    fontSize: 9,
+    color: colors.textSoft,
+  },
+  mediaSquare: {
+    minHeight: 176,
+    backgroundColor: colors.surfaceMuted,
+  },
+  placeholderSquare: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  placeholderEmoji: {
+    fontSize: 26,
+  },
+  iconBadgeLeft: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.darkOverlay,
+  },
+  iconBadgeRight: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlay,
+  },
+  actionBadgeColumn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    gap: 6,
+  },
+  singleActionBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlay,
+    zIndex: 2,
+  },
+  tileBody: {
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  tileTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  tileDescription: {
+    marginTop: 4,
+    fontSize: 10,
+    color: colors.textSoft,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  metaLike: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  tileMeta: {
+    fontSize: 10,
+    color: colors.textSoft,
+  },
+  tileTimestamp: {
+    marginTop: 6,
+    fontSize: 9,
+    lineHeight: 13,
+    color: colors.textSoft,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  ratingText: {
+    fontSize: 10,
+    color: colors.warningText,
+    fontWeight: '600',
+  },
+  photoCountBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.darkOverlay,
+  },
+  photoCountText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
+  userCover: {
+    height: 72,
+    backgroundColor: colors.userCoverFallback,
+  },
+  userAvatarWrap: {
+    marginTop: -30,
+    paddingHorizontal: 12,
+  },
+  userAvatarFrame: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.surface,
+    overflow: 'hidden',
+  },
+  userTileBody: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  followButton: {
+    minHeight: 30,
+    marginTop: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  followButtonPassive: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  followButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
+  followButtonTextPassive: {
+    color: colors.textMuted,
+  },
+});

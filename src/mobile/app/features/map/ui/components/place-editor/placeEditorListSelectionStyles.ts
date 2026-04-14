@@ -1,0 +1,243 @@
+import { StyleSheet } from 'react-native';
+
+import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+
+export const placeEditorListSelectionStyles = StyleSheet.create({
+  stepContent: {
+    gap: 16,
+  },
+  section: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  sectionHelper: {
+    marginTop: -2,
+    fontSize: 11,
+    color: colors.textSoft,
+  },
+  listSelectionNotice: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.warningText,
+    backgroundColor: colors.warningBg,
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  listWrap: {
+    gap: 10,
+  },
+  listCard: {
+    minHeight: 94,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+  },
+  listCardSelected: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary,
+  },
+  listCardDisabled: {
+    opacity: 0.58,
+  },
+  listPreview: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  listPreviewPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  listPreviewEmoji: {
+    fontSize: 24,
+  },
+  listRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  listRadioSelected: {
+    borderColor: colors.primary,
+  },
+  listRadioDisabled: {
+    borderColor: colors.textSoft,
+    backgroundColor: colors.surfaceMuted,
+  },
+  listRadioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+  },
+  listBody: {
+    flex: 1,
+    gap: 8,
+  },
+  listTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  listName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  listNameDisabled: {
+    color: colors.textMuted,
+  },
+  listMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textSoft,
+    fontWeight: '700',
+  },
+  listMetaDisabled: {
+    color: colors.textMuted,
+  },
+  listBlockedBadge: {
+    minHeight: 22,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.warningBg,
+  },
+  listBlockedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.warningText,
+  },
+  listPrivacyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 24,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  listPrivacyText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  createListTrigger: {
+    minHeight: 50,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  createListTriggerText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  createListCard: {
+    gap: 12,
+    borderRadius: radius.lg,
+    padding: 14,
+    backgroundColor: colors.successBg,
+    borderWidth: 1,
+    borderColor: colors.secondary,
+  },
+  createListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  coverPreview: {
+    height: 92,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+  },
+  coverClear: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.darkOverlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverPicker: {
+    minHeight: 62,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.secondary,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  coverPickerText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.secondary,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  privacyButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+  },
+  privacyButtonActive: {
+    backgroundColor: colors.secondary,
+  },
+  privateButtonActive: {
+    backgroundColor: colors.textMuted,
+  },
+  privacyText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textMuted,
+  },
+  privacyTextActive: {
+    color: colors.onPrimary,
+  },
+});

@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.*.local
+.expo
+dist
+node_modules
+android/keystore.properties
+android/keystores/
+*.jks
+*.keystore
+SoRita_web/
+SoRita_web_repo/
+docs/
+expo-export/
+expo-export-*/
+mobile-web/
+Untitled

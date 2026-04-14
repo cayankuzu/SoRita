@@ -1,0 +1,172 @@
+import { StyleSheet } from 'react-native';
+
+import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+
+export const placeEditorModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
+  },
+  panel: {
+    maxHeight: '88%',
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  panelTopArea: {
+    gap: 0,
+  },
+  handle: {
+    width: 42,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.cardBorder,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: colors.textSoft,
+  },
+  headerMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.background,
+  },
+  stepTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  stepSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: colors.textSoft,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepDot: {
+    width: 12,
+    height: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.cardBorder,
+  },
+  stepDotActive: {
+    width: 26,
+    backgroundColor: colors.primary,
+  },
+  stepDotDone: {
+    backgroundColor: colors.secondary,
+  },
+  content: {
+    padding: 18,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    backgroundColor: colors.surface,
+  },
+  backButton: {
+    minHeight: 46,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  backButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.textMuted,
+  },
+  deleteButton: {
+    minHeight: 46,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    backgroundColor: colors.dangerBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.danger,
+  },
+  nextButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  disabledButton: {
+    opacity: 0.45,
+  },
+  nextButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.onPrimary,
+  },
+});

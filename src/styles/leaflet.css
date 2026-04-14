@@ -1,0 +1,35 @@
+/* Leaflet core CSS */
+@import 'leaflet/dist/leaflet.css';
+
+/* Leaflet CSS customizations */
+.leaflet-container {
+  font-family: inherit;
+  z-index: 0 !important;
+}
+
+/* Prevent Leaflet tile panes from escaping their container's stacking context */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: auto !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 3 !important;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 4 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 5 !important;
+}
