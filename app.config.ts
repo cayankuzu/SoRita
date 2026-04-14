@@ -29,6 +29,20 @@ const config: ExpoConfig = {
   plugins: [
     'expo-notifications',
     [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'SoRita, yakinindaki mekanlari gosterebilmek ve harita deneyimini iyilestirmek icin konumunuzu kullanir.',
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'SoRita, profilinize ve paylasimlariniza fotograf ekleyebilmeniz icin fotograf kitapliginiza erisim ister.',
+      },
+    ],
+    [
       'react-native-maps',
       {
         androidGoogleMapsApiKey: googleMapsApiKey,
@@ -53,6 +67,15 @@ const config: ExpoConfig = {
   },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      NSLocationWhenInUseUsageDescription:
+        'SoRita, yakinindaki mekanlari gosterebilmek ve harita deneyimini iyilestirmek icin konumunuzu kullanir.',
+      NSPhotoLibraryUsageDescription:
+        'SoRita, profilinize ve paylasimlariniza fotograf ekleyebilmeniz icin fotograf kitapliginiza erisim ister.',
+      NSPhotoLibraryAddUsageDescription:
+        'SoRita, sectiginiz gorselleri uygulama icerisinde kullanabilmeniz icin fotograf kitapliginiza kaydetme izni isteyebilir.',
+    },
     config: {
       googleMapsApiKey,
     },
