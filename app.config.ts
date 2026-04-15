@@ -2,6 +2,27 @@ import 'dotenv/config';
 
 import type { ExpoConfig } from 'expo/config';
 
+const requiredExpoPublicEnvVars = [
+  'EXPO_PUBLIC_SUPABASE_URL',
+  'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+] as const;
+const missingExpoPublicEnvVars = requiredExpoPublicEnvVars.filter((name) => {
+  const value = process.env[name];
+  return typeof value !== 'string' || value.trim().length === 0;
+});
+
+if (missingExpoPublicEnvVars.length > 0) {
+  const message =
+    `Missing required Expo public env vars: ${missingExpoPublicEnvVars.join(', ')}. ` +
+    'If this build runs on EAS, add them to EAS Environment Variables or Secrets before building.';
+
+  if (process.env.CI === 'true' || process.env.EAS_BUILD === 'true') {
+    throw new Error(message);
+  }
+
+  console.warn(message);
+}
+
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
@@ -52,6 +73,7 @@ const config: ExpoConfig = {
   ],
   android: {
     package: 'com.cayan.sorita.socialmap',
+    versionCode: 3,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     config: {

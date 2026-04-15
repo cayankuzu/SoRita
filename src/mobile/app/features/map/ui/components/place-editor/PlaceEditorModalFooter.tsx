@@ -8,6 +8,7 @@ import {
 } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
@@ -18,7 +19,7 @@ type PlaceEditorModalFooterProps = {
   onDelete?: () => void;
   onNext: () => void;
   onPrevious: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   paddingBottom: number;
   step: number;
 };
@@ -49,17 +50,17 @@ export function PlaceEditorModalFooter({
       ) : null}
 
       {!isLastStep ? (
-        <Pressable
-          disabled={!canContinue}
+        <InstantPressable
+          accessibilityState={{ disabled: !canContinue }}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onNext}
         >
           <Text style={styles.nextButtonText}>{tr.placeEditor.continue}</Text>
           <ChevronRight color={colors.onPrimary} size={16} />
-        </Pressable>
+        </InstantPressable>
       ) : (
-        <Pressable
-          disabled={!canContinue}
+        <InstantPressable
+          accessibilityState={{ disabled: !canContinue }}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onSave}
         >
@@ -67,7 +68,7 @@ export function PlaceEditorModalFooter({
           <Text style={styles.nextButtonText}>
             {isEditing ? tr.placeEditor.update : tr.placeEditor.complete}
           </Text>
-        </Pressable>
+        </InstantPressable>
       )}
     </View>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type AvailabilityStatus =
   | 'idle'
@@ -26,7 +26,12 @@ type UseAvailabilityCheckParams = {
   unavailableMessage: string;
   errorMessage: string;
   checkAvailability: (normalizedValue: string) => Promise<boolean>;
+  debounceMs?: number;
+  timeoutMs?: number;
 };
+
+const DEFAULT_DEBOUNCE_MS = 180;
+const DEFAULT_TIMEOUT_MS = 3500;
 
 export function useAvailabilityCheck({
   active,
@@ -39,8 +44,17 @@ export function useAvailabilityCheck({
   unavailableMessage,
   errorMessage,
   checkAvailability,
+  debounceMs = DEFAULT_DEBOUNCE_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 }: UseAvailabilityCheckParams) {
   const [availability, setAvailability] = useState<AvailabilityState>({ status: 'idle' });
+  const normalizeRef = useRef(normalize);
+  const invalidMessageRef = useRef(invalidMessage);
+  const checkAvailabilityRef = useRef(checkAvailability);
+
+  normalizeRef.current = normalize;
+  invalidMessageRef.current = invalidMessage;
+  checkAvailabilityRef.current = checkAvailability;
 
   useEffect(() => {
     if (!active) {
@@ -48,14 +62,14 @@ export function useAvailabilityCheck({
       return;
     }
 
-    const normalizedValue = normalize(value);
+    const normalizedValue = normalizeRef.current(value);
 
     if (!normalizedValue) {
       setAvailability({ status: 'idle' });
       return;
     }
 
-    const invalid = invalidMessage?.(normalizedValue);
+    const invalid = invalidMessageRef.current?.(normalizedValue);
     if (invalid) {
       setAvailability({
         status: 'invalid',
@@ -70,11 +84,31 @@ export function useAvailabilityCheck({
     });
 
     let cancelled = false;
-    const timeoutId = setTimeout(() => {
-      void checkAvailability(normalizedValue)
+    let settled = false;
+    let requestTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const debounceTimeoutId = setTimeout(() => {
+      requestTimeoutId = setTimeout(() => {
+        if (cancelled || settled) {
+          return;
+        }
+
+        settled = true;
+        setAvailability({
+          status: 'error',
+          message: errorMessage,
+        });
+      }, timeoutMs);
+
+      void checkAvailabilityRef.current(normalizedValue)
         .then((isAvailable) => {
-          if (cancelled) {
+          if (cancelled || settled) {
             return;
+          }
+
+          settled = true;
+          if (requestTimeoutId) {
+            clearTimeout(requestTimeoutId);
           }
 
           setAvailability({
@@ -83,8 +117,13 @@ export function useAvailabilityCheck({
           });
         })
         .catch(() => {
-          if (cancelled) {
+          if (cancelled || settled) {
             return;
+          }
+
+          settled = true;
+          if (requestTimeoutId) {
+            clearTimeout(requestTimeoutId);
           }
 
           setAvailability({
@@ -92,20 +131,22 @@ export function useAvailabilityCheck({
             message: errorMessage,
           });
         });
-    }, 350);
+    }, debounceMs);
 
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
+      clearTimeout(debounceTimeoutId);
+      if (requestTimeoutId) {
+        clearTimeout(requestTimeoutId);
+      }
     };
   }, [
     active,
     availableMessage,
-    checkAvailability,
     checkingMessage,
+    debounceMs,
     errorMessage,
-    invalidMessage,
-    normalize,
+    timeoutMs,
     unavailableMessage,
     value,
   ]);

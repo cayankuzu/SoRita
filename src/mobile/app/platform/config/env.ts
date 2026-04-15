@@ -13,6 +13,10 @@ type ExpoExtraConfig = {
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as ExpoExtraConfig;
 const authRedirectPath = expoExtra.authRedirectPath ?? 'auth/callback';
+const missingRequiredStartupEnvVars = [
+  !expoExtra.supabaseUrl ? 'EXPO_PUBLIC_SUPABASE_URL' : null,
+  !expoExtra.supabasePublishableKey ? 'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY' : null,
+].filter((value): value is string => Boolean(value));
 
 export const env = {
   googleMapsApiKey: expoExtra.googleMapsApiKey ?? '',
@@ -27,4 +31,6 @@ export const env = {
     ((Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ?? ''),
   authRedirectPath,
   authRedirectUrl: Linking.createURL(authRedirectPath),
+  hasRequiredStartupConfig: missingRequiredStartupEnvVars.length === 0,
+  missingRequiredStartupEnvVars,
 };

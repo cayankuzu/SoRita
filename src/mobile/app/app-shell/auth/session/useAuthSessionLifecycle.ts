@@ -8,6 +8,7 @@ import {
   getActiveOrPersistedSession,
   hydratePersistedAuthState,
   persistAuthSession,
+  resolveImmediateAuthUser,
   syncAuthenticatedUser,
 } from '@/mobile/app/app-shell/auth/session/authSessionSupport';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -44,11 +45,15 @@ export function useAuthSessionLifecycle({
           return;
         }
 
+        setUserIfMounted(resolveImmediateAuthUser(authUser));
+        setBootedIfMounted();
+
         const nextUser = await syncAuthenticatedUser(authUser);
-        setUserIfMounted(nextUser);
+        if (nextUser) {
+          setUserIfMounted(nextUser);
+        }
       } catch (error) {
         console.error('Failed to sync auth state', error);
-        setUserIfMounted(null);
       } finally {
         setBootedIfMounted();
       }

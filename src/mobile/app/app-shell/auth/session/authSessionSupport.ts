@@ -99,6 +99,32 @@ export async function ensureProfileExists(authUser: SupabaseAuthUser) {
   }
 }
 
+export function createUserFromAuthUser(authUser: SupabaseAuthUser): User {
+  const metadata = authUser.user_metadata ?? {};
+
+  return {
+    id: authUser.id,
+    email: authUser.email ?? '',
+    name: String(metadata.name ?? metadata.full_name ?? authUser.email?.split('@')[0] ?? 'Yeni Kullanici'),
+    username: String(metadata.username ?? `user_${authUser.id.slice(0, 8)}`).toLowerCase(),
+    isPublicAccount: true,
+    bio: typeof metadata.bio === 'string' ? metadata.bio : undefined,
+    interests: Array.isArray(metadata.interests) ? metadata.interests : undefined,
+    profilePhoto: typeof metadata.profile_photo_url === 'string' ? metadata.profile_photo_url : undefined,
+    coverPhoto: typeof metadata.cover_photo_url === 'string' ? metadata.cover_photo_url : undefined,
+  };
+}
+
+export function resolveImmediateAuthUser(authUser: SupabaseAuthUser): User {
+  const cachedUser =
+    storage.findUserByIdIncludingBlocked(authUser.id) ||
+    storage.findUserById(authUser.id) ||
+    createUserFromAuthUser(authUser);
+
+  storage.setCurrentUser(cachedUser);
+  return cachedUser;
+}
+
 export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
   const pendingMedia = await getPendingSignupMedia(authUser.email);
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   View,
@@ -237,7 +239,10 @@ export function PlaceEditorModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.panel}>
           <PlaceEditorModalHeader
@@ -250,7 +255,12 @@ export function PlaceEditorModal({
 
           <PlaceEditorWizardHeader step={step} steps={wizardSteps} />
 
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+          >
             {renderStep()}
           </ScrollView>
 
@@ -266,7 +276,7 @@ export function PlaceEditorModal({
             step={step}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
+import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
 import { ListGridTile, PlaceGridTile } from '@/mobile/app/features/discovery/public/components';
 import { useOwnProfileScreenState } from '@/mobile/app/features/profile/application/useOwnProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -136,7 +137,8 @@ export function ProfileScreen() {
     const previousPlace = editingPlaceTarget.place;
     const selectedListIds = Array.from(new Set(targetListIds));
     const nextUpdatedAt = new Date().toISOString();
-    const changedLists = lists
+    const currentLists = storage.getListsByUserId(freshUser.id);
+    const changedLists = currentLists
       .map((list) => {
         const matchedPlaceIndex = list.places.findIndex((place) => isMatchingPlace(place, previousPlace));
         const hasPlace = matchedPlaceIndex >= 0;

@@ -40,24 +40,23 @@ export function findExistingPlaceMatch(
   rawName?: string,
 ) {
   const normalizedName = normalizePlaceLabel(rawName);
-  let nearestCoordinateMatch: { place: Place; list: PlaceList; distance: number } | null = null;
   let nearestNamedMatch: { place: Place; list: PlaceList; distance: number } | null = null;
+
+  if (!normalizedName) {
+    return null;
+  }
 
   allPlaces.forEach((entry) => {
     const distance = Math.hypot(entry.place.lat - latitude, entry.place.lng - longitude);
 
-    if (distance <= 0.00012 && (!nearestCoordinateMatch || distance < nearestCoordinateMatch.distance)) {
-      nearestCoordinateMatch = { ...entry, distance };
-    }
-
-    if (normalizedName && normalizePlaceLabel(entry.place.name) === normalizedName && distance <= 0.001) {
+    if (normalizePlaceLabel(entry.place.name) === normalizedName && distance <= 0.000025) {
       if (!nearestNamedMatch || distance < nearestNamedMatch.distance) {
         nearestNamedMatch = { ...entry, distance };
       }
     }
   });
 
-  return nearestCoordinateMatch ?? nearestNamedMatch;
+  return nearestNamedMatch;
 }
 
 export function buildSelectedSearchMarker(

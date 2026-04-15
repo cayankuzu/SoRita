@@ -9,6 +9,7 @@ import {
   clearCurrentUserState,
   getAuthErrorCode,
   persistAuthSession,
+  resolveImmediateAuthUser,
   syncAuthenticatedUser,
 } from '@/mobile/app/app-shell/auth/session/authSessionSupport';
 import { checkAccountAvailability } from '@/mobile/app/data/repositories/accountAvailability';
@@ -61,7 +62,16 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
       }
 
       await persistAuthSession(data.session ?? null);
-      setUser(await syncAuthenticatedUser(data.user));
+      setUser(resolveImmediateAuthUser(data.user));
+      void syncAuthenticatedUser(data.user)
+        .then((nextUser) => {
+          if (nextUser) {
+            setUser(nextUser);
+          }
+        })
+        .catch((syncError) => {
+          console.error('Failed to sync authenticated user after login', syncError);
+        });
       return { success: true };
     },
     [setUser],
@@ -69,27 +79,6 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
 
   const register = useCallback(async (data: RegisterData): Promise<AuthActionResult> => {
     const normalizedUsername = data.username.trim().toLowerCase();
-
-    try {
-      const availability = await checkAccountAvailability({
-        email: data.email,
-        username: normalizedUsername,
-      });
-
-      if (!availability.emailAvailable) {
-        return { success: false, code: 'duplicate_email' };
-      }
-
-      if (!availability.usernameAvailable) {
-        return { success: false, code: 'duplicate_username' };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        code: 'unexpected',
-        message: error instanceof Error ? error.message : 'Availability check failed',
-      };
-    }
 
     const { error } = await supabase.auth.signUp({
       email: data.email.trim(),

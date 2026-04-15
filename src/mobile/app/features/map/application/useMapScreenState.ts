@@ -333,8 +333,9 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
       const selectedListIds = Array.from(new Set(targetListIds));
       const sourcePlace = editorData?.existingPlace || null;
+      const currentLists = storage.getListsByUserId(user.id);
       const changedLists = buildChangedListsForPlaceSave({
-        lists,
+        lists: currentLists,
         selectedListIds,
         sourcePlace,
         placeData,
@@ -349,7 +350,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       setMinimizedEditor(null);
       showToast(tr.map.placeSaved, 'success');
     },
-    [editorData?.existingPlace, lists, user],
+    [editorData?.existingPlace, user],
   );
 
   const handleDeletePlace = useCallback(async (placeId: string) => {

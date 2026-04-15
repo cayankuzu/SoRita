@@ -6,6 +6,11 @@ dist
 node_modules
 android/keystore.properties
 android/keystores/
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/.cxx/
+android/app/build/
 *.jks
 *.keystore
 SoRita_web/

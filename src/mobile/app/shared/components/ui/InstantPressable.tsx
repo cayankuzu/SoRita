@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable } from 'react-native';
 
-import { isPromiseLike, runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
+import { isPromiseLike } from '@/mobile/app/shared/utils/interaction';
 
 type InstantPressableRenderState = {
   pressed: boolean;
@@ -44,20 +44,16 @@ export function InstantPressable({
 
       event.persist?.();
 
-      runAfterNextPaint(async () => {
-        const result = onPress(event);
+      const result = onPress(event);
 
-        if (!isPromiseLike(result)) {
-          return;
-        }
+      if (!isPromiseLike(result)) {
+        return;
+      }
 
-        setBusy(true);
+      setBusy(true);
 
-        try {
-          await result;
-        } finally {
-          setBusy(false);
-        }
+      void result.finally(() => {
+        setBusy(false);
       });
     },
     [isDisabled, onPress],

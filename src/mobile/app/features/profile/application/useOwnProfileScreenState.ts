@@ -61,8 +61,12 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
   );
 
   const createList = useCallback(async (list: PlaceList) => {
-    await storage.createList(list);
-  }, []);
+    if (!userId) {
+      return;
+    }
+
+    await storage.createList({ ...list, userId });
+  }, [userId]);
 
   const deleteList = useCallback(async (listId: string) => {
     await storage.deleteList(listId);

@@ -203,18 +203,6 @@ export function usePlaceEditorState({
     }
   }, [draggingPhotoIndex, photoDragX]);
 
-  const canContinue = useMemo(() => {
-    if (step === 0) {
-      return name.trim().length >= 2;
-    }
-
-    if (step === 3) {
-      return name.trim().length >= 2 && selectedLists.length > 0;
-    }
-
-    return true;
-  }, [name, selectedLists.length, step]);
-
   const dietarySelections = useMemo(
     () => features.filter((item) => PLACE_DIETARY_OPTIONS.includes(item)),
     [features],
@@ -264,6 +252,67 @@ export function usePlaceEditorState({
       prev.filter((listId) => !duplicateListIds.has(listId) || currentMembershipListIds.has(listId)),
     );
   }, [currentMembershipListIds, duplicateListIds]);
+
+  const availableListIds = useMemo(() => new Set(lists.map((list) => list.id)), [lists]);
+
+  const selectableLists = useMemo(
+    () => lists.filter((list) => !duplicateListIds.has(list.id) || currentMembershipListIds.has(list.id)),
+    [currentMembershipListIds, duplicateListIds, lists],
+  );
+
+  const safeSelectedLists = useMemo(
+    () =>
+      filterSafeSelectedLists(
+        selectedLists,
+        duplicateListIds,
+        currentMembershipListIds,
+        availableListIds,
+      ),
+    [availableListIds, currentMembershipListIds, duplicateListIds, selectedLists],
+  );
+
+  const hasValidName = name.trim().length >= 2;
+  const hasPendingListCreation = Boolean(onCreateList && showNewListForm && newListName.trim());
+  const hasTargetListSelection = safeSelectedLists.length > 0 || hasPendingListCreation;
+
+  useEffect(() => {
+    if (!visible || showNewListForm || safeSelectedLists.length > 0) {
+      return;
+    }
+
+    const firstSelectableList = selectableLists[0];
+
+    if (firstSelectableList) {
+      setSelectedLists([firstSelectableList.id]);
+    }
+  }, [safeSelectedLists.length, selectableLists, showNewListForm, visible]);
+
+  const showValidationFeedback = useCallback(() => {
+    if (!hasValidName) {
+      showToast('Mekan adi en az 2 karakter olmali', 'error');
+      return;
+    }
+
+    if (!hasTargetListSelection) {
+      showListSelectionNotice(
+        lists.length > 0
+          ? 'Kaydetmek icin en az bir hedef liste sec.'
+          : 'Kaydetmek icin once bir liste olustur.',
+      );
+    }
+  }, [hasTargetListSelection, hasValidName, lists.length, showListSelectionNotice]);
+
+  const canContinue = useMemo(() => {
+    if (step === 0) {
+      return hasValidName;
+    }
+
+    if (step === 2 || step === 3) {
+      return hasValidName && hasTargetListSelection;
+    }
+
+    return true;
+  }, [hasTargetListSelection, hasValidName, step]);
 
   const toggleList = useCallback((listId: string, options?: { blocked?: boolean; listName?: string }) => {
     if (options?.blocked) {
@@ -497,9 +546,9 @@ export function usePlaceEditorState({
     }
   }, []);
 
-  const handleCreateList = useCallback(async () => {
+  const createPendingList = useCallback(async () => {
     if (!newListName.trim() || !onCreateList) {
-      return;
+      return null;
     }
 
     const newListId = createUuid();
@@ -527,25 +576,33 @@ export function usePlaceEditorState({
       setNewListCoverImage('');
       setNewListPublic(true);
       showToast(tr.placeEditor.newListCreated, 'success');
+      return newListId;
     } catch {
       showToast('Liste olusturulamadi', 'error');
+      return null;
     }
   }, [newListCoverImage, newListDescription, newListName, newListPublic, onCreateList]);
 
+  const handleCreateList = useCallback(async () => {
+    await createPendingList();
+  }, [createPendingList]);
+
   const handleSave = useCallback(async () => {
     if (!canContinue) {
+      showValidationFeedback();
       return;
     }
 
     try {
-      const safeSelectedLists = filterSafeSelectedLists(
-        selectedLists,
-        duplicateListIds,
-        currentMembershipListIds,
-      );
+      let targetListIds = safeSelectedLists;
 
-      if (safeSelectedLists.length === 0) {
-        showListSelectionNotice(tr.placeEditor.targetListsHelper);
+      if (targetListIds.length === 0 && hasPendingListCreation) {
+        const createdListId = await createPendingList();
+        targetListIds = createdListId ? [createdListId] : [];
+      }
+
+      if (targetListIds.length === 0) {
+        showValidationFeedback();
         return;
       }
 
@@ -570,7 +627,7 @@ export function usePlaceEditorState({
           photos,
           placeName,
         }),
-        safeSelectedLists,
+        targetListIds,
       );
     } catch (error) {
       const fallbackMessage = existingPlace ? 'Mekan guncellenemedi' : 'Mekan kaydedilemedi';
@@ -586,10 +643,10 @@ export function usePlaceEditorState({
     atmosphere,
     bestTimes,
     canContinue,
-    currentMembershipListIds,
-    duplicateListIds,
+    createPendingList,
     existingPlace,
     features,
+    hasPendingListCreation,
     lat,
     lng,
     name,
@@ -601,9 +658,9 @@ export function usePlaceEditorState({
     priceMax,
     priceMin,
     rating,
+    safeSelectedLists,
     selectedCategories,
-    selectedLists,
-    showListSelectionNotice,
+    showValidationFeedback,
     studentFriendly,
     title,
   ]);
@@ -614,11 +671,12 @@ export function usePlaceEditorState({
 
   const goToNextStep = useCallback(() => {
     if (!canContinue) {
+      showValidationFeedback();
       return;
     }
 
     setStep((value) => value + 1);
-  }, [canContinue]);
+  }, [canContinue, showValidationFeedback]);
 
   return {
     address,

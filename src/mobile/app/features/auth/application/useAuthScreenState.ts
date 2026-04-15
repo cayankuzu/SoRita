@@ -2,7 +2,10 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
 import { checkAccountAvailability } from '@/mobile/app/data/repositories/accountAvailability';
-import { useAvailabilityCheck } from '@/mobile/app/features/auth/application/useAvailabilityCheck';
+import {
+  useAvailabilityCheck,
+  type AvailabilityStatus,
+} from '@/mobile/app/features/auth/application/useAvailabilityCheck';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { pickSingleImage } from '@/mobile/app/platform/media/images';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -15,6 +18,10 @@ type UseAuthScreenStateParams = Pick<
 >;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isAvailabilityBlocking(status: AvailabilityStatus) {
+  return status === 'invalid' || status === 'unavailable';
+}
 
 export function useAuthScreenState({
   login,
@@ -81,14 +88,22 @@ export function useAuthScreenState({
       },
     });
 
+  const normalizedRegUsername = regUsername.trim().toLowerCase();
+  const normalizedRegEmail = regEmail.trim().toLowerCase();
+  const isUsernameFormatValid = normalizedRegUsername.length >= 3;
+  const isEmailFormatValid = EMAIL_REGEX.test(normalizedRegEmail);
+  const canUseUsername =
+    isUsernameFormatValid && !isAvailabilityBlocking(usernameAvailability.status);
+  const canUseEmail = isEmailFormatValid && !isAvailabilityBlocking(emailAvailability.status);
+
   const canContinue = useMemo(() => {
     if (regStep === 0) {
-      return regName.trim().length >= 2 && usernameAvailability.status === 'available';
+      return regName.trim().length >= 2 && canUseUsername;
     }
 
     if (regStep === 1) {
       return (
-        emailAvailability.status === 'available' &&
+        canUseEmail &&
         regPassword.length >= 6 &&
         regPassword === regPasswordConfirm
       );
@@ -100,13 +115,13 @@ export function useAuthScreenState({
 
     return true;
   }, [
-    emailAvailability.status,
+    canUseEmail,
+    canUseUsername,
     regInterests.length,
     regName,
     regPassword,
     regPasswordConfirm,
     regStep,
-    usernameAvailability.status,
   ]);
 
   const passwordHint = useMemo(() => {
@@ -171,17 +186,22 @@ export function useAuthScreenState({
       return;
     }
 
-    if (regUsername.length < 3) {
+    if (!isUsernameFormatValid) {
       showToast(tr.auth.toast.usernameTooShort, 'error');
       return;
     }
 
-    if (usernameAvailability.status !== 'available') {
-      showToast('Once uygun bir kullanici adi sec', 'error');
+    if (usernameAvailability.status === 'unavailable') {
+      showToast('Bu kullanici adi zaten kullaniliyor', 'error');
       return;
     }
 
-    if (emailAvailability.status !== 'available') {
+    if (!isEmailFormatValid) {
+      showToast('Gecerli bir e-posta gir', 'error');
+      return;
+    }
+
+    if (emailAvailability.status === 'unavailable') {
       showToast('Once gecerli ve benzersiz bir e-posta gir', 'error');
       return;
     }
@@ -196,7 +216,7 @@ export function useAuthScreenState({
         email: regEmail,
         password: regPassword,
         name: regName,
-        username: regUsername.toLowerCase(),
+        username: normalizedRegUsername,
         bio: regBio,
         interests: regInterests,
         profilePhoto,
@@ -230,6 +250,9 @@ export function useAuthScreenState({
   }, [
     coverPhoto,
     emailAvailability.status,
+    isEmailFormatValid,
+    isUsernameFormatValid,
+    normalizedRegUsername,
     profilePhoto,
     regBio,
     regEmail,

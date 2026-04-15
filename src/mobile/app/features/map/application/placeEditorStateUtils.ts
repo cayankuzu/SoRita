@@ -119,8 +119,11 @@ export function filterSafeSelectedLists(
   selectedLists: string[],
   duplicateListIds: Set<string>,
   currentMembershipListIds: Set<string>,
+  availableListIds?: Set<string>,
 ) {
   return selectedLists.filter(
-    (listId) => !duplicateListIds.has(listId) || currentMembershipListIds.has(listId),
+    (listId) =>
+      (!availableListIds || availableListIds.has(listId)) &&
+      (!duplicateListIds.has(listId) || currentMembershipListIds.has(listId)),
   );
 }
