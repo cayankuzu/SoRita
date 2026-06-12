@@ -5,7 +5,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   Image as ImageIcon,
   Ban,
@@ -15,6 +14,11 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import {
+  openStackScreen,
+  useAppNavigation,
+  useRootStackRoute,
+} from '@/mobile/app/app-shell/navigation/navigation';
 import { ListGridTile, PlaceGridTile } from '@/mobile/app/features/discovery/public/components';
 import { useUserProfileScreenState } from '@/mobile/app/features/profile/application/useUserProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -24,10 +28,10 @@ import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/Conf
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 import { UserProfileActionsSheet } from '@/mobile/app/features/profile/ui/components/UserProfileActionsSheet';
 import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
@@ -40,8 +44,8 @@ import {
 type ProfileTab = 'lists' | 'places' | 'gallery';
 
 export function UserProfileScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useAppNavigation();
+  const route = useRootStackRoute<'UserProfile'>();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
@@ -52,7 +56,7 @@ export function UserProfileScreen() {
   const [reportReason, setReportReason] = useState('');
   const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
 
-  const userId = route.params?.userId as string;
+  const userId = route.params.userId;
   const allowBlockedView = Boolean(route.params?.allowBlockedView);
   const {
     allPhotos,
@@ -60,10 +64,15 @@ export function UserProfileScreen() {
     blockUser,
     canViewProfileContent,
     currentUser,
+    errorMessage,
+    fetchNextPage,
     followerUsers,
     followUser,
     followingUsers,
     hasPendingFollowRequest,
+    hasNextPage,
+    hasPartialDataError,
+    isFetchingNextPage,
     isBlockedByCurrent,
     isBlockedByTarget,
     isFollowing,
@@ -73,6 +82,7 @@ export function UserProfileScreen() {
     publicLists,
     refreshing,
     reportUser,
+    retry,
     unblockUser,
   } = useUserProfileScreenState({
     allowBlockedView,
@@ -80,6 +90,10 @@ export function UserProfileScreen() {
     userId,
   });
   const totalPlaces = allPlaces.length;
+  const hasAnyContent =
+    publicLists.length > 0 || allPlaces.length > 0 || allPhotos.length > 0;
+  const shouldShowErrorState =
+    canViewProfileContent && Boolean(errorMessage && !hasAnyContent);
 
   const tabs = useMemo<ProfileTabOption[]>(
     () => [
@@ -147,9 +161,12 @@ export function UserProfileScreen() {
     return (
       <Screen>
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={32} />}
-          title={tr.profile.empty.userNotFound}
-          description={tr.profile.empty.userNotFoundDescription}
+          icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={32} />}
+          title={errorMessage ? 'Profil simdi acilamiyor' : tr.profile.empty.userNotFound}
+          description={errorMessage ? errorMessage : tr.profile.empty.userNotFoundDescription}
+          actionLabel={errorMessage ? 'Tekrar dene' : undefined}
+          onAction={errorMessage ? retry : undefined}
+          tone={errorMessage ? 'danger' : 'default'}
         />
       </Screen>
     );
@@ -254,7 +271,32 @@ export function UserProfileScreen() {
             />
 
             <View style={styles.contentSection}>
-              {activeTab === 'lists' ? (
+              {hasPartialDataError && hasAnyContent ? (
+                <View style={styles.noticeWrap}>
+                  <InlineNotice
+                    tone="warning"
+                    title="Profilin bazi bolumleri guncellenemedi"
+                    description="Kayitli veriler gosteriliyor. Baglanti duzelince tekrar deneyebilirsin."
+                    actionLabel="Tekrar dene"
+                    onAction={() => {
+                      void retry();
+                    }}
+                  />
+                </View>
+              ) : null}
+
+              {shouldShowErrorState ? (
+                <EmptyState
+                  icon={<MapPin color={colors.danger} size={32} />}
+                  title="Profil icerigi alinamadi"
+                  description={errorMessage || 'Profil icerigi su an yuklenemiyor.'}
+                  actionLabel="Tekrar dene"
+                  onAction={retry}
+                  tone="danger"
+                />
+              ) : null}
+
+              {!shouldShowErrorState && activeTab === 'lists' ? (
                 publicLists.length === 0 ? (
                   <EmptyState
                     icon={<MapPin color={colors.textSoft} size={32} />}
@@ -274,7 +316,7 @@ export function UserProfileScreen() {
                 )
               ) : null}
 
-              {activeTab === 'places' ? (
+              {!shouldShowErrorState && activeTab === 'places' ? (
                 allPlaces.length === 0 ? (
                   <EmptyState
                     icon={<MapPin color={colors.textSoft} size={32} />}
@@ -288,7 +330,10 @@ export function UserProfileScreen() {
                         key={item.key}
                         place={item.place}
                         mode="place"
+                        listCoverImage={item.listCoverImage}
+                        listEmoji={item.listEmoji}
                         listIsPublic={item.listIsPublic}
+                        listName={item.listName}
                         onPress={() => setFeedMode({ startIndex: index, kind: 'places' })}
                       />
                     ))}
@@ -296,7 +341,7 @@ export function UserProfileScreen() {
                 )
               ) : null}
 
-              {activeTab === 'gallery' ? (
+              {!shouldShowErrorState && activeTab === 'gallery' ? (
                 allPhotos.length === 0 ? (
                   <EmptyState
                     icon={<ImageIcon color={colors.textSoft} size={32} />}
@@ -310,12 +355,32 @@ export function UserProfileScreen() {
                         key={item.key}
                         place={item.place}
                         mode="photo"
+                        listCoverImage={item.listCoverImage}
+                        listEmoji={item.listEmoji}
                         listIsPublic={item.listIsPublic}
+                        listName={item.listName}
                         onPress={() => setFeedMode({ startIndex: index, kind: 'gallery' })}
                       />
                     ))}
                   </View>
                 )
+              ) : null}
+
+              {!shouldShowErrorState && hasNextPage ? (
+                <Pressable
+                  style={styles.loadMoreButton}
+                  onPress={() => {
+                    if (isFetchingNextPage) {
+                      return;
+                    }
+
+                    void fetchNextPage?.();
+                  }}
+                >
+                  <Text style={styles.loadMoreLabel}>
+                    {isFetchingNextPage ? 'Yukleniyor...' : 'Daha Fazla Goster'}
+                  </Text>
+                </Pressable>
               ) : null}
             </View>
           </>
@@ -414,5 +479,18 @@ const styles = StyleSheet.create({
   contentSection: {
     paddingTop: 14,
     paddingBottom: 20,
+  },
+  noticeWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 18,
+  },
+  loadMoreLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

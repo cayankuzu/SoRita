@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +24,10 @@ import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/Repor
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
+const ANDROID_COMPOSER_BASE_INSET = 34;
+const ANDROID_MODAL_BASE_INSET = 22;
+const ANDROID_KEYBOARD_EXTRA_LIFT = 18;
+
 type CommentPanelProps = {
   visible: boolean;
   comments: FeedActionComment[];
@@ -42,6 +47,7 @@ type CommentPanelProps = {
   onCancelEdit: () => void;
   onCancelReply: () => void;
   onDeleteComment: (commentId: string) => void;
+  onLoadMoreComments?: () => void;
   onToggleCommentLike: (commentId: string) => void;
   onStartReport: (commentId: string) => void;
   onCloseReport: () => void;
@@ -51,6 +57,8 @@ type CommentPanelProps = {
   onRefreshComments?: () => void;
   onRefreshLikers?: () => void;
   onUserPress?: (userId: string) => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 };
 
 export function CommentPanel({
@@ -72,6 +80,7 @@ export function CommentPanel({
   onCancelEdit,
   onCancelReply,
   onDeleteComment,
+  onLoadMoreComments,
   onToggleCommentLike,
   onStartReport,
   onCloseReport,
@@ -81,11 +90,14 @@ export function CommentPanel({
   onRefreshComments,
   onRefreshLikers,
   onUserPress,
+  hasNextPage = false,
+  isFetchingNextPage = false,
 }: CommentPanelProps) {
   const insets = useSafeAreaInsets();
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [activeLikedComment, setActiveLikedComment] = useState<FeedActionComment | null>(null);
   const [composerHeight, setComposerHeight] = useState(132);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const totalComments = useMemo(() => {
     const countTree = (items: FeedActionComment[]) =>
@@ -97,7 +109,31 @@ export function CommentPanel({
   useEffect(() => {
     if (!visible) {
       setActiveLikedComment(null);
+      setKeyboardHeight(0);
     }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') {
+      return;
+    }
+
+    const handleKeyboardShow = (event: { endCoordinates?: { height?: number } }) => {
+      setKeyboardHeight(event.endCoordinates?.height ?? 0);
+    };
+    const handleKeyboardHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', handleKeyboardShow);
+    const frameSubscription = Keyboard.addListener('keyboardDidChangeFrame', handleKeyboardShow);
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
+
+    return () => {
+      showSubscription.remove();
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
   }, [visible]);
 
   const toggleReplies = (commentId: string) => {
@@ -107,10 +143,19 @@ export function CommentPanel({
     }));
   };
 
-  const composerInset = Math.max(insets.bottom, 12);
-  const modalBottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 16) : insets.bottom;
-  const composerKeyboardOffset = 0;
-  const commentScrollBottomPadding = composerHeight + composerInset + composerKeyboardOffset + 18;
+  const composerInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.bottom + 14, ANDROID_COMPOSER_BASE_INSET)
+      : Math.max(insets.bottom, 12);
+  const modalBottomInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.bottom + 8, ANDROID_MODAL_BASE_INSET)
+      : insets.bottom;
+  const composerKeyboardOffset =
+    Platform.OS === 'android'
+      ? Math.max(keyboardHeight - modalBottomInset + ANDROID_KEYBOARD_EXTRA_LIFT, 0)
+      : 0;
+  const commentScrollBottomPadding = composerHeight + composerKeyboardOffset + composerInset + 18;
 
   return (
     <>
@@ -118,13 +163,16 @@ export function CommentPanel({
         visible={visible}
         transparent
         animationType="slide"
+        hardwareAccelerated
+        navigationBarTranslucent
         onRequestClose={onClose}
+        presentationStyle="overFullScreen"
         statusBarTranslucent
       >
         <View style={[styles.sheetOverlay, { paddingBottom: modalBottomInset }]}>
           <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.sheetKeyboard}
           >
             <View style={styles.commentSheet}>
@@ -165,19 +213,28 @@ export function CommentPanel({
                       <Text style={styles.emptyCommentsDescription}>Ilk yorumu sen yaz.</Text>
                     </View>
                   ) : (
-                    <CommentThread
-                      comments={comments}
-                      editingCommentId={editingCommentId}
-                      expandedReplies={expandedReplies}
-                      onDeleteComment={onDeleteComment}
-                      onShowCommentLikers={setActiveLikedComment}
-                      onStartEdit={onStartEdit}
-                      onStartReply={onStartReply}
-                      onStartReport={onStartReport}
-                      onToggleCommentLike={onToggleCommentLike}
-                      onToggleReplies={toggleReplies}
-                      onUserPress={onUserPress}
-                    />
+                    <>
+                      <CommentThread
+                        comments={comments}
+                        editingCommentId={editingCommentId}
+                        expandedReplies={expandedReplies}
+                        onDeleteComment={onDeleteComment}
+                        onShowCommentLikers={setActiveLikedComment}
+                        onStartEdit={onStartEdit}
+                        onStartReply={onStartReply}
+                        onStartReport={onStartReport}
+                        onToggleCommentLike={onToggleCommentLike}
+                        onToggleReplies={toggleReplies}
+                        onUserPress={onUserPress}
+                      />
+                      {hasNextPage ? (
+                        <Pressable style={styles.loadMoreButton} onPress={onLoadMoreComments}>
+                          <Text style={styles.loadMoreLabel}>
+                            {isFetchingNextPage ? 'Yukleniyor...' : 'Daha Fazla Yorum Goster'}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </>
                   )}
                 </ScrollView>
 
@@ -220,7 +277,10 @@ export function CommentPanel({
         visible={Boolean(activeLikedComment)}
         transparent
         animationType="fade"
+        hardwareAccelerated
+        navigationBarTranslucent
         onRequestClose={() => setActiveLikedComment(null)}
+        presentationStyle="overFullScreen"
         statusBarTranslucent
       >
         <View style={[styles.sheetOverlay, { paddingBottom: modalBottomInset }]}>

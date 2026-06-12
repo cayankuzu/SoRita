@@ -10,6 +10,7 @@ import {
 } from 'lucide-react-native';
 
 import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests';
+import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthImagePicker } from '@/mobile/app/features/auth/ui/components/AuthImagePicker';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
@@ -330,6 +331,8 @@ export function AuthRegisterFlow({
           ) : null}
         </View>
       )}
+
+      <AuthBrandFooter />
     </Screen>
   );
 }

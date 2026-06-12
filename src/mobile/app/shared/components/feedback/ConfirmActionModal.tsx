@@ -30,7 +30,16 @@ export function ConfirmActionModal({
   const isDanger = confirmVariant === 'danger';
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+    >
       <View style={[styles.modalOverlay, { paddingTop: 20 + insets.top, paddingBottom: 20 + insets.bottom }]}>
         <View style={styles.confirmCard}>
           <View style={styles.confirmHeader}>
@@ -63,6 +72,7 @@ const styles = StyleSheet.create({
   },
   confirmCard: {
     width: '100%',
+    maxWidth: 440,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     padding: 18,

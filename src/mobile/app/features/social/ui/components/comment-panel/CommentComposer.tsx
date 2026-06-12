@@ -9,6 +9,7 @@ import {
 import { Send } from 'lucide-react-native';
 
 import type { ReplyTarget } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelTypes';
+import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -122,6 +123,7 @@ export function CommentComposer({
           <TextInput
             value={commentText}
             onChangeText={onCommentTextChange}
+            maxLength={COMMENT_MAX_LENGTH}
             placeholder={composerPlaceholder}
             placeholderTextColor={colors.textSoft}
             style={styles.commentInput}

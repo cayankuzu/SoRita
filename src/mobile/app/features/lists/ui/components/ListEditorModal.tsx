@@ -16,6 +16,11 @@ import { pickSingleImage } from '@/mobile/app/platform/media/images';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  LIST_DESCRIPTION_MAX_LENGTH,
+  LIST_NAME_MAX_LENGTH,
+  clampTextLength,
+} from '@/mobile/app/shared/validation/contentLimits';
 
 type ListEditorModalProps = {
   visible: boolean;
@@ -49,6 +54,10 @@ export function ListEditorModal({
   }, [list, visible]);
 
   const handlePickCover = async () => {
+    if (loading) {
+      return;
+    }
+
     const uri = await pickSingleImage();
 
     if (uri) {
@@ -66,8 +75,8 @@ export function ListEditorModal({
     try {
       await onSave({
         ...list,
-        name: name.trim(),
-        description: description.trim() || undefined,
+        name: clampTextLength(name, LIST_NAME_MAX_LENGTH).trim(),
+        description: clampTextLength(description, LIST_DESCRIPTION_MAX_LENGTH).trim() || undefined,
         coverImage,
         isPublic,
         updatedAt: new Date().toISOString(),
@@ -78,9 +87,18 @@ export function ListEditorModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+    >
       <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable disabled={loading} style={styles.backdrop} onPress={onClose} />
 
         <View style={styles.panel}>
           <View style={styles.handle} />
@@ -91,7 +109,7 @@ export function ListEditorModal({
               <Text style={styles.subtitle}>Mevcut bilgiler dolu geliyor, istediklerini degistirebilirsin.</Text>
             </View>
 
-            <Pressable onPress={onClose} style={styles.closeButton}>
+            <Pressable disabled={loading} onPress={onClose} style={styles.closeButton}>
               <X color={colors.textMuted} size={18} />
             </Pressable>
           </View>
@@ -106,12 +124,12 @@ export function ListEditorModal({
               {coverImage ? (
                 <View style={styles.coverPreview}>
                   <Image source={{ uri: coverImage }} style={styles.coverImage} resizeMode="cover" />
-                  <Pressable onPress={() => setCoverImage('')} style={styles.coverClearButton}>
-                    <X color={colors.onPrimary} size={16} />
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable style={styles.coverPicker} onPress={handlePickCover}>
+                <Pressable disabled={loading} onPress={() => setCoverImage('')} style={styles.coverClearButton}>
+                  <X color={colors.onPrimary} size={16} />
+                </Pressable>
+              </View>
+            ) : (
+                <Pressable disabled={loading} style={styles.coverPicker} onPress={() => void handlePickCover()}>
                   <ImagePlus color={colors.secondary} size={18} />
                   <Text style={styles.coverPickerText}>Kapak fotografi sec</Text>
                 </Pressable>
@@ -122,6 +140,7 @@ export function ListEditorModal({
                   title="Kapagi Degistir"
                   variant="secondary"
                   onPress={handlePickCover}
+                  disabled={loading}
                 />
               ) : null}
             </View>
@@ -130,16 +149,20 @@ export function ListEditorModal({
               <TextField
                 label="Liste adi"
                 value={name}
-                onChangeText={setName}
+                onChangeText={(value) => setName(clampTextLength(value, LIST_NAME_MAX_LENGTH))}
                 placeholder="Liste adi"
+                maxLength={LIST_NAME_MAX_LENGTH}
               />
 
               <TextField
                 label="Aciklama"
                 value={description}
-                onChangeText={setDescription}
+                onChangeText={(value) =>
+                  setDescription(clampTextLength(value, LIST_DESCRIPTION_MAX_LENGTH))
+                }
                 placeholder="Liste aciklamasi"
                 multilineRows={3}
+                maxLength={LIST_DESCRIPTION_MAX_LENGTH}
               />
             </View>
 
@@ -148,6 +171,7 @@ export function ListEditorModal({
               <View style={styles.privacyRow}>
                 <Pressable
                   style={[styles.privacyButton, isPublic ? styles.privacyButtonActive : null]}
+                  disabled={loading}
                   onPress={() => setIsPublic(true)}
                 >
                   <Globe color={isPublic ? colors.onPrimary : colors.textMuted} size={14} />
@@ -158,6 +182,7 @@ export function ListEditorModal({
 
                 <Pressable
                   style={[styles.privacyButton, !isPublic ? styles.privateButtonActive : null]}
+                  disabled={loading}
                   onPress={() => setIsPublic(false)}
                 >
                   <Lock color={!isPublic ? colors.onPrimary : colors.textMuted} size={14} />
@@ -169,18 +194,17 @@ export function ListEditorModal({
             </View>
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 18) + 18 }]}>
             <PrimaryButton
               title="Iptal"
               variant="secondary"
               onPress={onClose}
+              disabled={loading}
               style={styles.footerButton}
             />
             <PrimaryButton
               title="Kaydet"
-              onPress={() => {
-                void handleSave();
-              }}
+              onPress={handleSave}
               disabled={!name.trim()}
               loading={loading}
               style={styles.footerButton}
@@ -202,6 +226,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlay,
   },
   panel: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     maxHeight: '86%',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

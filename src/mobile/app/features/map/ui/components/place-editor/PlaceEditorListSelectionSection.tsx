@@ -9,6 +9,8 @@ import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/
 type PlaceEditorListSelectionSectionProps = {
   currentMembershipListIds: Set<string>;
   duplicateListIds: Set<string>;
+  isCreatingList: boolean;
+  isPickingListCover: boolean;
   listSelectionNotice?: string | null;
   lists: PlaceList[];
   newListCoverImage: string;
@@ -30,6 +32,8 @@ type PlaceEditorListSelectionSectionProps = {
 export function PlaceEditorListSelectionSection({
   currentMembershipListIds,
   duplicateListIds,
+  isCreatingList,
+  isPickingListCover,
   listSelectionNotice,
   lists,
   newListCoverImage,
@@ -58,6 +62,8 @@ export function PlaceEditorListSelectionSection({
         onToggleList={onToggleList}
       />
       <PlaceEditorNewListForm
+        isCreatingList={isCreatingList}
+        isPickingListCover={isPickingListCover}
         newListCoverImage={newListCoverImage}
         newListDescription={newListDescription}
         newListName={newListName}

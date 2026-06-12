@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TextInputProps,
   View,
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -11,7 +12,10 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
-type AuthFieldProps = {
+type AuthFieldProps = Omit<
+  TextInputProps,
+  'value' | 'onChangeText' | 'placeholder' | 'secureTextEntry' | 'keyboardType' | 'autoCapitalize'
+> & {
   label: string;
   placeholder: string;
   value: string;
@@ -35,9 +39,13 @@ export function AuthField({
   icon,
   helper,
   helperTone = 'muted',
+  ...inputProps
 }: AuthFieldProps) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const shouldShowPasswordToggle = secureTextEntry;
+  const accessibilityLabel = inputProps.accessibilityLabel || label;
+  const autoCorrect =
+    inputProps.autoCorrect ?? !(autoCapitalize === 'none' || secureTextEntry);
 
   return (
     <View style={styles.block}>
@@ -45,6 +53,10 @@ export function AuthField({
       <View style={styles.inputWrap}>
         <View style={styles.icon}>{icon}</View>
         <TextInput
+          {...inputProps}
+          accessibilityHint={helper}
+          accessibilityLabel={accessibilityLabel}
+          allowFontScaling
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -52,6 +64,8 @@ export function AuthField({
           secureTextEntry={secureTextEntry && !passwordVisible}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          maxFontSizeMultiplier={1.2}
           style={[styles.input, shouldShowPasswordToggle ? styles.inputWithToggle : null]}
         />
         {shouldShowPasswordToggle ? (
@@ -71,6 +85,7 @@ export function AuthField({
             helperTone === 'danger' ? styles.helperDanger : null,
             helperTone === 'success' ? styles.helperSuccess : null,
           ]}
+          maxFontSizeMultiplier={1.2}
         >
           {helper}
         </Text>

@@ -1,6 +1,8 @@
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
 
 import type { ExpoConfig } from 'expo/config';
+
+dotenv.config({ override: true });
 
 const requiredExpoPublicEnvVars = [
   'EXPO_PUBLIC_SUPABASE_URL',
@@ -28,27 +30,43 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 const supabaseDeleteUserFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_DELETE_USER_FUNCTION_NAME ?? 'delete-user';
+const authWebOrigin =
+  process.env.EXPO_PUBLIC_AUTH_WEB_ORIGIN ?? 'https://cayankuzu.github.io/SoRita_web';
 const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID ?? '';
 const enablePushNotifications = process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS === 'true';
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
+const sentryOrg = process.env.SENTRY_ORG ?? '';
+const sentryProject = process.env.SENTRY_PROJECT ?? '';
+const sentryUrl = process.env.SENTRY_URL ?? '';
+const sentryPluginEnabled = Boolean(sentryOrg && sentryProject && sentryUrl);
 
 const config: ExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   owner: 'cayan',
-  version: '1.0.0',
+  version: '1.0.35',
   newArchEnabled: false,
   orientation: 'portrait',
   scheme: 'sorita',
   icon: './assets/app-icons_background_removed/playstore.png',
   userInterfaceStyle: 'light',
   splash: {
-    image: './assets/app-icons_background_removed/playstore.png',
-    resizeMode: 'contain',
+    image: './assets/splash/launch-splash.png',
+    resizeMode: 'cover',
     backgroundColor: '#f8fafc',
   },
   assetBundlePatterns: ['**/*'],
   plugins: [
+    'expo-secure-store',
     'expo-notifications',
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#f8fafc',
+        image: './assets/splash/launch-splash.png',
+        resizeMode: 'cover',
+      },
+    ],
     [
       'expo-location',
       {
@@ -70,12 +88,26 @@ const config: ExpoConfig = {
         iosGoogleMapsApiKey: googleMapsApiKey,
       },
     ],
+    ...(sentryPluginEnabled
+      ? [[
+          '@sentry/react-native/expo',
+          {
+            url: sentryUrl,
+            organization: sentryOrg,
+            project: sentryProject,
+          },
+        ] as const]
+      : []),
   ],
   android: {
     package: 'com.cayan.sorita.socialmap',
-    versionCode: 3,
+    versionCode: 38,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
+    blockedPermissions: [
+      'android.permission.RECORD_AUDIO',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+    ],
     config: {
       googleMaps: {
         apiKey: googleMapsApiKey,
@@ -89,6 +121,7 @@ const config: ExpoConfig = {
   },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
+    buildNumber: '38',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
@@ -110,8 +143,10 @@ const config: ExpoConfig = {
     supabaseUrl,
     supabasePublishableKey,
     supabaseDeleteUserFunctionName,
+    authWebOrigin,
     expoProjectId,
     enablePushNotifications,
+    sentryDsn,
     authRedirectPath: 'auth/callback',
   },
 };

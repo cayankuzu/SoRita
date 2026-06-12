@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '@/app/app-shell/auth/AuthSessionProvider';
 import type { Place } from '@/app/data/contracts/entities';
 import { storage } from '@/app/data/repositories/mockStorage';
-import { PlacePanel } from '@/app/features/map/ui/components/PlacePanel';
+import { PlacePanel } from '@/app/features/map/public/components';
 import { PhotoLightbox } from '@/app/shared/components/feedback/PhotoLightbox';
 import { MiniMap, MiniMapHandle } from '@/app/shared/components/maps/MiniMap';
 import {

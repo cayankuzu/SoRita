@@ -7,7 +7,7 @@ import { ListGridTile, PlaceGridTile, UserGridTile } from '@/mobile/app/features
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import type { PlaceFeedCardItem } from '@/mobile/app/shared/utils/placeAggregation';
+import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 import type { ExploreTabType } from './exploreScreenTypes';
@@ -83,7 +83,7 @@ export function ExploreBrowseResults({
         <EmptyState
           icon={<MapPin color={colors.textSoft} size={32} />}
           title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPlace}
-          description={tr.explore.empty.noPlaceDescription}
+          description={searchQuery.trim() ? tr.explore.empty.tryDifferentSearch : tr.explore.empty.noPlaceDescription}
         />
       );
     }
@@ -97,7 +97,10 @@ export function ExploreBrowseResults({
             owner={item.owner}
             showOwner={Boolean(item.owner)}
             mode="place"
+            listCoverImage={item.listCoverImage}
+            listEmoji={item.listEmoji}
             listIsPublic={item.listIsPublic}
+            listName={item.listName}
             onOwnerPress={() => item.owner && onOpenUserProfile(item.owner.id)}
             onPress={() => onOpenFeedItem('places', index)}
           />
@@ -111,8 +114,8 @@ export function ExploreBrowseResults({
       return (
         <EmptyState
           icon={<Camera color={colors.textSoft} size={32} />}
-          title={tr.explore.empty.noPhoto}
-          description={tr.explore.empty.noPhotoDescription}
+          title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPhoto}
+          description={searchQuery.trim() ? tr.explore.empty.tryDifferentSearch : tr.explore.empty.noPhotoDescription}
         />
       );
     }
@@ -126,7 +129,10 @@ export function ExploreBrowseResults({
             owner={item.owner}
             showOwner={Boolean(item.owner)}
             mode="photo"
+            listCoverImage={item.listCoverImage}
+            listEmoji={item.listEmoji}
             listIsPublic={item.listIsPublic}
+            listName={item.listName}
             onOwnerPress={() => item.owner && onOpenUserProfile(item.owner.id)}
             onPress={() => onOpenFeedItem('photos', index)}
           />
@@ -140,7 +146,7 @@ export function ExploreBrowseResults({
       <EmptyState
         icon={<Users color={colors.textSoft} size={32} />}
         title={searchQuery.trim() ? tr.explore.empty.noUserResult : tr.explore.empty.noUser}
-        description={tr.explore.empty.noUserDescription}
+        description={searchQuery.trim() ? tr.explore.empty.tryDifferentSearch : tr.explore.empty.noUserDescription}
       />
     );
   }

@@ -89,6 +89,10 @@ export function PlaceEditorModal({
     handlePickListCover,
     handleRemovePhoto,
     handleSave,
+    isAddingPhoto,
+    isCreatingList,
+    isPickingListCover,
+    isSaving,
     listSelectionNotice,
     name,
     newListCoverImage,
@@ -144,6 +148,9 @@ export function PlaceEditorModal({
     onSave,
     onCreateList,
   });
+  const isEditorBusy = isSaving || isCreatingList;
+  const footerPaddingBottom =
+    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 18) + 20;
 
   const renderStep = () => {
     if (step === 0) {
@@ -189,6 +196,9 @@ export function PlaceEditorModal({
           duplicateListIds={duplicateListIds}
           features={features}
           generalFeatureOptions={generalFeatureOptions}
+          isAddingPhoto={isAddingPhoto}
+          isCreatingList={isCreatingList}
+          isPickingListCover={isPickingListCover}
           listSelectionNotice={listSelectionNotice}
           lists={lists}
           newListCoverImage={newListCoverImage}
@@ -238,17 +248,26 @@ export function PlaceEditorModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={isEditorBusy ? undefined : onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable disabled={isEditorBusy} style={styles.backdrop} onPress={onClose} />
         <View style={styles.panel}>
           <PlaceEditorModalHeader
             existingPlaceListName={existingPlaceListName}
             isEditing={Boolean(existingPlace)}
-            onClose={onClose}
+            onClose={isEditorBusy ? () => undefined : onClose}
             onMinimize={onMinimize ? () => onMinimize(buildDraft()) : undefined}
             subtitle={name || placeName || tr.placeEditor.minimizedNewTitle}
           />
@@ -256,7 +275,7 @@ export function PlaceEditorModal({
           <PlaceEditorWizardHeader step={step} steps={wizardSteps} />
 
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, styles.contentWithFooterBuffer]}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="always"
             showsVerticalScrollIndicator={false}
@@ -267,12 +286,13 @@ export function PlaceEditorModal({
           <PlaceEditorModalFooter
             canContinue={canContinue}
             isEditing={Boolean(existingPlace)}
+            isBusy={isEditorBusy}
             isLastStep={step === wizardSteps.length - 1}
             onDelete={existingPlace && onDelete ? () => onDelete(existingPlace.id) : undefined}
             onNext={goToNextStep}
             onPrevious={goToPreviousStep}
             onSave={handleSave}
-            paddingBottom={16 + insets.bottom}
+            paddingBottom={footerPaddingBottom}
             step={step}
           />
         </View>

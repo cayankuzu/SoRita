@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import {
+  getLocalMediaFileExtension,
+  persistLocalUriToFile,
+} from '@/mobile/app/platform/media/localFiles';
+
 const PENDING_SIGNUP_MEDIA_KEY = 'sorita_pending_signup_media';
 const PENDING_SIGNUP_MEDIA_DIR = `${FileSystem.documentDirectory ?? ''}pending-signup-media/`;
 
@@ -34,15 +39,9 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function getFileExtension(uri: string) {
-  const cleanUri = uri.split('?')[0] || uri;
-  const extension = cleanUri.split('.').pop()?.toLowerCase();
-  return extension && extension.length <= 5 ? extension : 'jpg';
-}
-
 function buildPendingMediaPath(email: string, kind: 'profile' | 'cover', sourceUri: string) {
   const normalizedEmail = normalizeEmail(email).replace(/[^a-z0-9._-]/g, '_');
-  const extension = getFileExtension(sourceUri);
+  const extension = getLocalMediaFileExtension(sourceUri);
   return `${PENDING_SIGNUP_MEDIA_DIR}${normalizedEmail}-${kind}.${extension}`;
 }
 
@@ -70,23 +69,7 @@ async function persistPendingMedia(email: string, kind: 'profile' | 'cover', uri
   await ensurePendingMediaDirectory();
 
   const targetPath = buildPendingMediaPath(email, kind, uri);
-
-  try {
-    const currentTargetInfo = await FileSystem.getInfoAsync(targetPath);
-
-    if (currentTargetInfo.exists) {
-      await FileSystem.deleteAsync(targetPath, { idempotent: true });
-    }
-
-    await FileSystem.copyAsync({
-      from: uri,
-      to: targetPath,
-    });
-
-    return targetPath;
-  } catch {
-    return uri;
-  }
+  return persistLocalUriToFile({ uri, targetPath });
 }
 
 async function removePendingMediaFile(uri?: string) {

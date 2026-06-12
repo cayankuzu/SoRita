@@ -16,6 +16,7 @@ import {
   searchPlacesByText,
   type GeocodingSearchResult,
 } from '@/mobile/app/platform/api/geocoding';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
@@ -41,6 +42,7 @@ export function useMapSearchController({
   const [searchFocusTrigger, setSearchFocusTrigger] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchErrorMessage, setSearchErrorMessage] = useState<string | null>(null);
   const searchRequestIdRef = useRef(0);
   const skipNextLiveSearchRef = useRef(false);
 
@@ -52,6 +54,7 @@ export function useMapSearchController({
       setSearchResults([]);
       setHasSearched(false);
       setIsSearching(false);
+      setSearchErrorMessage(null);
       return;
     }
 
@@ -68,16 +71,22 @@ export function useMapSearchController({
 
       setSearchResults(results);
       setHasSearched(true);
-    } catch {
+      setSearchErrorMessage(null);
+    } catch (error) {
       if (searchRequestIdRef.current !== requestId) {
         return;
       }
 
       setSearchResults([]);
       setHasSearched(true);
+      const message = getUserFacingErrorMessage(
+        error,
+        tr.map.searchError,
+      );
+      setSearchErrorMessage(message);
 
       if (showErrorToast) {
-        showToast(tr.map.searchError, 'error');
+        showToast(message, 'error');
       }
     } finally {
       if (searchRequestIdRef.current === requestId) {
@@ -103,6 +112,7 @@ export function useMapSearchController({
       setSearchResults([]);
       setHasSearched(false);
       setIsSearching(false);
+      setSearchErrorMessage(null);
       return;
     }
 
@@ -116,6 +126,7 @@ export function useMapSearchController({
   const handleSearchQueryChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
+      setSearchErrorMessage(null);
 
       if (!value.trim() || (selectedSearchResult && value.trim() !== selectedSearchResult.name)) {
         setSelectedSearchResult(null);
@@ -128,10 +139,12 @@ export function useMapSearchController({
     searchRequestIdRef.current += 1;
     setSearchQuery('');
     setSearchResults([]);
+    setManualViewport(null);
     setSelectedSearchResult(null);
     setHasSearched(false);
     setIsSearching(false);
-  }, []);
+    setSearchErrorMessage(null);
+  }, [setManualViewport, setSelectedSearchResult]);
 
   const handleSearchResultPress = useCallback(
     (item: GeocodingSearchResult) => {
@@ -174,6 +187,7 @@ export function useMapSearchController({
     hasSearched,
     isSearching,
     runSearch,
+    searchErrorMessage,
     searchFocusTrigger,
     searchQuery,
     searchResults,

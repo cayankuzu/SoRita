@@ -58,6 +58,28 @@ export const settingsScreenStyles = StyleSheet.create({
   photoSection: {
     alignItems: 'center',
   },
+  loadingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
+    padding: 14,
+  },
+  loadingCardBody: {
+    flex: 1,
+    gap: 2,
+  },
+  loadingCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  loadingCardText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+  },
   stepActions: {
     flexDirection: 'row',
     gap: 12,

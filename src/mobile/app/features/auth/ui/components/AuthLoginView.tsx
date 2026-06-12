@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 
+import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
@@ -18,6 +19,7 @@ type AuthLoginViewProps = {
   onBack: () => void;
   onChangeEmail: (value: string) => void;
   onChangePassword: (value: string) => void;
+  onForgotPassword: () => void;
   onLogin: () => void;
   onOpenRegister: () => void;
   onResendConfirmation: () => void;
@@ -30,6 +32,7 @@ export function AuthLoginView({
   onBack,
   onChangeEmail,
   onChangePassword,
+  onForgotPassword,
   onLogin,
   onOpenRegister,
   onResendConfirmation,
@@ -82,6 +85,9 @@ export function AuthLoginView({
           autoCapitalize="none"
           icon={<Lock color={colors.textSoft} size={16} />}
         />
+        <Text style={styles.footerLink} onPress={onForgotPassword}>
+          Sifremi unuttum
+        </Text>
         <PrimaryButton title={tr.auth.login.submit} onPress={onLogin} />
       </View>
 
@@ -91,6 +97,8 @@ export function AuthLoginView({
           {tr.auth.login.register}
         </Text>
       </Text>
+
+      <AuthBrandFooter />
     </Screen>
   );
 }

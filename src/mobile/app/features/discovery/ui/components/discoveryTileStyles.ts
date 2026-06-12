@@ -4,7 +4,6 @@ import { colors, layout, radius } from '@/mobile/app/shared/theme/tokens';
 
 export const discoveryTileStyles = StyleSheet.create({
   tile: {
-    width: layout.discoveryTileWidth,
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.surface,
@@ -89,6 +88,26 @@ export const discoveryTileStyles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
   },
+  tileTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  tileTitleContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleActionButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  titleActionButtonActive: {
+    backgroundColor: colors.primaryBg,
+  },
   tileTitle: {
     fontSize: 12,
     fontWeight: '700',
@@ -98,6 +117,59 @@ export const discoveryTileStyles = StyleSheet.create({
     marginTop: 4,
     fontSize: 10,
     color: colors.textSoft,
+  },
+  listContextBar: {
+    marginTop: 8,
+    minHeight: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  listContextCover: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceMuted,
+  },
+  listContextCoverFallback: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  listContextBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  listContextTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  listContextTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  listContextMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  listContextMetaText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.textSoft,
+  },
+  listContextMetaTextPrivate: {
+    color: colors.danger,
   },
   metaRow: {
     flexDirection: 'row',

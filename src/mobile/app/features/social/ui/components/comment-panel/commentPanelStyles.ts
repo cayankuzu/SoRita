@@ -13,6 +13,9 @@ export const commentPanelStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   commentSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     height: '84%',
     maxHeight: '92%',
     minHeight: '84%',
@@ -22,6 +25,9 @@ export const commentPanelStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   innerSheetCard: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     marginHorizontal: 12,
     marginBottom: 8,
     borderRadius: radius.xl,
@@ -90,6 +96,15 @@ export const commentPanelStyles = StyleSheet.create({
   emptyCommentsDescription: {
     fontSize: 13,
     color: colors.textSoft,
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  loadMoreLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
   commentItem: {
     flexDirection: 'row',

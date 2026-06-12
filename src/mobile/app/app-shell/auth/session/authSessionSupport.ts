@@ -1,21 +1,21 @@
-import type { Session, User as SupabaseAuthUser } from '@supabase/supabase-js';
+import type { InfiniteData } from '@tanstack/react-query';
+import {
+  isAuthApiError,
+  isAuthSessionMissingError,
+  type Session,
+  type User as SupabaseAuthUser,
+} from '@supabase/supabase-js';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
-import {
-  clearNotificationCache,
-  hydrateNotificationCache,
-  refreshNotifications,
-} from '@/mobile/app/data/repositories/notificationRepository';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
+import { queryClient } from '@/mobile/app/data/query/queryClient';
+import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import {
   clearPersistedAuthSession,
   getPersistedAuthSession,
+  getPersistedAuthUser,
   savePersistedAuthSession,
+  savePersistedAuthUser,
 } from '@/mobile/app/platform/storage/authSession';
-import {
-  clearPendingSignupMedia,
-  getPendingSignupMedia,
-} from '@/mobile/app/platform/storage/pendingSignupMedia';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 
 export type AuthErrorCode =
@@ -25,6 +25,36 @@ export type AuthErrorCode =
   | 'email_not_confirmed'
   | 'signup_pending_confirmation'
   | 'unexpected';
+
+export class MissingAuthenticatedAccountError extends Error {
+  constructor(message = 'Authenticated account no longer exists.') {
+    super(message);
+    this.name = 'MissingAuthenticatedAccountError';
+  }
+}
+
+function createInfiniteQueryCachePage<T>(items: T[]): InfiniteData<T[], number> {
+  return {
+    pageParams: [0],
+    pages: [items],
+  };
+}
+
+async function loadUsersRepository() {
+  return import('@/mobile/app/data/repositories/usersRepository');
+}
+
+async function loadVisibleDataRepository() {
+  return import('@/mobile/app/data/repositories/visibleDataRepository');
+}
+
+async function loadNotificationRepository() {
+  return import('@/mobile/app/data/repositories/notificationRepository');
+}
+
+async function loadPendingSignupMediaStorage() {
+  return import('@/mobile/app/platform/storage/pendingSignupMedia');
+}
 
 export async function restorePersistedSession(): Promise<Session | null> {
   const persistedSession = await getPersistedAuthSession();
@@ -53,6 +83,14 @@ export async function persistAuthSession(session: Session | null) {
   await clearPersistedAuthSession();
 }
 
+export async function getPersistedAuthUserSnapshot() {
+  return getPersistedAuthUser<User>();
+}
+
+export async function persistResolvedAuthUser(user: User | null) {
+  await savePersistedAuthUser(user);
+}
+
 export async function getActiveOrPersistedSession(): Promise<Session | null> {
   const { data } = await supabase.auth.getSession();
   const activeSession = data.session ?? null;
@@ -63,6 +101,39 @@ export async function getActiveOrPersistedSession(): Promise<Session | null> {
 
   await persistAuthSession(activeSession);
   return activeSession;
+}
+
+export async function getVerifiedAuthUser(session: Session | null): Promise<SupabaseAuthUser | null> {
+  if (!session?.access_token) {
+    return null;
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(session.access_token);
+
+  if (error) {
+    throw error;
+  }
+
+  if (!user) {
+    throw new MissingAuthenticatedAccountError();
+  }
+
+  return user;
+}
+
+export function isMissingAuthenticatedAccountError(error: unknown) {
+  if (error instanceof MissingAuthenticatedAccountError) {
+    return true;
+  }
+
+  if (isAuthSessionMissingError(error)) {
+    return true;
+  }
+
+  return isAuthApiError(error) && error.status === 404;
 }
 
 export async function ensureProfileExists(authUser: SupabaseAuthUser) {
@@ -116,23 +187,67 @@ export function createUserFromAuthUser(authUser: SupabaseAuthUser): User {
 }
 
 export function resolveImmediateAuthUser(authUser: SupabaseAuthUser): User {
-  const cachedUser =
-    storage.findUserByIdIncludingBlocked(authUser.id) ||
-    storage.findUserById(authUser.id) ||
-    createUserFromAuthUser(authUser);
+  return createUserFromAuthUser(authUser);
+}
 
-  storage.setCurrentUser(cachedUser);
-  return cachedUser;
+async function resolveSessionEmail(authUserId: string) {
+  try {
+    const {
+      data: { user: authUser },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || authUser?.id !== authUserId) {
+      return null;
+    }
+
+    return authUser.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function hydrateContextCurrentUserEmail<TContext extends {
+  allUsers: User[];
+  currentUser: User | null;
+  users: User[];
+}>(context: TContext, params: { fallbackEmail?: string | null; userId: string }) {
+  if (!context.currentUser) {
+    return context;
+  }
+
+  const resolvedEmail = params.fallbackEmail ?? (await resolveSessionEmail(params.userId));
+
+  if (!resolvedEmail) {
+    return context;
+  }
+
+  const hydrateUser = (user: User) =>
+    user.id === params.userId
+      ? {
+          ...user,
+          email: resolvedEmail,
+        }
+      : user;
+
+  return {
+    ...context,
+    allUsers: context.allUsers.map(hydrateUser),
+    currentUser: hydrateUser(context.currentUser),
+    users: context.users.map(hydrateUser),
+  };
 }
 
 export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
+  const [{ clearPendingSignupMedia, getPendingSignupMedia }, { fetchUserByIdIncludingBlocked, updateUser }] =
+    await Promise.all([loadPendingSignupMediaStorage(), loadUsersRepository()]);
   const pendingMedia = await getPendingSignupMedia(authUser.email);
 
   if (!pendingMedia) {
     return;
   }
 
-  const currentUser = storage.findUserById(authUser.id);
+  const currentUser = await fetchUserByIdIncludingBlocked(authUser.id);
 
   if (!currentUser) {
     return;
@@ -146,7 +261,7 @@ export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
     return;
   }
 
-  await storage.updateUser({
+  await updateUser({
     ...currentUser,
     profilePhoto: nextProfilePhoto,
     coverPhoto: nextCoverPhoto,
@@ -154,40 +269,82 @@ export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
   await clearPendingSignupMedia(authUser.email);
 }
 
-export function resolveCurrentUser(authUserId: string | null): User | null {
+export async function resolveCurrentUser(authUserId: string | null): Promise<User | null> {
   if (!authUserId) {
-    storage.setCurrentUser(null);
     return null;
   }
 
-  const nextUser = storage.findUserById(authUserId) || null;
-  storage.setCurrentUser(nextUser);
-  return nextUser;
+  const { fetchVisibleDataContext } = await loadVisibleDataRepository();
+  const context = await hydrateContextCurrentUserEmail(
+    await fetchVisibleDataContext(authUserId),
+    { userId: authUserId },
+  );
+  queryClient.setQueryData(queryKeys.visibleData.context(authUserId), context);
+  queryClient.setQueryData(queryKeys.visibleData.snapshot(authUserId), { ...context, lists: [] });
+  return context.currentUser;
 }
 
 export async function hydratePersistedAuthState(authUserId: string) {
-  await Promise.all([
-    storage.hydratePersistedCache(authUserId).catch(() => false),
-    hydrateNotificationCache(authUserId).catch(() => false),
+  const [{ fetchVisibleDataContext }, { refreshNotifications }] = await Promise.all([
+    loadVisibleDataRepository(),
+    loadNotificationRepository(),
   ]);
+  const context = await hydrateContextCurrentUserEmail(
+    await fetchVisibleDataContext(authUserId),
+    { userId: authUserId },
+  );
+  queryClient.setQueryData(queryKeys.visibleData.context(authUserId), context);
+  queryClient.setQueryData(queryKeys.visibleData.snapshot(authUserId), { ...context, lists: [] });
+  await savePersistedAuthUser(context.currentUser);
+  void refreshNotifications(authUserId)
+    .then((items) => {
+      queryClient.setQueryData(
+        queryKeys.notifications.list(authUserId),
+        createInfiniteQueryCachePage(items),
+      );
+    })
+    .catch(() => undefined);
 
-  return resolveCurrentUser(authUserId);
+  return context.currentUser;
 }
 
 export function clearCurrentUserState() {
-  storage.setCurrentUser(null);
-  clearNotificationCache();
+  queryClient.clear();
 }
 
 export async function syncAuthenticatedUser(authUser: SupabaseAuthUser): Promise<User | null> {
   await ensureProfileExists(authUser);
-  await storage.bootstrap(authUser.id);
   await syncPendingProfileMedia(authUser);
 
-  const nextUser = resolveCurrentUser(authUser.id);
-  void refreshNotifications(authUser.id).catch(() => undefined);
+  const [{ fetchVisibleDataContext }, { refreshNotifications }] = await Promise.all([
+    loadVisibleDataRepository(),
+    loadNotificationRepository(),
+  ]);
+  const context = await hydrateContextCurrentUserEmail(
+    await fetchVisibleDataContext(authUser.id),
+    {
+      fallbackEmail: authUser.email ?? null,
+      userId: authUser.id,
+    },
+  );
 
-  return nextUser;
+  if (!context.currentUser) {
+    throw new MissingAuthenticatedAccountError();
+  }
+
+  queryClient.setQueryData(queryKeys.visibleData.context(authUser.id), context);
+  queryClient.setQueryData(queryKeys.visibleData.snapshot(authUser.id), { ...context, lists: [] });
+  await savePersistedAuthUser(context.currentUser);
+  void refreshNotifications(authUser.id)
+    .then((items) => {
+      queryClient.setQueryData(
+        queryKeys.notifications.list(authUser.id),
+        createInfiniteQueryCachePage(items),
+      );
+    })
+    .catch(() => undefined);
+
+  return context.currentUser;
 }
 
 export function getAuthErrorCode(message: string | undefined): AuthErrorCode {

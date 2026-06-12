@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -6,9 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import { Users, X } from 'lucide-react-native';
+import { Search, Users, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
@@ -28,6 +29,14 @@ type ProfileConnectionsModalProps = {
   onUserPress: (user: User) => void;
 };
 
+function matchesUser(user: User, query: string) {
+  return (
+    user.name.toLowerCase().includes(query) ||
+    user.username.toLowerCase().includes(query) ||
+    Boolean(user.bio?.toLowerCase().includes(query))
+  );
+}
+
 export function ProfileConnectionsModal({
   visible,
   title,
@@ -39,13 +48,29 @@ export function ProfileConnectionsModal({
   onUserPress,
 }: ProfileConnectionsModalProps) {
   const insets = useSafeAreaInsets();
+  const [searchQuery, setSearchQuery] = useState('');
+  const q = searchQuery.trim().toLowerCase();
+  const filteredUsers = useMemo(
+    () => (q ? users.filter((user) => matchesUser(user, q)) : users),
+    [q, users],
+  );
+
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery('');
+    }
+  }, [visible]);
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
+      hardwareAccelerated
+      navigationBarTranslucent
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
     >
       <View style={[styles.overlay, { paddingTop: 20 + insets.top, paddingBottom: 20 + insets.bottom }]}>
         <View style={styles.card}>
@@ -56,11 +81,34 @@ export function ProfileConnectionsModal({
             </Pressable>
           </View>
 
-          {users.length === 0 ? (
+          {users.length > 0 ? (
+            <View style={styles.searchWrap}>
+              <Search color={colors.textSoft} size={16} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                cursorColor={colors.primary}
+                keyboardAppearance="light"
+                placeholder="Kullanici ara..."
+                placeholderTextColor={colors.textSoft}
+                selectionColor={colors.primary}
+                spellCheck={false}
+                style={styles.searchInput}
+                textContentType="none"
+                underlineColorAndroid="transparent"
+              />
+            </View>
+          ) : null}
+
+          {filteredUsers.length === 0 ? (
             <EmptyState
               icon={<Users color={colors.textSoft} size={28} />}
-              title={emptyTitle}
-              description=""
+              title={q ? 'Sonuc bulunamadi' : emptyTitle}
+              description={q ? 'Farkli bir arama dene.' : ''}
             />
           ) : (
             <ScrollView
@@ -77,7 +125,7 @@ export function ProfileConnectionsModal({
                 ) : undefined
               }
             >
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <Pressable key={user.id} style={styles.userRow} onPress={() => onUserPress(user)}>
                   <AvatarView uri={user.profilePhoto} name={user.name} size={42} />
                   <View style={styles.userBody}>
@@ -105,6 +153,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
+    width: '100%',
+    maxWidth: 540,
+    alignSelf: 'center',
     maxHeight: '72%',
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
@@ -131,6 +182,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
+  },
+  searchWrap: {
+    minHeight: 42,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    paddingVertical: 0,
   },
   list: {
     padding: 16,

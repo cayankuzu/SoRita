@@ -36,7 +36,16 @@ export function ReportActionSheet({
   const bottomInset = Math.max(insets.bottom, 16);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+    >
       <View style={[styles.overlay, { paddingBottom: bottomInset }]}>
         <InstantPressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: bottomInset }]}>
@@ -106,6 +115,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlay,
   },
   sheet: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,

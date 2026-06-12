@@ -19,6 +19,15 @@ export const placeCardStyles = StyleSheet.create({
     padding: 10,
     gap: 4,
   },
+  compactTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  compactTitleContent: {
+    flex: 1,
+    minWidth: 0,
+  },
   compactTitle: {
     fontSize: 12,
     fontWeight: '700',
@@ -147,6 +156,15 @@ export const placeCardStyles = StyleSheet.create({
     paddingTop: 12,
     gap: 4,
   },
+  contentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  contentTitleContent: {
+    flex: 1,
+    minWidth: 0,
+  },
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
@@ -222,5 +240,16 @@ export const placeCardStyles = StyleSheet.create({
   },
   inlineIcon: {
     justifyContent: 'center',
+  },
+  focusActionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  focusActionButtonActive: {
+    backgroundColor: colors.primaryBg,
   },
 });

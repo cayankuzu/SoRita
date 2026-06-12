@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  Image,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
@@ -45,7 +45,11 @@ export function AuthImagePicker({
       >
         {uri ? (
           <>
-            <Image source={{ uri }} style={styles.previewImage} />
+            <AppImage
+              uri={uri}
+              style={styles.previewImage}
+              accessibilityLabel={isCircle ? 'Secilen profil fotografi' : 'Secilen kapak fotografi'}
+            />
             <InstantPressable
               onPress={(event) => {
                 event.stopPropagation();

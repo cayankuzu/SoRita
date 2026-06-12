@@ -1,47 +1,60 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Bell } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
-import {
-  getCachedNotificationCount,
-  refreshNotifications,
-} from '@/mobile/app/data/repositories/notificationRepository';
-import { useNotificationVersion } from '@/mobile/app/shared/hooks/useNotificationVersion';
+import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
+import { useNotificationsQuery } from '@/mobile/app/data/hooks/useNotificationsQuery';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, layout, radius } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 
 export function AppHeader() {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
   const route = useRoute();
   const { user } = useAuth();
   const showNotifications = route.name === 'Home';
-  useNotificationVersion();
+  const notificationsQuery = useNotificationsQuery(user?.id, { enabled: showNotifications });
+  const hasFocusedOnceRef = useRef(false);
 
   const loadNotificationCount = useCallback(async () => {
-    if (!user) {
+    if (!showNotifications || !user || notificationsQuery.isFetching) {
       return;
     }
 
-    await refreshNotifications(user.id).catch(() => undefined);
-  }, [user]);
+    const hasFreshData =
+      notificationsQuery.dataUpdatedAt > 0 &&
+      Date.now() - notificationsQuery.dataUpdatedAt < 1000 * 20;
+
+    if (hasFreshData) {
+      return;
+    }
+
+    await notificationsQuery.refetch().catch(() => undefined);
+  }, [notificationsQuery, showNotifications, user]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!showNotifications) {
+        hasFocusedOnceRef.current = false;
+        return;
+      }
+
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
+
       void loadNotificationCount();
-    }, [loadNotificationCount]),
+    }, [loadNotificationCount, showNotifications]),
   );
 
   useEffect(() => {
     if (!showNotifications || !user) {
       return;
     }
-
-    void loadNotificationCount();
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -54,7 +67,9 @@ export function AppHeader() {
     };
   }, [loadNotificationCount, showNotifications, user]);
 
-  const notificationCount = showNotifications && user ? getCachedNotificationCount(user.id) : 0;
+  const notificationCount = showNotifications && user
+    ? (notificationsQuery.data || []).filter((item) => !item.read).length
+    : 0;
   const badgeLabel = notificationCount > 99 ? '99+' : String(notificationCount);
 
   return (

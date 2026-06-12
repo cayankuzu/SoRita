@@ -12,6 +12,9 @@ export const placeEditorModalStyles = StyleSheet.create({
     backgroundColor: colors.overlay,
   },
   panel: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     maxHeight: '88%',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
@@ -112,6 +115,9 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   content: {
     padding: 18,
+  },
+  contentWithFooterBuffer: {
+    paddingBottom: 32,
   },
   footer: {
     flexDirection: 'row',

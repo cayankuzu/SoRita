@@ -73,7 +73,7 @@ export function getInitialSelectedCategories(existingPlace?: Place | null) {
     return [existingPlace.category];
   }
 
-  return ['other'];
+  return [];
 }
 
 export function getInitialBestTimes(existingPlace?: Place | null) {
@@ -91,7 +91,7 @@ export function getInitialSelectedLists(existingPlace: Place | null | undefined,
       .map((list) => list.id);
   }
 
-  return lists.slice(0, 1).map((list) => list.id);
+  return [];
 }
 
 export function sortSelectedCategories(categories: string[]) {
@@ -110,9 +110,9 @@ export function buildEditorSourceKey(params: {
   placeName?: string;
   placeAddress?: string;
 }) {
-  const { existingPlace, lat, lng, placeName, placeAddress } = params;
+  const { existingPlace, lat, lng } = params;
 
-  return [existingPlace?.id || 'new', String(lat), String(lng), placeName || '', placeAddress || ''].join('|');
+  return [existingPlace?.id || 'new', String(lat), String(lng)].join('|');
 }
 
 export function filterSafeSelectedLists(

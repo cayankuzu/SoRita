@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -14,7 +14,8 @@ import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
-import type { PlaceFeedCardItem } from '@/mobile/app/shared/utils/placeAggregation';
+import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 type ProfileFeedScreenProps = {
   title: string;
@@ -41,11 +42,22 @@ export function ProfileFeedScreen({
   onOpenListDetail,
   onOwnerPress,
 }: ProfileFeedScreenProps) {
+  const { height, width } = useWindowDimensions();
   const { listRef, handleContentSizeChange, handleScrollToIndexFailed } =
     useInitialFlatListIndex<PlaceFeedCardItem>({
       itemCount: items.length,
       startIndex,
     });
+  const listProps = React.useMemo(
+    () =>
+      buildAdaptiveFlatListProps({
+        containsNativeMaps: true,
+        itemCount: items.length,
+        viewportHeight: height,
+        viewportWidth: width,
+      }),
+    [height, items.length, width],
+  );
 
   return (
     <Screen scroll={false} padded={false}>
@@ -57,6 +69,7 @@ export function ProfileFeedScreen({
       </View>
 
       <FlatList
+        {...listProps}
         ref={listRef}
         data={items}
         keyExtractor={(item) => item.key}
@@ -83,10 +96,6 @@ export function ProfileFeedScreen({
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        initialNumToRender={4}
-        maxToRenderPerBatch={6}
-        windowSize={6}
-        removeClippedSubviews={Platform.OS === 'android'}
       />
     </Screen>
   );

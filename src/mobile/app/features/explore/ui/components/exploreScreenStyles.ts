@@ -78,6 +78,8 @@ export const exploreScreenStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
   feedHeader: {
     flexDirection: 'row',

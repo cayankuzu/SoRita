@@ -48,6 +48,21 @@ type PlaceEditorDraftSnapshot = {
   showNewListForm: boolean;
 };
 
+function resolvePlaceEditorName({
+  address,
+  name,
+  placeAddress,
+  placeName,
+}: Pick<PlaceEditorSnapshot, 'address' | 'name' | 'placeAddress' | 'placeName'>) {
+  return (
+    name.trim() ||
+    placeName?.trim() ||
+    address.trim() ||
+    placeAddress?.trim() ||
+    tr.placeEditor.placeNamePlaceholder
+  );
+}
+
 export function buildPreviewPlace({
   existingPlace,
   name,
@@ -70,15 +85,20 @@ export function buildPreviewPlace({
 }: PlaceEditorSnapshot): Place {
   return {
     id: existingPlace?.id || 'preview-place',
-    name: name.trim() || placeName || tr.placeEditor.placeNamePlaceholder,
+    name: resolvePlaceEditorName({
+      address,
+      name,
+      placeAddress,
+      placeName,
+    }),
     title: title.trim() || undefined,
     lat,
     lng,
     address: address.trim() || placeAddress || undefined,
     notes: notes.trim() || undefined,
     rating,
-    category: selectedCategories[0] || 'other',
-    categories: selectedCategories.length > 0 ? selectedCategories : ['other'],
+    category: selectedCategories[0] || undefined,
+    categories: selectedCategories,
     studentDiscount: studentFriendly,
     priceRange: priceMin || priceMax ? 2 : undefined,
     priceMin: priceMin ? Number(priceMin) : undefined,
@@ -131,15 +151,15 @@ export function buildPlaceEditorDraft(snapshot: PlaceEditorDraftSnapshot): Place
 
 export function buildPlaceSavePayload(snapshot: PlaceEditorSnapshot): Omit<Place, 'id' | 'addedAt'> {
   return {
-    name: snapshot.name.trim(),
+    name: resolvePlaceEditorName(snapshot),
     title: snapshot.title.trim() || undefined,
     lat: snapshot.lat,
     lng: snapshot.lng,
     address: snapshot.address.trim() || undefined,
     notes: snapshot.notes.trim() || undefined,
     rating: snapshot.rating,
-    category: snapshot.selectedCategories[0] || 'other',
-    categories: snapshot.selectedCategories.length > 0 ? snapshot.selectedCategories : ['other'],
+    category: snapshot.selectedCategories[0] || undefined,
+    categories: snapshot.selectedCategories,
     studentDiscount: snapshot.studentFriendly,
     priceRange: snapshot.priceMin || snapshot.priceMax ? 2 : undefined,
     priceMin: snapshot.priceMin ? Number(snapshot.priceMin) : undefined,

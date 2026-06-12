@@ -1,6 +1,5 @@
-export type ProfileRow = {
+export type PublicProfileRow = {
   id: string;
-  email: string;
   name: string;
   username: string;
   is_public_account: boolean;
@@ -10,6 +9,10 @@ export type ProfileRow = {
   interests: string[] | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ProfileRow = PublicProfileRow & {
+  email: string;
 };
 
 export type ListRow = {

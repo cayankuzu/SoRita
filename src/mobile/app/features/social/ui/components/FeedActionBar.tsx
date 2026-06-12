@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import {
   Crosshair,
@@ -15,6 +15,7 @@ import {
   CommentPanel,
   LikersPanel,
 } from '@/mobile/app/features/social/ui/components/FeedActionPanels';
+import { MINI_MAP_RESET_LONG_PRESS_MS } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -38,11 +39,14 @@ type FeedActionBarProps = {
   showAddToList?: boolean;
   onLikePress?: () => Promise<void> | void;
   onFocusPress?: () => void;
+  onFocusLongPress?: () => void;
+  focusActionActive?: boolean;
   onAddToListPress?: () => void;
   onAddressCopied?: () => void;
   onCommentSubmit?: (content: string, parentCommentId?: string | null) => Promise<void> | void;
   onCommentUpdate?: (commentId: string, content: string) => Promise<void> | void;
   onCommentDelete?: (commentId: string) => Promise<void> | void;
+  onCommentsLoadMore?: () => Promise<void> | void;
   onCommentReport?: (commentId: string, reason: string) => Promise<void> | void;
   onCommentLikeToggle?: (commentId: string) => Promise<void> | void;
   showReportAction?: boolean;
@@ -51,6 +55,9 @@ type FeedActionBarProps = {
   onReportSubmit?: (reason: string) => Promise<void> | void;
   onRefresh?: () => Promise<void> | void;
   onUserPress?: (userId: string) => void;
+  hasNextCommentsPage?: boolean;
+  isFetchingNextCommentsPage?: boolean;
+  onCommentsVisibilityChange?: (visible: boolean) => void;
 };
 
 export function FeedActionBar({
@@ -65,11 +72,14 @@ export function FeedActionBar({
   showAddToList = false,
   onLikePress,
   onFocusPress,
+  onFocusLongPress,
+  focusActionActive = false,
   onAddToListPress,
   onAddressCopied,
   onCommentSubmit,
   onCommentUpdate,
   onCommentDelete,
+  onCommentsLoadMore,
   onCommentReport,
   onCommentLikeToggle,
   showReportAction = false,
@@ -78,6 +88,9 @@ export function FeedActionBar({
   onReportSubmit,
   onRefresh,
   onUserPress,
+  hasNextCommentsPage = false,
+  isFetchingNextCommentsPage = false,
+  onCommentsVisibilityChange,
 }: FeedActionBarProps) {
   const {
     activeReportCommentId,
@@ -130,6 +143,11 @@ export function FeedActionBar({
     onReportSubmit,
     onUserPress,
   });
+  const handledFocusLongPressRef = React.useRef(false);
+
+  useEffect(() => {
+    onCommentsVisibilityChange?.(showComments);
+  }, [onCommentsVisibilityChange, showComments]);
 
   return (
     <>
@@ -161,8 +179,27 @@ export function FeedActionBar({
         ) : null}
 
         {onFocusPress ? (
-          <InstantPressable style={styles.actionButton} onPress={onFocusPress}>
-            <Crosshair size={18} color={colors.textMuted} />
+          <InstantPressable
+            accessibilityLabel="Mini haritayi odakla"
+            style={[styles.actionButton, focusActionActive ? styles.primaryActionActive : null]}
+            delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
+            onPressIn={() => {
+              handledFocusLongPressRef.current = false;
+            }}
+            onPress={() => {
+              if (handledFocusLongPressRef.current) {
+                handledFocusLongPressRef.current = false;
+                return;
+              }
+
+              onFocusPress();
+            }}
+            onLongPress={() => {
+              handledFocusLongPressRef.current = true;
+              onFocusLongPress?.();
+            }}
+          >
+            <Crosshair size={18} color={focusActionActive ? colors.primary : colors.textMuted} />
           </InstantPressable>
         ) : null}
 
@@ -215,6 +252,9 @@ export function FeedActionBar({
           onDeleteComment={(commentId) => {
             setConfirmDeleteCommentId(commentId);
           }}
+          onLoadMoreComments={() => {
+            void onCommentsLoadMore?.();
+          }}
           onToggleCommentLike={(commentId) => {
             void handleCommentLikeToggle(commentId);
           }}
@@ -235,6 +275,8 @@ export function FeedActionBar({
             void handleRefreshLikers();
           }}
           onUserPress={handleUserPress}
+          hasNextPage={hasNextCommentsPage}
+          isFetchingNextPage={isFetchingNextCommentsPage}
         />
       ) : null}
 

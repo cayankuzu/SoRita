@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '@/app/app-shell/auth/AuthSessionProvider';
 import type { Place, PlaceList, User } from '@/app/data/contracts/entities';
 import { storage } from '@/app/data/repositories/mockStorage';
-import { ListCard } from '@/app/features/lists/ui/components/ListCard';
-import { PlaceCard } from '@/app/features/places/ui/components/PlaceCard';
+import { ListCard } from '@/app/features/lists/public/components';
+import { PlaceCard } from '@/app/features/places/public/components';
 import { MiniMap } from '@/app/shared/components/maps/MiniMap';
 import {
   ArrowLeft, MapPin, UserPlus, UserMinus,

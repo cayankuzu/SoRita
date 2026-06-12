@@ -1,15 +1,19 @@
 import React from 'react';
 import {
-  Image,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Star } from 'lucide-react-native';
+import { Crosshair, Star } from 'lucide-react-native';
 
 import type { Place } from '@/mobile/app/data/contracts/entities';
+import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
+import {
+  MINI_MAP_RESET_LONG_PRESS_MS,
+  useMiniMapInteraction,
+} from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
@@ -39,6 +43,15 @@ export function CompactPlaceCard({
   onPress,
 }: CompactPlaceCardProps) {
   const lastCompactMapGestureAtRef = React.useRef(0);
+  const handledLongPressRef = React.useRef(false);
+  const hasMiniMap = !photos[0];
+  const {
+    activateMap,
+    deactivateMap,
+    isMapInteractive,
+    mapFocusKey,
+    showInteractionHint,
+  } = useMiniMapInteraction(`${place.id}:${hasMiniMap ? 'map' : 'photo'}`);
 
   return (
     <Pressable
@@ -53,25 +66,66 @@ export function CompactPlaceCard({
     >
       <View style={styles.compactImageWrap}>
         {photos[0] ? (
-          <Image source={{ uri: photos[0] }} style={StyleSheet.absoluteFillObject} />
+          <AppImage
+            uri={photos[0]}
+            style={styles.compactImageWrap}
+            accessibilityLabel={`${place.name} fotografi`}
+          />
         ) : (
           <MiniMapPreview
             places={mapMarkers}
             height={160}
-            interactive
+            interactive={isMapInteractive}
+            instanceId={mapFocusKey}
+            focusIndex={0}
+            focusTrigger={mapFocusKey}
             onMapGesture={() => {
               lastCompactMapGestureAtRef.current = Date.now();
             }}
           />
         )}
+        {hasMiniMap ? <MiniMapInteractionHint visible={showInteractionHint} /> : null}
       </View>
       <View style={styles.compactBody}>
-        <ExpandableText
-          text={place.name}
-          collapsedLines={1}
-          textStyle={styles.compactTitle}
-          showIndicator={false}
-        />
+        <View style={styles.compactTitleRow}>
+          <View style={styles.compactTitleContent}>
+            <ExpandableText
+              text={place.name}
+              collapsedLines={1}
+              textStyle={styles.compactTitle}
+              showIndicator={false}
+            />
+          </View>
+          {hasMiniMap ? (
+            <Pressable
+              accessibilityLabel="Mini haritayi odakla"
+              delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
+              onPressIn={() => {
+                handledLongPressRef.current = false;
+              }}
+              onPress={(event) => {
+                event.stopPropagation();
+                if (handledLongPressRef.current) {
+                  handledLongPressRef.current = false;
+                  return;
+                }
+
+                activateMap();
+              }}
+              onLongPress={(event) => {
+                event.stopPropagation();
+                handledLongPressRef.current = true;
+                deactivateMap();
+              }}
+              style={[
+                styles.focusActionButton,
+                isMapInteractive ? styles.focusActionButtonActive : null,
+              ]}
+            >
+              <Crosshair color={colors.primary} size={14} />
+            </Pressable>
+          ) : null}
+        </View>
         {place.notes ? (
           <ExpandableText text={place.notes} collapsedLines={1} textStyle={styles.compactDescription} />
         ) : null}

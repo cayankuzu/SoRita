@@ -86,7 +86,7 @@ export function useFeedActionBarState({
   };
 
   const handleCommentSubmit = async () => {
-    if (!commentText.trim()) {
+    if (!commentText.trim() || submitting) {
       return;
     }
 
@@ -94,26 +94,31 @@ export function useFeedActionBarState({
       return;
     }
 
+    const previousCommentText = commentText;
+    const previousEditingCommentId = editingCommentId;
+    const previousReplyingTo = replyingTo;
+    const nextContent =
+      !editingCommentId && replyingTo?.username && !commentText.trim().startsWith('@')
+        ? `@${replyingTo.username} ${commentText.trim()}`
+        : commentText.trim();
+
+    resetCommentComposer();
     setSubmitting(true);
 
     try {
-      const nextContent =
-        !editingCommentId && replyingTo?.username && !commentText.trim().startsWith('@')
-          ? `@${replyingTo.username} ${commentText.trim()}`
-          : commentText.trim();
-
       if (editingCommentId) {
-        await onCommentUpdate?.(editingCommentId, commentText.trim());
+        await onCommentUpdate?.(editingCommentId, previousCommentText.trim());
       } else {
-        await onCommentSubmit?.(nextContent, replyingTo?.commentId ?? null);
+        await onCommentSubmit?.(nextContent, previousReplyingTo?.commentId ?? null);
       }
-
-      resetCommentComposer();
     } catch (error) {
+      setCommentText(previousCommentText);
+      setEditingCommentId(previousEditingCommentId);
+      setReplyingTo(previousReplyingTo);
       showToast(
         getErrorMessage(
           error,
-          editingCommentId ? tr.cards.commentUpdateFailed : tr.cards.commentSendFailed,
+          previousEditingCommentId ? tr.cards.commentUpdateFailed : tr.cards.commentSendFailed,
         ),
         'error',
       );
@@ -148,7 +153,7 @@ export function useFeedActionBarState({
   };
 
   const handleRefreshComments = async () => {
-    if (!onRefresh) {
+    if (!onRefresh || commentsRefreshing) {
       return;
     }
 
@@ -162,7 +167,7 @@ export function useFeedActionBarState({
   };
 
   const handleRefreshLikers = async () => {
-    if (!onRefresh) {
+    if (!onRefresh || likersRefreshing) {
       return;
     }
 

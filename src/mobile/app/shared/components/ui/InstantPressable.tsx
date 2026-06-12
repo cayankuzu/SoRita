@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable } from 'react-native';
 
@@ -19,6 +19,7 @@ type InstantPressableProps = Omit<PressableProps, 'children' | 'onPress' | 'styl
   busyOpacity?: number;
   disableFeedback?: boolean;
   preventRepeatWhileBusy?: boolean;
+  minimumBusyMs?: number;
 };
 
 export function InstantPressable({
@@ -31,10 +32,21 @@ export function InstantPressable({
   busyOpacity = 0.72,
   disableFeedback = false,
   preventRepeatWhileBusy = true,
+  minimumBusyMs = 120,
   ...rest
 }: InstantPressableProps) {
   const [busy, setBusy] = useState(false);
+  const busyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDisabled = disabled || (preventRepeatWhileBusy && busy);
+
+  useEffect(
+    () => () => {
+      if (busyTimeoutRef.current) {
+        clearTimeout(busyTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
@@ -43,20 +55,37 @@ export function InstantPressable({
       }
 
       event.persist?.();
+      const pressStartedAt = Date.now();
+      const finishPress = () => {
+        const remainingBusyMs = Math.max(0, minimumBusyMs - (Date.now() - pressStartedAt));
+
+        if (busyTimeoutRef.current) {
+          clearTimeout(busyTimeoutRef.current);
+          busyTimeoutRef.current = null;
+        }
+
+        if (remainingBusyMs === 0) {
+          setBusy(false);
+          return;
+        }
+
+        busyTimeoutRef.current = setTimeout(() => {
+          busyTimeoutRef.current = null;
+          setBusy(false);
+        }, remainingBusyMs);
+      };
 
       const result = onPress(event);
+      setBusy(true);
 
       if (!isPromiseLike(result)) {
+        finishPress();
         return;
       }
 
-      setBusy(true);
-
-      void result.finally(() => {
-        setBusy(false);
-      });
+      void result.finally(finishPress);
     },
-    [isDisabled, onPress],
+    [isDisabled, minimumBusyMs, onPress],
   );
 
   const renderStyle = useCallback(

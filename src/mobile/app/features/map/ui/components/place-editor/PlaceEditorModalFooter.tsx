@@ -15,6 +15,7 @@ import { colors } from '@/mobile/app/shared/theme/tokens';
 type PlaceEditorModalFooterProps = {
   canContinue: boolean;
   isEditing: boolean;
+  isBusy?: boolean;
   isLastStep: boolean;
   onDelete?: () => void;
   onNext: () => void;
@@ -27,6 +28,7 @@ type PlaceEditorModalFooterProps = {
 export function PlaceEditorModalFooter({
   canContinue,
   isEditing,
+  isBusy = false,
   isLastStep,
   onDelete,
   onNext,
@@ -38,12 +40,12 @@ export function PlaceEditorModalFooter({
   return (
     <View style={[styles.footer, { paddingBottom }]}>
       {step > 0 ? (
-        <Pressable style={styles.backButton} onPress={onPrevious}>
+        <Pressable disabled={isBusy} style={styles.backButton} onPress={onPrevious}>
           <ChevronLeft color={colors.textMuted} size={16} />
           <Text style={styles.backButtonText}>{tr.common.back}</Text>
         </Pressable>
       ) : onDelete ? (
-        <Pressable style={styles.deleteButton} onPress={onDelete}>
+        <Pressable disabled={isBusy} style={styles.deleteButton} onPress={onDelete}>
           <Trash2 color={colors.danger} size={16} />
           <Text style={styles.deleteButtonText}>{tr.common.delete}</Text>
         </Pressable>
@@ -52,6 +54,7 @@ export function PlaceEditorModalFooter({
       {!isLastStep ? (
         <InstantPressable
           accessibilityState={{ disabled: !canContinue }}
+          disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onNext}
         >
@@ -61,6 +64,7 @@ export function PlaceEditorModalFooter({
       ) : (
         <InstantPressable
           accessibilityState={{ disabled: !canContinue }}
+          disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onSave}
         >

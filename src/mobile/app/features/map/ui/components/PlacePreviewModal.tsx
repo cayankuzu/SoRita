@@ -39,7 +39,16 @@ export function PlacePreviewModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      hardwareAccelerated
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+    >
       <View style={[styles.overlay, { paddingTop: 20 + insets.top, paddingBottom: 12 + insets.bottom }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
@@ -89,6 +98,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlay,
   },
   sheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     maxHeight: '82%',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

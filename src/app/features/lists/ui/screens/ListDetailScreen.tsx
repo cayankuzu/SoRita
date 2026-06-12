@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/app/app-shell/auth/AuthSessionProvider';
 import type { Place, PlaceList } from '@/app/data/contracts/entities';
 import { storage } from '@/app/data/repositories/mockStorage';
-import { PlaceCard } from '@/app/features/places/ui/components/PlaceCard';
+import { PlaceCard } from '@/app/features/places/public/components';
 import { MiniMap } from '@/app/shared/components/maps/MiniMap';
 import {
   Globe, Lock, MapPin, ArrowLeft, Heart,

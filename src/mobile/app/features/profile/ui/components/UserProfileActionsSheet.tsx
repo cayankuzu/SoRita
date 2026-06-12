@@ -32,7 +32,11 @@ export function UserProfileActionsSheet({
       visible={visible}
       transparent
       animationType="fade"
+      hardwareAccelerated
+      navigationBarTranslucent
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
     >
       <View style={styles.sheetOverlay}>
         <View style={styles.sheetCard}>
@@ -82,6 +86,7 @@ const styles = StyleSheet.create({
   },
   sheetCard: {
     width: '100%',
+    maxWidth: 440,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     padding: 16,

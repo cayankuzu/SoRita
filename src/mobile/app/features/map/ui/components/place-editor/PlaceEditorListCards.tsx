@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Globe, Lock } from 'lucide-react-native';
+import { Globe, Info, Lock } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
@@ -37,7 +37,17 @@ export function PlaceEditorListCards({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{tr.placeEditor.targetLists}</Text>
       <Text style={styles.sectionHelper}>{tr.placeEditor.targetListsHelper}</Text>
-      {listSelectionNotice ? <Text style={styles.listSelectionNotice}>{listSelectionNotice}</Text> : null}
+      {listSelectionNotice ? (
+        <View style={styles.listSelectionNotice}>
+          <View style={styles.listSelectionNoticeIconWrap}>
+            <Info color={colors.warningText} size={14} />
+          </View>
+          <View style={styles.listSelectionNoticeBody}>
+            <Text style={styles.listSelectionNoticeTitle}>Liste ipucu</Text>
+            <Text style={styles.listSelectionNoticeText}>{listSelectionNotice}</Text>
+          </View>
+        </View>
+      ) : null}
       <View style={styles.listWrap}>
         {lists.map((list) => {
           const selected = selectedLists.includes(list.id);

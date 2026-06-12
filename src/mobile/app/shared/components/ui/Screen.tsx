@@ -7,12 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   StyleProp,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from 'react-native';
 import { Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/mobile/app/shared/theme/tokens';
+import { getResponsiveScreenPadding } from '@/mobile/app/shared/utils/layout';
 
 type ScreenProps = {
   children: React.ReactNode;
@@ -38,9 +40,11 @@ export function Screen({
   onRefresh,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
   const bottomTabBarHeight = React.useContext(BottomTabBarHeightContext);
   const shouldApplyBottomSafeArea = safeBottom && typeof bottomTabBarHeight !== 'number';
   const shouldUseScrollView = scroll || Boolean(onRefresh);
+  const horizontalPadding = getResponsiveScreenPadding(width, height);
   const sharedBottomPadding = !safeBottom
     ? 0
     : typeof bottomTabBarHeight === 'number'
@@ -60,13 +64,16 @@ export function Screen({
 
   const content = shouldUseScrollView ? (
     <ScrollView
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      contentInsetAdjustmentBehavior="automatic"
       style={styles.scrollView}
       contentContainerStyle={[
         scroll ? styles.scrollContent : styles.staticScrollContent,
-        padded ? styles.paddedContent : null,
+        padded ? { paddingHorizontal: horizontalPadding } : null,
         contentContainerStyle,
         { paddingBottom: scrollBottomPadding },
       ]}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -86,7 +93,7 @@ export function Screen({
     <View
       style={[
         styles.staticContent,
-        padded ? styles.paddedContent : null,
+        padded ? { paddingHorizontal: horizontalPadding } : null,
         contentContainerStyle,
         { paddingBottom: staticBottomPadding },
       ]}
@@ -97,7 +104,10 @@ export function Screen({
 
   return (
     <SafeAreaView style={[styles.safeArea, style]} edges={edges}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoider}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoider}
+      >
         {content}
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -123,8 +133,5 @@ const styles = StyleSheet.create({
   },
   staticContent: {
     flex: 1,
-  },
-  paddedContent: {
-    paddingHorizontal: spacing.screen,
   },
 });

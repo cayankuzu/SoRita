@@ -1,17 +1,19 @@
 import React from 'react';
 import {
-  Image,
   Pressable,
-  StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
 
 export type UserGridTileProps = {
   user: User;
@@ -28,10 +30,19 @@ function UserGridTileComponent({
   onPress,
   onFollowPress,
 }: UserGridTileProps) {
+  const { height, width } = useWindowDimensions();
+  const tileWidth = getResponsiveDiscoveryTileWidth(width, height);
+
   return (
-    <Pressable onPress={onPress} style={styles.tile}>
+    <Pressable onPress={onPress} style={[styles.tile, { width: tileWidth }]}>
       <View style={styles.userCover}>
-        {user.coverPhoto ? <Image source={{ uri: user.coverPhoto }} style={StyleSheet.absoluteFillObject} /> : null}
+        {user.coverPhoto ? (
+          <AppImage
+            uri={user.coverPhoto}
+            style={styles.userCover}
+            accessibilityLabel={`${user.name} kapak fotografi`}
+          />
+        ) : null}
       </View>
 
       <View style={styles.userAvatarWrap}>
@@ -46,12 +57,13 @@ function UserGridTileComponent({
         {user.bio ? (
           <ExpandableText text={user.bio} collapsedLines={1} textStyle={styles.tileDescription} />
         ) : null}
-        <Pressable
+        <InstantPressable
           onPress={(event) => {
             event.stopPropagation();
             onFollowPress();
           }}
           style={[styles.followButton, isFollowing || isPending ? styles.followButtonPassive : null]}
+          preventRepeatWhileBusy={false}
         >
           <Text
             style={[
@@ -61,7 +73,7 @@ function UserGridTileComponent({
           >
             {isFollowing ? tr.cards.following : isPending ? 'Istek gonderildi' : tr.cards.follow}
           </Text>
-        </Pressable>
+        </InstantPressable>
       </View>
     </Pressable>
   );

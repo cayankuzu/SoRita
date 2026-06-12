@@ -1,36 +1,76 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
-import { checkAccountAvailability } from '@/mobile/app/data/repositories/accountAvailability';
 import {
-  useAvailabilityCheck,
+  useEmailAvailabilityQuery,
+  useUsernameAvailabilityQuery,
+  type AvailabilityState,
   type AvailabilityStatus,
-} from '@/mobile/app/features/auth/application/useAvailabilityCheck';
+} from '@/mobile/app/data/hooks/useAccountAvailabilityQuery';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { pickSingleImage } from '@/mobile/app/platform/media/images';
+import {
+  getPersistedLegalConsentVersion,
+  savePersistedLegalConsentVersion,
+} from '@/mobile/app/platform/storage/legalConsent';
+import {
+  LEGAL_CONSENT_VERSION,
+  type LegalDocumentId,
+} from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
-export type AuthView = 'landing' | 'login' | 'register';
+export type AuthView = 'landing' | 'login' | 'register' | 'forgotPassword';
 
 type UseAuthScreenStateParams = Pick<
   AuthContextType,
   'login' | 'register' | 'resendConfirmationEmail'
->;
+> &
+Partial<
+  Pick<AuthContextType, 'requestPasswordResetEmail'>
+> & {
+  initialEmail?: string;
+  initialView?: AuthView;
+};
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type HelperTone = 'muted' | 'danger' | 'success';
 
 function isAvailabilityBlocking(status: AvailabilityStatus) {
   return status === 'invalid' || status === 'unavailable';
 }
 
+function getAvailabilityHelper(availability: AvailabilityState, idleMessage?: string) {
+  return availability.status === 'idle' ? idleMessage : availability.message;
+}
+
+function getAvailabilityHelperTone(availability: AvailabilityState): HelperTone {
+  if (availability.status === 'available') {
+    return 'success';
+  }
+
+  if (
+    availability.status === 'invalid' ||
+    availability.status === 'unavailable' ||
+    availability.status === 'error'
+  ) {
+    return 'danger';
+  }
+
+  return 'muted';
+}
+
 export function useAuthScreenState({
+  initialEmail,
+  initialView,
   login,
   register,
+  requestPasswordResetEmail = async () => ({ success: false, code: 'unexpected' }),
   resendConfirmationEmail,
 }: UseAuthScreenStateParams) {
-  const [view, setView] = useState<AuthView>('landing');
-  const [loginEmail, setLoginEmail] = useState('');
+  const [view, setView] = useState<AuthView>(initialView ?? 'landing');
+  const [loginEmail, setLoginEmail] = useState(initialEmail ?? '');
   const [loginPassword, setLoginPassword] = useState('');
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState(initialEmail ?? '');
   const [confirmationEmail, setConfirmationEmail] = useState('');
   const [regStep, setRegStep] = useState(0);
   const [regName, setRegName] = useState('');
@@ -42,6 +82,47 @@ export function useAuthScreenState({
   const [regInterests, setRegInterests] = useState<string[]>([]);
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>();
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>();
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false);
+  const [activeLegalDocument, setActiveLegalDocument] = useState<LegalDocumentId | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    void getPersistedLegalConsentVersion()
+      .then((version) => {
+        if (active && version === LEGAL_CONSENT_VERSION) {
+          setHasAcceptedLegal(true);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (initialView) {
+      setView(initialView);
+    }
+
+    if (initialEmail) {
+      setLoginEmail(initialEmail);
+      setForgotPasswordEmail(initialEmail);
+    }
+  }, [initialEmail, initialView]);
+
+  const requireLegalConsent = useCallback(() => {
+    if (hasAcceptedLegal) {
+      return true;
+    }
+
+    showToast(
+      'Devam etmek icin Kullanim Kosullari, Topluluk Kurallari, Gizlilik ve KVKK onayini vermelisin.',
+      'error',
+    );
+    return false;
+  }, [hasAcceptedLegal]);
 
   const resetRegisterState = useCallback(() => {
     setRegStep(0);
@@ -56,25 +137,20 @@ export function useAuthScreenState({
     setCoverPhoto(undefined);
   }, []);
 
-  const { availability: usernameAvailability, helper: usernameHelper, helperTone: usernameHelperTone } =
-    useAvailabilityCheck({
+  const { availability: usernameAvailability } =
+    useUsernameAvailabilityQuery({
       active: view === 'register',
       value: regUsername,
-      idleMessage: tr.auth.register.usernameHelper,
       invalidMessage: (value) =>
         value.length < 3 ? 'Kullanici adi en az 3 karakter olmali' : null,
       checkingMessage: 'Kullanici adi kontrol ediliyor...',
       availableMessage: 'Bu kullanici adi kullanilabilir',
       unavailableMessage: 'Bu kullanici adi zaten kullaniliyor',
       errorMessage: 'Kullanici adi su an kontrol edilemiyor',
-      checkAvailability: async (username) => {
-        const result = await checkAccountAvailability({ username });
-        return result.usernameAvailable;
-      },
     });
 
-  const { availability: emailAvailability, helper: emailHelper, helperTone: emailHelperTone } =
-    useAvailabilityCheck({
+  const { availability: emailAvailability } =
+    useEmailAvailabilityQuery({
       active: view === 'register',
       value: regEmail,
       invalidMessage: (value) => (!EMAIL_REGEX.test(value) ? 'Gecerli bir e-posta gir' : null),
@@ -82,11 +158,12 @@ export function useAuthScreenState({
       availableMessage: 'Bu e-posta kullanilabilir',
       unavailableMessage: 'Bu e-posta zaten kullaniliyor',
       errorMessage: 'E-posta su an kontrol edilemiyor',
-      checkAvailability: async (email) => {
-        const result = await checkAccountAvailability({ email });
-        return result.emailAvailable;
-      },
     });
+
+  const usernameHelper = getAvailabilityHelper(usernameAvailability, tr.auth.register.usernameHelper);
+  const usernameHelperTone = getAvailabilityHelperTone(usernameAvailability);
+  const emailHelper = getAvailabilityHelper(emailAvailability);
+  const emailHelperTone = getAvailabilityHelperTone(emailAvailability);
 
   const normalizedRegUsername = regUsername.trim().toLowerCase();
   const normalizedRegEmail = regEmail.trim().toLowerCase();
@@ -141,19 +218,40 @@ export function useAuthScreenState({
   }, [regPassword]);
 
   const openRegister = useCallback(() => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
     resetRegisterState();
     setView('register');
-  }, [resetRegisterState]);
+  }, [requireLegalConsent, resetRegisterState]);
 
   const goToLanding = useCallback(() => {
     setView('landing');
   }, []);
 
   const goToLogin = useCallback(() => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
     setView('login');
-  }, []);
+  }, [requireLegalConsent]);
+
+  const goToForgotPassword = useCallback(() => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
+    setForgotPasswordEmail((current) => current || loginEmail);
+    setView('forgotPassword');
+  }, [loginEmail, requireLegalConsent]);
 
   const handleLogin = useCallback(async () => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
     try {
       const result = await login(loginEmail, loginPassword);
 
@@ -173,9 +271,13 @@ export function useAuthScreenState({
     } catch {
       showToast(tr.auth.toast.loginInvalid, 'error');
     }
-  }, [login, loginEmail, loginPassword]);
+  }, [login, loginEmail, loginPassword, requireLegalConsent]);
 
   const handleRegister = useCallback(async () => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
     if (regPassword !== regPasswordConfirm) {
       showToast(tr.auth.toast.passwordMismatch, 'error');
       return;
@@ -219,6 +321,11 @@ export function useAuthScreenState({
         username: normalizedRegUsername,
         bio: regBio,
         interests: regInterests,
+        legalConsent: {
+          acceptedAt: new Date().toISOString(),
+          documentsAccepted: ['terms', 'community', 'privacy', 'kvkk'],
+          version: LEGAL_CONSENT_VERSION,
+        },
         profilePhoto,
         coverPhoto,
       });
@@ -263,6 +370,7 @@ export function useAuthScreenState({
     regUsername,
     register,
     resetRegisterState,
+    requireLegalConsent,
     usernameAvailability.status,
   ]);
 
@@ -284,6 +392,28 @@ export function useAuthScreenState({
       showToast(tr.auth.toast.confirmationResendError, 'error');
     }
   }, [confirmationEmail, resendConfirmationEmail]);
+
+  const handleForgotPassword = useCallback(async () => {
+    if (!forgotPasswordEmail.trim()) {
+      showToast('Sifirlama maili icin e-posta adresini gir', 'error');
+      return;
+    }
+
+    try {
+      const result = await requestPasswordResetEmail(forgotPasswordEmail);
+
+      if (!result.success) {
+        showToast(result.message || tr.settings.password.resetHint, 'error');
+        return;
+      }
+
+      setLoginEmail(forgotPasswordEmail.trim());
+      setView('login');
+      showToast(tr.settings.password.resetSent, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : tr.settings.password.resetHint, 'error');
+    }
+  }, [forgotPasswordEmail, requestPasswordResetEmail]);
 
   const toggleInterest = useCallback((value: string) => {
     setRegInterests((current) =>
@@ -335,31 +465,58 @@ export function useAuthScreenState({
   }, [regStep]);
 
   const goToNextRegisterStep = useCallback(() => {
+    if (!requireLegalConsent()) {
+      return;
+    }
+
     if (!canContinue) {
       return;
     }
 
     setRegStep((value) => value + 1);
-  }, [canContinue]);
+  }, [canContinue, requireLegalConsent]);
+
+  const toggleLegalConsent = useCallback(() => {
+    setHasAcceptedLegal((current) => {
+      const nextValue = !current;
+      void savePersistedLegalConsentVersion(nextValue ? LEGAL_CONSENT_VERSION : null);
+      return nextValue;
+    });
+  }, []);
+
+  const openLegalDocument = useCallback((documentId: LegalDocumentId) => {
+    setActiveLegalDocument(documentId);
+  }, []);
+
+  const closeLegalDocument = useCallback(() => {
+    setActiveLegalDocument(null);
+  }, []);
 
   return {
+    activeLegalDocument,
     canContinue,
     clearCoverPhoto,
     clearProfilePhoto,
+    closeLegalDocument,
     confirmationEmail,
     coverPhoto,
     emailHelper,
     emailHelperTone,
+    forgotPasswordEmail,
     goToLanding,
+    goToForgotPassword,
     goToLogin,
     goToNextRegisterStep,
     goToPreviousRegisterStep,
     handleLogin,
+    handleForgotPassword,
     handleRegister,
     handleRegisterBack,
     handleResendConfirmation,
+    hasAcceptedLegal,
     loginEmail,
     loginPassword,
+    openLegalDocument,
     openRegister,
     passwordHint,
     profilePhoto,
@@ -375,11 +532,13 @@ export function useAuthScreenState({
     selectProfilePhoto,
     setLoginEmail,
     setLoginPassword,
+    setForgotPasswordEmail,
     setRegBio,
     setRegEmail,
     setRegName,
     setRegPassword,
     setRegPasswordConfirm,
+    toggleLegalConsent,
     toggleInterest,
     updateRegisterUsername,
     usernameHelper,

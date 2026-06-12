@@ -8,6 +8,7 @@ export type SharedMapViewport = {
 
 export type SharedMapProps = {
   places: MapMarkerItem[];
+  instanceId?: number;
   interactive?: boolean;
   liteMode?: boolean;
   highlightedIndex?: number | null;

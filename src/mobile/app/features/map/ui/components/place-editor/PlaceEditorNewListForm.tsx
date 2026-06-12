@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -9,12 +8,19 @@ import {
 import { Globe, ImagePlus, Lock, Plus, X } from 'lucide-react-native';
 
 import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import {
+  LIST_DESCRIPTION_MAX_LENGTH,
+  LIST_NAME_MAX_LENGTH,
+} from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceEditorNewListFormProps = {
+  isCreatingList: boolean;
+  isPickingListCover: boolean;
   newListCoverImage: string;
   newListDescription: string;
   newListName: string;
@@ -30,6 +36,8 @@ type PlaceEditorNewListFormProps = {
 };
 
 export function PlaceEditorNewListForm({
+  isCreatingList,
+  isPickingListCover,
   newListCoverImage,
   newListDescription,
   newListName,
@@ -45,10 +53,10 @@ export function PlaceEditorNewListForm({
 }: PlaceEditorNewListFormProps) {
   if (!showNewListForm) {
     return (
-      <Pressable style={styles.createListTrigger} onPress={() => onShowNewListFormChange(true)}>
+      <InstantPressable style={styles.createListTrigger} onPress={() => onShowNewListFormChange(true)}>
         <Plus color={colors.primary} size={18} />
         <Text style={styles.createListTriggerText}>{tr.placeEditor.createList}</Text>
-      </Pressable>
+      </InstantPressable>
     );
   }
 
@@ -56,39 +64,49 @@ export function PlaceEditorNewListForm({
     <View style={styles.createListCard}>
       <View style={styles.createListHeader}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.newList}</Text>
-        <Pressable onPress={() => onShowNewListFormChange(false)}>
+        <InstantPressable disabled={isCreatingList} onPress={() => onShowNewListFormChange(false)}>
           <X color={colors.textSoft} size={18} />
-        </Pressable>
+        </InstantPressable>
       </View>
 
       {newListCoverImage ? (
         <View style={styles.coverPreview}>
           <Image source={{ uri: newListCoverImage }} style={StyleSheet.absoluteFillObject} />
-          <Pressable onPress={() => onNewListCoverImageChange('')} style={styles.coverClear}>
+          <InstantPressable
+            disabled={isCreatingList || isPickingListCover}
+            onPress={() => onNewListCoverImageChange('')}
+            style={styles.coverClear}
+          >
             <X color={colors.onPrimary} size={16} />
-          </Pressable>
+          </InstantPressable>
         </View>
       ) : (
-        <Pressable style={styles.coverPicker} onPress={() => void onPickListCover()}>
-          <ImagePlus color={colors.secondary} size={18} />
-          <Text style={styles.coverPickerText}>{tr.placeEditor.chooseCoverPhoto}</Text>
-        </Pressable>
+        <PrimaryButton
+          title={tr.placeEditor.chooseCoverPhoto}
+          variant="secondary"
+          onPress={onPickListCover}
+          loading={isPickingListCover}
+          disabled={isCreatingList}
+        />
       )}
 
       <TextField
         value={newListName}
         onChangeText={onNewListNameChange}
         placeholder={tr.placeEditor.listNamePlaceholder}
+        maxLength={LIST_NAME_MAX_LENGTH}
       />
       <TextField
         value={newListDescription}
         onChangeText={onNewListDescriptionChange}
         placeholder={tr.placeEditor.listDescriptionPlaceholder}
         multilineRows={2}
+        maxLength={LIST_DESCRIPTION_MAX_LENGTH}
       />
 
       <View style={styles.privacyRow}>
-        <Pressable
+        <InstantPressable
+          disabled={isCreatingList}
           style={[styles.privacyButton, newListPublic ? styles.privacyButtonActive : null]}
           onPress={() => onNewListPublicChange(true)}
         >
@@ -96,8 +114,9 @@ export function PlaceEditorNewListForm({
           <Text style={[styles.privacyText, newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.publicList}
           </Text>
-        </Pressable>
-        <Pressable
+        </InstantPressable>
+        <InstantPressable
+          disabled={isCreatingList}
           style={[styles.privacyButton, !newListPublic ? styles.privateButtonActive : null]}
           onPress={() => onNewListPublicChange(false)}
         >
@@ -105,13 +124,14 @@ export function PlaceEditorNewListForm({
           <Text style={[styles.privacyText, !newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.privateList}
           </Text>
-        </Pressable>
+        </InstantPressable>
       </View>
 
       <PrimaryButton
         title={tr.placeEditor.createListAction}
-        onPress={() => void onCreateList()}
-        disabled={!newListName.trim()}
+        onPress={onCreateList}
+        disabled={!newListName.trim() || isPickingListCover}
+        loading={isCreatingList}
       />
     </View>
   );

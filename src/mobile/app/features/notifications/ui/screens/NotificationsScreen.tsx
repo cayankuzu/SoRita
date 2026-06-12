@@ -1,10 +1,15 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ArrowLeft, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
+  openStackScreen,
+  type AppNavigation,
+  useAppNavigation,
+} from '@/mobile/app/app-shell/navigation/navigation';
+import {
+  type MobileNotification,
   type NotificationCategory,
   useNotificationsScreenState,
 } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
@@ -14,9 +19,11 @@ import { NotificationListItem } from '@/mobile/app/features/notifications/ui/com
 import { NotificationsEmptyState } from '@/mobile/app/features/notifications/ui/components/NotificationsEmptyState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
+import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
   { key: 'all', label: notificationUiConfig.categories.all },
@@ -27,26 +34,51 @@ const categories: Array<{ key: NotificationCategory; label: string }> = [
 ];
 
 export function NotificationsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
+  const { height, width } = useWindowDimensions();
   const { user } = useAuth();
   const {
     category,
+    errorMessage,
+    fetchNextPage,
     filteredItems,
+    hasNextPage,
+    isInitialLoading,
+    isFetchingNextPage,
     markItemRead,
     onRefresh,
     refreshing,
     respondToFollowRequest,
+    retry,
     setCategory,
     unreadCount,
   } = useNotificationsScreenState({ userId: user?.id });
+  const listProps = React.useMemo(
+    () =>
+      buildAdaptiveFlatListProps({
+        itemCount: filteredItems.length,
+        viewportHeight: height,
+        viewportWidth: width,
+      }),
+    [filteredItems.length, height, width],
+  );
+
+  if (isInitialLoading) {
+    return (
+      <Screen padded={false} scroll={false}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.primary} size="small" />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen
       padded={false}
+      scroll={false}
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
     >
       <View style={styles.brandBar}>
         <SoRitaLogo size="sm" />
@@ -68,43 +100,95 @@ export function NotificationsScreen() {
         onChange={(nextCategory) => setCategory(nextCategory as NotificationCategory)}
       />
 
-      {filteredItems.length === 0 ? (
-        <NotificationsEmptyState title={notificationUiConfig.emptyTitle} description={notificationUiConfig.emptyDescription} />
-      ) : (
-        <View style={styles.list}>
-          {filteredItems.map((notification) => (
-            <NotificationListItem
-              key={notification.id}
-              notification={notification}
-              onPress={() => {
-                void (async () => {
-                  await markItemRead(notification);
-                  openNotificationTarget(notification, navigation);
-                })();
-              }}
-              onAcceptFollowRequest={() =>
-                void (async () => {
-                  await respondToFollowRequest(notification, 'accept');
-                  showToast('Takip istegi onaylandi', 'success');
-                })()
-              }
-              onRejectFollowRequest={() =>
-                void (async () => {
-                  await respondToFollowRequest(notification, 'reject');
-                  showToast('Takip istegi reddedildi', 'success');
-                })()
-              }
+      <FlatList
+        {...listProps}
+        data={filteredItems}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: notification }) => (
+          <NotificationListItem
+            notification={notification}
+            onPress={() => {
+              void (async () => {
+                await markItemRead(notification);
+                openNotificationTarget(notification, navigation);
+              })();
+            }}
+            onAcceptFollowRequest={() =>
+              void (async () => {
+                await respondToFollowRequest(notification, 'accept');
+                showToast('Takip istegi onaylandi', 'success');
+              })()
+            }
+            onRejectFollowRequest={() =>
+              void (async () => {
+                await respondToFollowRequest(notification, 'reject');
+                showToast('Takip istegi reddedildi', 'success');
+              })()
+            }
+          />
+        )}
+        contentContainerStyle={[
+          styles.list,
+          filteredItems.length === 0 ? styles.listEmpty : null,
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            void fetchNextPage();
+          }
+        }}
+        ListEmptyComponent={
+          errorMessage ? (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                icon={<Heart color={colors.danger} size={28} />}
+                title="Bildirimler acilamiyor"
+                description={errorMessage}
+                actionLabel="Tekrar dene"
+                onAction={retry}
+                tone="danger"
+              />
+            </View>
+          ) : (
+            <NotificationsEmptyState
+              title={notificationUiConfig.emptyTitle}
+              description={notificationUiConfig.emptyDescription}
             />
-          ))}
-        </View>
-      )}
+          )
+        }
+        ListHeaderComponent={
+          errorMessage && filteredItems.length > 0 ? (
+            <View style={styles.noticeWrap}>
+              <InlineNotice
+                tone="warning"
+                title="Bazi bildirimler guncellenemedi"
+                description="Kayitli bildirimler gosteriliyor. Baglanti duzelince tekrar deneyebilirsin."
+                actionLabel="Tekrar dene"
+                onAction={() => {
+                  void retry();
+                }}
+              />
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.listFooter}>
+              <ActivityIndicator color={colors.primary} size="small" />
+            </View>
+          ) : null
+        }
+      />
     </Screen>
   );
 }
 
 function openNotificationTarget(
-  notification: import('@/mobile/app/data/repositories/notificationRepository').MobileNotification,
-  navigation: any,
+  notification: MobileNotification,
+  navigation: AppNavigation,
 ) {
   if (!notification.linkTo) {
     openStackScreen(navigation, 'UserProfile', { userId: notification.userId });
@@ -167,7 +251,29 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   list: {
     backgroundColor: colors.surface,
+    paddingBottom: 12,
+  },
+  listEmpty: {
+    flexGrow: 1,
+  },
+  emptyWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 28,
+  },
+  noticeWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  listFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
 });

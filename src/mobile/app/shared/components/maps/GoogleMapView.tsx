@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
@@ -9,9 +9,30 @@ const DEFAULT_LATITUDE = 39.9334;
 const DEFAULT_LONGITUDE = 32.8597;
 const DEFAULT_ZOOM_DELTA = 11.5;
 const SINGLE_PLACE_DELTA = 0.012;
+const FIT_EDGE_PADDING = {
+  top: 48,
+  right: 48,
+  bottom: 48,
+  left: 48,
+};
 
 function clampDelta(value: number) {
   return Math.min(Math.max(value, 0.0045), 80);
+}
+
+function getPlacesSignature(places: SharedMapProps['places']) {
+  return places
+    .map(
+      (place, index) =>
+        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
+    )
+    .join('|');
+}
+
+function getViewportSignature(viewport: SharedMapProps['viewport']) {
+  return viewport
+    ? `${viewport.latitude.toFixed(6)}:${viewport.longitude.toFixed(6)}:${viewport.zoom ?? ''}`
+    : 'none';
 }
 
 function buildRegion(places: SharedMapProps['places'], viewport: SharedMapProps['viewport']): Region {
@@ -59,8 +80,9 @@ function buildRegion(places: SharedMapProps['places'], viewport: SharedMapProps[
   };
 }
 
-export function GoogleMapView({
+function GoogleMapViewComponent({
   places,
+  instanceId = 0,
   interactive = true,
   liteMode = false,
   highlightedIndex = null,
@@ -76,25 +98,21 @@ export function GoogleMapView({
   const mapRef = useRef<MapView>(null);
   const lastSelectionPressAt = useRef(0);
   const lastHandledMarkerPress = useRef<{ index: number; at: number } | null>(null);
-  const previousFocusTrigger = useRef<number | null>(null);
-  const previousHighlightedIndex = useRef<number | null>(null);
+  const previousPlacesSignature = useRef<string | null>(null);
+  const previousViewportSignature = useRef<string | null>(null);
+  const previousFocusSignature = useRef<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const placesSignature = places
-    .map(
-      (place, index) =>
-        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
-    )
-    .join('|');
-  const viewportSignature = viewport
-    ? `${viewport.latitude.toFixed(6)}:${viewport.longitude.toFixed(6)}:${viewport.zoom ?? ''}`
-    : 'none';
-  const mapKey = `${interactive ? 'interactive' : 'static'}:${liteMode ? 'lite' : 'full'}:${placesSignature}:${viewportSignature}`;
+  const placesSignature = useMemo(() => getPlacesSignature(places), [places]);
+  const viewportSignature = useMemo(() => getViewportSignature(viewport), [viewport]);
+  const mapKey = `${interactive ? 'interactive' : 'static'}:${liteMode ? 'lite' : 'full'}:${instanceId}`;
   const initialRegion = buildRegion(places, viewport);
+  const shouldUseNativeUserLocation = showUserLocation && Platform.OS === 'ios';
 
   useEffect(() => {
     setIsReady(false);
-    previousFocusTrigger.current = null;
-    previousHighlightedIndex.current = null;
+    previousPlacesSignature.current = null;
+    previousViewportSignature.current = null;
+    previousFocusSignature.current = null;
   }, [mapKey]);
 
   const handleMarkerPress = (index: number) => {
@@ -118,11 +136,9 @@ export function GoogleMapView({
     const activeFocusIndex = focusIndex ?? highlightedIndex;
 
     if (activeFocusIndex != null && places[activeFocusIndex]) {
-      const shouldAnimate =
-        previousFocusTrigger.current !== focusTrigger ||
-        previousHighlightedIndex.current !== highlightedIndex;
+      const focusSignature = `${activeFocusIndex}:${focusTrigger}:${highlightedIndex ?? 'none'}:${placesSignature}`;
 
-      if (shouldAnimate) {
+      if (previousFocusSignature.current !== focusSignature) {
         const target = places[activeFocusIndex];
         mapRef.current?.animateCamera(
           {
@@ -136,27 +152,86 @@ export function GoogleMapView({
             duration: focusTrigger === 0 ? 0 : 450,
           },
         );
-        previousFocusTrigger.current = focusTrigger;
-        previousHighlightedIndex.current = highlightedIndex;
       }
 
+      previousFocusSignature.current = focusSignature;
+      previousPlacesSignature.current = placesSignature;
+      previousViewportSignature.current = viewportSignature;
       return;
     }
 
+    previousFocusSignature.current = null;
+
     if (viewport) {
+      if (previousViewportSignature.current !== viewportSignature) {
+        mapRef.current?.animateCamera(
+          {
+            center: {
+              latitude: viewport.latitude,
+              longitude: viewport.longitude,
+            },
+            zoom: viewport.zoom ?? 13.5,
+          },
+          { duration: 450 },
+        );
+      }
+
+      previousViewportSignature.current = viewportSignature;
+      previousPlacesSignature.current = placesSignature;
+      return;
+    }
+
+    if (previousPlacesSignature.current === placesSignature) {
+      return;
+    }
+
+    if (places.length === 1) {
       mapRef.current?.animateCamera(
         {
           center: {
-            latitude: viewport.latitude,
-            longitude: viewport.longitude,
+            latitude: places[0].lat,
+            longitude: places[0].lng,
           },
-          zoom: viewport.zoom ?? 13.5,
+          zoom: 15,
         },
-        { duration: 450 },
+        { duration: 0 },
       );
-      return;
+    } else if (places.length > 1) {
+      mapRef.current?.fitToCoordinates(
+        places.map((place) => ({
+          latitude: place.lat,
+          longitude: place.lng,
+        })),
+        {
+          animated: false,
+          edgePadding: FIT_EDGE_PADDING,
+        },
+      );
+    } else {
+      mapRef.current?.animateCamera(
+        {
+          center: {
+            latitude: DEFAULT_LATITUDE,
+            longitude: DEFAULT_LONGITUDE,
+          },
+          zoom: 11,
+        },
+        { duration: 0 },
+      );
     }
-  }, [focusIndex, focusTrigger, highlightedIndex, isReady, places, viewport]);
+
+    previousPlacesSignature.current = placesSignature;
+    previousViewportSignature.current = viewportSignature;
+  }, [
+    focusIndex,
+    focusTrigger,
+    highlightedIndex,
+    isReady,
+    places,
+    placesSignature,
+    viewport,
+    viewportSignature,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -169,7 +244,7 @@ export function GoogleMapView({
         cacheEnabled={!interactive}
         mapType="standard"
         initialRegion={initialRegion}
-        showsUserLocation={showUserLocation}
+        showsUserLocation={shouldUseNativeUserLocation}
         showsMyLocationButton={false}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
@@ -236,6 +311,28 @@ export function GoogleMapView({
     </View>
   );
 }
+
+function areGoogleMapViewPropsEqual(previous: SharedMapProps, next: SharedMapProps) {
+  return (
+    previous.interactive === next.interactive &&
+    previous.liteMode === next.liteMode &&
+    previous.highlightedIndex === next.highlightedIndex &&
+    previous.focusIndex === next.focusIndex &&
+    previous.focusTrigger === next.focusTrigger &&
+    previous.showUserLocation === next.showUserLocation &&
+    previous.onMapGesture === next.onMapGesture &&
+    previous.onMarkerPress === next.onMarkerPress &&
+    previous.onPoiPress === next.onPoiPress &&
+    previous.onMapPress === next.onMapPress &&
+    getViewportSignature(previous.viewport) === getViewportSignature(next.viewport) &&
+    getPlacesSignature(previous.places) === getPlacesSignature(next.places)
+  );
+}
+
+export const GoogleMapView = React.memo(
+  GoogleMapViewComponent,
+  areGoogleMapViewPropsEqual,
+);
 
 const styles = StyleSheet.create({
   container: {

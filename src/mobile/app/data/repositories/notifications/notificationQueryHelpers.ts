@@ -1,7 +1,7 @@
 import type {
   FollowRequestRow,
   NotificationRow,
-  ProfileRow,
+  PublicProfileRow,
   UserBlockRow,
 } from '@/mobile/app/platform/supabase/databaseTypes';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -33,48 +33,43 @@ export type MobileNotification = {
 };
 
 type NotificationRecord = NotificationRow & {
-  actor_profile?: ProfileRow[] | ProfileRow | null;
   follow_request?: FollowRequestRow[] | FollowRequestRow | null;
 };
 
-function isMissingFollowRequestsSchemaError(
-  error: { code?: string | null; message?: string | null } | null | undefined,
-) {
-  const normalizedMessage = error?.message?.toLowerCase() ?? '';
-
-  return (
-    error?.code === 'PGRST205' ||
-    error?.code === '42P01' ||
-    normalizedMessage.includes('follow_requests') ||
-    normalizedMessage.includes('follow_request_id') ||
-    normalizedMessage.includes('notifications_follow_request_id_fkey')
-  );
-}
-
-function isMissingUserBlocksSchemaError(
-  error: { code?: string | null; message?: string | null } | null | undefined,
-) {
-  const normalizedMessage = error?.message?.toLowerCase() ?? '';
-
-  return (
-    error?.code === 'PGRST205' ||
-    error?.code === '42P01' ||
-    normalizedMessage.includes('user_blocks')
-  );
-}
+const NOTIFICATION_SELECT = `
+  id,
+  recipient_user_id,
+  actor_user_id,
+  type,
+  message,
+  list_id,
+  list_place_id,
+  follow_request_id,
+  read,
+  created_at,
+  follow_request:follow_requests!notifications_follow_request_id_fkey (
+    id,
+    requester_id,
+    target_user_id,
+    status,
+    created_at,
+    responded_at
+  )
+`;
 
 async function getHiddenUserIds(userId: string) {
   const { data, error } = await supabase
     .from('user_blocks')
-    .select('blocker_user_id, blocked_user_id, created_at');
+    .select('blocker_user_id, blocked_user_id, created_at')
+    .or(`blocker_user_id.eq.${userId},blocked_user_id.eq.${userId}`);
 
-  if (error && !isMissingUserBlocksSchemaError(error)) {
+  if (error) {
     throw error;
   }
 
   const hiddenUserIds = new Set<string>();
 
-  for (const row of ((error ? [] : (data || [])) as UserBlockRow[])) {
+  for (const row of ((data || []) as UserBlockRow[])) {
     if (row.blocker_user_id === userId) {
       hiddenUserIds.add(row.blocked_user_id);
     }
@@ -85,6 +80,33 @@ async function getHiddenUserIds(userId: string) {
   }
 
   return hiddenUserIds;
+}
+
+async function fetchActorProfilesById(rows: NotificationRecord[]) {
+  const actorUserIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.actor_user_id)
+        .filter((userId): userId is string => Boolean(userId)),
+    ),
+  );
+
+  if (actorUserIds.length === 0) {
+    return new Map<string, PublicProfileRow>();
+  }
+
+  const { data, error } = await supabase
+    .from('public_profile_summaries')
+    .select('id, name, username, is_public_account, bio, profile_photo_url, cover_photo_url, interests, created_at, updated_at')
+    .in('id', actorUserIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Map(
+    ((data || []) as PublicProfileRow[]).map((profile) => [profile.id, profile]),
+  );
 }
 
 function formatRelativeTimestamp(isoDate: string) {
@@ -112,10 +134,11 @@ function formatRelativeTimestamp(isoDate: string) {
   return `${diffWeeks} hafta once`;
 }
 
-function mapNotification(record: NotificationRecord): MobileNotification {
-  const actorProfile = Array.isArray(record.actor_profile)
-    ? record.actor_profile[0]
-    : record.actor_profile;
+function mapNotification(
+  record: NotificationRecord,
+  actorProfilesById: Map<string, PublicProfileRow>,
+): MobileNotification {
+  const actorProfile = record.actor_user_id ? actorProfilesById.get(record.actor_user_id) : undefined;
   const followRequest = Array.isArray(record.follow_request)
     ? record.follow_request[0]
     : record.follow_request;
@@ -125,7 +148,7 @@ function mapNotification(record: NotificationRecord): MobileNotification {
     type: record.type,
     userName: actorProfile?.name || 'SoRita',
     userPhoto: actorProfile?.profile_photo_url || undefined,
-    userId: actorProfile?.id || '',
+    userId: record.actor_user_id || actorProfile?.id || '',
     message: record.message,
     timestamp: formatRelativeTimestamp(record.created_at),
     read: record.read,
@@ -150,61 +173,13 @@ function mapNotification(record: NotificationRecord): MobileNotification {
   };
 }
 
-async function getNotificationsFallbackWithActor(userId: string) {
-  return supabase
-    .from('notifications')
-    .select(
-      `
-        id,
-        recipient_user_id,
-        actor_user_id,
-        type,
-        message,
-        list_id,
-        list_place_id,
-        read,
-        created_at,
-        actor_profile:profiles!notifications_actor_user_id_fkey (
-          id,
-          email,
-          name,
-          username,
-          bio,
-          profile_photo_url,
-          cover_photo_url,
-          interests,
-          created_at,
-          updated_at
-        )
-      `,
-    )
-    .eq('recipient_user_id', userId)
-    .order('created_at', { ascending: false });
-}
-
-async function getNotificationsFallbackBase(userId: string) {
-  return supabase
-    .from('notifications')
-    .select(
-      `
-        id,
-        recipient_user_id,
-        actor_user_id,
-        type,
-        message,
-        list_id,
-        list_place_id,
-        read,
-        created_at
-      `,
-    )
-    .eq('recipient_user_id', userId)
-    .order('created_at', { ascending: false });
-}
-
-function mapAndFilterNotifications(rows: NotificationRecord[], hiddenUserIds: Set<string>) {
+function mapAndFilterNotifications(
+  rows: NotificationRecord[],
+  hiddenUserIds: Set<string>,
+  actorProfilesById: Map<string, PublicProfileRow>,
+) {
   return rows
-    .map(mapNotification)
+    .map((row) => mapNotification(row, actorProfilesById))
     .filter((notification) => !notification.userId || !hiddenUserIds.has(notification.userId));
 }
 
@@ -212,74 +187,37 @@ export async function fetchNotifications(userId: string): Promise<MobileNotifica
   const hiddenUserIds = await getHiddenUserIds(userId);
   const { data, error } = await supabase
     .from('notifications')
-    .select(
-      `
-        id,
-        recipient_user_id,
-        actor_user_id,
-        type,
-        message,
-        list_id,
-        list_place_id,
-        follow_request_id,
-        read,
-        created_at,
-        actor_profile:profiles!notifications_actor_user_id_fkey (
-          id,
-          email,
-          name,
-          username,
-          bio,
-          profile_photo_url,
-          cover_photo_url,
-          interests,
-          created_at,
-          updated_at
-        ),
-        follow_request:follow_requests!notifications_follow_request_id_fkey (
-          id,
-          requester_id,
-          target_user_id,
-          status,
-          created_at,
-          responded_at
-        )
-      `,
-    )
+    .select(NOTIFICATION_SELECT)
     .eq('recipient_user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error && !isMissingFollowRequestsSchemaError(error)) {
-    const { data: fallbackData, error: fallbackError } = await getNotificationsFallbackWithActor(userId);
-
-    if (fallbackError) {
-      const { data: baseData, error: baseError } = await getNotificationsFallbackBase(userId);
-
-      if (baseError) {
-        throw error;
-      }
-
-      return mapAndFilterNotifications((baseData || []) as unknown as NotificationRecord[], hiddenUserIds);
-    }
-
-    return mapAndFilterNotifications((fallbackData || []) as unknown as NotificationRecord[], hiddenUserIds);
+  if (error) {
+    throw error;
   }
+
+  const rows = (data || []) as unknown as NotificationRecord[];
+  const actorProfilesById = await fetchActorProfilesById(rows);
+  return mapAndFilterNotifications(rows, hiddenUserIds, actorProfilesById);
+}
+
+export async function fetchNotificationsPage(
+  userId: string,
+  pageOffset: number,
+  pageSize: number,
+): Promise<MobileNotification[]> {
+  const hiddenUserIds = await getHiddenUserIds(userId);
+  const { data, error } = await supabase
+    .from('notifications')
+    .select(NOTIFICATION_SELECT)
+    .eq('recipient_user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(pageOffset, pageOffset + pageSize - 1);
 
   if (error) {
-    const { data: fallbackData, error: fallbackError } = await getNotificationsFallbackWithActor(userId);
-
-    if (fallbackError) {
-      const { data: baseData, error: baseError } = await getNotificationsFallbackBase(userId);
-
-      if (baseError) {
-        throw fallbackError;
-      }
-
-      return mapAndFilterNotifications((baseData || []) as unknown as NotificationRecord[], hiddenUserIds);
-    }
-
-    return mapAndFilterNotifications((fallbackData || []) as unknown as NotificationRecord[], hiddenUserIds);
+    throw error;
   }
 
-  return mapAndFilterNotifications((data || []) as unknown as NotificationRecord[], hiddenUserIds);
+  const rows = (data || []) as unknown as NotificationRecord[];
+  const actorProfilesById = await fetchActorProfilesById(rows);
+  return mapAndFilterNotifications(rows, hiddenUserIds, actorProfilesById);
 }

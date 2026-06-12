@@ -13,6 +13,10 @@ import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/compone
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  PLACE_ADDRESS_MAX_LENGTH,
+  PLACE_NAME_MAX_LENGTH,
+} from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceEditorBasicsStepProps = {
   address: string;
@@ -54,12 +58,14 @@ export function PlaceEditorBasicsStep({
         value={name}
         onChangeText={onNameChange}
         placeholder={tr.placeEditor.placeNamePlaceholder}
+        maxLength={PLACE_NAME_MAX_LENGTH}
       />
       <TextField
         label={tr.placeEditor.addressLabel}
         value={address}
         onChangeText={onAddressChange}
         placeholder={tr.placeEditor.addressPlaceholder}
+        maxLength={PLACE_ADDRESS_MAX_LENGTH}
       />
 
       <View style={styles.section}>

@@ -33,8 +33,19 @@ import {
 } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 import { MAX_PLACE_PHOTOS } from '@/mobile/app/features/map/catalog/placeEditor';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { logger } from '@/mobile/app/platform/feedback/logger';
 import { pickSingleImage } from '@/mobile/app/platform/media/images';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import {
+  LIST_DESCRIPTION_MAX_LENGTH,
+  LIST_NAME_MAX_LENGTH,
+  MAX_SELECTED_LISTS_PER_PLACE_SAVE,
+  PLACE_ADDRESS_MAX_LENGTH,
+  PLACE_NAME_MAX_LENGTH,
+  PLACE_NOTES_MAX_LENGTH,
+  PLACE_TITLE_MAX_LENGTH,
+  clampTextLength,
+} from '@/mobile/app/shared/validation/contentLimits';
 import { createUuid } from '@/shared/utils/id';
 
 type UsePlaceEditorStateParams = {
@@ -49,6 +60,14 @@ type UsePlaceEditorStateParams = {
   onSave: (place: Omit<Place, 'id' | 'addedAt'>, targetListIds: string[]) => Promise<void> | void;
   onCreateList?: (list: PlaceList) => Promise<void> | void;
 };
+
+function getErrorMessage(error: unknown, fallbackMessage: string) {
+  return error instanceof Error && error.message.trim() ? error.message : fallbackMessage;
+}
+
+function sanitizeNumericInput(value: string) {
+  return value.replace(/[^\d]/g, '');
+}
 
 export function usePlaceEditorState({
   visible,
@@ -86,6 +105,10 @@ export function usePlaceEditorState({
   const [showNewListForm, setShowNewListForm] = useState(false);
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null);
   const [listSelectionNotice, setListSelectionNotice] = useState<string | null>(null);
+  const [isAddingPhoto, setIsAddingPhoto] = useState(false);
+  const [isCreatingList, setIsCreatingList] = useState(false);
+  const [isPickingListCover, setIsPickingListCover] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const draggingPhotoIndexRef = useRef<number | null>(null);
   const photoTouchStartXRef = useRef<number | null>(null);
@@ -93,6 +116,9 @@ export function usePlaceEditorState({
   const photoDragX = useRef(new Animated.Value(0)).current;
   const wasVisibleRef = useRef(false);
   const initSourceKeyRef = useRef<string | null>(null);
+  const lastIncomingNameRef = useRef(placeName || existingPlace?.name || '');
+  const lastIncomingAddressRef = useRef(placeAddress || existingPlace?.address || '');
+  const hasShownMultiListGuidanceRef = useRef(false);
   const listSelectionNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearListSelectionNotice = useCallback(() => {
@@ -113,7 +139,7 @@ export function usePlaceEditorState({
     listSelectionNoticeTimeoutRef.current = setTimeout(() => {
       listSelectionNoticeTimeoutRef.current = null;
       setListSelectionNotice(null);
-    }, 2600);
+    }, 3400);
   }, []);
 
   useEffect(() => {
@@ -125,9 +151,15 @@ export function usePlaceEditorState({
   }, []);
 
   useEffect(() => {
+    const incomingName = placeName || existingPlace?.name || '';
+    const incomingAddress = placeAddress || existingPlace?.address || '';
+
     if (!visible) {
       wasVisibleRef.current = false;
       initSourceKeyRef.current = null;
+      lastIncomingNameRef.current = incomingName;
+      lastIncomingAddressRef.current = incomingAddress;
+      hasShownMultiListGuidanceRef.current = false;
       clearListSelectionNotice();
       return;
     }
@@ -135,6 +167,8 @@ export function usePlaceEditorState({
     if (draft) {
       wasVisibleRef.current = true;
       initSourceKeyRef.current = `draft:${draft.step}:${draft.name}:${draft.address}`;
+      lastIncomingNameRef.current = draft.name;
+      lastIncomingAddressRef.current = draft.address;
       setStep(draft.step);
       setName(draft.name);
       setTitle(draft.title);
@@ -165,15 +199,32 @@ export function usePlaceEditorState({
       });
 
       if (wasVisibleRef.current && initSourceKeyRef.current === sourceKey) {
+        const previousIncomingName = lastIncomingNameRef.current;
+        const previousIncomingAddress = lastIncomingAddressRef.current;
+
+        if (incomingName !== previousIncomingName) {
+          setName((prev) => (!prev.trim() || prev === previousIncomingName ? incomingName : prev));
+        }
+
+        if (incomingAddress !== previousIncomingAddress) {
+          setAddress((prev) =>
+            !prev.trim() || prev === previousIncomingAddress ? incomingAddress : prev,
+          );
+        }
+
+        lastIncomingNameRef.current = incomingName;
+        lastIncomingAddressRef.current = incomingAddress;
         return;
       }
 
       wasVisibleRef.current = true;
       initSourceKeyRef.current = sourceKey;
+      lastIncomingNameRef.current = incomingName;
+      lastIncomingAddressRef.current = incomingAddress;
       setStep(0);
-      setName(placeName || existingPlace?.name || '');
+      setName(incomingName);
       setTitle(existingPlace?.title || '');
-      setAddress(placeAddress || existingPlace?.address || '');
+      setAddress(incomingAddress);
       setNotes(existingPlace?.notes || '');
       setSelectedCategories(getInitialSelectedCategories(existingPlace));
       setRating(existingPlace?.rating || 0);
@@ -255,11 +306,6 @@ export function usePlaceEditorState({
 
   const availableListIds = useMemo(() => new Set(lists.map((list) => list.id)), [lists]);
 
-  const selectableLists = useMemo(
-    () => lists.filter((list) => !duplicateListIds.has(list.id) || currentMembershipListIds.has(list.id)),
-    [currentMembershipListIds, duplicateListIds, lists],
-  );
-
   const safeSelectedLists = useMemo(
     () =>
       filterSafeSelectedLists(
@@ -270,49 +316,64 @@ export function usePlaceEditorState({
       ),
     [availableListIds, currentMembershipListIds, duplicateListIds, selectedLists],
   );
+  const pendingAddedListCount = useMemo(
+    () => safeSelectedLists.filter((listId) => !currentMembershipListIds.has(listId)).length,
+    [currentMembershipListIds, safeSelectedLists],
+  );
 
-  const hasValidName = name.trim().length >= 2;
-  const hasPendingListCreation = Boolean(onCreateList && showNewListForm && newListName.trim());
-  const hasTargetListSelection = safeSelectedLists.length > 0 || hasPendingListCreation;
-
-  useEffect(() => {
-    if (!visible || showNewListForm || safeSelectedLists.length > 0) {
-      return;
-    }
-
-    const firstSelectableList = selectableLists[0];
-
-    if (firstSelectableList) {
-      setSelectedLists([firstSelectableList.id]);
-    }
-  }, [safeSelectedLists.length, selectableLists, showNewListForm, visible]);
+  const hasTargetListSelection = safeSelectedLists.length > 0;
 
   const showValidationFeedback = useCallback(() => {
-    if (!hasValidName) {
-      showToast('Mekan adi en az 2 karakter olmali', 'error');
-      return;
-    }
-
     if (!hasTargetListSelection) {
       showListSelectionNotice(
         lists.length > 0
-          ? 'Kaydetmek icin en az bir hedef liste sec.'
-          : 'Kaydetmek icin once bir liste olustur.',
+          ? 'Devam etmek icin en az bir hedef liste sec.'
+          : showNewListForm && newListName.trim()
+            ? 'Devam etmek icin once listeyi olustur ve sec.'
+            : 'Devam etmek icin once bir liste olustur.',
       );
     }
-  }, [hasTargetListSelection, hasValidName, lists.length, showListSelectionNotice]);
+  }, [hasTargetListSelection, lists.length, newListName, showListSelectionNotice, showNewListForm]);
+
+  const handleNameChange = useCallback((value: string) => {
+    setName(clampTextLength(value, PLACE_NAME_MAX_LENGTH));
+  }, []);
+
+  const handleTitleChange = useCallback((value: string) => {
+    setTitle(clampTextLength(value, PLACE_TITLE_MAX_LENGTH));
+  }, []);
+
+  const handleAddressChange = useCallback((value: string) => {
+    setAddress(clampTextLength(value, PLACE_ADDRESS_MAX_LENGTH));
+  }, []);
+
+  const handleNotesChange = useCallback((value: string) => {
+    setNotes(clampTextLength(value, PLACE_NOTES_MAX_LENGTH));
+  }, []);
+
+  const handleNewListNameChange = useCallback((value: string) => {
+    setNewListName(clampTextLength(value, LIST_NAME_MAX_LENGTH));
+  }, []);
+
+  const handleNewListDescriptionChange = useCallback((value: string) => {
+    setNewListDescription(clampTextLength(value, LIST_DESCRIPTION_MAX_LENGTH));
+  }, []);
+
+  const handlePriceMinChange = useCallback((value: string) => {
+    setPriceMin(sanitizeNumericInput(value));
+  }, []);
+
+  const handlePriceMaxChange = useCallback((value: string) => {
+    setPriceMax(sanitizeNumericInput(value));
+  }, []);
 
   const canContinue = useMemo(() => {
-    if (step === 0) {
-      return hasValidName;
-    }
-
     if (step === 2 || step === 3) {
-      return hasValidName && hasTargetListSelection;
+      return hasTargetListSelection;
     }
 
     return true;
-  }, [hasTargetListSelection, hasValidName, step]);
+  }, [hasTargetListSelection, step]);
 
   const toggleList = useCallback((listId: string, options?: { blocked?: boolean; listName?: string }) => {
     if (options?.blocked) {
@@ -324,15 +385,53 @@ export function usePlaceEditorState({
       return;
     }
 
-    setSelectedLists((prev) =>
-      prev.includes(listId) ? prev.filter((item) => item !== listId) : [...prev, listId],
-    );
-  }, [showListSelectionNotice]);
+    let blockedBySelectionLimit = false;
+    let shouldShowMultiListGuidance = false;
+
+    setSelectedLists((prev) => {
+      if (prev.includes(listId)) {
+        return prev.filter((item) => item !== listId);
+      }
+
+      if (!currentMembershipListIds.has(listId)) {
+        const nextPendingAddedListCount = prev.filter(
+          (item) => !currentMembershipListIds.has(item),
+        ).length;
+
+        if (nextPendingAddedListCount >= MAX_SELECTED_LISTS_PER_PLACE_SAVE) {
+          blockedBySelectionLimit = true;
+          return prev;
+        }
+      }
+
+      const nextSelectedLists = [...prev, listId];
+
+      if (nextSelectedLists.length > 1 && !hasShownMultiListGuidanceRef.current) {
+        shouldShowMultiListGuidance = true;
+      }
+
+      return nextSelectedLists;
+    });
+
+    if (blockedBySelectionLimit) {
+      showListSelectionNotice(
+        `Bir mekani ayni anda en fazla ${MAX_SELECTED_LISTS_PER_PLACE_SAVE} listeye ekleyebilirsin.`,
+      );
+      return;
+    }
+
+    if (shouldShowMultiListGuidance) {
+      hasShownMultiListGuidanceRef.current = true;
+      showListSelectionNotice(
+        'Ayni mekani birden fazla listeye ekleyebilirsin. Daha ozgun kartlar icin listelerine ayri ayri ekleyip bilgileri ozellestirmeni oneririz.',
+      );
+    }
+  }, [currentMembershipListIds, showListSelectionNotice]);
 
   const toggleCategory = useCallback((value: string) => {
     setSelectedCategories((prev) => {
       if (prev.includes(value)) {
-        return prev.length === 1 ? prev : prev.filter((item) => item !== value);
+        return prev.filter((item) => item !== value);
       }
 
       return sortSelectedCategories([...prev, value]);
@@ -352,12 +451,22 @@ export function usePlaceEditorState({
   }, []);
 
   const handleAddPhoto = useCallback(async () => {
-    const uri = await pickSingleImage();
-
-    if (uri) {
-      setPhotos((prev) => [...prev, uri].slice(0, MAX_PLACE_PHOTOS));
+    if (isAddingPhoto) {
+      return;
     }
-  }, []);
+
+    setIsAddingPhoto(true);
+
+    try {
+      const uri = await pickSingleImage();
+
+      if (uri) {
+        setPhotos((prev) => [...prev, uri].slice(0, MAX_PLACE_PHOTOS));
+      }
+    } finally {
+      setIsAddingPhoto(false);
+    }
+  }, [isAddingPhoto]);
 
   const handleRemovePhoto = useCallback((index: number) => {
     setPhotos((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
@@ -539,15 +648,35 @@ export function usePlaceEditorState({
   );
 
   const handlePickListCover = useCallback(async () => {
-    const uri = await pickSingleImage();
-
-    if (uri) {
-      setNewListCoverImage(uri);
+    if (isPickingListCover) {
+      return;
     }
-  }, []);
+
+    setIsPickingListCover(true);
+
+    try {
+      const uri = await pickSingleImage();
+
+      if (uri) {
+        setNewListCoverImage(uri);
+      }
+    } finally {
+      setIsPickingListCover(false);
+    }
+  }, [isPickingListCover]);
 
   const createPendingList = useCallback(async () => {
-    if (!newListName.trim() || !onCreateList) {
+    if (isCreatingList || !onCreateList) {
+      return null;
+    }
+
+    const normalizedNewListName = clampTextLength(newListName, LIST_NAME_MAX_LENGTH).trim();
+    const normalizedNewListDescription = clampTextLength(
+      newListDescription,
+      LIST_DESCRIPTION_MAX_LENGTH,
+    ).trim();
+
+    if (!normalizedNewListName) {
       return null;
     }
 
@@ -555,8 +684,8 @@ export function usePlaceEditorState({
     const list: PlaceList = {
       id: newListId,
       userId: '',
-      name: newListName.trim(),
-      description: newListDescription.trim() || undefined,
+      name: normalizedNewListName,
+      description: normalizedNewListDescription || undefined,
       emoji: tr.placeEditor.defaultEmoji,
       coverImage: newListCoverImage || undefined,
       places: [],
@@ -568,38 +697,77 @@ export function usePlaceEditorState({
     };
 
     try {
+      setIsCreatingList(true);
       await onCreateList(list);
-      setSelectedLists((prev) => (prev.includes(newListId) ? prev : [...prev, newListId]));
+      let blockedBySelectionLimit = false;
+
+      setSelectedLists((prev) => {
+        const pendingSelectionCount = prev.filter(
+          (listId) => !currentMembershipListIds.has(listId),
+        ).length;
+
+        if (
+          prev.includes(newListId) ||
+          pendingSelectionCount >= MAX_SELECTED_LISTS_PER_PLACE_SAVE
+        ) {
+          blockedBySelectionLimit = true;
+          return prev;
+        }
+
+        return [...prev, newListId];
+      });
       setShowNewListForm(false);
       setNewListName('');
       setNewListDescription('');
       setNewListCoverImage('');
       setNewListPublic(true);
       showToast(tr.placeEditor.newListCreated, 'success');
+
+      if (blockedBySelectionLimit) {
+        showListSelectionNotice(
+          `Liste olusturuldu. Ayni anda en fazla ${MAX_SELECTED_LISTS_PER_PLACE_SAVE} yeni liste secilebildigi icin otomatik secilmedi.`,
+        );
+      }
+
       return newListId;
-    } catch {
-      showToast('Liste olusturulamadi', 'error');
+    } catch (error) {
+      logger.error('place-editor', 'Failed to create list', error);
+      showToast(getErrorMessage(error, 'Liste olusturulamadi'), 'error');
       return null;
+    } finally {
+      setIsCreatingList(false);
     }
-  }, [newListCoverImage, newListDescription, newListName, newListPublic, onCreateList]);
+  }, [
+    currentMembershipListIds,
+    isCreatingList,
+    newListCoverImage,
+    newListDescription,
+    newListName,
+    newListPublic,
+    onCreateList,
+    showListSelectionNotice,
+  ]);
 
   const handleCreateList = useCallback(async () => {
     await createPendingList();
   }, [createPendingList]);
 
   const handleSave = useCallback(async () => {
-    if (!canContinue) {
+    if (isSaving || isCreatingList || !canContinue) {
       showValidationFeedback();
       return;
     }
 
     try {
-      let targetListIds = safeSelectedLists;
-
-      if (targetListIds.length === 0 && hasPendingListCreation) {
-        const createdListId = await createPendingList();
-        targetListIds = createdListId ? [createdListId] : [];
+      setIsSaving(true);
+      if (pendingAddedListCount > MAX_SELECTED_LISTS_PER_PLACE_SAVE) {
+        showListSelectionNotice(
+          `Bir mekani ayni anda en fazla ${MAX_SELECTED_LISTS_PER_PLACE_SAVE} listeye ekleyebilirsin.`,
+        );
+        return;
       }
+
+      const targetListIds = safeSelectedLists;
 
       if (targetListIds.length === 0) {
         showValidationFeedback();
@@ -637,16 +805,16 @@ export function usePlaceEditorState({
           : fallbackMessage;
 
       showToast(message || fallbackMessage, 'error');
+    } finally {
+      setIsSaving(false);
     }
   }, [
     address,
     atmosphere,
     bestTimes,
     canContinue,
-    createPendingList,
     existingPlace,
     features,
-    hasPendingListCreation,
     lat,
     lng,
     name,
@@ -654,6 +822,7 @@ export function usePlaceEditorState({
     onSave,
     placeAddress,
     placeName,
+    pendingAddedListCount,
     photos,
     priceMax,
     priceMin,
@@ -663,6 +832,8 @@ export function usePlaceEditorState({
     showValidationFeedback,
     studentFriendly,
     title,
+    isCreatingList,
+    isSaving,
   ]);
 
   const goToPreviousStep = useCallback(() => {
@@ -701,6 +872,10 @@ export function usePlaceEditorState({
     handlePickListCover,
     handleRemovePhoto,
     handleSave,
+    isAddingPhoto,
+    isCreatingList,
+    isPickingListCover,
+    isSaving,
     listSelectionNotice,
     name,
     newListCoverImage,
@@ -722,22 +897,22 @@ export function usePlaceEditorState({
     selectedCategories,
     selectedLists,
     selectedPreviewList,
-    setAddress,
+    setAddress: handleAddressChange,
     setAtmosphere,
     setBestTimes,
     setFeatures,
-    setName,
+    setName: handleNameChange,
     setNewListCoverImage,
-    setNewListDescription,
-    setNewListName,
+    setNewListDescription: handleNewListDescriptionChange,
+    setNewListName: handleNewListNameChange,
     setNewListPublic,
-    setNotes,
-    setPriceMax,
-    setPriceMin,
+    setNotes: handleNotesChange,
+    setPriceMax: handlePriceMaxChange,
+    setPriceMin: handlePriceMinChange,
     setRating,
     setShowNewListForm,
     setStudentFriendly,
-    setTitle,
+    setTitle: handleTitleChange,
     showNewListForm,
     step,
     studentFriendly,

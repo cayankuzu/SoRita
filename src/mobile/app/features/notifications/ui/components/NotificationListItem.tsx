@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Heart, MapPin, MessageCircle, Star, UserPlus } from 'lucide-react-native';
 
-import type { MobileNotification } from '@/mobile/app/data/repositories/notificationRepository';
+import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
@@ -49,7 +49,7 @@ const ICON_META = {
   },
 } as const;
 
-export function NotificationListItem({
+function NotificationListItemComponent({
   notification,
   onPress,
   onAcceptFollowRequest,
@@ -116,6 +116,18 @@ export function NotificationListItem({
     </InstantPressable>
   );
 }
+
+function areNotificationListItemPropsEqual(
+  previous: NotificationListItemProps,
+  next: NotificationListItemProps,
+) {
+  return previous.notification === next.notification;
+}
+
+export const NotificationListItem = React.memo(
+  NotificationListItemComponent,
+  areNotificationListItemPropsEqual,
+);
 
 const styles = StyleSheet.create({
   row: {

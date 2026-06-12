@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { MapPin } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import {
+  openStackScreen,
+  useAppNavigation,
+  useRootStackRoute,
+} from '@/mobile/app/app-shell/navigation/navigation';
 import { useListDetailScreenState } from '@/mobile/app/features/lists/application/useListDetailScreenState';
 import { ListDetailHeader } from '@/mobile/app/features/lists/ui/components/ListDetailHeader';
 import { ListDetailPlacesSection } from '@/mobile/app/features/lists/ui/components/ListDetailPlacesSection';
@@ -16,11 +20,10 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 
 export function ListDetailScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useAppNavigation();
+  const route = useRootStackRoute<'ListDetail'>();
   const { user } = useAuth();
   const [deletePlaceId, setDeletePlaceId] = useState<string | null>(null);
   const [highlightedPlaceId, setHighlightedPlaceId] = useState<string | null>(null);
@@ -28,8 +31,8 @@ export function ListDetailScreen() {
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
 
-  const listId = route.params?.listId as string;
-  const placeId = route.params?.placeId as string | undefined;
+  const listId = route.params?.listId ?? '';
+  const placeId = route.params?.placeId;
   const {
     canReportList,
     deletePlace,

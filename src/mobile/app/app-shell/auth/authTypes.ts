@@ -9,6 +9,11 @@ export type RegisterData = {
   interests?: string[];
   profilePhoto?: string;
   coverPhoto?: string;
+  legalConsent: {
+    acceptedAt: string;
+    documentsAccepted: string[];
+    version: string;
+  };
 };
 
 export type AuthActionCode =
@@ -31,6 +36,7 @@ export type AuthContextType = {
   login: (email: string, password: string) => Promise<AuthActionResult>;
   register: (data: RegisterData) => Promise<AuthActionResult>;
   resendConfirmationEmail: (email: string) => Promise<AuthActionResult>;
+  requestPasswordResetEmail: (email: string) => Promise<AuthActionResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   requestPasswordReset: (currentPassword: string) => Promise<AuthActionResult>;

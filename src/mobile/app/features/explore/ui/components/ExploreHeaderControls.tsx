@@ -53,7 +53,9 @@ export function ExploreHeaderControls({
       ? tr.explore.search.list
       : activeTab === 'places'
         ? tr.explore.search.place
-        : tr.explore.search.person;
+        : activeTab === 'photos'
+          ? 'Fotograf veya mekan ara...'
+          : tr.explore.search.person;
 
   return (
     <>
@@ -63,18 +65,18 @@ export function ExploreHeaderControls({
       </View>
 
       <View style={styles.filtersSection}>
-        {activeTab !== 'photos' ? (
-          <View style={styles.searchWrap}>
-            <Search color={colors.textSoft} size={16} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={onSearchQueryChange}
-              placeholder={placeholder}
-              placeholderTextColor={colors.textSoft}
-              style={styles.searchInput}
-            />
-          </View>
-        ) : null}
+        <View style={styles.searchWrap}>
+          <Search color={colors.textSoft} size={16} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={onSearchQueryChange}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textSoft}
+            style={styles.searchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
 
         <View style={styles.tabRail}>
           <ScrollView

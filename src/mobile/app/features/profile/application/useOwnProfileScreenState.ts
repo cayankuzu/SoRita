@@ -1,42 +1,85 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
+import {
+  useCreateListMutation,
+  useDeleteListMutation,
+  useUpdateListMutation,
+  useUpdateListsMutation,
+} from '@/mobile/app/data/hooks/useListMutations';
+import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
+import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
-import { useStorageVersion } from '@/mobile/app/shared/hooks/useStorageVersion';
-import { buildPlaceFeedCardItems } from '@/mobile/app/shared/utils/placeAggregation';
+import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
 
 type UseOwnProfileScreenStateParams = {
   user: User | null;
 };
 
 export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParams) {
-  const storageVersion = useStorageVersion();
   const userId = user?.id;
+  const visibleDataQuery = useVisibleDataQuery(userId, {
+    ownerId: userId || undefined,
+    listPageSize: 12,
+  });
+  const { mutateAsync: createListAsync } = useCreateListMutation();
+  const { mutateAsync: deleteListAsync } = useDeleteListMutation();
+  const { mutateAsync: updateListAsync } = useUpdateListMutation();
+  const { mutateAsync: updateListsAsync } = useUpdateListsMutation();
+  const { mutateAsync: deletePlaceAsync } = useDeletePlaceMutation();
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = visibleDataQuery;
+  const visibleUsers = visibleDataQuery.data?.users || [];
+  const visibleLists = visibleDataQuery.data?.lists || [];
+  const usersById = useMemo(
+    () => new Map(visibleUsers.map((item) => [item.id, item])),
+    [visibleUsers],
+  );
+  const errorMessage = visibleDataQuery.error
+    ? getUserFacingErrorMessage(
+        visibleDataQuery.error,
+        'Profil verileri su an yuklenemiyor. Lutfen tekrar dene.',
+      )
+    : null;
 
   const loadLists = useCallback(async () => {
     if (!userId) {
       return;
     }
 
-    await storage.refreshVisibleData(userId);
-  }, [userId]);
+    await refetch();
+  }, [refetch, userId]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadLists);
+
+  useEffect(() => {
+    void loadLists();
+  }, [loadLists]);
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || !fetchNextPage) {
+      return;
+    }
+
+    void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const freshUser = useMemo(() => {
     if (!userId) {
       return null;
     }
 
-    return storage.findUserById(userId) || user;
-  }, [storageVersion, user, userId]);
+    return usersById.get(userId) || user;
+  }, [user, userId, usersById]);
 
-  const lists = useMemo(() => (userId ? storage.getListsByUserId(userId) : []), [storageVersion, userId]);
+  const lists = useMemo(
+    () => (userId ? visibleLists.filter((list) => list.userId === userId) : []),
+    [userId, visibleLists],
+  );
 
   const allPlaces = useMemo(
-    () => buildPlaceFeedCardItems(lists, (ownerId) => storage.findUserById(ownerId)),
-    [lists, storageVersion],
+    () => buildPlaceFeedCardItems(lists, (ownerId) => usersById.get(ownerId)),
+    [lists, usersById],
   );
 
   const allPhotos = useMemo(
@@ -47,17 +90,17 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
   const followerUsers = useMemo<User[]>(
     () =>
       (freshUser?.followers || [])
-        .map((targetUserId) => storage.findUserById(targetUserId))
+        .map((targetUserId) => usersById.get(targetUserId))
         .filter((item): item is User => Boolean(item)),
-    [freshUser, storageVersion],
+    [freshUser, usersById],
   );
 
   const followingUsers = useMemo<User[]>(
     () =>
       (freshUser?.following || [])
-        .map((targetUserId) => storage.findUserById(targetUserId))
+        .map((targetUserId) => usersById.get(targetUserId))
         .filter((item): item is User => Boolean(item)),
-    [freshUser, storageVersion],
+    [freshUser, usersById],
   );
 
   const createList = useCallback(async (list: PlaceList) => {
@@ -65,24 +108,24 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
       return;
     }
 
-    await storage.createList({ ...list, userId });
-  }, [userId]);
+    await createListAsync({ ...list, userId });
+  }, [createListAsync, userId]);
 
   const deleteList = useCallback(async (listId: string) => {
-    await storage.deleteList(listId);
-  }, []);
+    await deleteListAsync(listId);
+  }, [deleteListAsync]);
 
   const updateList = useCallback(async (list: PlaceList) => {
-    await storage.updateList(list);
-  }, []);
+    await updateListAsync(list);
+  }, [updateListAsync]);
 
   const updateLists = useCallback(async (listsToUpdate: PlaceList[]) => {
-    await storage.updateLists(listsToUpdate);
-  }, []);
+    await updateListsAsync(listsToUpdate);
+  }, [updateListsAsync]);
 
   const deletePlace = useCallback(async (placeId: string) => {
-    await storage.deletePlace(placeId);
-  }, []);
+    await deletePlaceAsync(placeId);
+  }, [deletePlaceAsync]);
 
   return {
     allPhotos,
@@ -90,12 +133,18 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
     createList,
     deleteList,
     deletePlace,
+    errorMessage,
+    fetchNextPage,
     followerUsers,
     followingUsers,
     freshUser,
+    hasNextPage,
+    hasPartialDataError: visibleDataQuery.hasPartialDataError,
+    isFetchingNextPage,
     lists,
     onRefresh,
     refreshing,
+    retry: loadLists,
     updateList,
     updateLists,
   };

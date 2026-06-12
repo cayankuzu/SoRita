@@ -19,6 +19,10 @@ import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/co
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  PLACE_NOTES_MAX_LENGTH,
+  PLACE_TITLE_MAX_LENGTH,
+} from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceEditorFinalStepProps = {
   atmosphere: string[];
@@ -27,6 +31,9 @@ type PlaceEditorFinalStepProps = {
   duplicateListIds: Set<string>;
   features: string[];
   generalFeatureOptions: string[];
+  isAddingPhoto: boolean;
+  isCreatingList: boolean;
+  isPickingListCover: boolean;
   listSelectionNotice?: string | null;
   lists: PlaceList[];
   newListCoverImage: string;
@@ -66,6 +73,9 @@ export function PlaceEditorFinalStep({
   duplicateListIds,
   features,
   generalFeatureOptions,
+  isAddingPhoto,
+  isCreatingList,
+  isPickingListCover,
   listSelectionNotice,
   lists,
   newListCoverImage,
@@ -104,6 +114,7 @@ export function PlaceEditorFinalStep({
         value={title}
         onChangeText={onTitleChange}
         placeholder={tr.placeEditor.shortTitlePlaceholder}
+        maxLength={PLACE_TITLE_MAX_LENGTH}
       />
       <TextField
         label={tr.placeEditor.notesLabel}
@@ -111,6 +122,7 @@ export function PlaceEditorFinalStep({
         onChangeText={onNotesChange}
         multilineRows={4}
         placeholder={tr.placeEditor.notesPlaceholder}
+        maxLength={PLACE_NOTES_MAX_LENGTH}
       />
 
       <View style={styles.section}>
@@ -171,9 +183,17 @@ export function PlaceEditorFinalStep({
               );
             })}
             {photos.length < MAX_PLACE_PHOTOS ? (
-              <Pressable style={styles.photoAddTile} onPress={() => void onAddPhoto()}>
+              <Pressable
+                style={[styles.photoAddTile, isAddingPhoto ? styles.photoAddTileBusy : null]}
+                onPress={() => {
+                  void onAddPhoto();
+                }}
+                disabled={isAddingPhoto}
+              >
                 <ImagePlus color={colors.primary} size={20} />
-                <Text style={styles.addPhotoText}>{tr.placeEditor.add}</Text>
+                <Text style={styles.addPhotoText}>
+                  {isAddingPhoto ? 'Ekleniyor' : tr.placeEditor.add}
+                </Text>
               </Pressable>
             ) : null}
           </ScrollView>
@@ -183,6 +203,8 @@ export function PlaceEditorFinalStep({
       <PlaceEditorListSelectionSection
         currentMembershipListIds={currentMembershipListIds}
         duplicateListIds={duplicateListIds}
+        isCreatingList={isCreatingList}
+        isPickingListCover={isPickingListCover}
         listSelectionNotice={listSelectionNotice}
         lists={lists}
         newListCoverImage={newListCoverImage}
@@ -283,6 +305,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+  },
+  photoAddTileBusy: {
+    opacity: 0.6,
   },
   addPhotoText: {
     fontSize: 12,

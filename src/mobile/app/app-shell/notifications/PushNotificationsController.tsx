@@ -2,22 +2,19 @@ import React, { useCallback, useEffect, useRef } from 'react';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/RootNavigator';
+import { queryClient } from '@/mobile/app/data/query/queryClient';
+import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import { registerPushNotifications } from '@/mobile/app/data/repositories/pushNotificationRepository';
-import {
-  markNotificationRead,
-  refreshNotifications,
-} from '@/mobile/app/data/repositories/notificationRepository';
+import { markNotificationRead } from '@/mobile/app/data/repositories/notificationRepository';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
 import { logger } from '@/mobile/app/platform/feedback/logger';
-
-let notificationHandlerConfigured = false;
 
 async function loadNotificationsModule() {
   return import('expo-notifications');
 }
 
 async function ensureNotificationHandler() {
-  if (!notificationRuntime.supportsNotificationObservers || notificationHandlerConfigured) {
+  if (!notificationRuntime.supportsNotificationObservers) {
     return;
   }
 
@@ -31,8 +28,6 @@ async function ensureNotificationHandler() {
       shouldSetBadge: true,
     }),
   });
-
-  notificationHandlerConfigured = true;
 }
 
 type PushPayload = {
@@ -69,8 +64,10 @@ export function PushNotificationsController() {
       }
 
       if (user?.id && payload.notificationId) {
-        void markNotificationRead(payload.notificationId, user.id).catch((error) => {
+        void markNotificationRead(payload.notificationId).catch((error) => {
           logger.warn('push', 'Failed to mark notification as read from push tap', error);
+        }).finally(() => {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(user.id) });
         });
       }
 
@@ -128,9 +125,10 @@ export function PushNotificationsController() {
             return;
           }
 
-          void refreshNotifications(user.id).catch((error) => {
-            logger.warn('push', 'Failed to refresh notifications after foreground push', error);
-          });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(user.id) })
+            .catch((error) => {
+              logger.warn('push', 'Failed to invalidate notifications after foreground push', error);
+            });
         });
 
         responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {

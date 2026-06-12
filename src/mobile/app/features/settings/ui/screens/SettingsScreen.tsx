@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigation } from '@react-navigation/native';
 import {
   Ban,
   Lock,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useSettingsAccountState } from '@/mobile/app/features/settings/application/useSettingsAccountState';
 import { useSettingsScreenState } from '@/mobile/app/features/settings/application/useSettingsScreenState';
 import { SettingsBlockedUsersView } from '@/mobile/app/features/settings/ui/components/SettingsBlockedUsersView';
@@ -24,7 +24,6 @@ import {
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 
 const editProfileSteps = [
   {
@@ -46,7 +45,7 @@ const editProfileSteps = [
 ] as const;
 
 export function SettingsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
   const { user, logout, refreshUser, requestPasswordReset } = useAuth();
   const {
     blockedUsers,
@@ -78,6 +77,7 @@ export function SettingsScreen() {
     goToPreviousEditStep,
     handleLogout,
     isPublicAccount,
+    isSavingProfile,
     openBlocked,
     openEditProfile,
     openPassword,
@@ -86,6 +86,7 @@ export function SettingsScreen() {
     resetMailSent,
     saveAccountPrivacy,
     saveProfile,
+    saveProfileMessage,
     selectCoverPhoto,
     selectProfilePhoto,
     sendPasswordResetMail,
@@ -193,6 +194,7 @@ export function SettingsScreen() {
         editName={editName}
         editStep={editStep}
         editUsername={editUsername}
+        isSavingProfile={isSavingProfile}
         onBack={goBack}
         onChangeBio={setEditBio}
         onChangeName={setEditName}
@@ -204,6 +206,7 @@ export function SettingsScreen() {
         }}
         profilePhoto={profilePhoto}
         refreshing={refreshing}
+        saveProfileMessage={saveProfileMessage}
         selectCoverPhoto={selectCoverPhoto}
         selectProfilePhoto={selectProfilePhoto}
         steps={editProfileSteps}

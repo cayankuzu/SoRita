@@ -1,21 +1,16 @@
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useMemo, useState } from 'react';
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
-import { checkAccountAvailability } from '@/mobile/app/data/repositories/accountAvailability';
 import type { User } from '@/mobile/app/data/contracts/entities';
+import { useUsernameAvailabilityQuery } from '@/mobile/app/data/hooks/useAccountAvailabilityQuery';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { logger } from '@/mobile/app/platform/feedback/logger';
 import { pickSingleImage } from '@/mobile/app/platform/media/images';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type SettingsView = 'main' | 'editProfile' | 'privacy' | 'password' | 'blocked';
 
-type AvailabilityStatus = 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid' | 'error';
 type HelperTone = 'muted' | 'danger' | 'success';
-
-type AvailabilityState = {
-  status: AvailabilityStatus;
-  message?: string;
-};
 
 type UseSettingsScreenStateParams = {
   deleteCurrentUser: () => Promise<void>;
@@ -26,6 +21,14 @@ type UseSettingsScreenStateParams = {
   requestPasswordReset: AuthContextType['requestPasswordReset'];
   saveUserProfile: (nextUser: User) => Promise<User>;
 };
+
+function getErrorMessage(error: unknown, fallbackMessage: string) {
+  return error instanceof Error && error.message.trim() ? error.message : fallbackMessage;
+}
+
+function hasPendingLocalMedia(uri?: string) {
+  return Boolean(uri && !/^https?:\/\//i.test(uri));
+}
 
 export function useSettingsScreenState({
   deleteCurrentUser,
@@ -50,8 +53,22 @@ export function useSettingsScreenState({
   const [isPublicAccount, setIsPublicAccount] = useState(freshUser?.isPublicAccount ?? true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [resetMailSent, setResetMailSent] = useState(false);
-  const [usernameAvailability, setUsernameAvailability] = useState<AvailabilityState>({
-    status: 'idle',
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const normalizedEditUsername = editUsername.trim().toLowerCase();
+  const currentUsername = freshUser?.username.trim().toLowerCase() || '';
+  const { availability: usernameAvailability } = useUsernameAvailabilityQuery({
+    active: Boolean(freshUser && view === 'editProfile'),
+    availableMessage:
+      normalizedEditUsername === currentUsername
+        ? 'Mevcut kullanici adin korunacak'
+        : 'Bu kullanici adi kullanilabilir',
+    checkingMessage: 'Kullanici adi kontrol ediliyor...',
+    errorMessage: 'Kullanici adi su an kontrol edilemiyor',
+    excludeUserId: freshUser?.id,
+    invalidMessage: (value) =>
+      value.length < 3 ? 'Kullanici adi en az 3 karakter olmali' : null,
+    unavailableMessage: 'Bu kullanici adi zaten kullaniliyor',
+    value: editUsername,
   });
 
   const resetSettingsState = useCallback(async () => {
@@ -70,87 +87,14 @@ export function useSettingsScreenState({
     setIsPublicAccount(nextUser.isPublicAccount ?? true);
     setCurrentPassword('');
     setResetMailSent(false);
-    setUsernameAvailability({ status: 'idle' });
   }, [refreshCurrentUserState]);
-
-  useEffect(() => {
-    if (!freshUser || view !== 'editProfile') {
-      return;
-    }
-
-    const normalizedUsername = editUsername.trim().toLowerCase();
-    const currentUsername = freshUser.username.trim().toLowerCase();
-
-    if (!normalizedUsername) {
-      setUsernameAvailability({ status: 'idle' });
-      return;
-    }
-
-    if (normalizedUsername.length < 3) {
-      setUsernameAvailability({
-        status: 'invalid',
-        message: 'Kullanici adi en az 3 karakter olmali',
-      });
-      return;
-    }
-
-    if (normalizedUsername === currentUsername) {
-      setUsernameAvailability({
-        status: 'available',
-        message: 'Mevcut kullanici adin korunacak',
-      });
-      return;
-    }
-
-    setUsernameAvailability({
-      status: 'checking',
-      message: 'Kullanici adi kontrol ediliyor...',
-    });
-
-    let cancelled = false;
-    const timeoutId = setTimeout(() => {
-      void checkAccountAvailability({
-        username: normalizedUsername,
-        excludeUserId: freshUser.id,
-      })
-        .then((result) => {
-          if (cancelled) {
-            return;
-          }
-
-          if (result.usernameAvailable) {
-            setUsernameAvailability({
-              status: 'available',
-              message: 'Bu kullanici adi kullanilabilir',
-            });
-            return;
-          }
-
-          setUsernameAvailability({
-            status: 'unavailable',
-            message: 'Bu kullanici adi zaten kullaniliyor',
-          });
-        })
-        .catch(() => {
-          if (cancelled) {
-            return;
-          }
-
-          setUsernameAvailability({
-            status: 'error',
-            message: 'Kullanici adi su an kontrol edilemiyor',
-          });
-        });
-    }, 350);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [editUsername, freshUser, view]);
 
   const saveProfile = useCallback(async () => {
     if (!freshUser) {
+      return;
+    }
+
+    if (isSavingProfile) {
       return;
     }
 
@@ -175,13 +119,18 @@ export function useSettingsScreenState({
       isPublicAccount: freshUser.isPublicAccount ?? true,
     };
 
+    setIsSavingProfile(true);
+
     try {
       await saveUserProfile(updatedUser);
       showToast(tr.settings.editProfile.saved, 'success');
       setView('main');
       setEditStep(0);
-    } catch {
-      showToast('Profil guncellenemedi', 'error');
+    } catch (error) {
+      logger.error('settings', 'Failed to save profile', error);
+      showToast(getErrorMessage(error, 'Profil guncellenemedi'), 'error');
+    } finally {
+      setIsSavingProfile(false);
     }
   }, [
     coverPhoto,
@@ -190,6 +139,7 @@ export function useSettingsScreenState({
     editName,
     editUsername,
     freshUser,
+    isSavingProfile,
     profilePhoto,
     saveUserProfile,
     usernameAvailability.status,
@@ -214,9 +164,10 @@ export function useSettingsScreenState({
           nextIsPublicAccount ? tr.settings.privacy.publicSaved : tr.settings.privacy.privateSaved,
           'success',
         );
-      } catch {
+      } catch (error) {
+        logger.error('settings', 'Failed to update account privacy', error);
         setIsPublicAccount(freshUser.isPublicAccount ?? true);
-        showToast('Hesap gizliligi guncellenemedi', 'error');
+        showToast(getErrorMessage(error, 'Hesap gizliligi guncellenemedi'), 'error');
       }
     },
     [freshUser, persistAccountPrivacy],
@@ -239,8 +190,9 @@ export function useSettingsScreenState({
       setResetMailSent(true);
       setCurrentPassword('');
       showToast(tr.settings.password.resetSent, 'success');
-    } catch {
-      showToast('Sifre sifirlama maili gonderilemedi', 'error');
+    } catch (error) {
+      logger.error('settings', 'Failed to send password reset email', error);
+      showToast(getErrorMessage(error, 'Sifre sifirlama maili gonderilemedi'), 'error');
     }
   }, [currentPassword, requestPasswordReset]);
 
@@ -262,8 +214,9 @@ export function useSettingsScreenState({
 
     try {
       await logout();
-    } catch {
-      showToast('Cikis yapilamadi', 'error');
+    } catch (error) {
+      logger.error('settings', 'Failed to logout', error);
+      showToast(getErrorMessage(error, 'Cikis yapilamadi'), 'error');
     }
   }, [logout]);
 
@@ -306,6 +259,18 @@ export function useSettingsScreenState({
         : true,
     [editName, editStep, usernameAvailability.status],
   );
+
+  const saveProfileMessage = useMemo(() => {
+    if (!isSavingProfile) {
+      return '';
+    }
+
+    if (hasPendingLocalMedia(profilePhoto) || hasPendingLocalMedia(coverPhoto)) {
+      return 'Fotograflarin yukleniyor. Bu islem genelde kisa surer.';
+    }
+
+    return 'Profil bilgilerin kaydediliyor. Lutfen kisa bir sure bekle.';
+  }, [coverPhoto, isSavingProfile, profilePhoto]);
 
   const openEditProfile = useCallback(() => {
     void resetSettingsState();
@@ -394,6 +359,7 @@ export function useSettingsScreenState({
     goToPreviousEditStep,
     handleLogout,
     isPublicAccount,
+    isSavingProfile,
     openBlocked,
     openEditProfile,
     openPassword,
@@ -402,6 +368,7 @@ export function useSettingsScreenState({
     resetMailSent,
     saveAccountPrivacy,
     saveProfile,
+    saveProfileMessage,
     selectCoverPhoto,
     selectProfilePhoto,
     sendPasswordResetMail,

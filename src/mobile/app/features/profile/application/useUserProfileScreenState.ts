@@ -1,10 +1,18 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
-import { storage, type FollowStateResult } from '@/mobile/app/data/repositories/supabaseStorage';
+import {
+  useBlockUserMutation,
+  useFollowUserMutation,
+  useReportUserMutation,
+  useUnblockUserMutation,
+  type FollowStateResult,
+} from '@/mobile/app/data/hooks/useUserMutations';
+import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
-import { useStorageVersion } from '@/mobile/app/shared/hooks/useStorageVersion';
-import { buildPlaceFeedCardItems } from '@/mobile/app/shared/utils/placeAggregation';
+import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
+import { getBlockStateForUsers } from '@/mobile/app/data/selectors/visibility';
 
 type UseUserProfileScreenStateParams = {
   allowBlockedView: boolean;
@@ -17,37 +25,64 @@ export function useUserProfileScreenState({
   user,
   userId,
 }: UseUserProfileScreenStateParams) {
-  const storageVersion = useStorageVersion();
   const currentUserId = user?.id;
+  const visibleDataQuery = useVisibleDataQuery(currentUserId, {
+    listPageSize: 12,
+    ownerId: userId,
+    publicOnly: true,
+  });
+  const { mutateAsync: followUserAsync } = useFollowUserMutation();
+  const { mutateAsync: reportUserAsync } = useReportUserMutation();
+  const { mutateAsync: blockUserAsync } = useBlockUserMutation();
+  const { mutateAsync: unblockUserAsync } = useUnblockUserMutation();
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = visibleDataQuery;
+  const visibleUsers = visibleDataQuery.data?.users || [];
+  const allUsers = visibleDataQuery.data?.allUsers || [];
+  const blockRows = visibleDataQuery.data?.blockRows || [];
+  const visibleLists = visibleDataQuery.data?.lists || [];
+  const usersById = useMemo(
+    () => new Map(visibleUsers.map((item) => [item.id, item])),
+    [visibleUsers],
+  );
+  const errorMessage = visibleDataQuery.error
+    ? getUserFacingErrorMessage(
+        visibleDataQuery.error,
+        'Profil su an yuklenemiyor. Lutfen tekrar dene.',
+      )
+    : null;
 
   const loadData = useCallback(async () => {
-    await storage.refreshVisibleData(currentUserId);
-  }, [currentUserId]);
+    await refetch();
+  }, [refetch]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadData);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const currentUser = useMemo(() => {
     if (!currentUserId) {
       return null;
     }
 
-    return storage.findUserById(currentUserId) || user;
-  }, [currentUserId, storageVersion, user]);
+    return usersById.get(currentUserId) || user;
+  }, [currentUserId, user, usersById]);
 
   const blockState = useMemo(
     () =>
       currentUser
-        ? storage.getBlockState(currentUser.id, userId)
+        ? getBlockStateForUsers(blockRows, currentUser.id, userId)
         : { blockedByCurrent: false, blockedByTarget: false },
-    [currentUser, storageVersion, userId],
+    [blockRows, currentUser, userId],
   );
 
   const profileUser = useMemo(
     () =>
       allowBlockedView || blockState.blockedByCurrent
-        ? storage.findUserByIdIncludingBlocked(userId)
-        : storage.findUserById(userId),
-    [allowBlockedView, blockState.blockedByCurrent, storageVersion, userId],
+        ? allUsers.find((item) => item.id === userId)
+        : usersById.get(userId),
+    [allUsers, allowBlockedView, blockState.blockedByCurrent, userId, usersById],
   );
 
   const isOwnProfile = currentUser?.id === profileUser?.id;
@@ -62,17 +97,25 @@ export function useUserProfileScreenState({
     !isBlockedByTarget &&
     (profileUser?.id === currentUser?.id || profileUser?.isPublicAccount !== false || isFollowing);
 
+  useEffect(() => {
+    if (!canViewProfileContent || !hasNextPage || isFetchingNextPage || !fetchNextPage) {
+      return;
+    }
+
+    void fetchNextPage();
+  }, [canViewProfileContent, fetchNextPage, hasNextPage, isFetchingNextPage]);
+
   const publicLists: PlaceList[] = useMemo(
     () =>
       profileUser && canViewProfileContent
-        ? storage.getListsByUserId(profileUser.id).filter((list) => list.isPublic)
+        ? visibleLists.filter((list) => list.userId === profileUser.id && list.isPublic)
         : [],
-    [canViewProfileContent, profileUser, storageVersion],
+    [canViewProfileContent, profileUser, visibleLists],
   );
 
   const allPlaces = useMemo(
-    () => buildPlaceFeedCardItems(publicLists, (ownerId) => storage.findUserById(ownerId)),
-    [publicLists, storageVersion],
+    () => buildPlaceFeedCardItems(publicLists, (ownerId) => usersById.get(ownerId)),
+    [publicLists, usersById],
   );
 
   const allPhotos = useMemo(
@@ -83,17 +126,17 @@ export function useUserProfileScreenState({
   const followerUsers = useMemo<User[]>(
     () =>
       (profileUser?.followers || [])
-        .map((followerId) => storage.findUserById(followerId))
+        .map((followerId) => usersById.get(followerId))
         .filter((item): item is User => Boolean(item)),
-    [profileUser, storageVersion],
+    [profileUser, usersById],
   );
 
   const followingUsers = useMemo<User[]>(
     () =>
       (profileUser?.following || [])
-        .map((followingId) => storage.findUserById(followingId))
+        .map((followingId) => usersById.get(followingId))
         .filter((item): item is User => Boolean(item)),
-    [profileUser, storageVersion],
+    [profileUser, usersById],
   );
 
   const followUser = useCallback(async (): Promise<FollowStateResult> => {
@@ -101,8 +144,8 @@ export function useUserProfileScreenState({
       throw new Error('Takip islemi icin kullanici bulunamadi.');
     }
 
-    return storage.followUser(currentUser.id, profileUser.id);
-  }, [currentUser, profileUser]);
+    return followUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+  }, [currentUser, followUserAsync, profileUser]);
 
   const reportUser = useCallback(
     async (reason: string) => {
@@ -110,9 +153,13 @@ export function useUserProfileScreenState({
         throw new Error('Kullanici bulunamadi.');
       }
 
-      await storage.reportUser(currentUser.id, profileUser.id, reason);
+      await reportUserAsync({
+        reporterUserId: currentUser.id,
+        targetUserId: profileUser.id,
+        reason,
+      });
     },
-    [currentUser, profileUser],
+    [currentUser, profileUser, reportUserAsync],
   );
 
   const blockUser = useCallback(async () => {
@@ -120,16 +167,16 @@ export function useUserProfileScreenState({
       throw new Error('Kullanici bulunamadi.');
     }
 
-    await storage.blockUser(currentUser.id, profileUser.id);
-  }, [currentUser, profileUser]);
+    await blockUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+  }, [blockUserAsync, currentUser, profileUser]);
 
   const unblockUser = useCallback(async () => {
     if (!currentUser || !profileUser) {
       throw new Error('Kullanici bulunamadi.');
     }
 
-    await storage.unblockUser(currentUser.id, profileUser.id);
-  }, [currentUser, profileUser]);
+    await unblockUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+  }, [currentUser, profileUser, unblockUserAsync]);
 
   return {
     allPhotos,
@@ -137,10 +184,15 @@ export function useUserProfileScreenState({
     blockUser,
     canViewProfileContent,
     currentUser,
+    errorMessage,
+    fetchNextPage,
     followerUsers,
     followUser,
     followingUsers,
     hasPendingFollowRequest,
+    hasNextPage,
+    hasPartialDataError: visibleDataQuery.hasPartialDataError,
+    isFetchingNextPage,
     isBlockedByCurrent,
     isBlockedByTarget,
     isFollowing,
@@ -150,6 +202,7 @@ export function useUserProfileScreenState({
     publicLists,
     refreshing,
     reportUser,
+    retry: loadData,
     unblockUser,
   };
 }

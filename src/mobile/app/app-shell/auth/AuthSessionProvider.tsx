@@ -7,7 +7,6 @@ import type {
 } from '@/mobile/app/app-shell/auth/authTypes';
 import { useAuthActions } from '@/mobile/app/app-shell/auth/session/useAuthActions';
 import { useAuthSessionLifecycle } from '@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle';
-import { useAuthStorageBridge } from '@/mobile/app/app-shell/auth/session/useAuthStorageBridge';
 import type { User } from '@/mobile/app/data/contracts/entities';
 
 export type { AuthActionResult, RegisterData } from '@/mobile/app/app-shell/auth/authTypes';
@@ -19,7 +18,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [booted, setBooted] = useState(false);
 
   useAuthSessionLifecycle({ setBooted, setUser });
-  useAuthStorageBridge({ setUser });
 
   const authActions = useAuthActions({ user, setUser });
 

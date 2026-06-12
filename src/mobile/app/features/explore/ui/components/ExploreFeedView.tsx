@@ -1,15 +1,15 @@
 import React from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
-import { FlatList, Platform, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 
+import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
-import type { PlaceFeedCardItem } from '@/mobile/app/shared/utils/placeAggregation';
+import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 
@@ -28,12 +28,23 @@ export function ExploreFeedView({
   onRefresh,
   onBack,
 }: ExploreFeedViewProps) {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
+  const { height, width } = useWindowDimensions();
   const { listRef, handleContentSizeChange, handleScrollToIndexFailed } =
     useInitialFlatListIndex<PlaceFeedCardItem>({
       itemCount: items.length,
       startIndex,
     });
+  const listProps = React.useMemo(
+    () =>
+      buildAdaptiveFlatListProps({
+        containsNativeMaps: true,
+        itemCount: items.length,
+        viewportHeight: height,
+        viewportWidth: width,
+      }),
+    [height, items.length, width],
+  );
 
   return (
     <Screen scroll={false} padded={false}>
@@ -45,6 +56,7 @@ export function ExploreFeedView({
       </View>
 
       <FlatList
+        {...listProps}
         ref={listRef}
         data={items}
         keyExtractor={(item) => item.key}
@@ -82,10 +94,6 @@ export function ExploreFeedView({
             colors={[colors.primary]}
           />
         }
-        initialNumToRender={4}
-        maxToRenderPerBatch={6}
-        windowSize={6}
-        removeClippedSubviews={Platform.OS === 'android'}
       />
     </Screen>
   );

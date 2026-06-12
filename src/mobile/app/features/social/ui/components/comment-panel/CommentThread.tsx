@@ -18,6 +18,7 @@ import {
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
@@ -126,23 +127,20 @@ export function CommentThread({
               </View>
             </Pressable>
 
-            <View style={styles.commentLikeColumn}>
-              <Pressable
-                style={styles.commentLikeButton}
-                onPress={() => onToggleCommentLike(comment.id)}
-                onLongPress={() => {
-                  if ((comment.likers || []).length > 0) {
-                    onShowCommentLikers(comment);
-                  }
-                }}
-                delayLongPress={500}
-              >
+            <InstantPressable
+              style={styles.commentLikeColumn}
+              onPress={() => onToggleCommentLike(comment.id)}
+              onLongPress={() => onShowCommentLikers(comment)}
+              delayLongPress={500}
+              preventRepeatWhileBusy={false}
+            >
+              <View style={styles.commentLikeButton}>
                 <Heart
                   color={comment.liked ? colors.danger : colors.textSoft}
                   size={18}
                   fill={comment.liked ? colors.danger : 'transparent'}
                 />
-              </Pressable>
+              </View>
               {comment.likes ? (
                 <Text
                   style={[
@@ -153,7 +151,7 @@ export function CommentThread({
                   {comment.likes}
                 </Text>
               ) : null}
-            </View>
+            </InstantPressable>
           </View>
 
           <CommentContent content={comment.content} style={styles.commentContent} />

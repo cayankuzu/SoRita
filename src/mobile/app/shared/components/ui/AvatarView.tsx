@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { getUserAvatarText } from '@/mobile/app/shared/utils/format';
 
@@ -13,15 +14,19 @@ type AvatarViewProps = {
 export function AvatarView({ uri, name, size = 40 }: AvatarViewProps) {
   const avatarStyle = { width: size, height: size, borderRadius: size / 2 };
   const fallbackTextStyle = [styles.fallbackText, { fontSize: size * 0.28 }];
-
-  if (uri) {
-    return <Image source={{ uri }} style={avatarStyle} />;
-  }
-
-  return (
+  const fallback = (
     <View style={[styles.fallback, avatarStyle]}>
       <Text style={fallbackTextStyle}>{getUserAvatarText(name ? { name } : null)}</Text>
     </View>
+  );
+
+  return (
+    <AppImage
+      uri={uri}
+      style={avatarStyle}
+      fallback={fallback}
+      accessibilityLabel={name ? `${name} profil fotografi` : 'Profil fotografi'}
+    />
   );
 }
 

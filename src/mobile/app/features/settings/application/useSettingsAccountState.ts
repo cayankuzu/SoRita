@@ -1,9 +1,13 @@
 import { useCallback, useMemo } from 'react';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
+import {
+  useDeleteCurrentUserMutation,
+  useUpdateUserMutation,
+} from '@/mobile/app/data/hooks/useUserMutations';
+import { logger } from '@/mobile/app/platform/feedback/logger';
+import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
 import { usePullToRefresh } from '@/mobile/app/shared/hooks/usePullToRefresh';
-import { useStorageVersion } from '@/mobile/app/shared/hooks/useStorageVersion';
 
 type UseSettingsAccountStateParams = {
   refreshUser: () => Promise<void>;
@@ -14,20 +18,36 @@ export function useSettingsAccountState({
   refreshUser,
   user,
 }: UseSettingsAccountStateParams) {
-  const storageVersion = useStorageVersion();
   const userId = user?.id;
+  const visibleDataQuery = useVisibleDataQuery(userId, { includeLists: false });
+  const { mutateAsync: updateUserAsync } = useUpdateUserMutation();
+  const { mutateAsync: deleteCurrentUserAsync } = useDeleteCurrentUserMutation();
+  const { refetch } = visibleDataQuery;
+  const visibleUsers = visibleDataQuery.data?.users || [];
+  const allUsers = visibleDataQuery.data?.allUsers || [];
+
+  const syncSessionUser = useCallback(() => {
+    return refreshUser().catch((error) => {
+      logger.warn('settings', 'Background user refresh failed after profile update', error);
+    });
+  }, [refreshUser]);
 
   const freshUser = useMemo(() => {
     if (!userId) {
       return null;
     }
 
-    return storage.findUserById(userId) || user;
-  }, [storageVersion, user, userId]);
+    return visibleUsers.find((item) => item.id === userId) || user;
+  }, [user, userId, visibleUsers]);
 
   const blockedUsers = useMemo(
-    () => (freshUser ? storage.getBlockedUsers(freshUser.id) : []),
-    [freshUser, storageVersion],
+    () =>
+      freshUser
+        ? (freshUser.blockedUsers || [])
+            .map((blockedUserId) => allUsers.find((item) => item.id === blockedUserId))
+            .filter((item): item is User => Boolean(item))
+        : [],
+    [allUsers, freshUser],
   );
 
   const refreshCurrentUserState = useCallback(async () => {
@@ -35,11 +55,11 @@ export function useSettingsAccountState({
       return null;
     }
 
-    await storage.refreshVisibleData(userId);
-    const nextUser = storage.findUserById(userId) || user;
+    const { data } = await refetch();
+    const nextUser = data?.users.find((item) => item.id === userId) || user;
     await refreshUser();
     return nextUser;
-  }, [refreshUser, user, userId]);
+  }, [refetch, refreshUser, user, userId]);
 
   const { refreshing, onRefresh } = usePullToRefresh(async () => {
     await refreshCurrentUserState();
@@ -47,11 +67,11 @@ export function useSettingsAccountState({
 
   const saveUserProfile = useCallback(
     async (nextUser: User) => {
-      const updatedUser = await storage.updateUser(nextUser);
-      await refreshUser();
+      const updatedUser = await updateUserAsync(nextUser);
+      await syncSessionUser();
       return updatedUser;
     },
-    [refreshUser],
+    [syncSessionUser, updateUserAsync],
   );
 
   const saveAccountPrivacy = useCallback(
@@ -60,19 +80,19 @@ export function useSettingsAccountState({
         throw new Error('Kullanici bulunamadi.');
       }
 
-      const updatedUser = await storage.updateUser({
+      const updatedUser = await updateUserAsync({
         ...freshUser,
         isPublicAccount: nextIsPublicAccount,
       });
-      await refreshUser();
+      await syncSessionUser();
       return updatedUser;
     },
-    [freshUser, refreshUser],
+    [freshUser, syncSessionUser, updateUserAsync],
   );
 
   const deleteCurrentUser = useCallback(async () => {
-    await storage.deleteUser();
-  }, []);
+    await deleteCurrentUserAsync();
+  }, [deleteCurrentUserAsync]);
 
   return {
     blockedUsers,

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
 import { ArrowLeft } from 'lucide-react-native';
 
 import { ProfileStatsRow } from '@/mobile/app/features/profile/ui/components/ProfileStatsRow';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
@@ -52,7 +52,11 @@ export function ProfileHero({
       <View style={[styles.coverWrap, { backgroundColor: coverBackgroundColor }]}>
         {coverPhoto ? (
           <Pressable onPress={onCoverPhotoPress} style={styles.coverPressable}>
-            <Image source={{ uri: coverPhoto }} style={styles.coverImage} />
+            <AppImage
+              uri={coverPhoto}
+              style={styles.coverImage}
+              accessibilityLabel={`${name} kapak fotografi`}
+            />
           </Pressable>
         ) : null}
 

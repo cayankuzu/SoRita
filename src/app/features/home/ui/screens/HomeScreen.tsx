@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { PlaceList } from '@/app/data/contracts/entities';
 import { storage } from '@/app/data/repositories/mockStorage';
 import { useAuth } from '@/app/app-shell/auth/AuthSessionProvider';
-import { ListCard } from '@/app/features/lists/ui/components/ListCard';
+import { ListCard } from '@/app/features/lists/public/components';
 import { Users, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router';
 

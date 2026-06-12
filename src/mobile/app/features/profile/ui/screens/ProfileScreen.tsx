@@ -5,7 +5,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import {
   Image as ImageIcon,
   List,
@@ -13,22 +12,22 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
 import { ListGridTile, PlaceGridTile } from '@/mobile/app/features/discovery/public/components';
 import { useOwnProfileScreenState } from '@/mobile/app/features/profile/application/useOwnProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { ListEditorModal } from '@/mobile/app/features/lists/ui/components/ListEditorModal';
-import { PlaceEditorModal } from '@/mobile/app/features/map/ui/components/PlaceEditorModal';
+import { ListEditorModal } from '@/mobile/app/features/lists/public/components';
+import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
 import { ProfileConnectionsSummary } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsSummary';
 import { OwnProfileActionBar } from '@/mobile/app/features/profile/ui/components/OwnProfileActionBar';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
@@ -60,7 +59,7 @@ function isMatchingPlace(
 }
 
 export function ProfileScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
   const [deleteListId, setDeleteListId] = useState<string | null>(null);
@@ -75,16 +74,24 @@ export function ProfileScreen() {
     createList,
     deleteList: deleteStoredList,
     deletePlace,
+    errorMessage,
+    fetchNextPage,
     followerUsers,
     followingUsers,
     freshUser,
+    hasNextPage,
+    hasPartialDataError,
+    isFetchingNextPage,
     lists,
     onRefresh,
     refreshing,
+    retry,
     updateList,
     updateLists,
   } = useOwnProfileScreenState({ user });
   const totalPlaces = allPlaces.length;
+  const hasAnyContent = lists.length > 0 || allPlaces.length > 0 || allPhotos.length > 0;
+  const shouldShowErrorState = Boolean(errorMessage && !hasAnyContent);
 
   const tabs = useMemo<ProfileTabOption[]>(
     () => [
@@ -137,8 +144,7 @@ export function ProfileScreen() {
     const previousPlace = editingPlaceTarget.place;
     const selectedListIds = Array.from(new Set(targetListIds));
     const nextUpdatedAt = new Date().toISOString();
-    const currentLists = storage.getListsByUserId(freshUser.id);
-    const changedLists = currentLists
+    const changedLists = lists
       .map((list) => {
         const matchedPlaceIndex = list.places.findIndex((place) => isMatchingPlace(place, previousPlace));
         const hasPlace = matchedPlaceIndex >= 0;
@@ -185,6 +191,21 @@ export function ProfileScreen() {
   };
 
   if (!freshUser) {
+    if (errorMessage) {
+      return (
+        <Screen>
+          <EmptyState
+            icon={<MapPin color={colors.danger} size={32} />}
+            title="Profilin simdi acilamiyor"
+            description={errorMessage}
+            actionLabel="Tekrar dene"
+            onAction={retry}
+            tone="danger"
+          />
+        </Screen>
+      );
+    }
+
     return null;
   }
 
@@ -261,7 +282,32 @@ export function ProfileScreen() {
         />
 
         <View style={styles.contentSection}>
-          {activeTab === 'lists' ? (
+          {hasPartialDataError && hasAnyContent ? (
+            <View style={styles.noticeWrap}>
+              <InlineNotice
+                tone="warning"
+                title="Profilin bir kismi eski verilerle gosteriliyor"
+                description="Son degisikliklerden bazilari henuz alinamadi. Asagi cekerek tekrar deneyebilirsin."
+                actionLabel="Tekrar dene"
+                onAction={() => {
+                  void retry();
+                }}
+              />
+            </View>
+          ) : null}
+
+          {shouldShowErrorState ? (
+            <EmptyState
+              icon={<MapPin color={colors.danger} size={32} />}
+              title="Profil verileri alinamadi"
+              description={errorMessage || 'Profil verileri su an yuklenemiyor.'}
+              actionLabel="Tekrar dene"
+              onAction={retry}
+              tone="danger"
+            />
+          ) : null}
+
+          {!shouldShowErrorState && activeTab === 'lists' ? (
             lists.length === 0 ? (
               <EmptyState
                 icon={<MapPin color={colors.textSoft} size={32} />}
@@ -284,7 +330,7 @@ export function ProfileScreen() {
             )
           ) : null}
 
-          {activeTab === 'places' ? (
+          {!shouldShowErrorState && activeTab === 'places' ? (
             allPlaces.length === 0 ? (
               <EmptyState
                 icon={<MapPin color={colors.textSoft} size={32} />}
@@ -298,7 +344,10 @@ export function ProfileScreen() {
                     key={item.key}
                     place={item.place}
                     mode="place"
+                    listCoverImage={item.listCoverImage}
+                    listEmoji={item.listEmoji}
                     listIsPublic={item.listIsPublic}
+                    listName={item.listName}
                     onEditPress={() => openEditingPlaceTarget(item.listId, item.place.id)}
                     onPress={() =>
                       setFeedMode({
@@ -312,7 +361,7 @@ export function ProfileScreen() {
             )
           ) : null}
 
-          {activeTab === 'gallery' ? (
+          {!shouldShowErrorState && activeTab === 'gallery' ? (
             allPhotos.length === 0 ? (
               <EmptyState
                 icon={<ImageIcon color={colors.textSoft} size={32} />}
@@ -326,13 +375,33 @@ export function ProfileScreen() {
                     key={item.key}
                     place={item.place}
                     mode="photo"
+                    listCoverImage={item.listCoverImage}
+                    listEmoji={item.listEmoji}
                     listIsPublic={item.listIsPublic}
+                    listName={item.listName}
                     onEditPress={() => openEditingPlaceTarget(item.listId, item.place.id)}
                     onPress={() => setFeedMode({ startIndex: index, kind: 'gallery' })}
                   />
                 ))}
               </View>
             )
+          ) : null}
+
+          {!shouldShowErrorState && hasNextPage ? (
+            <Pressable
+              style={styles.loadMoreButton}
+              onPress={() => {
+                if (isFetchingNextPage) {
+                  return;
+                }
+
+                void fetchNextPage?.();
+              }}
+            >
+              <Text style={styles.loadMoreLabel}>
+                {isFetchingNextPage ? 'Yukleniyor...' : 'Daha Fazla Goster'}
+              </Text>
+            </Pressable>
           ) : null}
         </View>
       </Screen>
@@ -399,9 +468,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    justifyContent: 'space-between',
   },
   contentSection: {
     paddingTop: 14,
     paddingBottom: 20,
+    paddingHorizontal: 16,
+  },
+  noticeWrap: {
+    paddingBottom: 14,
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 18,
+  },
+  loadMoreLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

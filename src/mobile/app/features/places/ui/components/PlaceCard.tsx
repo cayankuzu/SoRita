@@ -1,14 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
 import { CompactPlaceCard } from '@/mobile/app/features/places/ui/components/place-card/CompactPlaceCard';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
@@ -16,7 +17,6 @@ import {
   formatPrice,
   getListMarkerColor,
 } from '@/mobile/app/shared/utils/format';
-import { openStackScreen } from '@/mobile/app/shared/utils/navigation';
 
 type PlaceCardProps = {
   place: Place;
@@ -51,13 +51,20 @@ function PlaceCardComponent({
   onDelete,
   onRefresh,
 }: PlaceCardProps) {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
   const { user } = useAuth();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [showAddToList, setShowAddToList] = useState(false);
-  const [mapFocusKey, setMapFocusKey] = useState(0);
+  const [commentsActivated, setCommentsActivated] = useState(false);
   const photos = place.photos || [];
   const baseMarkerColor = getListMarkerColor(listIsPublic);
+  const {
+    activateMap,
+    deactivateMap,
+    isMapInteractive,
+    mapFocusKey,
+    showInteractionHint,
+  } = useMiniMapInteraction(place.id);
 
   const categories = Array.from(
     new Set(place.categories?.length ? place.categories : place.category ? [place.category] : []),
@@ -90,10 +97,15 @@ function PlaceCardComponent({
     [place.addedAt, place.updatedAt],
   );
 
+  useEffect(() => {
+    setCommentsActivated(false);
+  }, [place.id]);
+
   const {
     canReportPlace,
     comments,
     createList,
+    fetchNextCommentsPage,
     handleCreateComment,
     handleDeleteComment,
     handleLikePress,
@@ -101,6 +113,8 @@ function PlaceCardComponent({
     handleReportPlace,
     handleToggleCommentLike,
     handleUpdateComment,
+    hasNextCommentsPage,
+    isFetchingNextCommentsPage,
     isLiked,
     likers,
     myLists,
@@ -110,6 +124,7 @@ function PlaceCardComponent({
     ownerId,
     place,
     user,
+    commentsEnabled: commentsActivated,
   });
 
   const openUserProfile = (targetUserId: string) => {
@@ -139,6 +154,10 @@ function PlaceCardComponent({
 
   void markerContext;
 
+  const focusMapPreview = () => {
+    activateMap();
+  };
+
   return (
     <>
       <PlaceCardFull
@@ -151,22 +170,29 @@ function PlaceCardComponent({
         currentUserPhoto={user?.profilePhoto}
         dietaryOptions={dietaryOptions}
         isLiked={isLiked}
+        isFetchingNextCommentsPage={isFetchingNextCommentsPage}
         likers={likers}
         listCoverImage={listCoverImage}
         listEmoji={listEmoji}
         listIsPublic={listIsPublic}
         listName={listName}
+        isMapInteractive={isMapInteractive}
         mapFocusKey={mapFocusKey}
         mapMarkers={mapMarkers}
+        showMapInteractionHint={showInteractionHint}
         onAddToListPress={() => setShowAddToList(true)}
         onAddressCopied={() => showToast(tr.cards.addressCopied, 'success')}
         onCommentDelete={handleDeleteComment}
+        onCommentsLoadMore={async () => {
+          await fetchNextCommentsPage?.();
+        }}
         onCommentLikeToggle={handleToggleCommentLike}
         onCommentReport={handleReportComment}
         onCommentSubmit={handleCreateComment}
         onCommentUpdate={handleUpdateComment}
         onDelete={onDelete}
-        onFocusPress={() => setMapFocusKey((value) => value + 1)}
+        onFocusPress={focusMapPreview}
+        onFocusLongPress={deactivateMap}
         onLikePress={handleLikePress}
         onOwnerPress={onOwnerPress}
         onPhotoPress={setLightboxUri}
@@ -174,12 +200,18 @@ function PlaceCardComponent({
         onRefresh={onRefresh}
         onReportPlace={handleReportPlace}
         onUserPress={openUserProfile}
+        onCommentsVisibilityChange={(visible) => {
+          if (visible) {
+            setCommentsActivated(true);
+          }
+        }}
         owner={owner}
         photos={photos}
         place={place}
         placeTimestampLabels={placeTimestampLabels}
         priceLabel={priceLabel}
         specialFeatures={specialFeatures}
+        hasNextCommentsPage={hasNextCommentsPage}
       />
 
       {allowAddToList && user ? (

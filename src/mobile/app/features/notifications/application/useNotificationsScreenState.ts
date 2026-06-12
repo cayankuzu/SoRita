@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
+import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import {
-  getCachedNotifications,
-  markNotificationRead,
-  refreshNotifications,
-  respondToFollowRequestNotification,
   type MobileNotification,
-} from '@/mobile/app/data/repositories/notificationRepository';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
+  useMarkNotificationReadMutation,
+  useNotificationsQuery,
+  useRespondToFollowRequestMutation,
+} from '@/mobile/app/data/hooks/useNotificationsQuery';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
-import { useNotificationVersion } from '@/mobile/app/shared/hooks/useNotificationVersion';
 
 export type NotificationCategory = 'all' | 'likes' | 'follows' | 'comments' | 'places';
+export type { MobileNotification };
 
 type UseNotificationsScreenStateParams = {
   userId?: string | null;
@@ -36,15 +37,24 @@ function getCategory(type: MobileNotification['type']): NotificationCategory {
 
 export function useNotificationsScreenState({ userId }: UseNotificationsScreenStateParams) {
   const [category, setCategory] = useState<NotificationCategory>('all');
-  useNotificationVersion();
+  const queryClient = useQueryClient();
+  const notificationsQuery = useNotificationsQuery(userId);
+  const markNotificationReadMutation = useMarkNotificationReadMutation(userId);
+  const respondToFollowRequestMutation = useRespondToFollowRequestMutation(userId);
+  const errorMessage = notificationsQuery.error
+    ? getUserFacingErrorMessage(
+        notificationsQuery.error,
+        'Bildirimler su an yuklenemiyor. Lutfen tekrar dene.',
+      )
+    : null;
 
   const loadNotifications = useCallback(async () => {
     if (!userId) {
       return;
     }
 
-    await refreshNotifications(userId).catch(() => undefined);
-  }, [userId]);
+    await notificationsQuery.refetch().catch(() => undefined);
+  }, [notificationsQuery, userId]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadNotifications);
 
@@ -66,7 +76,7 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
     };
   }, [loadNotifications, userId]);
 
-  const items = userId ? getCachedNotifications(userId) : [];
+  const items = notificationsQuery.data || [];
 
   const filteredItems = useMemo(() => {
     if (category === 'all') {
@@ -81,10 +91,10 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
   const markItemRead = useCallback(
     async (notification: MobileNotification) => {
       if (!notification.read) {
-        await markNotificationRead(notification.id, userId).catch(() => undefined);
+        await markNotificationReadMutation.mutateAsync(notification).catch(() => undefined);
       }
     },
-    [userId],
+    [markNotificationReadMutation],
   );
 
   const respondToFollowRequest = useCallback(
@@ -93,25 +103,26 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
         return;
       }
 
-      await respondToFollowRequestNotification(
-        notification.id,
-        notification.followRequest.id,
-        decision,
-        userId,
-      );
-      await storage.refreshVisibleData(userId);
+      await respondToFollowRequestMutation.mutateAsync({ notification, decision });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.visibleData.all });
     },
-    [userId],
+    [queryClient, respondToFollowRequestMutation, userId],
   );
 
   return {
     category,
+    errorMessage,
+    fetchNextPage: notificationsQuery.fetchNextPage,
     filteredItems,
+    hasNextPage: notificationsQuery.hasNextPage,
+    isInitialLoading: notificationsQuery.isLoading && items.length === 0,
+    isFetchingNextPage: notificationsQuery.isFetchingNextPage,
     items,
     markItemRead,
     onRefresh,
     refreshing,
     respondToFollowRequest,
+    retry: loadNotifications,
     setCategory,
     unreadCount,
   };

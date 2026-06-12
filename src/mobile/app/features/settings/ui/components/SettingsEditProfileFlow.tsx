@@ -1,10 +1,9 @@
 import React from 'react';
 import { Camera } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests';
-import { AuthImagePicker } from '@/mobile/app/features/auth/ui/components/AuthImagePicker';
-import { AuthStepDots } from '@/mobile/app/features/auth/ui/components/AuthStepDots';
+import { AuthImagePicker, AuthStepDots } from '@/mobile/app/features/auth/public/components';
 import { ProfilePreviewSection } from '@/mobile/app/features/profile/public/components';
 import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/ui/components/settingsScreenStyles';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
@@ -30,6 +29,7 @@ type SettingsEditProfileFlowProps = {
   editName: string;
   editStep: number;
   editUsername: string;
+  isSavingProfile: boolean;
   onBack: () => void;
   onChangeBio: (value: string) => void;
   onChangeName: (value: string) => void;
@@ -39,6 +39,7 @@ type SettingsEditProfileFlowProps = {
   onSave: () => void;
   profilePhoto: string;
   refreshing: boolean;
+  saveProfileMessage?: string;
   selectCoverPhoto: () => void;
   selectProfilePhoto: () => void;
   steps: readonly EditProfileStep[];
@@ -62,6 +63,7 @@ export function SettingsEditProfileFlow({
   editName,
   editStep,
   editUsername,
+  isSavingProfile,
   onBack,
   onChangeBio,
   onChangeName,
@@ -71,6 +73,7 @@ export function SettingsEditProfileFlow({
   onSave,
   profilePhoto,
   refreshing,
+  saveProfileMessage,
   selectCoverPhoto,
   selectProfilePhoto,
   steps,
@@ -181,12 +184,25 @@ export function SettingsEditProfileFlow({
         />
       ) : null}
 
+      {isSavingProfile ? (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator color={colors.primary} />
+          <View style={styles.loadingCardBody}>
+            <Text style={styles.loadingCardTitle}>Profil guncelleniyor</Text>
+            <Text style={styles.loadingCardText}>
+              {saveProfileMessage || 'Degisikliklerin kaydediliyor.'}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.stepActions}>
         {editStep > 0 ? (
           <PrimaryButton
             title={tr.common.back}
             variant="secondary"
             onPress={onBack}
+            disabled={isSavingProfile}
             style={styles.stepButton}
           />
         ) : null}
@@ -201,7 +217,8 @@ export function SettingsEditProfileFlow({
 
             onNext();
           }}
-          disabled={!canContinueEdit}
+          disabled={!canContinueEdit || isSavingProfile}
+          loading={isSavingProfile}
           style={styles.stepButton}
         />
       </View>

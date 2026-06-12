@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { buildCharacterLimitLabel } from '@/mobile/app/shared/validation/contentLimits';
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -24,25 +25,42 @@ export function TextField({
   style,
   ...props
 }: TextFieldProps) {
+  const accessibilityLabel = props.accessibilityLabel || label || props.placeholder;
+  const autoCorrect =
+    props.autoCorrect ?? !(props.autoCapitalize === 'none');
+
+  const valueLengthHelper =
+    typeof props.maxLength === 'number' && typeof props.value === 'string'
+      ? buildCharacterLimitLabel(props.value, props.maxLength)
+      : null;
+  const resolvedHelper = helper || valueLengthHelper || undefined;
+
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         {...props}
+        accessibilityHint={resolvedHelper}
+        accessibilityLabel={accessibilityLabel}
+        allowFontScaling
+        autoCorrect={autoCorrect}
+        maxFontSizeMultiplier={1.2}
         multiline={Boolean(multilineRows)}
         numberOfLines={multilineRows}
         placeholderTextColor={colors.textSoft}
+        scrollEnabled={multilineRows ? false : props.scrollEnabled}
         style={[styles.input, multilineRows ? styles.multiline : null, style]}
       />
-      {helper ? (
+      {resolvedHelper ? (
         <Text
           style={[
             styles.helper,
             helperTone === 'danger' ? styles.helperDanger : null,
             helperTone === 'success' ? styles.helperSuccess : null,
           ]}
+          maxFontSizeMultiplier={1.2}
         >
-          {helper}
+          {resolvedHelper}
         </Text>
       ) : null}
     </View>

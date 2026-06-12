@@ -1,16 +1,14 @@
 import { Platform } from 'react-native';
 
-import { env } from '@/mobile/app/platform/config/env';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
+import { env } from '@/mobile/app/platform/config/env';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 
 type PushPermissionResult = {
   granted: boolean;
   canAskAgain: boolean;
 };
-
-let activeExpoPushToken: string | null = null;
 
 async function loadNotificationsModule() {
   return import('expo-notifications');
@@ -66,8 +64,25 @@ function getExpoProjectId() {
   return env.expoProjectId || null;
 }
 
+async function resolveCurrentExpoPushToken() {
+  const projectId = getExpoProjectId();
+
+  if (!projectId || notificationRuntime.isExpoGo || !notificationRuntime.supportsRemotePushRegistration) {
+    return null;
+  }
+
+  const Notifications = await loadNotificationsModule();
+  const permissions = await Notifications.getPermissionsAsync();
+
+  if (!permissions.granted && permissions.ios?.status !== Notifications.IosAuthorizationStatus.PROVISIONAL) {
+    return null;
+  }
+
+  return (await Notifications.getExpoPushTokenAsync({ projectId })).data || null;
+}
+
 export async function registerPushNotifications(userId: string) {
-  if (!env.pushNotificationsEnabled) {
+  if (!notificationRuntime.featureEnabled) {
     logger.info('push', 'Push registration skipped because feature flag is disabled.');
     return null;
   }
@@ -116,17 +131,22 @@ export async function registerPushNotifications(userId: string) {
   }
 
   logger.info('push', `Push token registered for ${userId}`);
-  activeExpoPushToken = expoPushToken;
   return expoPushToken;
 }
 
 export async function unregisterPushNotifications(expoPushToken: string | null | undefined) {
-  if (!expoPushToken || notificationRuntime.isExpoGo || !env.pushNotificationsEnabled) {
+  if (notificationRuntime.isExpoGo || !notificationRuntime.featureEnabled) {
+    return;
+  }
+
+  const token = expoPushToken || await resolveCurrentExpoPushToken();
+
+  if (!token) {
     return;
   }
 
   const { error } = await supabase.rpc('remove_user_push_token', {
-    input_token: expoPushToken,
+    input_token: token,
   });
 
   if (error) {
@@ -134,11 +154,4 @@ export async function unregisterPushNotifications(expoPushToken: string | null |
   }
 
   logger.info('push', 'Push token unregistered');
-  if (activeExpoPushToken === expoPushToken) {
-    activeExpoPushToken = null;
-  }
-}
-
-export function getActiveExpoPushToken() {
-  return activeExpoPushToken;
 }

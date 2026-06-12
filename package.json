@@ -1,7 +1,7 @@
 {
   "name": "@figma/my-make-file",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -15,13 +15,16 @@
     "check:architecture": "node utils/guards/check-architecture-boundaries.cjs",
     "clean:metro": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (Test-Path .expo) { Remove-Item .expo -Recurse -Force }; if (Test-Path \\\"$env:LOCALAPPDATA\\\\Temp\\\\metro-cache\\\") { Remove-Item \\\"$env:LOCALAPPDATA\\\\Temp\\\\metro-cache\\\" -Recurse -Force }\"",
     "dev": "vite --host 0.0.0.0 --port 5173 --strictPort",
-    "expo:android": "expo start --clear --android",
-    "expo:start": "expo start --clear",
+    "expo:android": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; expo start --clear --android\"",
+    "expo:start": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; expo start --clear\"",
     "logs:android": "node utils/android-logcat.mjs --clear",
     "logs:android:all": "node utils/android-logcat.mjs --clear --all",
-    "mobile:live": "wait-on http://127.0.0.1:5173 && expo start --clear --android",
+    "mobile:live": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"wait-on http://127.0.0.1:5173; $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; expo start --clear --android\"",
     "start": "expo start --clear",
-    "run:android": "expo run:android",
+    "run:android": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; expo run:android\"",
+    "security:verify:internal": "vitest run src/mobile/app/platform/supabase/__tests__/media.test.ts supabase/functions/_shared/requestSecurity.test.ts supabase/functions/delete-user/handler.test.ts supabase/functions/media-assets/handler.test.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +33,7 @@
     "@googlemaps/js-api-loader": "^2.0.2",
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
+    "@noble/hashes": "^2.2.0",
     "@popperjs/core": "2.11.8",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
@@ -62,6 +66,7 @@
     "@react-navigation/elements": "^1.3.30",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.26",
+    "@sentry/react-native": "~7.11.0",
     "@supabase/supabase-js": "^2.103.0",
     "@tanstack/react-query": "^5.97.0",
     "@types/google.maps": "^3.58.1",
@@ -77,12 +82,15 @@
     "expo": "~55.0.15",
     "expo-asset": "~55.0.15",
     "expo-clipboard": "~55.0.13",
+    "expo-crypto": "~55.0.14",
     "expo-device": "~55.0.15",
     "expo-file-system": "~55.0.16",
     "expo-image-picker": "~55.0.18",
     "expo-linking": "~55.0.13",
     "expo-location": "~55.1.8",
     "expo-notifications": "~55.0.19",
+    "expo-secure-store": "~55.0.13",
+    "expo-splash-screen": "~55.0.19",
     "input-otp": "1.4.2",
     "leaflet": "^1.9.4",
     "lucide-react": "0.487.0",
@@ -119,16 +127,28 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "~19.1.7",
     "@vitejs/plugin-react": "4.7.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "babel-plugin-module-resolver": "^5.0.3",
+    "msw": "^2.13.3",
+    "react-test-renderer": "^19.2.0",
     "tailwindcss": "4.1.12",
     "typescript": "^5.9.2",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "@xmldom/xmldom": "0.8.13",
+    "postcss": "8.5.12"
   },
   "pnpm": {
     "overrides": {
+      "@xmldom/xmldom": "0.8.13",
+      "postcss": "8.5.12",
       "vite": "6.4.2"
     }
   }

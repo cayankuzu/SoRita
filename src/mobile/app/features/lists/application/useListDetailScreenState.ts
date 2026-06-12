@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
-import { storage } from '@/mobile/app/data/repositories/supabaseStorage';
+import { useReportListMutation } from '@/mobile/app/data/hooks/useListMutations';
+import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
+import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
-import { useStorageVersion } from '@/mobile/app/shared/hooks/useStorageVersion';
 import { getMapMarkers } from '@/mobile/app/shared/utils/format';
 
 type UseListDetailScreenStateParams = {
@@ -12,17 +13,25 @@ type UseListDetailScreenStateParams = {
 };
 
 export function useListDetailScreenState({ listId, user }: UseListDetailScreenStateParams) {
-  const storageVersion = useStorageVersion();
   const userId = user?.id;
+  const visibleDataQuery = useVisibleDataQuery(userId, { listId });
+  const { mutateAsync: reportListAsync } = useReportListMutation();
+  const { mutateAsync: deletePlaceAsync } = useDeletePlaceMutation();
+  const { refetch } = visibleDataQuery;
+  const visibleUsers = visibleDataQuery.data?.users || [];
+  const visibleLists = visibleDataQuery.data?.lists || [];
 
   const loadList = useCallback(async () => {
-    await storage.refreshVisibleData(userId);
-  }, [userId]);
+    await refetch();
+  }, [refetch]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadList);
 
-  const list = useMemo(() => storage.getListById(listId) || null, [listId, storageVersion]);
-  const owner = useMemo(() => (list ? storage.findUserById(list.userId) : null), [list, storageVersion]);
+  const list = useMemo(() => visibleLists.find((item) => item.id === listId) || null, [listId, visibleLists]);
+  const owner = useMemo(
+    () => (list ? visibleUsers.find((item) => item.id === list.userId) || null : null),
+    [list, visibleUsers],
+  );
   const isOwner = Boolean(list && userId && list.userId === userId);
   const canReportList = Boolean(list && userId && list.userId !== userId);
   const displayPlaces = list?.places || [];
@@ -32,8 +41,8 @@ export function useListDetailScreenState({ listId, user }: UseListDetailScreenSt
   );
 
   const deletePlace = useCallback(async (placeId: string) => {
-    await storage.deletePlace(placeId);
-  }, []);
+    await deletePlaceAsync(placeId);
+  }, [deletePlaceAsync]);
 
   const reportList = useCallback(
     async (reason: string) => {
@@ -41,9 +50,9 @@ export function useListDetailScreenState({ listId, user }: UseListDetailScreenSt
         throw new Error('Liste bulunamadi.');
       }
 
-      await storage.reportList(userId, list.id, reason);
+      await reportListAsync({ reporterUserId: userId, listId: list.id, reason });
     },
-    [list, userId],
+    [list, reportListAsync, userId],
   );
 
   return {
