@@ -9,12 +9,17 @@ import {
 import { Globe, Info, Lock } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
+import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { getCoverPhoto, getMapMarkers } from '@/mobile/app/shared/utils/format';
-import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
+import {
+  getCoverPhoto,
+  getMapMarkers,
+  getMarkerColorForPlaceAcrossLists,
+} from '@/mobile/app/shared/utils/format';
+import { MAX_SELECTED_LISTS_PER_PLACE_SAVE } from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceEditorListCardsProps = {
   currentMembershipListIds: Set<string>;
@@ -36,14 +41,16 @@ export function PlaceEditorListCards({
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{tr.placeEditor.targetLists}</Text>
-      <Text style={styles.sectionHelper}>{tr.placeEditor.targetListsHelper}</Text>
+      <Text style={styles.sectionHelper}>
+        {`En fazla ${MAX_SELECTED_LISTS_PER_PLACE_SAVE} liste seçebilirsin. ${tr.placeEditor.targetListsHelper}`}
+      </Text>
       {listSelectionNotice ? (
         <View style={styles.listSelectionNotice}>
           <View style={styles.listSelectionNoticeIconWrap}>
             <Info color={colors.warningText} size={14} />
           </View>
           <View style={styles.listSelectionNoticeBody}>
-            <Text style={styles.listSelectionNoticeTitle}>Liste ipucu</Text>
+            <Text style={styles.listSelectionNoticeTitle}>{tr.placeEditor.listHintTitle}</Text>
             <Text style={styles.listSelectionNoticeText}>{listSelectionNotice}</Text>
           </View>
         </View>
@@ -68,10 +75,20 @@ export function PlaceEditorListCards({
                 {coverPhoto ? (
                   <Image source={{ uri: coverPhoto }} style={StyleSheet.absoluteFillObject} />
                 ) : list.places.length > 0 ? (
-                  <MiniMapPreview places={getMapMarkers(list.places, list.isPublic)} height={76} />
+                  <MiniMapPreview
+                    places={getMapMarkers(
+                      list.places,
+                      list.isPublic,
+                      (place) =>
+                        getMarkerColorForPlaceAcrossLists(place, lists, list.isPublic),
+                    )}
+                    height={76}
+                  />
                 ) : (
                   <View style={styles.listPreviewPlaceholder}>
-                    <Text style={styles.listPreviewEmoji}>{list.emoji || tr.placeEditor.defaultEmoji}</Text>
+                    <Text style={styles.listPreviewEmoji}>
+                      {list.emoji || tr.placeEditor.defaultEmoji}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -92,11 +109,6 @@ export function PlaceEditorListCards({
                     textStyle={[styles.listName, blocked ? styles.listNameDisabled : null]}
                     showIndicator={false}
                   />
-                  {blocked ? (
-                    <View style={styles.listBlockedBadge}>
-                      <Text style={styles.listBlockedBadgeText}>{tr.placeEditor.duplicateListBadge}</Text>
-                    </View>
-                  ) : null}
                 </View>
                 <View style={styles.listMetaRow}>
                   <Text style={[styles.listMeta, blocked ? styles.listMetaDisabled : null]}>

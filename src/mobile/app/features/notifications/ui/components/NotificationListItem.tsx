@@ -5,6 +5,7 @@ import { Heart, MapPin, MessageCircle, Star, UserPlus } from 'lucide-react-nativ
 import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationListItemProps = {
@@ -41,6 +42,10 @@ const ICON_META = {
   },
   place_added: {
     backgroundColor: colors.purple,
+    icon: <MapPin color={colors.onPrimary} size={12} />,
+  },
+  place_quote: {
+    backgroundColor: colors.primary,
     icon: <MapPin color={colors.onPrimary} size={12} />,
   },
   list_liked: {
@@ -106,7 +111,9 @@ function NotificationListItemComponent({
         {isResolvedFollowRequest ? (
           <View style={styles.statusBadge}>
             <Text style={styles.statusLabel}>
-              {notification.followRequest?.status === 'accepted' ? 'Onaylandi' : 'Reddedildi'}
+              {notification.followRequest?.status === 'accepted'
+                ? tr.notifications.status.accepted
+                : tr.notifications.status.rejected}
             </Text>
           </View>
         ) : null}

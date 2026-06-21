@@ -6,11 +6,13 @@ import { createQueryClientWrapper, createTestQueryClient } from '@/mobile/app/te
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 
 const useNotificationsQueryMock = vi.fn();
+const useMarkAllNotificationsReadMutationMock = vi.fn();
 const useMarkNotificationReadMutationMock = vi.fn();
 const useRespondToFollowRequestMutationMock = vi.fn();
 const useFocusRefreshMock = vi.fn();
 
 vi.mock('@/mobile/app/data/hooks/useNotificationsQuery', () => ({
+  useMarkAllNotificationsReadMutation: useMarkAllNotificationsReadMutationMock,
   useMarkNotificationReadMutation: useMarkNotificationReadMutationMock,
   useNotificationsQuery: useNotificationsQueryMock,
   useRespondToFollowRequestMutation: useRespondToFollowRequestMutationMock,
@@ -23,6 +25,7 @@ vi.mock('@/mobile/app/shared/hooks/useFocusRefresh', () => ({
 describe('useNotificationsScreenState', () => {
   beforeEach(() => {
     useNotificationsQueryMock.mockReset();
+    useMarkAllNotificationsReadMutationMock.mockReset();
     useMarkNotificationReadMutationMock.mockReset();
     useRespondToFollowRequestMutationMock.mockReset();
     useFocusRefreshMock.mockReset();
@@ -33,6 +36,7 @@ describe('useNotificationsScreenState', () => {
     const wrapper = createQueryClientWrapper(queryClient);
     const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const refetchMock = vi.fn().mockResolvedValue(undefined);
+    const markAllReadAsync = vi.fn().mockResolvedValue(undefined);
     const markReadAsync = vi.fn().mockResolvedValue(undefined);
     const respondAsync = vi.fn().mockResolvedValue(undefined);
 
@@ -62,6 +66,10 @@ describe('useNotificationsScreenState', () => {
       isFetchingNextPage: false,
       refetch: refetchMock,
     });
+    useMarkAllNotificationsReadMutationMock.mockReturnValue({
+      isPending: false,
+      mutateAsync: markAllReadAsync,
+    });
     useMarkNotificationReadMutationMock.mockReturnValue({ mutateAsync: markReadAsync });
     useRespondToFollowRequestMutationMock.mockReturnValue({ mutateAsync: respondAsync });
     useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
@@ -74,7 +82,7 @@ describe('useNotificationsScreenState', () => {
 
     expect(hook.result.current.unreadCount).toBe(1);
     expect(hook.result.current.errorMessage).toBe(
-      'Internet baglantisi su an kullanilamiyor. Baglantini kontrol edip tekrar dene.',
+      'İnternet bağlantısı şu an kullanılamıyor. Bağlantını kontrol edip tekrar dene.',
     );
 
     act(() => {
@@ -83,12 +91,14 @@ describe('useNotificationsScreenState', () => {
     expect(hook.result.current.filteredItems.map((item) => item.id)).toEqual(['n2']);
 
     await hook.result.current.markItemRead(followRequestNotification);
+    await hook.result.current.markAllItemsRead();
     await hook.result.current.respondToFollowRequest(
       followRequestNotification,
       'accept',
     );
     await hook.result.current.retry();
 
+    expect(markAllReadAsync).toHaveBeenCalled();
     expect(markReadAsync).toHaveBeenCalled();
     expect(respondAsync).toHaveBeenCalledWith({
       notification: followRequestNotification,
@@ -103,6 +113,7 @@ describe('useNotificationsScreenState', () => {
     const queryClient = createTestQueryClient();
     const wrapper = createQueryClientWrapper(queryClient);
     const refetchMock = vi.fn().mockRejectedValue(new Error('network failed'));
+    const markAllReadAsync = vi.fn().mockResolvedValue(undefined);
     const markReadAsync = vi.fn().mockResolvedValue(undefined);
     const respondAsync = vi.fn().mockResolvedValue(undefined);
 
@@ -111,7 +122,8 @@ describe('useNotificationsScreenState', () => {
         { id: 'n1', type: 'comment', read: false },
         { id: 'n2', type: 'comment_reply', read: true },
         { id: 'n3', type: 'follow', read: true },
-        { id: 'n4', type: 'place_recommended', read: true },
+        { id: 'n4', type: 'place_quote', read: true },
+        { id: 'n5', type: 'place_added', read: true },
       ],
       error: null,
       fetchNextPage: vi.fn(),
@@ -119,6 +131,10 @@ describe('useNotificationsScreenState', () => {
       isLoading: false,
       isFetchingNextPage: true,
       refetch: refetchMock,
+    });
+    useMarkAllNotificationsReadMutationMock.mockReturnValue({
+      isPending: false,
+      mutateAsync: markAllReadAsync,
     });
     useMarkNotificationReadMutationMock.mockReturnValue({ mutateAsync: markReadAsync });
     useRespondToFollowRequestMutationMock.mockReturnValue({ mutateAsync: respondAsync });
@@ -141,14 +157,21 @@ describe('useNotificationsScreenState', () => {
     expect(hook.result.current.filteredItems.map((item) => item.id)).toEqual(['n3']);
 
     act(() => {
-      hook.result.current.setCategory('places');
+      hook.result.current.setCategory('quotes');
     });
     expect(hook.result.current.filteredItems.map((item) => item.id)).toEqual(['n4']);
 
+    act(() => {
+      hook.result.current.setCategory('places');
+    });
+    expect(hook.result.current.filteredItems.map((item) => item.id)).toEqual(['n5']);
+
     await hook.result.current.markItemRead({ id: 'n2', type: 'follow', read: true } as never);
+    await hook.result.current.markAllItemsRead();
     await hook.result.current.respondToFollowRequest({ id: 'n5', type: 'follow_request', read: false } as never, 'reject');
     await hook.result.current.onRefresh();
 
+    expect(markAllReadAsync).not.toHaveBeenCalled();
     expect(markReadAsync).not.toHaveBeenCalled();
     expect(respondAsync).not.toHaveBeenCalled();
     expect(refetchMock).not.toHaveBeenCalled();

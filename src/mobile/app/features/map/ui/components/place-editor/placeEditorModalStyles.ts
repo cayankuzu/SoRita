@@ -21,6 +21,9 @@ export const placeEditorModalStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
+  panelCompressed: {
+    transform: [{ scale: 0.985 }],
+  },
   panelTopArea: {
     gap: 0,
   },
@@ -64,6 +67,48 @@ export const placeEditorModalStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
+  },
+  saveProgressBanner: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  saveProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  saveProgressTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  saveProgressPercent: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  saveProgressTrack: {
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    overflow: 'hidden',
+  },
+  saveProgressFill: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+  },
+  saveProgressWarning: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.textSoft,
   },
   closeButton: {
     width: 34,

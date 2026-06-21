@@ -3,11 +3,6 @@ import type { Dispatch, SetStateAction } from 'react';
 import { PLACE_CATEGORY_META } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 
-const PHOTO_TILE_SIZE = 82;
-const PHOTO_TILE_GAP = 10;
-
-export const PHOTO_TILE_STRIDE = PHOTO_TILE_SIZE + PHOTO_TILE_GAP;
-
 export function normalizePlaceIdentity(value?: string) {
   return value?.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ') || '';
 }
@@ -38,7 +33,7 @@ export function isEquivalentTargetPlace(
   return referenceName === candidateName;
 }
 
-export function reorderPhotos(items: string[], fromIndex: number, toIndex: number) {
+export function reorderPhotos<T>(items: T[], fromIndex: number, toIndex: number) {
   if (
     fromIndex === toIndex ||
     fromIndex < 0 ||
@@ -57,6 +52,30 @@ export function reorderPhotos(items: string[], fromIndex: number, toIndex: numbe
   }
 
   nextItems.splice(toIndex, 0, movedItem);
+  return nextItems;
+}
+
+export function swapPhotos<T>(items: T[], leftIndex: number, rightIndex: number) {
+  if (
+    leftIndex === rightIndex ||
+    leftIndex < 0 ||
+    rightIndex < 0 ||
+    leftIndex >= items.length ||
+    rightIndex >= items.length
+  ) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const leftItem = nextItems[leftIndex];
+  const rightItem = nextItems[rightIndex];
+
+  if (!leftItem || !rightItem) {
+    return items;
+  }
+
+  nextItems[leftIndex] = rightItem;
+  nextItems[rightIndex] = leftItem;
   return nextItems;
 }
 

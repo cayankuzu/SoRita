@@ -5,6 +5,10 @@ import {
   normalizeStoredMediaUrl,
   uniqueStrings,
 } from '@/mobile/app/data/mappers/mediaUrlMappers';
+import {
+  getPlacePhotoUrls,
+  normalizePlaceMedia,
+} from '@/mobile/app/shared/utils/placeMedia';
 import type {
   FollowRow,
   FollowRequestRow,
@@ -36,6 +40,7 @@ type ListRecord = ListRow & {
 };
 
 type ListPlaceCommentRecord = ListPlaceCommentRow & {
+  is_pending?: boolean;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
 };
 
@@ -145,6 +150,7 @@ export function mapPlaceComments(
       parentCommentId: comment.parent_comment_id || undefined,
       createdAt: comment.created_at,
       updatedAt: comment.updated_at,
+      isPending: Boolean(comment.is_pending),
       likes: commentLikedBy.length,
       likedBy: commentLikedBy.length ? commentLikedBy : undefined,
       likeDetails: commentLikeDetails.length ? commentLikeDetails : undefined,
@@ -198,6 +204,21 @@ function mapPlace(
   usersById: Map<string, User>,
 ): Place {
   const addedByUser = place.created_by ? usersById.get(place.created_by) : null;
+  const mappedMedia = normalizePlaceMedia(
+    place.list_place_photos
+      ?.slice()
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .map((item) => ({
+        durationMs: item.duration_ms ?? undefined,
+        height: item.height ?? undefined,
+        id: item.id,
+        mimeType: item.mime_type ?? undefined,
+        thumbnailUrl: normalizeStoredMediaUrl(item.thumbnail_url),
+        type: item.media_type,
+        url: item.url,
+        width: item.width ?? undefined,
+      })),
+  );
   const likeDetails = (place.list_place_likes || [])
     .slice()
     .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
@@ -227,10 +248,8 @@ function mapPlace(
     bestTimes: place.best_times?.length ? place.best_times : undefined,
     atmosphere: place.atmosphere?.length ? place.atmosphere : undefined,
     specialFeatures: place.special_features?.length ? place.special_features : undefined,
-    photos: place.list_place_photos
-      ?.slice()
-      .sort((left, right) => left.sort_order - right.sort_order)
-      .map((item) => item.url),
+    media: mappedMedia,
+    photos: getPlacePhotoUrls({ media: mappedMedia }),
     likes: likedBy.length,
     likedBy: likedBy.length ? likedBy : undefined,
     likeDetails: likeDetails.length ? likeDetails : undefined,
@@ -242,6 +261,16 @@ function mapPlace(
           userId: addedByUser.id,
           userName: addedByUser.name,
           userAvatar: addedByUser.profilePhoto,
+        }
+      : undefined,
+    sourceAttribution: place.source_place_id
+      ? {
+          listId: place.source_list_id || undefined,
+          placeId: place.source_place_id,
+          placeName: place.source_place_name || undefined,
+          userAvatar: place.source_user_avatar_url || undefined,
+          userId: place.source_user_id || undefined,
+          userName: place.source_user_name || 'SoRita',
         }
       : undefined,
   };

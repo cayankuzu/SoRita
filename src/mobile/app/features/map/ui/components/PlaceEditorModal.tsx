@@ -5,10 +5,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 import { usePlaceEditorState } from '@/mobile/app/features/map/application/usePlaceEditorState';
@@ -17,10 +19,10 @@ import { PlaceEditorDetailsStep } from '@/mobile/app/features/map/ui/components/
 import { PlaceEditorFinalStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorFinalStep';
 import { PlaceEditorModalFooter } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorModalFooter';
 import { PlaceEditorModalHeader } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorModalHeader';
-import { PlaceEditorPreviewStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorPreviewStep';
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
 import { PlaceEditorWizardHeader } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorWizardHeader';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { getModalSafeAreaPadding } from '@/mobile/app/shared/utils/modalLayout';
 
 export type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 
@@ -34,20 +36,18 @@ type PlaceEditorModalProps = {
   existingPlace?: Place | null;
   existingPlaceListName?: string;
   onClose: () => void;
-  onSave: (place: Omit<Place, 'id' | 'addedAt'>, targetListIds: string[]) => Promise<void> | void;
+  onSave: (
+    place: Omit<Place, 'id' | 'addedAt'>,
+    targetListIds: string[],
+    options?: { onProgress?: (progress: number) => void },
+  ) => Promise<void> | void;
   onDelete?: (placeId: string) => void;
   onCreateList?: (list: PlaceList) => Promise<void> | void;
   draft?: PlaceEditorDraft | null;
   onMinimize?: (draft: PlaceEditorDraft) => void;
 };
 
-const wizardSteps = [
-  ...tr.placeEditor.steps,
-  {
-    title: tr.common.preview,
-    subtitle: 'Kartinin nasil gorunecegini kontrol et',
-  },
-] as const;
+const wizardSteps = tr.placeEditor.steps;
 
 export function PlaceEditorModal({
   visible,
@@ -66,6 +66,16 @@ export function PlaceEditorModal({
   onMinimize,
 }: PlaceEditorModalProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const { progress } = useAppProgressBanner();
+  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
+    topInset: insets.top,
+    bottomInset: insets.bottom,
+    topSpacing: 20,
+    bottomSpacing: 12,
+    minTopPadding: Platform.OS === 'android' ? 20 : 20,
+    minBottomPadding: Platform.OS === 'android' ? 36 : 12,
+  });
   const {
     address,
     atmosphere,
@@ -74,22 +84,19 @@ export function PlaceEditorModal({
     canContinue,
     currentMembershipListIds,
     dietarySelections,
-    draggingPhotoIndex,
     duplicateListIds,
     features,
     generalFeatureOptions,
     goToNextStep,
     goToPreviousStep,
-    handleAddPhoto,
+    handleAddMedia,
     handleCreateList,
-    handlePhotoLongPress,
-    handlePhotoTouchEnd,
-    handlePhotoTouchMove,
-    handlePhotoTouchStart,
+    handleEditMedia,
+    handleMediaPress,
     handlePickListCover,
-    handleRemovePhoto,
+    handleRemoveMedia,
     handleSave,
-    isAddingPhoto,
+    isAddingMedia,
     isCreatingList,
     isPickingListCover,
     isSaving,
@@ -100,20 +107,13 @@ export function PlaceEditorModal({
     newListName,
     newListPublic,
     notes,
-    photoDragX,
-    photos,
-    previewBestTimes,
-    previewCategories,
-    previewDietaryOptions,
-    previewGeneralFeatures,
-    previewPlace,
-    previewPriceLabel,
+    media,
     priceMax,
     priceMin,
     rating,
     selectedCategories,
     selectedLists,
-    selectedPreviewList,
+    selectedMediaIndex,
     setAddress,
     setName,
     setNewListCoverImage,
@@ -146,11 +146,21 @@ export function PlaceEditorModal({
     existingPlace,
     draft,
     onSave,
+    onSaveStart: onClose,
     onCreateList,
   });
   const isEditorBusy = isSaving || isCreatingList;
-  const footerPaddingBottom =
-    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 18) + 20;
+  const isCloseLocked = isCreatingList;
+  const footerPaddingBottom = Platform.OS === 'android' ? 26 : 18;
+  const isProgressBannerVisible = progress != null;
+  const progressBannerReserve = isProgressBannerVisible
+    ? Platform.OS === 'android'
+      ? 212
+      : 176
+    : 0;
+  const compressedPanelMaxHeight = isProgressBannerVisible
+    ? Math.max(windowHeight - paddingTop - paddingBottom - progressBannerReserve, 360)
+    : null;
 
   const renderStep = () => {
     if (step === 0) {
@@ -192,11 +202,10 @@ export function PlaceEditorModal({
         <PlaceEditorFinalStep
           atmosphere={atmosphere}
           currentMembershipListIds={currentMembershipListIds}
-          draggingPhotoIndex={draggingPhotoIndex}
           duplicateListIds={duplicateListIds}
           features={features}
           generalFeatureOptions={generalFeatureOptions}
-          isAddingPhoto={isAddingPhoto}
+          isAddingMedia={isAddingMedia}
           isCreatingList={isCreatingList}
           isPickingListCover={isPickingListCover}
           listSelectionNotice={listSelectionNotice}
@@ -205,25 +214,22 @@ export function PlaceEditorModal({
           newListDescription={newListDescription}
           newListName={newListName}
           newListPublic={newListPublic}
+          media={media}
           notes={notes}
-          photoDragX={photoDragX}
-          photos={photos}
           selectedLists={selectedLists}
+          selectedMediaIndex={selectedMediaIndex}
           showNewListForm={showNewListForm}
           title={title}
-          onAddPhoto={handleAddPhoto}
+          onAddMedia={handleAddMedia}
           onCreateList={handleCreateList}
+          onMediaPress={handleMediaPress}
           onNewListCoverImageChange={setNewListCoverImage}
           onNewListDescriptionChange={setNewListDescription}
           onNewListNameChange={setNewListName}
           onNewListPublicChange={setNewListPublic}
           onNotesChange={setNotes}
-          onPhotoLongPress={handlePhotoLongPress}
-          onPhotoTouchEnd={handlePhotoTouchEnd}
-          onPhotoTouchMove={handlePhotoTouchMove}
-          onPhotoTouchStart={handlePhotoTouchStart}
           onPickListCover={handlePickListCover}
-          onRemovePhoto={handleRemovePhoto}
+          onRemoveMedia={handleRemoveMedia}
           onShowNewListFormChange={setShowNewListForm}
           onTitleChange={setTitle}
           onToggleAtmosphere={toggleAtmosphere}
@@ -233,18 +239,7 @@ export function PlaceEditorModal({
       );
     }
 
-    return (
-      <PlaceEditorPreviewStep
-        previewBestTimes={previewBestTimes}
-        previewCategories={previewCategories}
-        previewDietaryOptions={previewDietaryOptions}
-        previewGeneralFeatures={previewGeneralFeatures}
-        previewPlace={previewPlace}
-        previewPriceLabel={previewPriceLabel}
-        selectedListCount={selectedLists.length}
-        selectedPreviewList={selectedPreviewList}
-      />
-    );
+    return null;
   };
 
   return (
@@ -254,21 +249,29 @@ export function PlaceEditorModal({
       animationType="slide"
       hardwareAccelerated
       navigationBarTranslucent
-      onRequestClose={isEditorBusy ? undefined : onClose}
+      onRequestClose={isCloseLocked ? undefined : onClose}
       presentationStyle="overFullScreen"
       statusBarTranslucent
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable disabled={isEditorBusy} style={styles.backdrop} onPress={onClose} />
-        <View style={styles.panel}>
+        <Pressable disabled={isCloseLocked} style={styles.backdrop} onPress={onClose} />
+        <View
+          style={[
+            styles.panel,
+            isProgressBannerVisible ? styles.panelCompressed : null,
+            compressedPanelMaxHeight != null ? { maxHeight: compressedPanelMaxHeight } : null,
+          ]}
+        >
           <PlaceEditorModalHeader
             existingPlaceListName={existingPlaceListName}
             isEditing={Boolean(existingPlace)}
-            onClose={isEditorBusy ? () => undefined : onClose}
-            onMinimize={onMinimize ? () => onMinimize(buildDraft()) : undefined}
+            onClose={isCloseLocked ? () => undefined : onClose}
+            onMinimize={
+              onMinimize && !isCloseLocked ? () => onMinimize(buildDraft()) : undefined
+            }
             subtitle={name || placeName || tr.placeEditor.minimizedNewTitle}
           />
 

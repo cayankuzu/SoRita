@@ -22,6 +22,7 @@ import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
@@ -30,6 +31,7 @@ const categories: Array<{ key: NotificationCategory; label: string }> = [
   { key: 'likes', label: notificationUiConfig.categories.likes },
   { key: 'follows', label: notificationUiConfig.categories.follows },
   { key: 'comments', label: notificationUiConfig.categories.comments },
+  { key: 'quotes', label: notificationUiConfig.categories.quotes },
   { key: 'places', label: notificationUiConfig.categories.places },
 ];
 
@@ -45,6 +47,8 @@ export function NotificationsScreen() {
     hasNextPage,
     isInitialLoading,
     isFetchingNextPage,
+    isMarkingAllRead,
+    markAllItemsRead,
     markItemRead,
     onRefresh,
     refreshing,
@@ -92,6 +96,26 @@ export function NotificationsScreen() {
           <Text style={styles.title}>{notificationUiConfig.title}</Text>
           {unreadCount > 0 ? <Text style={styles.subtitle}>{notificationUiConfig.newCount(unreadCount)}</Text> : null}
         </View>
+        <Pressable
+          disabled={unreadCount === 0 || isMarkingAllRead}
+          onPress={() => {
+            void markAllItemsRead();
+          }}
+          style={({ pressed }) => [
+            styles.markAllButton,
+            unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonDisabled : null,
+            pressed && unreadCount > 0 && !isMarkingAllRead ? styles.markAllButtonPressed : null,
+          ]}
+        >
+          <Text
+            style={[
+              styles.markAllButtonLabel,
+              unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonLabelDisabled : null,
+            ]}
+          >
+            {notificationUiConfig.markAllReadLabel}
+          </Text>
+        </Pressable>
       </View>
 
       <NotificationCategoryTabs
@@ -109,20 +133,23 @@ export function NotificationsScreen() {
             notification={notification}
             onPress={() => {
               void (async () => {
-                await markItemRead(notification);
+                if (!notification.read) {
+                  await markItemRead(notification);
+                }
+
                 openNotificationTarget(notification, navigation);
               })();
             }}
             onAcceptFollowRequest={() =>
               void (async () => {
                 await respondToFollowRequest(notification, 'accept');
-                showToast('Takip istegi onaylandi', 'success');
+                showToast(notificationUiConfig.toast.followRequestAccepted, 'success');
               })()
             }
             onRejectFollowRequest={() =>
               void (async () => {
                 await respondToFollowRequest(notification, 'reject');
-                showToast('Takip istegi reddedildi', 'success');
+                showToast(notificationUiConfig.toast.followRequestRejected, 'success');
               })()
             }
           />
@@ -145,9 +172,9 @@ export function NotificationsScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon={<Heart color={colors.danger} size={28} />}
-                title="Bildirimler acilamiyor"
+                title={notificationUiConfig.errorTitle}
                 description={errorMessage}
-                actionLabel="Tekrar dene"
+                actionLabel={tr.common.retry}
                 onAction={retry}
                 tone="danger"
               />
@@ -164,9 +191,9 @@ export function NotificationsScreen() {
             <View style={styles.noticeWrap}>
               <InlineNotice
                 tone="warning"
-                title="Bazi bildirimler guncellenemedi"
-                description="Kayitli bildirimler gosteriliyor. Baglanti duzelince tekrar deneyebilirsin."
-                actionLabel="Tekrar dene"
+                title={notificationUiConfig.partialTitle}
+                description={notificationUiConfig.partialDescription}
+                actionLabel={tr.common.retry}
                 onAction={() => {
                   void retry();
                 }}
@@ -239,6 +266,28 @@ const styles = StyleSheet.create({
   },
   headerBody: {
     flex: 1,
+  },
+  markAllButton: {
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  markAllButtonDisabled: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  markAllButtonPressed: {
+    opacity: 0.82,
+  },
+  markAllButtonLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  markAllButtonLabelDisabled: {
+    color: colors.textSoft,
   },
   title: {
     fontSize: 16,

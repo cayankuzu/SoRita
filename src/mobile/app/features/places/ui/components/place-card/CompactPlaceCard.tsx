@@ -6,17 +6,19 @@ import {
 } from 'react-native';
 import { Crosshair, Star } from 'lucide-react-native';
 
-import type { Place } from '@/mobile/app/data/contracts/entities';
+import type { Place, PlaceMedia } from '@/mobile/app/data/contracts/entities';
+import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import {
   MINI_MAP_RESET_LONG_PRESS_MS,
   useMiniMapInteraction,
 } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
+import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 
 const MAP_PRESS_SUPPRESSION_WINDOW_MS = 320;
 
@@ -28,30 +30,31 @@ type CompactMapMarker = {
 };
 
 type CompactPlaceCardProps = {
+  media: PlaceMedia[];
   mapMarkers: CompactMapMarker[];
-  photos: string[];
   place: Place;
   placeTimestampLabels: string[];
   onPress?: () => void;
 };
 
 export function CompactPlaceCard({
+  media,
   mapMarkers,
-  photos,
   place,
   placeTimestampLabels,
   onPress,
 }: CompactPlaceCardProps) {
   const lastCompactMapGestureAtRef = React.useRef(0);
   const handledLongPressRef = React.useRef(false);
-  const hasMiniMap = !photos[0];
+  const primaryMedia = media[0];
+  const hasMiniMap = !primaryMedia;
   const {
     activateMap,
     deactivateMap,
     isMapInteractive,
     mapFocusKey,
     showInteractionHint,
-  } = useMiniMapInteraction(`${place.id}:${hasMiniMap ? 'map' : 'photo'}`);
+  } = useMiniMapInteraction(`${place.id}:${hasMiniMap ? 'map' : primaryMedia.type}`);
 
   return (
     <Pressable
@@ -65,12 +68,16 @@ export function CompactPlaceCard({
       }}
     >
       <View style={styles.compactImageWrap}>
-        {photos[0] ? (
-          <AppImage
-            uri={photos[0]}
-            style={styles.compactImageWrap}
-            accessibilityLabel={`${place.name} fotografi`}
-          />
+        {primaryMedia ? (
+          primaryMedia.type === 'video' ? (
+            <VideoPreview uri={primaryMedia.url} muted style={styles.compactImageWrap} />
+          ) : (
+            <AppImage
+              uri={primaryMedia.url}
+              style={styles.compactImageWrap}
+              accessibilityLabel={`${place.name} fotoğrafı`}
+            />
+          )
         ) : (
           <MiniMapPreview
             places={mapMarkers}
@@ -98,7 +105,7 @@ export function CompactPlaceCard({
           </View>
           {hasMiniMap ? (
             <Pressable
-              accessibilityLabel="Mini haritayi odakla"
+              accessibilityLabel={tr.cards.focusMiniMap}
               delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
               onPressIn={() => {
                 handledLongPressRef.current = false;

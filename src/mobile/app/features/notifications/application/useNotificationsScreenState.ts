@@ -5,14 +5,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import {
   type MobileNotification,
+  useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
   useNotificationsQuery,
   useRespondToFollowRequestMutation,
 } from '@/mobile/app/data/hooks/useNotificationsQuery';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
-export type NotificationCategory = 'all' | 'likes' | 'follows' | 'comments' | 'places';
+export type NotificationCategory =
+  | 'all'
+  | 'likes'
+  | 'follows'
+  | 'comments'
+  | 'quotes'
+  | 'places';
 export type { MobileNotification };
 
 type UseNotificationsScreenStateParams = {
@@ -32,6 +40,10 @@ function getCategory(type: MobileNotification['type']): NotificationCategory {
     return 'comments';
   }
 
+  if (type === 'place_quote') {
+    return 'quotes';
+  }
+
   return 'places';
 }
 
@@ -39,12 +51,13 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
   const [category, setCategory] = useState<NotificationCategory>('all');
   const queryClient = useQueryClient();
   const notificationsQuery = useNotificationsQuery(userId);
+  const markAllNotificationsReadMutation = useMarkAllNotificationsReadMutation(userId);
   const markNotificationReadMutation = useMarkNotificationReadMutation(userId);
   const respondToFollowRequestMutation = useRespondToFollowRequestMutation(userId);
   const errorMessage = notificationsQuery.error
     ? getUserFacingErrorMessage(
         notificationsQuery.error,
-        'Bildirimler su an yuklenemiyor. Lutfen tekrar dene.',
+        tr.notifications.errorDescription,
       )
     : null;
 
@@ -56,14 +69,12 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
     await notificationsQuery.refetch().catch(() => undefined);
   }, [notificationsQuery, userId]);
 
-  const { refreshing, onRefresh } = useFocusRefresh(loadNotifications);
+  const { refreshing, onRefresh } = useFocusRefresh(loadNotifications, { skipInitialFocus: true });
 
   useEffect(() => {
     if (!userId) {
       return;
     }
-
-    void loadNotifications();
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -87,6 +98,14 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
   }, [category, items]);
 
   const unreadCount = useMemo(() => items.filter((item) => !item.read).length, [items]);
+
+  const markAllItemsRead = useCallback(async () => {
+    if (!userId || unreadCount === 0) {
+      return;
+    }
+
+    await markAllNotificationsReadMutation.mutateAsync().catch(() => undefined);
+  }, [markAllNotificationsReadMutation, unreadCount, userId]);
 
   const markItemRead = useCallback(
     async (notification: MobileNotification) => {
@@ -117,7 +136,9 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
     hasNextPage: notificationsQuery.hasNextPage,
     isInitialLoading: notificationsQuery.isLoading && items.length === 0,
     isFetchingNextPage: notificationsQuery.isFetchingNextPage,
+    isMarkingAllRead: markAllNotificationsReadMutation.isPending,
     items,
+    markAllItemsRead,
     markItemRead,
     onRefresh,
     refreshing,

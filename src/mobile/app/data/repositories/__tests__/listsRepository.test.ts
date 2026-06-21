@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fromMock = vi.fn();
 const uploadImageAssetMock = vi.fn();
+const uploadPlaceMediaAssetMock = vi.fn();
 const deleteStorageAssetsByUrlsMock = vi.fn();
 const fetchVisibleDataContextMock = vi.fn();
 const fetchVisibleListsPageMock = vi.fn();
@@ -15,6 +16,7 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
 vi.mock('@/mobile/app/platform/supabase/media', () => ({
   deleteStorageAssetsByUrls: deleteStorageAssetsByUrlsMock,
   uploadImageAsset: uploadImageAssetMock,
+  uploadPlaceMediaAsset: uploadPlaceMediaAssetMock,
 }));
 
 vi.mock('@/mobile/app/data/repositories/visibleDataRepository', () => ({
@@ -45,6 +47,7 @@ describe('listsRepository', () => {
   beforeEach(() => {
     fromMock.mockReset();
     uploadImageAssetMock.mockReset();
+    uploadPlaceMediaAssetMock.mockReset();
     deleteStorageAssetsByUrlsMock.mockReset();
     fetchVisibleDataContextMock.mockReset();
     fetchVisibleListsPageMock.mockReset();
@@ -61,10 +64,10 @@ describe('listsRepository', () => {
     };
     const insertPhotoRowsMock = vi.fn().mockResolvedValue({ error: null });
 
-    uploadImageAssetMock
-      .mockResolvedValueOnce('https://cdn.example/list-cover.jpg')
+    uploadImageAssetMock.mockResolvedValueOnce('https://cdn.example/list-cover.jpg');
+    uploadPlaceMediaAssetMock
       .mockResolvedValueOnce('https://cdn.example/place-0.jpg')
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce('https://cdn.example/place-1.jpg');
     fromMock
       .mockReturnValueOnce({ upsert: listsUpsertMock })
       .mockReturnValueOnce({ upsert: placesUpsertMock })
@@ -116,11 +119,18 @@ describe('listsRepository', () => {
       }),
     );
     expect(insertPhotoRowsMock).toHaveBeenCalledWith([
-      {
+      expect.objectContaining({
         list_place_id: 'place-1',
+        media_type: 'photo',
         sort_order: 0,
         url: 'https://cdn.example/place-0.jpg',
-      },
+      }),
+      expect.objectContaining({
+        list_place_id: 'place-1',
+        media_type: 'photo',
+        sort_order: 1,
+        url: 'https://cdn.example/place-1.jpg',
+      }),
     ]);
   });
 
@@ -159,7 +169,7 @@ describe('listsRepository', () => {
       likedBy: [],
       createdAt: '2026-04-16T10:00:00.000Z',
       updatedAt: '2026-04-16T10:00:00.000Z',
-    })).rejects.toThrow('Liste adi topluluk kurallarina aykiri ifade iceriyor.');
+    })).rejects.toThrow('Liste adı topluluk kurallarına aykırı ifade içeriyor.');
 
     uploadImageAssetMock.mockResolvedValue(undefined);
     fromMock.mockReturnValueOnce({
@@ -185,7 +195,7 @@ describe('listsRepository', () => {
       likedBy: [],
       createdAt: '2026-04-16T10:00:00.000Z',
       updatedAt: '2026-04-16T10:00:00.000Z',
-    })).rejects.toThrow('Mekan adi topluluk kurallarina aykiri ifade iceriyor.');
+    })).rejects.toThrow('Mekân adı topluluk kurallarına aykırı ifade içeriyor.');
 
     expect(fromMock).toHaveBeenCalledTimes(1);
     expect(uploadImageAssetMock).toHaveBeenCalledTimes(1);
@@ -261,7 +271,7 @@ describe('listsRepository', () => {
 
     expect(placesUpsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: 'Kaydedilen Mekan',
+        name: 'Kaydedilen Mekân',
         categories: [],
         best_times: [],
         atmosphere: [],
@@ -317,9 +327,8 @@ describe('listsRepository', () => {
     };
     const insertPhotoRowsMock = vi.fn().mockResolvedValue({ error: new Error('insert photo rows failed') });
 
-    uploadImageAssetMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce('https://cdn.example/place-0.jpg');
+    uploadImageAssetMock.mockResolvedValueOnce(undefined);
+    uploadPlaceMediaAssetMock.mockResolvedValueOnce('https://cdn.example/place-0.jpg');
     fromMock
       .mockReturnValueOnce({ upsert: listsUpsertMock })
       .mockReturnValueOnce({ upsert: placesUpsertMock })
@@ -367,6 +376,7 @@ describe('listsRepository', () => {
             lat: 1,
             lng: 1,
             photos: ['https://cdn.example/old-place.jpg'],
+            media: [{ type: 'photo', url: 'https://cdn.example/old-place.jpg' }],
             addedAt: '2026-04-16T10:00:00.000Z',
           },
         ],

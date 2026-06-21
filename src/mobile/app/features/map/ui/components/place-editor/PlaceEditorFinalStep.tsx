@@ -1,24 +1,36 @@
 import React from 'react';
 import {
-  Animated,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import type { GestureResponderEvent } from 'react-native';
-import { ImagePlus, Trash2 } from 'lucide-react-native';
+import {
+  Camera,
+  ImagePlus,
+  Trash2,
+} from 'lucide-react-native';
 
 import { PLACE_ATMOSPHERE_OPTIONS } from '@/mobile/app/catalog/placeOptions';
-import type { PlaceList } from '@/mobile/app/data/contracts/entities';
-import { MAX_PLACE_PHOTOS, PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor';
+import type { PlaceList, PlaceMedia } from '@/mobile/app/data/contracts/entities';
+import {
+  MAX_PLACE_MEDIA_ITEMS,
+  MAX_PLACE_PHOTOS,
+  MAX_PLACE_VIDEOS,
+  PLACE_EDITOR_COPY,
+} from '@/mobile/app/features/map/catalog/placeEditor';
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorListSelectionSection';
+import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  formatPlaceMediaDuration,
+  getPlaceMediaCounts,
+} from '@/mobile/app/shared/utils/placeMedia';
 import {
   PLACE_NOTES_MAX_LENGTH,
   PLACE_TITLE_MAX_LENGTH,
@@ -27,38 +39,34 @@ import {
 type PlaceEditorFinalStepProps = {
   atmosphere: string[];
   currentMembershipListIds: Set<string>;
-  draggingPhotoIndex: number | null;
   duplicateListIds: Set<string>;
   features: string[];
   generalFeatureOptions: string[];
-  isAddingPhoto: boolean;
+  isAddingMedia: boolean;
   isCreatingList: boolean;
   isPickingListCover: boolean;
   listSelectionNotice?: string | null;
   lists: PlaceList[];
+  media: PlaceMedia[];
   newListCoverImage: string;
   newListDescription: string;
   newListName: string;
   newListPublic: boolean;
   notes: string;
-  photoDragX: Animated.Value;
-  photos: string[];
   selectedLists: string[];
+  selectedMediaIndex: number | null;
   showNewListForm: boolean;
   title: string;
-  onAddPhoto: () => void | Promise<void>;
+  onAddMedia: () => void | Promise<void>;
   onCreateList: () => void | Promise<void>;
+  onMediaPress: (index: number) => void;
   onNewListCoverImageChange: (value: string) => void;
   onNewListDescriptionChange: (value: string) => void;
   onNewListNameChange: (value: string) => void;
   onNewListPublicChange: (value: boolean) => void;
   onNotesChange: (value: string) => void;
-  onPhotoLongPress: (index: number) => void;
-  onPhotoTouchEnd: (index: number, event?: GestureResponderEvent) => void;
-  onPhotoTouchMove: (index: number, event: GestureResponderEvent) => void;
-  onPhotoTouchStart: (index: number, event: GestureResponderEvent) => void;
   onPickListCover: () => void | Promise<void>;
-  onRemovePhoto: (index: number) => void;
+  onRemoveMedia: (index: number) => void;
   onShowNewListFormChange: (value: boolean) => void;
   onTitleChange: (value: string) => void;
   onToggleAtmosphere: (value: string) => void;
@@ -66,47 +74,93 @@ type PlaceEditorFinalStepProps = {
   onToggleList: (listId: string, options?: { blocked?: boolean; listName?: string }) => void;
 };
 
+function MediaThumb({
+  index,
+  isSelected,
+  item,
+  onPress,
+  onRemove,
+}: {
+  index: number;
+  isSelected: boolean;
+  item: PlaceMedia;
+  onPress: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      <View style={[styles.mediaThumb, isSelected ? styles.mediaThumbSelected : null]}>
+        {item.type === 'video' ? (
+          <VideoPreview
+            uri={item.url}
+            durationLabel={formatPlaceMediaDuration(item.durationMs)}
+            muted
+            showPlayOverlay
+            style={styles.mediaThumbPreview}
+          />
+        ) : (
+          <AppImage uri={item.url} style={styles.mediaThumbPreview} />
+        )}
+        <View style={styles.mediaOrderBadge}>
+          <Text style={styles.mediaOrderBadgeText}>{index + 1}</Text>
+        </View>
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+          style={styles.mediaRemove}
+        >
+          <Trash2 color={colors.onPrimary} size={14} />
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+}
+
 export function PlaceEditorFinalStep({
   atmosphere,
   currentMembershipListIds,
-  draggingPhotoIndex,
   duplicateListIds,
   features,
   generalFeatureOptions,
-  isAddingPhoto,
+  isAddingMedia,
   isCreatingList,
   isPickingListCover,
   listSelectionNotice,
   lists,
+  media,
   newListCoverImage,
   newListDescription,
   newListName,
   newListPublic,
   notes,
-  photoDragX,
-  photos,
   selectedLists,
+  selectedMediaIndex,
   showNewListForm,
   title,
-  onAddPhoto,
+  onAddMedia,
   onCreateList,
+  onMediaPress,
   onNewListCoverImageChange,
   onNewListDescriptionChange,
   onNewListNameChange,
   onNewListPublicChange,
   onNotesChange,
-  onPhotoLongPress,
-  onPhotoTouchEnd,
-  onPhotoTouchMove,
-  onPhotoTouchStart,
   onPickListCover,
-  onRemovePhoto,
+  onRemoveMedia,
   onShowNewListFormChange,
   onTitleChange,
   onToggleAtmosphere,
   onToggleFeature,
   onToggleList,
 }: PlaceEditorFinalStepProps) {
+  const mediaCounts = getPlaceMediaCounts(media);
+  const photoCounterLabel = PLACE_EDITOR_COPY.photoCounterLabel(mediaCounts.photos, MAX_PLACE_PHOTOS);
+  const videoCounterLabel = PLACE_EDITOR_COPY.videoCounterLabel(mediaCounts.videos, MAX_PLACE_VIDEOS);
+  const mediaCounterLabel = PLACE_EDITOR_COPY.mediaCounterLabel(mediaCounts.total, MAX_PLACE_MEDIA_ITEMS);
+  const mediaHelperText = selectedMediaIndex == null ? null : tr.placeEditor.mediaSwapHint;
+
   return (
     <View style={styles.stepContent}>
       <TextField
@@ -127,77 +181,109 @@ export function PlaceEditorFinalStep({
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.atmosphere}</Text>
-        <Text style={styles.sectionHelper}>Birden fazla atmosfer sec</Text>
+        <Text style={styles.sectionHelper}>{tr.placeEditor.atmosphereHelper}</Text>
         <OptionRail options={PLACE_ATMOSPHERE_OPTIONS} selectedValues={atmosphere} onToggle={onToggleAtmosphere} />
-        {atmosphere.length > 0 ? <Text style={styles.selectionMeta}>{atmosphere.length} atmosfer secildi</Text> : null}
+        {atmosphere.length > 0 ? (
+          <Text style={styles.selectionMeta}>{tr.placeEditor.selectionCount(atmosphere.length, 'atmosfer')}</Text>
+        ) : null}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.features}</Text>
-        <Text style={styles.sectionHelper}>Kaydirarak uygun ozellikleri sec</Text>
+        <Text style={styles.sectionHelper}>{tr.placeEditor.featuresHelper}</Text>
         <OptionRail options={generalFeatureOptions} selectedValues={features} onToggle={onToggleFeature} />
-        {features.length > 0 ? <Text style={styles.selectionMeta}>{features.length} ozellik secildi</Text> : null}
+        {features.length > 0 ? (
+          <Text style={styles.selectionMeta}>{tr.placeEditor.selectionCount(features.length, 'özellik')}</Text>
+        ) : null}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.photos}</Text>
-        <Text style={styles.sectionHelper}>
-          {PLACE_EDITOR_COPY.photoCounterLabel(photos.length, MAX_PLACE_PHOTOS)}. Fotografa uzun basip saga sola surukleyerek siralamayi degistir.
-        </Text>
-        <View style={styles.photoRail}>
-          <ScrollView
-            horizontal
-            scrollEnabled={draggingPhotoIndex == null}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.photoStrip}
-          >
-            {photos.map((uri, index) => {
-              const isDragging = draggingPhotoIndex === index;
-
-              return (
-                <Pressable
-                  key={`${uri}-${index}`}
-                  delayLongPress={180}
-                  onPressIn={(event) => onPhotoTouchStart(index, event)}
-                  onLongPress={() => onPhotoLongPress(index)}
-                  onTouchMove={(event) => onPhotoTouchMove(index, event)}
-                  onTouchEnd={(event) => onPhotoTouchEnd(index, event)}
-                  onTouchCancel={() => onPhotoTouchEnd(index)}
-                >
-                  <Animated.View
-                    style={[
-                      styles.photoThumb,
-                      isDragging ? styles.photoThumbDragging : null,
-                      isDragging ? { transform: [{ translateX: photoDragX }, { scale: 1.04 }] } : null,
-                    ]}
-                  >
-                    <Image source={{ uri }} style={StyleSheet.absoluteFillObject} />
-                    <Pressable disabled={isDragging} onPress={() => onRemovePhoto(index)} style={styles.photoRemove}>
-                      <Trash2 color={colors.onPrimary} size={14} />
-                    </Pressable>
-                    <View style={styles.photoOrder}>
-                      <Text style={styles.photoOrderText}>{index + 1}</Text>
-                    </View>
-                  </Animated.View>
-                </Pressable>
-              );
-            })}
-            {photos.length < MAX_PLACE_PHOTOS ? (
-              <Pressable
-                style={[styles.photoAddTile, isAddingPhoto ? styles.photoAddTileBusy : null]}
-                onPress={() => {
-                  void onAddPhoto();
-                }}
-                disabled={isAddingPhoto}
-              >
-                <ImagePlus color={colors.primary} size={20} />
-                <Text style={styles.addPhotoText}>
-                  {isAddingPhoto ? 'Ekleniyor' : tr.placeEditor.add}
-                </Text>
-              </Pressable>
+        <View style={styles.mediaSectionHeader}>
+          <View style={styles.mediaSectionHeaderCopy}>
+            <Text style={styles.sectionTitle}>{tr.placeEditor.mediaTitle}</Text>
+            {mediaHelperText ? (
+              <Text style={[styles.sectionHelper, styles.sectionHelperActive]}>
+                {mediaHelperText}
+              </Text>
             ) : null}
-          </ScrollView>
+          </View>
         </View>
+
+        <View style={styles.counterRow}>
+          <View style={styles.counterBadge}>
+            <Text style={styles.counterBadgeText}>{photoCounterLabel}</Text>
+          </View>
+          <View style={styles.counterBadge}>
+            <Text style={styles.counterBadgeText}>{videoCounterLabel}</Text>
+          </View>
+          <View style={styles.counterBadgeStrong}>
+            <Text style={styles.counterBadgeStrongText}>{mediaCounterLabel}</Text>
+          </View>
+        </View>
+
+        {media.length === 0 ? (
+          <Pressable
+            style={[styles.mediaEmptyCard, isAddingMedia ? styles.mediaBusy : null]}
+            onPress={() => {
+              void onAddMedia();
+            }}
+            disabled={isAddingMedia}
+          >
+            <View style={styles.mediaEmptyIconWrap}>
+              <Camera color={colors.primary} size={20} />
+            </View>
+            <View style={styles.mediaEmptyCopy}>
+              <Text style={styles.mediaEmptyTitle}>{tr.placeEditor.mediaEmptyTitle}</Text>
+              <Text style={styles.mediaEmptyText}>
+                {tr.placeEditor.mediaEmptyDescription}
+              </Text>
+            </View>
+            <View style={styles.mediaEmptyAction}>
+              <ImagePlus color={colors.primary} size={18} />
+              <Text style={styles.mediaEmptyActionText}>
+                {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.mediaAddAction}
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.mediaRail}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.mediaStrip}
+            >
+              {media.map((item, index) => (
+                <MediaThumb
+                  key={`${item.url}-${item.type}-${index}`}
+                  index={index}
+                  isSelected={selectedMediaIndex === index}
+                  item={item}
+                  onPress={() => onMediaPress(index)}
+                  onRemove={() => onRemoveMedia(index)}
+                />
+              ))}
+
+              {mediaCounts.total < MAX_PLACE_MEDIA_ITEMS ? (
+                <Pressable
+                  style={[styles.mediaAddTile, isAddingMedia ? styles.mediaBusy : null]}
+                  onPress={() => {
+                    void onAddMedia();
+                  }}
+                  disabled={isAddingMedia}
+                >
+                  <View style={styles.mediaAddIconWrap}>
+                    <ImagePlus color={colors.primary} size={18} />
+                  </View>
+                  <Text style={styles.addMediaText}>
+                    {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.add}
+                  </Text>
+                  <Text style={styles.addMediaSubtext}>{tr.placeEditor.mediaAddTileSubtitle}</Text>
+                </Pressable>
+              ) : null}
+            </ScrollView>
+          </View>
+        )}
+
       </View>
 
       <PlaceEditorListSelectionSection
@@ -241,33 +327,136 @@ const styles = StyleSheet.create({
   sectionHelper: {
     marginTop: -2,
     fontSize: 11,
+    lineHeight: 17,
     color: colors.textSoft,
+  },
+  sectionHelperActive: {
+    color: colors.primary,
   },
   selectionMeta: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.primary,
   },
-  photoStrip: {
+  mediaSectionHeader: {
     gap: 10,
   },
-  photoRail: {
+  mediaSectionHeaderCopy: {
+    gap: 2,
+  },
+  counterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  counterBadge: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  counterBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  counterBadgeStrong: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  counterBadgeStrongText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  mediaEmptyCard: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.surface,
+    padding: 16,
+    gap: 12,
+  },
+  mediaBusy: {
+    opacity: 0.65,
+  },
+  mediaEmptyIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  mediaEmptyCopy: {
+    gap: 6,
+  },
+  mediaEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  mediaEmptyText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textMuted,
+  },
+  mediaEmptyAction: {
+    alignSelf: 'flex-start',
+    minHeight: 40,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    backgroundColor: colors.primaryBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mediaEmptyActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  mediaRail: {
     width: '100%',
   },
-  photoThumb: {
-    width: 82,
-    height: 82,
+  mediaStrip: {
+    gap: 10,
+  },
+  mediaThumb: {
+    width: 94,
+    height: 94,
     borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: colors.surfaceMuted,
   },
-  photoThumbDragging: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-    zIndex: 3,
-    elevation: 3,
+  mediaThumbPreview: {
+    width: '100%',
+    height: '100%',
   },
-  photoRemove: {
+  mediaThumbSelected: {
+    borderWidth: 2.5,
+    borderColor: colors.primary,
+  },
+  mediaOrderBadge: {
+    position: 'absolute',
+    left: 6,
+    top: 6,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.darkOverlay,
+    paddingHorizontal: 6,
+  },
+  mediaOrderBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.onPrimary,
+  },
+  mediaRemove: {
     position: 'absolute',
     top: 6,
     right: 6,
@@ -278,40 +467,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
   },
-  photoOrder: {
-    position: 'absolute',
-    left: 6,
-    bottom: 6,
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-  },
-  photoOrderText: {
-    color: colors.onPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  photoAddTile: {
-    width: 82,
-    height: 82,
+  mediaAddTile: {
+    width: 94,
+    height: 94,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: colors.primary,
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
   },
-  photoAddTileBusy: {
-    opacity: 0.6,
+  mediaAddIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
-  addPhotoText: {
+  addMediaText: {
     fontSize: 12,
     fontWeight: '800',
     color: colors.primary,
+  },
+  addMediaSubtext: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSoft,
+    textAlign: 'center',
   },
 });

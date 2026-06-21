@@ -4,8 +4,13 @@ import type {
 } from '@/mobile/app/platform/supabase/databaseTypes';
 import { deleteStorageAssetsByUrls } from '@/mobile/app/platform/supabase/media';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { assertNoObjectionableContent } from '@/mobile/app/shared/utils/contentModeration';
-import { COMMENT_MAX_LENGTH, clampTextLength } from '@/mobile/app/shared/validation/contentLimits';
+import {
+  COMMENT_EDIT_WINDOW_MS,
+  COMMENT_MAX_LENGTH,
+  clampTextLength,
+} from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceCommentRecord = ListPlaceCommentRow & {
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
@@ -18,6 +23,24 @@ function isMissingRpcFunctionError(error: unknown) {
     'code' in error &&
     (error.code === 'PGRST202' || error.code === '42883')
   );
+}
+
+function buildCommentEditCutoffIso(now = Date.now()) {
+  return new Date(now - COMMENT_EDIT_WINDOW_MS).toISOString();
+}
+
+function isCommentEditable(createdAt?: string | null, now = Date.now()) {
+  if (!createdAt) {
+    return false;
+  }
+
+  const createdAtMs = new Date(createdAt).getTime();
+
+  if (Number.isNaN(createdAtMs)) {
+    return false;
+  }
+
+  return now - createdAtMs <= COMMENT_EDIT_WINDOW_MS;
 }
 
 export async function getPlaceCommentsPage(
@@ -89,7 +112,7 @@ export async function getPlaceCommentsPage(
 export async function deletePlace(placeId: string) {
   const { data: placeRows, error: placeSelectError } = await supabase
     .from('list_places')
-    .select('list_place_photos ( url )')
+    .select('list_place_photos ( url, thumbnail_url )')
     .eq('id', placeId);
 
   if (placeSelectError) {
@@ -104,8 +127,11 @@ export async function deletePlace(placeId: string) {
 
   await deleteStorageAssetsByUrls({
     bucket: 'place-media',
-    urls: ((placeRows || []) as Array<{ list_place_photos?: Array<{ url?: string | null }> | null }>)
-      .flatMap((place) => (place.list_place_photos || []).map((photo) => photo.url)),
+    urls: ((placeRows || []) as Array<{
+      list_place_photos?: Array<{ thumbnail_url?: string | null; url?: string | null }> | null;
+    }>).flatMap((place) =>
+      (place.list_place_photos || []).flatMap((media) => [media.url, media.thumbnail_url]),
+    ),
   });
 }
 
@@ -151,7 +177,7 @@ export async function createPlaceComment(
   parentCommentId?: string | null,
 ) {
   const normalizedContent = clampTextLength(content, COMMENT_MAX_LENGTH);
-  assertNoObjectionableContent([{ label: 'Yorum', value: normalizedContent }]);
+  assertNoObjectionableContent([{ label: tr.moderation.commentField, value: normalizedContent }]);
 
   const payload: Record<string, unknown> = {
     list_place_id: placeId,
@@ -173,19 +199,46 @@ export async function createPlaceComment(
 
 export async function updatePlaceComment(commentId: string, userId: string, content: string) {
   const normalizedContent = clampTextLength(content, COMMENT_MAX_LENGTH);
-  assertNoObjectionableContent([{ label: 'Yorum', value: normalizedContent }]);
+  assertNoObjectionableContent([{ label: tr.moderation.commentField, value: normalizedContent }]);
+  const now = Date.now();
+  const editCutoffIso = buildCommentEditCutoffIso(now);
+  const { data: existingComment, error: existingCommentError } = await supabase
+    .from('list_place_comments')
+    .select('id, created_at')
+    .eq('id', commentId)
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  const { error } = await supabase
+  if (existingCommentError) {
+    throw existingCommentError;
+  }
+
+  if (!existingComment) {
+    throw new Error(tr.cards.commentUpdateFailed);
+  }
+
+  if (!isCommentEditable(existingComment.created_at, now)) {
+    throw new Error(tr.cards.commentEditExpired);
+  }
+
+  const { data: updatedComment, error } = await supabase
     .from('list_place_comments')
     .update({
       content: normalizedContent.trim(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', commentId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .gte('created_at', editCutoffIso)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     throw error;
+  }
+
+  if (!updatedComment) {
+    throw new Error(tr.cards.commentEditExpired);
   }
 
 }

@@ -40,6 +40,44 @@ export async function markNotificationRead(notificationId: string) {
   }
 }
 
+export async function markAllNotificationsRead(userId: string) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('recipient_user_id', userId)
+    .eq('read', false);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function createPlaceQuoteNotification(params: {
+  actorUserId: string;
+  listId?: string | null;
+  message: string;
+  placeId?: string | null;
+  recipientUserId: string;
+}) {
+  if (!params.recipientUserId || !params.actorUserId || params.recipientUserId === params.actorUserId) {
+    return;
+  }
+
+  const { error } = await supabase.from('notifications').insert({
+    actor_user_id: params.actorUserId,
+    list_id: params.listId || null,
+    list_place_id: params.placeId || null,
+    message: params.message,
+    read: false,
+    recipient_user_id: params.recipientUserId,
+    type: 'place_quote',
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function respondToFollowRequestNotification(
   notificationId: string,
   requestId: string,

@@ -21,6 +21,7 @@ export const queryKeys = {
     lists: (
       viewerId: string,
       filters?: {
+        includePlaceComments?: boolean | null;
         listId?: string | null;
         ownerId?: string | null;
         publicOnly?: boolean;
@@ -34,6 +35,7 @@ export const queryKeys = {
         filters?.ownerId || null,
         filters?.listId || null,
         filters?.publicOnly ?? false,
+        filters?.includePlaceComments ?? false,
         filters?.pageSize || null,
       ] as const,
     snapshot: (viewerId: string) => [...queryKeys.visibleData.all, 'snapshot', viewerId] as const,

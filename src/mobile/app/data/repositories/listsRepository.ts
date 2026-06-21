@@ -1,4 +1,4 @@
-import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
+import type { Place, PlaceList, PlaceMedia } from '@/mobile/app/data/contracts/entities';
 import {
   fetchVisibleDataContext,
   fetchVisibleListsPage,
@@ -6,8 +6,16 @@ import {
 import {
   deleteStorageAssetsByUrls,
   uploadImageAsset,
+  uploadPlaceMediaAsset,
 } from '@/mobile/app/platform/supabase/media';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import {
+  arePlaceMediaArraysEqual,
+  getPlaceMedia,
+  getPlacePhotoUrls,
+  normalizePlaceMedia,
+} from '@/mobile/app/shared/utils/placeMedia';
 import { assertNoObjectionableContent } from '@/mobile/app/shared/utils/contentModeration';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
@@ -28,7 +36,7 @@ function resolvePlaceName(place: Place) {
     place.name?.trim() ||
     place.title?.trim() ||
     place.address?.trim() ||
-    'Kaydedilen Mekan'
+    tr.cards.savedPlaceFallback
   );
 }
 
@@ -47,20 +55,15 @@ function areStringArraysEqual(left?: string[], right?: string[]) {
   return normalizedLeft.every((value, index) => value === normalizedRight[index]);
 }
 
-function arePhotoArraysEqual(left?: string[], right?: string[]) {
-  const leftPhotos = left || [];
-  const rightPhotos = right || [];
-
-  if (leftPhotos.length !== rightPhotos.length) {
-    return false;
-  }
-
-  return leftPhotos.every((value, index) => value === rightPhotos[index]);
-}
-
 function arePlacesEquivalentForPersistence(left: Place, right: Place) {
   return (
     left.id === right.id &&
+    left.sourceAttribution?.listId === right.sourceAttribution?.listId &&
+    left.sourceAttribution?.placeId === right.sourceAttribution?.placeId &&
+    left.sourceAttribution?.placeName === right.sourceAttribution?.placeName &&
+    left.sourceAttribution?.userAvatar === right.sourceAttribution?.userAvatar &&
+    left.sourceAttribution?.userId === right.sourceAttribution?.userId &&
+    left.sourceAttribution?.userName === right.sourceAttribution?.userName &&
     left.name === right.name &&
     left.title === right.title &&
     left.lat === right.lat &&
@@ -78,45 +81,133 @@ function arePlacesEquivalentForPersistence(left: Place, right: Place) {
     areStringArraysEqual(left.bestTimes, right.bestTimes) &&
     areStringArraysEqual(left.atmosphere, right.atmosphere) &&
     areStringArraysEqual(left.specialFeatures, right.specialFeatures) &&
-    arePhotoArraysEqual(left.photos, right.photos)
+    arePlaceMediaArraysEqual(getPlaceMedia(left), getPlaceMedia(right))
   );
 }
 
-async function uploadPlacePhotos(listId: string, place: Place, userId: string) {
-  const uploadedPhotos = await Promise.all(
-    (place.photos || []).map(async (photoUri, index) =>
-      uploadImageAsset({
-        bucket: 'place-media',
-        userId,
-        uri: photoUri,
-        prefix: `${listId}/${place.id}/${index}`,
-      }),
+type ProgressTracker = {
+  advance: (units?: number) => void;
+};
+
+function createProgressTracker(totalUnits: number, onProgress?: (progress: number) => void): ProgressTracker {
+  if (!onProgress) {
+    return {
+      advance: () => undefined,
+    };
+  }
+
+  const total = Math.max(1, totalUnits);
+  let completed = 0;
+
+  const emit = () => {
+    const progress = Math.round((completed / total) * 100);
+    onProgress(Math.max(0, Math.min(99, progress)));
+  };
+
+  onProgress(0);
+
+  return {
+    advance(units = 1) {
+      completed += units;
+      emit();
+    },
+  };
+}
+
+function estimateListUpdateUnits(list: PlaceList) {
+  return Math.max(
+    1,
+    1 + (list.coverImage ? 1 : 0) + list.places.length + list.places.reduce(
+      (total, place) => total + getPlaceMedia(place).filter((item) => Boolean(item.url)).length,
+      0,
     ),
   );
-
-  return uploadedPhotos.filter((photoUrl): photoUrl is string => Boolean(photoUrl));
 }
 
-async function upsertPlace(list: PlaceList, place: Place, previousPlace?: Place | null) {
+function estimateUpdateListsUnits(lists: PlaceList[]) {
+  return Math.max(1, lists.reduce((total, list) => total + estimateListUpdateUnits(list), 0));
+}
+
+function getPlaceStorageUrls(place?: Place | null) {
+  return getPlaceMedia(place).flatMap((item) =>
+    [item.url, item.thumbnailUrl].filter((value): value is string => Boolean(value)),
+  );
+}
+
+async function uploadPlaceMedia(
+  listId: string,
+  place: Place,
+  userId: string,
+  progressTracker?: ProgressTracker,
+) {
+  const uploadedMedia: PlaceMedia[] = [];
+  const nextMedia = normalizePlaceMedia(place.media, place.photos);
+
+  for (const [index, item] of nextMedia.entries()) {
+    const uploadedUrl = await uploadPlaceMediaAsset({
+      mimeType: item.mimeType,
+      prefix: `${listId}/${place.id}/${index}`,
+      uri: item.url,
+      userId,
+    }).finally(() => {
+      progressTracker?.advance();
+    });
+
+    uploadedMedia.push({
+      ...item,
+      thumbnailUrl:
+        item.thumbnailUrl && !item.thumbnailUrl.startsWith('file://') && !item.thumbnailUrl.startsWith('content://')
+          ? item.thumbnailUrl
+          : undefined,
+      url: uploadedUrl || item.url,
+    });
+  }
+
+  return uploadedMedia;
+}
+
+async function upsertPlace(
+  list: PlaceList,
+  place: Place,
+  previousPlace?: Place | null,
+  progressTracker?: ProgressTracker,
+) {
   const normalizedPlaceName = clampTextLength(resolvePlaceName(place), PLACE_NAME_MAX_LENGTH);
   const normalizedPlaceTitle = clampTextLength(place.title, PLACE_TITLE_MAX_LENGTH);
   const normalizedPlaceAddress = clampTextLength(place.address, PLACE_ADDRESS_MAX_LENGTH);
   const normalizedPlaceNotes = clampTextLength(place.notes, PLACE_NOTES_MAX_LENGTH);
 
   assertNoObjectionableContent([
-    { label: 'Mekan adi', value: normalizedPlaceName },
-    { label: 'Mekan basligi', value: normalizedPlaceTitle },
-    { label: 'Mekan notu', value: normalizedPlaceNotes },
+    { label: tr.moderation.placeNameField, value: normalizedPlaceName },
+    { label: tr.moderation.placeTitleField, value: normalizedPlaceTitle },
+    { label: tr.moderation.placeNoteField, value: normalizedPlaceNotes },
   ]);
 
-  const shouldSyncPhotos = !previousPlace || !arePhotoArraysEqual(place.photos, previousPlace.photos);
-  const uploadedPhotos = shouldSyncPhotos
-    ? await uploadPlacePhotos(list.id, place, list.userId)
-    : (previousPlace?.photos || []).filter(Boolean);
+  const nextPlaceMedia = normalizePlaceMedia(place.media, place.photos);
+  const previousPlaceMedia = normalizePlaceMedia(previousPlace?.media, previousPlace?.photos);
+  const shouldSyncMedia = !previousPlace || !arePlaceMediaArraysEqual(nextPlaceMedia, previousPlaceMedia);
+  const uploadedMedia = shouldSyncMedia
+    ? await uploadPlaceMedia(
+        list.id,
+        {
+          ...place,
+          media: nextPlaceMedia,
+          photos: getPlacePhotoUrls({ media: nextPlaceMedia }),
+        },
+        list.userId,
+        progressTracker,
+      )
+    : previousPlaceMedia;
   const { error: placeError } = await supabase.from('list_places').upsert({
     id: place.id,
     list_id: list.id,
     created_by: place.addedBy?.userId || list.userId,
+    source_list_id: place.sourceAttribution?.listId || null,
+    source_place_id: place.sourceAttribution?.placeId || null,
+    source_place_name: place.sourceAttribution?.placeName || null,
+    source_user_avatar_url: place.sourceAttribution?.userAvatar || null,
+    source_user_id: place.sourceAttribution?.userId || null,
+    source_user_name: place.sourceAttribution?.userName || null,
     name: normalizedPlaceName,
     title: normalizedPlaceTitle || null,
     lat: place.lat,
@@ -142,7 +233,9 @@ async function upsertPlace(list: PlaceList, place: Place, previousPlace?: Place 
     throw placeError;
   }
 
-  if (!shouldSyncPhotos) {
+  progressTracker?.advance();
+
+  if (!shouldSyncMedia) {
     return;
   }
 
@@ -155,19 +248,25 @@ async function upsertPlace(list: PlaceList, place: Place, previousPlace?: Place 
     throw deletePhotoRowsError;
   }
 
-  if (!uploadedPhotos.length) {
+  if (!uploadedMedia.length) {
     await deleteStorageAssetsByUrls({
       bucket: 'place-media',
-      urls: previousPlace?.photos || [],
+      urls: getPlaceStorageUrls(previousPlace),
     });
     return;
   }
 
   const { error: insertPhotoRowsError } = await supabase.from('list_place_photos').insert(
-    uploadedPhotos.map((url, index) => ({
+    uploadedMedia.map((item, index) => ({
+      duration_ms: item.durationMs ?? null,
+      height: item.height ?? null,
       list_place_id: place.id,
-      url,
+      media_type: item.type,
+      mime_type: item.mimeType ?? null,
       sort_order: index,
+      thumbnail_url: item.thumbnailUrl ?? null,
+      url: item.url,
+      width: item.width ?? null,
     })),
   );
 
@@ -175,9 +274,17 @@ async function upsertPlace(list: PlaceList, place: Place, previousPlace?: Place 
     throw insertPhotoRowsError;
   }
 
+  const currentStorageUrls = getPlaceStorageUrls({
+    ...place,
+    media: uploadedMedia,
+    photos: getPlacePhotoUrls({ media: uploadedMedia }),
+  });
+
   await deleteStorageAssetsByUrls({
     bucket: 'place-media',
-    urls: (previousPlace?.photos || []).filter((url) => !uploadedPhotos.includes(url)),
+    urls: getPlaceStorageUrls(previousPlace).filter(
+      (url) => !currentStorageUrls.includes(url),
+    ),
   });
 }
 
@@ -202,13 +309,17 @@ async function getExistingListFromContext(
   return lists[0] || null;
 }
 
-async function persistList(list: PlaceList, previousList?: PlaceList | null) {
+async function persistList(
+  list: PlaceList,
+  previousList?: PlaceList | null,
+  progressTracker?: ProgressTracker,
+) {
   const normalizedListName = clampTextLength(list.name, LIST_NAME_MAX_LENGTH);
   const normalizedListDescription = clampTextLength(list.description, LIST_DESCRIPTION_MAX_LENGTH);
 
   assertNoObjectionableContent([
-    { label: 'Liste adi', value: normalizedListName },
-    { label: 'Liste aciklamasi', value: normalizedListDescription },
+    { label: tr.listEditor.titleLabel, value: normalizedListName },
+    { label: tr.listEditor.descriptionLabel, value: normalizedListDescription },
   ]);
 
   const coverImage = await uploadImageAsset({
@@ -217,6 +328,10 @@ async function persistList(list: PlaceList, previousList?: PlaceList | null) {
     uri: list.coverImage,
     prefix: `${list.id}/cover`,
   });
+
+  if (list.coverImage) {
+    progressTracker?.advance();
+  }
 
   const { error: listError } = await supabase.from('lists').upsert({
     id: list.id,
@@ -233,6 +348,8 @@ async function persistList(list: PlaceList, previousList?: PlaceList | null) {
   if (listError) {
     throw listError;
   }
+
+  progressTracker?.advance();
 
   const nextPlaceIds = new Set(list.places.map((place) => place.id));
   const previousPlacesById = new Map((previousList?.places || []).map((place) => [place.id, place]));
@@ -254,22 +371,31 @@ async function persistList(list: PlaceList, previousList?: PlaceList | null) {
 
     await deleteStorageAssetsByUrls({
       bucket: 'place-media',
-      urls: removedPlaces.flatMap((place) => place.photos || []),
+      urls: removedPlaces.flatMap((place) => getPlaceStorageUrls(place)),
     });
+
+    progressTracker?.advance();
   }
 
   await Promise.all([
     Promise.all(
-      placesToUpsert.map((place) => upsertPlace(list, place, previousPlacesById.get(place.id))),
+      placesToUpsert.map((place) =>
+        upsertPlace(list, place, previousPlacesById.get(place.id), progressTracker),
+      ),
     ),
-    deleteStorageAssetsByUrls({
-      bucket: 'place-media',
-      urls: [
-        previousList?.coverImage && previousList.coverImage !== coverImage
-          ? previousList.coverImage
-          : undefined,
-      ],
-    }),
+    (async () => {
+      await deleteStorageAssetsByUrls({
+        bucket: 'place-media',
+        urls:
+          previousList?.coverImage && previousList.coverImage !== coverImage
+            ? [previousList.coverImage]
+            : [],
+      });
+
+      if (previousList?.coverImage && previousList.coverImage !== coverImage) {
+        progressTracker?.advance();
+      }
+    })(),
   ]);
 }
 
@@ -282,8 +408,12 @@ export async function updateList(list: PlaceList) {
   await persistList({ ...list, updatedAt: list.updatedAt || new Date().toISOString() }, previousList);
 }
 
-export async function updateLists(lists: PlaceList[]) {
+export async function updateLists(
+  lists: PlaceList[],
+  onProgress?: (progress: number) => void,
+) {
   const contextByViewerId = new Map<string, Awaited<ReturnType<typeof fetchVisibleDataContext>>>();
+  const progressTracker = createProgressTracker(estimateUpdateListsUnits(lists), onProgress);
 
   await Promise.all(
     lists.map(async (list) => {
@@ -298,9 +428,12 @@ export async function updateLists(lists: PlaceList[]) {
       await persistList(
         { ...list, updatedAt: list.updatedAt || new Date().toISOString() },
         previousList,
+        progressTracker,
       );
     }),
   );
+
+  onProgress?.(100);
 }
 
 export async function deleteList(listId: string) {
@@ -310,7 +443,7 @@ export async function deleteList(listId: string) {
     .eq('id', listId);
   const { data: placeRows, error: placeSelectError } = await supabase
     .from('list_places')
-    .select('list_place_photos ( url )')
+    .select('list_place_photos ( url, thumbnail_url )')
     .eq('list_id', listId);
 
   if (listSelectError) {
@@ -331,9 +464,12 @@ export async function deleteList(listId: string) {
     bucket: 'place-media',
     urls: [
       ...(listRows || []).map((row) => row.cover_image_url),
-      ...((placeRows || []) as Array<{ list_place_photos?: Array<{ url?: string | null }> | null }>)
-        .flatMap((place) => (place.list_place_photos || []).map((photo) => photo.url)),
-    ],
+      ...((placeRows || []) as Array<{
+        list_place_photos?: Array<{ thumbnail_url?: string | null; url?: string | null }> | null;
+      }>).flatMap((place) =>
+        (place.list_place_photos || []).flatMap((media) => [media.url, media.thumbnail_url]),
+      ),
+    ].filter((value): value is string => Boolean(value)),
   });
 }
 

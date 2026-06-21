@@ -1,4 +1,9 @@
 import type { Place } from '@/mobile/app/data/contracts/entities';
+import {
+  arePlaceMediaArraysEqual,
+  getPlaceMedia,
+  getPlacePhotoUrls,
+} from '@/mobile/app/shared/utils/placeMedia';
 
 export function uniqueStrings(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
@@ -87,6 +92,7 @@ export function isSamePlaceContent(previousPlace: Place, nextPlace: Place) {
     areStringArraysEqual(previousPlace.bestTimes, nextPlace.bestTimes) &&
     areStringArraysEqual(previousPlace.atmosphere, nextPlace.atmosphere) &&
     areStringArraysEqual(previousPlace.specialFeatures, nextPlace.specialFeatures) &&
-    arePlacePhotosEqual(previousPlace.photos, nextPlace.photos)
+    arePlacePhotosEqual(getPlacePhotoUrls(previousPlace), getPlacePhotoUrls(nextPlace)) &&
+    arePlaceMediaArraysEqual(getPlaceMedia(previousPlace), getPlaceMedia(nextPlace))
   );
 }

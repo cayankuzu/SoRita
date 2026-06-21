@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  androidNotificationChannelId,
+  androidNotificationChannelName,
+} from '@/mobile/app/platform/notifications/channels';
+
 const getPermissionsAsyncMock = vi.fn();
 const requestPermissionsAsyncMock = vi.fn();
 const getExpoPushTokenAsyncMock = vi.fn();
@@ -9,11 +14,22 @@ const infoMock = vi.fn();
 const warnMock = vi.fn();
 
 vi.mock('expo-notifications', () => ({
+  AndroidAudioContentType: {
+    SONIFICATION: 'sonification',
+  },
+  AndroidAudioUsage: {
+    NOTIFICATION_COMMUNICATION_INSTANT: 'notification_communication_instant',
+  },
   AndroidImportance: {
     MAX: 'max',
   },
+  AndroidNotificationVisibility: {
+    PUBLIC: 1,
+  },
   IosAuthorizationStatus: {
-    PROVISIONAL: 1,
+    AUTHORIZED: 2,
+    PROVISIONAL: 3,
+    EPHEMERAL: 4,
   },
   getExpoPushTokenAsync: getExpoPushTokenAsyncMock,
   getPermissionsAsync: getPermissionsAsyncMock,
@@ -80,7 +96,32 @@ describe('pushNotificationRepository', () => {
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
     const token = await repository.registerPushNotifications('viewer-1');
 
-    expect(setNotificationChannelAsyncMock).toHaveBeenCalled();
+    expect(setNotificationChannelAsyncMock).toHaveBeenCalledWith(
+      androidNotificationChannelId,
+      expect.objectContaining({
+        description: expect.any(String),
+        importance: 'max',
+        lockscreenVisibility: 1,
+        name: androidNotificationChannelName,
+      }),
+    );
+    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
+      input_platform: 'android',
+      input_token: 'ExponentPushToken[test]',
+    });
+    expect(token).toBe('ExponentPushToken[test]');
+  });
+
+  it('converts refreshed device push tokens into Expo push tokens', async () => {
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+    const devicePushToken = { type: 'android' as const, data: 'native-fcm-token' };
+
+    const token = await repository.registerDevicePushToken('viewer-1', devicePushToken);
+
+    expect(getExpoPushTokenAsyncMock).toHaveBeenCalledWith({
+      projectId: 'project-id',
+      devicePushToken,
+    });
     expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
       input_platform: 'android',
       input_token: 'ExponentPushToken[test]',
@@ -145,22 +186,72 @@ describe('pushNotificationRepository', () => {
     );
   });
 
-  it('accepts provisional ios permissions and supports ios registration', async () => {
+  it('upgrades provisional ios permissions to full alerts when possible', async () => {
     const { Platform } = await import('react-native');
     Platform.OS = 'ios';
     getPermissionsAsyncMock.mockResolvedValue({
       granted: false,
       canAskAgain: true,
-      ios: { status: 1 },
+      ios: {
+        status: 3,
+        allowsAlert: false,
+        allowsSound: false,
+        allowsDisplayOnLockScreen: false,
+        allowsDisplayInNotificationCenter: true,
+      },
+    });
+    requestPermissionsAsyncMock.mockResolvedValue({
+      granted: true,
+      canAskAgain: false,
+      ios: {
+        status: 2,
+        allowsAlert: true,
+        allowsSound: true,
+        allowsDisplayOnLockScreen: true,
+        allowsDisplayInNotificationCenter: true,
+      },
     });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
     await expect(repository.registerPushNotifications('viewer-1')).resolves.toBe('ExponentPushToken[test]');
     expect(setNotificationChannelAsyncMock).not.toHaveBeenCalled();
+    expect(requestPermissionsAsyncMock).toHaveBeenCalledWith({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+        allowProvisional: false,
+        provideAppNotificationSettings: true,
+      },
+    });
     expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
       input_platform: 'ios',
       input_token: 'ExponentPushToken[test]',
     });
+  });
+
+  it('keeps ios registration active but warns when permission stays quiet', async () => {
+    const { Platform } = await import('react-native');
+    Platform.OS = 'ios';
+    getPermissionsAsyncMock.mockResolvedValue({
+      granted: false,
+      canAskAgain: false,
+      ios: {
+        status: 3,
+        allowsAlert: false,
+        allowsSound: false,
+        allowsDisplayOnLockScreen: false,
+        allowsDisplayInNotificationCenter: true,
+      },
+    });
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(repository.registerPushNotifications('viewer-1')).resolves.toBe('ExponentPushToken[test]');
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
+    expect(warnMock).toHaveBeenCalledWith(
+      'push',
+      'iOS notification permission is limited. Notifications may arrive quietly until alerts, sounds, lock screen, and notification center are enabled in Settings.',
+    );
   });
 
   it('warns when the push token cannot be resolved', async () => {

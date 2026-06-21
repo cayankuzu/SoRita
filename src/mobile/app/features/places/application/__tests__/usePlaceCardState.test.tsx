@@ -12,6 +12,7 @@ const deletePlaceCommentAsyncMock = vi.fn();
 const toggleLikePlaceCommentAsyncMock = vi.fn();
 const reportPlaceAsyncMock = vi.fn();
 const reportPlaceCommentAsyncMock = vi.fn();
+const createPlaceQuoteNotificationMock = vi.fn();
 const fetchNextPageMock = vi.fn();
 let placeCommentsQueryResult: {
   data?: {
@@ -63,6 +64,10 @@ vi.mock('@/mobile/app/platform/feedback/toast', () => ({
   showToast: showToastMock,
 }));
 
+vi.mock('@/mobile/app/data/repositories/notificationRepository', () => ({
+  createPlaceQuoteNotification: createPlaceQuoteNotificationMock,
+}));
+
 vi.mock('@/mobile/app/shared/i18n/tr', () => ({
   tr: {
     cards: {
@@ -77,7 +82,20 @@ vi.mock('@/mobile/app/shared/i18n/tr', () => ({
       commentUpdateFailed: 'comment update failed',
       commentUpdated: 'comment updated',
       duplicateCommentReport: 'duplicate comment report',
+      listNotFound: 'Liste bulunamadi',
+      loginRequiredForComment: 'Yorum icin giris yapmalisin',
+      loginRequiredForLike: 'Begeni icin giris yapmalisin',
+      loginRequiredForReport: 'Mekani bildirmek icin giris yapmalisin',
       placeAddedToList: 'place added',
+      placeAlreadyReported: 'Bu mekan kartini zaten bildirdin',
+      placeLikeUpdateFailed: 'Mekan begenisi guncellenemedi',
+      placeReportFailed: 'Mekan karti bildirilemedi',
+    },
+    placeEditor: {
+      notices: {
+        selectionLimit: (max: number) =>
+          `Bir mekani ayni anda en fazla ${max} listeye ekleyebilirsin`,
+      },
     },
   },
 }));
@@ -144,6 +162,7 @@ describe('usePlaceCardState', () => {
     toggleLikePlaceCommentAsyncMock.mockReset();
     reportPlaceAsyncMock.mockReset();
     reportPlaceCommentAsyncMock.mockReset();
+    createPlaceQuoteNotificationMock.mockReset();
     fetchNextPageMock.mockReset();
     showToastMock.mockReset();
   });
@@ -200,6 +219,62 @@ describe('usePlaceCardState', () => {
       name: 'Cafe',
     });
     expect(showToastMock).toHaveBeenCalledWith('place added', 'success');
+  });
+
+  it('sends quote notifications to the attribution owner when one exists', async () => {
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() =>
+      usePlaceCardState({
+        owner: {
+          email: 'owner@example.com',
+          id: 'owner-1',
+          name: 'Owner',
+          username: 'owner',
+        },
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-1',
+          lat: 41.0,
+          lng: 29.0,
+          name: 'Cafe',
+          comments: [],
+          likes: 0,
+          sourceAttribution: {
+            placeId: 'source-place-1',
+            placeName: 'Original Cafe',
+            userId: 'source-user-1',
+            userName: 'Source Owner',
+          },
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+        },
+      }), { wrapper });
+
+    await act(async () => {
+      await hook.result.current.savePlaceToLists(
+        {
+          comments: [],
+          lat: 41.0,
+          likes: 0,
+          lng: 29.0,
+          name: 'Cafe',
+          updatedAt: '2026-04-16T10:00:00.000Z',
+        },
+        ['list-1'],
+      );
+    });
+
+    expect(createPlaceQuoteNotificationMock).toHaveBeenCalledWith({
+      actorUserId: 'user-1',
+      listId: 'list-1',
+      message: '"Original Cafe" mekânını kendi listesine alıntıladı',
+      placeId: 'generated-place-id',
+      recipientUserId: 'source-user-1',
+    });
   });
 
   it('supports liking, commenting, reporting, and list creation flows', async () => {
@@ -489,15 +564,96 @@ describe('usePlaceCardState', () => {
 
     await act(async () => {
       await expect(hook.result.current.handleLikePress()).rejects.toThrow('Mekan begenisi guncellenemedi');
-      await expect(hook.result.current.handleCreateComment('hello')).rejects.toThrow('comment send failed');
-      await expect(hook.result.current.handleUpdateComment('comment-1', 'hello')).rejects.toThrow('comment update failed');
-      await expect(hook.result.current.handleDeleteComment('comment-1')).rejects.toThrow('comment delete failed');
+      await expect(hook.result.current.handleCreateComment('hello')).rejects.toThrow('backend comment failed');
+      await expect(hook.result.current.handleUpdateComment('comment-1', 'hello')).rejects.toThrow('backend update failed');
+      await expect(hook.result.current.handleDeleteComment('comment-1')).rejects.toThrow('backend delete failed');
       await expect(hook.result.current.handleReportComment('comment-1', 'spam')).rejects.toThrow('duplicate comment report');
-      await expect(hook.result.current.handleReportComment('comment-1', 'spam')).rejects.toThrow('comment report failed');
+      await expect(hook.result.current.handleReportComment('comment-1', 'spam')).rejects.toThrow('backend report failed');
       await expect(hook.result.current.handleToggleCommentLike('comment-1')).rejects.toThrow('custom like failed');
       await expect(hook.result.current.handleReportPlace('spam')).rejects.toThrow('Bu mekan kartini zaten bildirdin');
       await expect(hook.result.current.handleReportPlace('spam')).rejects.toThrow('backend place report failed');
     });
+  });
+
+  it('marks own expired comments so the UI can block late edits', async () => {
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() =>
+      usePlaceCardState({
+        ownerId: 'owner-1',
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-1',
+          lat: 41.0,
+          lng: 29.0,
+          name: 'Cafe',
+          comments: [
+            {
+              id: 'comment-1',
+              userId: 'user-1',
+              content: 'old comment',
+              createdAt: '2026-04-16T10:00:00.000Z',
+              updatedAt: '2026-04-16T10:00:00.000Z',
+              author: {
+                userId: 'user-1',
+                name: 'Ada',
+                username: 'ada',
+              },
+            },
+          ],
+          likes: 0,
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+        },
+      }), { wrapper });
+
+    expect(hook.result.current.comments[0]?.canEdit).toBe(true);
+    expect(hook.result.current.comments[0]?.editWindowExpired).toBe(true);
+  });
+
+  it('keeps optimistic comments read-only until the server sync finishes', async () => {
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() =>
+      usePlaceCardState({
+        ownerId: 'owner-1',
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-1',
+          lat: 41.0,
+          lng: 29.0,
+          name: 'Cafe',
+          comments: [
+            {
+              id: 'comment-1',
+              userId: 'user-1',
+              content: 'pending comment',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isPending: true,
+              author: {
+                userId: 'user-1',
+                name: 'Ada',
+                username: 'ada',
+              },
+            },
+          ],
+          likes: 0,
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+        },
+      }), { wrapper });
+
+    expect(hook.result.current.comments[0]?.pendingSync).toBe(true);
+    expect(hook.result.current.comments[0]?.canEdit).toBe(false);
+    expect(hook.result.current.comments[0]?.canDelete).toBe(false);
+    expect(hook.result.current.comments[0]?.editWindowExpired).toBe(false);
   });
 
   it('hydrates paginated comments and filters blocked users from the thread', async () => {
@@ -578,5 +734,144 @@ describe('usePlaceCardState', () => {
       expect(hook.result.current.comments[0]?.replies).toEqual([]);
       expect(hook.result.current.hasNextCommentsPage).toBe(false);
     });
+  });
+
+  it('can skip loading personal lists until the add-to-list flow is opened', async () => {
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const { useVisibleDataQuery } = await import('@/mobile/app/data/hooks/useVisibleDataQuery');
+    const visibleDataQueryMock = vi.mocked(useVisibleDataQuery);
+
+    renderHook(() =>
+      usePlaceCardState({
+        listsEnabled: false,
+        ownerId: 'owner-1',
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-1',
+          lat: 41.0,
+          lng: 29.0,
+          name: 'Cafe',
+          comments: [],
+          likes: 0,
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+        },
+      }), { wrapper });
+
+    expect(visibleDataQueryMock).toHaveBeenNthCalledWith(1, 'user-1', {
+      enabled: false,
+      includeLists: false,
+      includePlaceComments: false,
+      listPageSize: 100,
+      ownerId: 'user-1',
+    });
+  });
+
+  it('exposes source attribution navigation rules for public and private users', async () => {
+    visibleDataQueryResult = {
+      data: {
+        allUsers: [
+          {
+            id: 'user-1',
+            email: 'ada@example.com',
+            name: 'Ada',
+            username: 'ada',
+            following: [],
+          },
+          {
+            id: 'user-2',
+            email: 'ben@example.com',
+            name: 'Ben',
+            username: 'ben',
+            isPublicAccount: false,
+            followers: [],
+          },
+          {
+            id: 'user-3',
+            email: 'eve@example.com',
+            name: 'Eve',
+            username: 'eve',
+            isPublicAccount: true,
+          },
+        ],
+        blockRows: [],
+        lists: [],
+        users: [
+          {
+            id: 'user-1',
+            email: 'ada@example.com',
+            name: 'Ada',
+            username: 'ada',
+            following: [],
+          },
+          {
+            id: 'user-3',
+            email: 'eve@example.com',
+            name: 'Eve',
+            username: 'eve',
+            isPublicAccount: true,
+          },
+        ],
+      },
+    };
+
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const privateSourceHook = renderHook(() =>
+      usePlaceCardState({
+        ownerId: 'owner-1',
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-1',
+          lat: 41,
+          lng: 29,
+          name: 'Cafe',
+          sourceAttribution: {
+            placeId: 'source-place',
+            userId: 'user-2',
+            userName: 'Ben',
+          },
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+          following: [],
+        },
+      }), { wrapper });
+
+    expect(privateSourceHook.result.current.sourceAttributionUserId).toBe('user-2');
+    expect(privateSourceHook.result.current.canOpenSourcePlaceCard).toBe(false);
+
+    const publicSourceHook = renderHook(() =>
+      usePlaceCardState({
+        ownerId: 'owner-1',
+        place: {
+          addedAt: '2026-04-16T10:00:00.000Z',
+          id: 'place-2',
+          lat: 41,
+          lng: 29,
+          name: 'Cafe',
+          sourceAttribution: {
+            placeId: 'source-place',
+            userId: 'user-3',
+            userName: 'Eve',
+          },
+        },
+        user: {
+          email: 'ada@example.com',
+          id: 'user-1',
+          name: 'Ada',
+          username: 'ada',
+          following: [],
+        },
+      }), { wrapper });
+
+    expect(publicSourceHook.result.current.sourceAttributionUserId).toBe('user-3');
+    expect(publicSourceHook.result.current.canOpenSourcePlaceCard).toBe(true);
   });
 });

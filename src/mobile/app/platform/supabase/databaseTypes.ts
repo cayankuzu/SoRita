@@ -88,6 +88,12 @@ export type ListPlaceRow = {
   id: string;
   list_id: string;
   created_by: string | null;
+  source_list_id: string | null;
+  source_place_id: string | null;
+  source_place_name: string | null;
+  source_user_avatar_url: string | null;
+  source_user_id: string | null;
+  source_user_name: string | null;
   name: string;
   title: string | null;
   lat: number;
@@ -113,6 +119,12 @@ export type ListPlacePhotoRow = {
   id: string;
   list_place_id: string;
   url: string;
+  media_type: 'photo' | 'video';
+  mime_type: string | null;
+  duration_ms: number | null;
+  thumbnail_url: string | null;
+  width: number | null;
+  height: number | null;
   sort_order: number;
   created_at: string;
 };
@@ -151,6 +163,7 @@ export type NotificationRow = {
     | 'follow_request'
     | 'comment'
     | 'place_added'
+    | 'place_quote'
     | 'list_liked'
     | 'comment_like'
     | 'comment_reply';

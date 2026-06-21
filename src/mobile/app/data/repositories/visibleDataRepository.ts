@@ -53,19 +53,121 @@ export type VisibleDataContext = {
 type VisibleDataPageLimits = {
   commentsPerPlace: number;
   lists: number;
-  photosPerPlace: number;
+  mediaPerPlace: number;
   placesPerList: number;
   users: number;
 };
 
 const DEFAULT_VISIBLE_DATA_LIMITS: VisibleDataPageLimits = {
-  commentsPerPlace: 60,
+  commentsPerPlace: 24,
   lists: 120,
-  photosPerPlace: 12,
+  mediaPerPlace: 9,
   placesPerList: 120,
-  users: 1000,
+  users: 400,
 };
 const PUBLIC_PROFILES_TABLE = 'public_profile_summaries';
+
+function buildListsSelect(includePlaceComments: boolean) {
+  const placeCommentsSelect = includePlaceComments
+    ? `,
+          list_place_comments (
+            id,
+            list_place_id,
+            user_id,
+            parent_comment_id,
+            content,
+            created_at,
+            updated_at,
+            list_place_comment_likes (
+              comment_id,
+              user_id,
+              created_at
+            )
+          )`
+    : '';
+
+  return `
+        id,
+        owner_id,
+        name,
+        description,
+        emoji,
+        cover_image_url,
+        is_public,
+        created_at,
+        updated_at,
+        list_likes (
+          list_id,
+          user_id,
+          created_at
+        ),
+        list_places:list_places!list_places_list_id_fkey (
+          id,
+          list_id,
+          created_by,
+          source_list_id,
+          source_place_id,
+          source_place_name,
+          source_user_avatar_url,
+          source_user_id,
+          source_user_name,
+          name,
+          title,
+          lat,
+          lng,
+          address,
+          notes,
+          rating,
+          category,
+          categories,
+          student_discount,
+          price_range,
+          price_min,
+          price_max,
+          best_time,
+          best_times,
+          atmosphere,
+          special_features,
+          added_at,
+          updated_at,
+          list_place_likes (
+            list_place_id,
+            user_id,
+            created_at
+          ),
+          list_place_photos (
+            id,
+            list_place_id,
+            url,
+            media_type,
+            mime_type,
+            duration_ms,
+            thumbnail_url,
+            width,
+            height,
+            sort_order,
+            created_at
+          )${placeCommentsSelect}
+        )
+      `;
+}
+
+async function getActiveSessionUser() {
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      return null;
+    }
+
+    return session?.user ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function attachCurrentSessionEmail(users: User[], userId?: string | null) {
   if (!userId) {
@@ -73,12 +175,9 @@ async function attachCurrentSessionEmail(users: User[], userId?: string | null) 
   }
 
   try {
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
+    const authUser = await getActiveSessionUser();
 
-    if (error || authUser?.id !== userId || !authUser.email) {
+    if (authUser?.id !== userId || !authUser.email) {
       return users;
     }
 
@@ -97,15 +196,7 @@ async function attachCurrentSessionEmail(users: User[], userId?: string | null) 
 
 async function getCurrentViewerId() {
   try {
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-      return null;
-    }
-
+    const authUser = await getActiveSessionUser();
     return authUser?.id ?? null;
   } catch {
     return null;
@@ -165,6 +256,7 @@ async function fetchUsersAndBlocks(pageLimits: VisibleDataPageLimits) {
 async function fetchLists(
   params: {
     allUsers: User[];
+    includePlaceComments?: boolean;
     limit: number;
     listId?: string;
     offset?: number;
@@ -176,6 +268,7 @@ async function fetchLists(
   const pageLimits = DEFAULT_VISIBLE_DATA_LIMITS;
   const {
     allUsers,
+    includePlaceComments = false,
     limit,
     listId,
     offset = 0,
@@ -185,79 +278,21 @@ async function fetchLists(
   } = params;
   let query = supabase
     .from('lists')
-    .select(
-      `
-        id,
-        owner_id,
-        name,
-        description,
-        emoji,
-        cover_image_url,
-        is_public,
-        created_at,
-        updated_at,
-        list_likes (
-          list_id,
-          user_id,
-          created_at
-        ),
-        list_places (
-          id,
-          list_id,
-          created_by,
-          name,
-          title,
-          lat,
-          lng,
-          address,
-          notes,
-          rating,
-          category,
-          categories,
-          student_discount,
-          price_range,
-          price_min,
-          price_max,
-          best_time,
-          best_times,
-          atmosphere,
-          special_features,
-          added_at,
-          updated_at,
-          list_place_likes (
-            list_place_id,
-            user_id,
-            created_at
-          ),
-          list_place_comments (
-            id,
-            list_place_id,
-            user_id,
-            parent_comment_id,
-            content,
-            created_at,
-            updated_at,
-            list_place_comment_likes (
-              comment_id,
-              user_id,
-              created_at
-            )
-          ),
-          list_place_photos (
-            id,
-            list_place_id,
-            url,
-            sort_order,
-            created_at
-          )
-        )
-      `,
-    )
+    .select(buildListsSelect(includePlaceComments))
     .order('updated_at', { ascending: false })
-    .limit(pageLimits.placesPerList, { foreignTable: 'list_places' })
-    .limit(pageLimits.commentsPerPlace, { foreignTable: 'list_places.list_place_comments' })
-    .limit(pageLimits.photosPerPlace, { foreignTable: 'list_places.list_place_photos' })
+    .limit(pageLimits.placesPerList, {
+      foreignTable: 'list_places!list_places_list_id_fkey',
+    })
+    .limit(pageLimits.mediaPerPlace, {
+      foreignTable: 'list_places!list_places_list_id_fkey.list_place_photos',
+    })
     .range(offset, offset + limit - 1);
+
+  if (includePlaceComments) {
+    query = query.limit(pageLimits.commentsPerPlace, {
+      foreignTable: 'list_places!list_places_list_id_fkey.list_place_comments',
+    });
+  }
 
   if (listId) {
     query = query.eq('id', listId);
@@ -284,7 +319,7 @@ async function fetchLists(
   }
 
   const usersById = new Map(allUsers.map((item) => [item.id, item]));
-  return ((data || []) as ListRecord[]).map((list) => mapList(list, usersById));
+  return (((data || []) as unknown) as ListRecord[]).map((list) => mapList(list, usersById));
 }
 
 export async function fetchVisibleDataContext(userId?: string | null): Promise<VisibleDataContext> {
@@ -304,6 +339,7 @@ export async function fetchVisibleDataContext(userId?: string | null): Promise<V
 export async function fetchVisibleListsPage(params: {
   allUsers: User[];
   blockRows: UserBlockRow[];
+  includePlaceComments?: boolean;
   limit: number;
   listId?: string;
   offset?: number;

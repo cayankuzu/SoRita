@@ -13,13 +13,14 @@ import {
   Leaf,
   List as ListIcon,
   Lock,
+  Repeat2,
   Shapes,
   Sparkles,
   Star,
   Trash2,
 } from 'lucide-react-native';
 
-import type { Place, User } from '@/mobile/app/data/contracts/entities';
+import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
 import { FeedActionBar } from '@/mobile/app/features/social/public/components';
 import type {
   FeedActionComment,
@@ -27,6 +28,7 @@ import type {
 } from '@/mobile/app/features/social/public/types';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
+import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
@@ -74,18 +76,22 @@ type PlaceCardFullProps = {
   onFocusLongPress: () => void;
   onLikePress: () => Promise<void> | void;
   onOwnerPress?: () => void;
-  onPhotoPress: (uri: string) => void;
+  onMediaPress: (index: number) => void;
   onPress?: () => void;
   onRefresh?: () => void;
   onReportPlace: (reason: string) => Promise<void> | void;
+  onSourcePress?: () => void;
   onUserPress: (userId: string) => void;
   onCommentsVisibilityChange?: (visible: boolean) => void;
+  onLikersVisibilityChange?: (visible: boolean) => void;
   owner?: User | null;
-  photos: string[];
+  media: PlaceMedia[];
   place: Place;
   placeTimestampLabels: string[];
   priceLabel?: string;
   specialFeatures: string[];
+  sourceAttribution?: Place['sourceAttribution'];
+  sourceUser?: User | null;
   bestTimes: string[];
   hasNextCommentsPage?: boolean;
 };
@@ -123,25 +129,29 @@ export function PlaceCardFull({
   onFocusLongPress,
   onLikePress,
   onOwnerPress,
-  onPhotoPress,
+  onMediaPress,
   onPress,
   onRefresh,
   onReportPlace,
+  onSourcePress,
   onUserPress,
   onCommentsVisibilityChange,
+  onLikersVisibilityChange,
   owner,
-  photos,
+  media,
   place,
   placeTimestampLabels,
   priceLabel,
   specialFeatures,
+  sourceAttribution,
+  sourceUser,
   hasNextCommentsPage = false,
 }: PlaceCardFullProps) {
   return (
     <View style={styles.feedCard}>
       {owner ? (
         <Pressable style={styles.userHeader} onPress={onOwnerPress}>
-          <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
+          <AvatarView uri={owner.profilePhoto} name={owner.name} size={42} />
           <View style={styles.userBody}>
             <Text style={styles.userName}>{owner.name}</Text>
             <Text style={styles.userUsername}>@{owner.username}</Text>
@@ -154,13 +164,48 @@ export function PlaceCardFull({
         </Pressable>
       ) : null}
 
+      {sourceAttribution ? (
+        <Pressable
+          style={styles.sourceBar}
+          disabled={!onSourcePress}
+          onPress={onSourcePress}
+        >
+          <View style={styles.sourceAvatarWrap}>
+            <AvatarView
+              uri={sourceUser?.profilePhoto || sourceAttribution.userAvatar}
+              name={sourceUser?.name || sourceAttribution.userName}
+              size={34}
+            />
+            <View style={styles.sourceBarIcon}>
+              <Repeat2 color={colors.onPrimary} size={12} />
+            </View>
+          </View>
+          <View style={styles.sourceBarBody}>
+            <View style={styles.sourceBarTopRow}>
+              <Text numberOfLines={1} style={styles.sourceBarTitle}>
+                {sourceUser?.name || sourceAttribution.userName}
+              </Text>
+              {sourceUser?.username ? (
+                <Text numberOfLines={1} style={styles.sourceBarUsername}>
+                  @{sourceUser.username}
+                </Text>
+              ) : null}
+            </View>
+            <Text numberOfLines={1} style={styles.sourceBarMeta}>
+              Mekân kartından alıntılandı
+            </Text>
+          </View>
+          <ChevronRight color={colors.primary} size={16} />
+        </Pressable>
+      ) : null}
+
       {listName ? (
         <Pressable style={styles.linkBar} onPress={onPress}>
           {listCoverImage ? (
             <AppImage
               uri={listCoverImage}
               style={styles.linkBarCover}
-              accessibilityLabel={`${listName} kapak gorseli`}
+              accessibilityLabel={tr.cards.listCoverImageLabel(listName)}
             />
           ) : (
             <View style={styles.linkBarCoverFallback}>
@@ -209,27 +254,26 @@ export function PlaceCardFull({
         <MiniMapInteractionHint visible={showMapInteractionHint} />
       </View>
 
-      {photos.length > 0 ? (
+      {media.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
-          {photos.map((item, index) => (
-            <Pressable key={`${item}-${index}`} onPress={() => onPhotoPress(item)}>
-              <AppImage
-                uri={item}
-                style={styles.thumb}
-                accessibilityLabel={`${place.name} fotograf ${index + 1}`}
-              />
+          {media.map((item, index) => (
+            <Pressable key={`${item.url}-${item.type}-${index}`} onPress={() => onMediaPress(index)}>
+              {item.type === 'video' ? (
+                <VideoPreview uri={item.url} muted style={styles.thumb} />
+              ) : (
+                <AppImage
+                  uri={item.url}
+                  style={styles.thumb}
+                  accessibilityLabel={`${place.name} fotograf ${index + 1}`}
+                />
+              )}
             </Pressable>
           ))}
         </ScrollView>
       ) : null}
 
       <View style={styles.content}>
-        <ExpandableText
-          text={place.name}
-          collapsedLines={2}
-          textStyle={styles.title}
-          showIndicator={false}
-        />
+        <ExpandableText text={place.name} collapsedLines={1} textStyle={styles.title} />
         {place.title ? (
           <ExpandableText
             text={place.title}
@@ -372,9 +416,10 @@ export function PlaceCardFull({
         hasNextCommentsPage={hasNextCommentsPage}
         isFetchingNextCommentsPage={isFetchingNextCommentsPage}
         onCommentsVisibilityChange={onCommentsVisibilityChange}
+        onLikersVisibilityChange={onLikersVisibilityChange}
         showReportAction={canReportPlace}
-        reportTitle="Mekani bildir"
-        reportDescription="Bu mekan kartini neden bildirmek istedigini sec."
+        reportTitle={tr.cards.reportContentTitle}
+        reportDescription={tr.cards.reportContentDescription}
         onReportSubmit={onReportPlace}
         onUserPress={onUserPress}
       />

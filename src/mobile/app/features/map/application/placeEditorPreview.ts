@@ -1,7 +1,8 @@
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
-import type { Place } from '@/mobile/app/data/contracts/entities';
+import type { Place, PlaceMedia } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { getPlacePhotoUrls, normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { formatPrice } from '@/mobile/app/shared/utils/format';
 
 type PlaceEditorSnapshot = {
@@ -21,7 +22,8 @@ type PlaceEditorSnapshot = {
   bestTimes: string[];
   atmosphere: string[];
   features: string[];
-  photos: string[];
+  media?: PlaceMedia[];
+  photos?: string[];
   placeName?: string;
 };
 
@@ -37,7 +39,8 @@ type PlaceEditorDraftSnapshot = {
   priceMin: string;
   priceMax: string;
   selectedLists: string[];
-  photos: string[];
+  media?: PlaceMedia[];
+  photos?: string[];
   bestTimes: string[];
   atmosphere: string[];
   features: string[];
@@ -80,9 +83,12 @@ export function buildPreviewPlace({
   bestTimes,
   atmosphere,
   features,
+  media,
   photos,
   placeName,
 }: PlaceEditorSnapshot): Place {
+  const normalizedMedia = normalizePlaceMedia(media, photos ?? existingPlace?.photos);
+
   return {
     id: existingPlace?.id || 'preview-place',
     name: resolvePlaceEditorName({
@@ -107,9 +113,11 @@ export function buildPreviewPlace({
     bestTimes,
     atmosphere,
     specialFeatures: features,
-    photos,
+    media: normalizedMedia,
+    photos: getPlacePhotoUrls({ media: normalizedMedia }),
     addedAt: existingPlace?.addedAt || new Date().toISOString(),
     addedBy: existingPlace?.addedBy,
+    sourceAttribution: existingPlace?.sourceAttribution,
   };
 }
 
@@ -146,10 +154,21 @@ export function buildPreviewPriceLabel(previewPlace: Place) {
 }
 
 export function buildPlaceEditorDraft(snapshot: PlaceEditorDraftSnapshot): PlaceEditorDraft {
-  return { ...snapshot };
+  const normalizedMedia = normalizePlaceMedia(snapshot.media, snapshot.photos);
+
+  return {
+    ...snapshot,
+    media: normalizedMedia,
+    photos: getPlacePhotoUrls({ media: normalizedMedia }),
+  };
 }
 
 export function buildPlaceSavePayload(snapshot: PlaceEditorSnapshot): Omit<Place, 'id' | 'addedAt'> {
+  const normalizedMedia = normalizePlaceMedia(
+    snapshot.media,
+    snapshot.photos ?? snapshot.existingPlace?.photos,
+  );
+
   return {
     name: resolvePlaceEditorName(snapshot),
     title: snapshot.title.trim() || undefined,
@@ -168,7 +187,9 @@ export function buildPlaceSavePayload(snapshot: PlaceEditorSnapshot): Omit<Place
     bestTimes: snapshot.bestTimes,
     atmosphere: snapshot.atmosphere,
     specialFeatures: snapshot.features,
-    photos: snapshot.photos,
+    media: normalizedMedia,
+    photos: getPlacePhotoUrls({ media: normalizedMedia }),
     addedBy: snapshot.existingPlace?.addedBy,
+    sourceAttribution: snapshot.existingPlace?.sourceAttribution,
   };
 }

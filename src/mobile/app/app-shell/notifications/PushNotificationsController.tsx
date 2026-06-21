@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/RootNavigator';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
-import { registerPushNotifications } from '@/mobile/app/data/repositories/pushNotificationRepository';
+import {
+  ensureAndroidPushChannel,
+  registerDevicePushToken,
+  registerPushNotifications,
+} from '@/mobile/app/data/repositories/pushNotificationRepository';
 import { markNotificationRead } from '@/mobile/app/data/repositories/notificationRepository';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
 import { logger } from '@/mobile/app/platform/feedback/logger';
@@ -13,21 +18,31 @@ async function loadNotificationsModule() {
   return import('expo-notifications');
 }
 
-async function ensureNotificationHandler() {
+let notificationPresentationPromise: Promise<void> | null = null;
+
+export async function ensureForegroundNotificationPresentation() {
   if (!notificationRuntime.supportsNotificationObservers) {
     return;
   }
 
-  const Notifications = await loadNotificationsModule();
+  if (!notificationPresentationPromise) {
+    notificationPresentationPromise = (async () => {
+      await ensureAndroidPushChannel().catch(() => undefined);
+      const Notifications = await loadNotificationsModule();
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        }),
+      });
+    })();
+  }
+
+  await notificationPresentationPromise;
 }
 
 type PushPayload = {
@@ -51,11 +66,49 @@ function normalizePushPayload(data: Record<string, unknown> | undefined): PushPa
 export function PushNotificationsController() {
   const { booted, user } = useAuth();
   const registeredTokenRef = useRef<string | null>(null);
+  const registeredUserIdRef = useRef<string | null>(null);
+  const registrationInFlightUserIdRef = useRef<string | null>(null);
   const lastHandledNotificationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    void ensureNotificationHandler();
+    void ensureForegroundNotificationPresentation();
   }, []);
+
+  const syncPushRegistration = useCallback(async () => {
+    if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
+      return;
+    }
+
+    if (!user) {
+      registeredTokenRef.current = null;
+      registeredUserIdRef.current = null;
+      registrationInFlightUserIdRef.current = null;
+      return;
+    }
+
+    if (
+      registeredUserIdRef.current === user.id ||
+      registrationInFlightUserIdRef.current === user.id
+    ) {
+      return;
+    }
+
+    try {
+      registrationInFlightUserIdRef.current = user.id;
+      const nextToken = await registerPushNotifications(user.id);
+
+      if (nextToken) {
+        registeredTokenRef.current = nextToken;
+        registeredUserIdRef.current = user.id;
+      }
+    } catch (error) {
+      logger.warn('push', 'Push registration failed', error);
+    } finally {
+      if (registrationInFlightUserIdRef.current === user.id) {
+        registrationInFlightUserIdRef.current = null;
+      }
+    }
+  }, [booted, user]);
 
   const openPushTarget = useCallback(
     (payload: PushPayload) => {
@@ -178,35 +231,66 @@ export function PushNotificationsController() {
   }, [booted, openPushTarget]);
 
   useEffect(() => {
+    void syncPushRegistration();
+  }, [syncPushRegistration]);
+
+  useEffect(() => {
+    if (!booted || !notificationRuntime.featureEnabled) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        return;
+      }
+
+      void ensureForegroundNotificationPresentation().catch((error) => {
+        logger.warn('push', 'Failed to refresh foreground notification presentation', error);
+      });
+      void syncPushRegistration();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [booted, syncPushRegistration]);
+
+  useEffect(() => {
+    if (!booted || !user || !notificationRuntime.supportsRemotePushRegistration) {
+      return;
+    }
+
+    let subscription: { remove: () => void } | null = null;
     let cancelled = false;
 
-    const syncPushState = async () => {
-      if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
-        return;
-      }
-
-      if (!user) {
-        registeredTokenRef.current = null;
-        return;
-      }
-
-      try {
-        const nextToken = await registerPushNotifications(user.id);
-
-        if (!cancelled && nextToken) {
-          registeredTokenRef.current = nextToken;
+    void loadNotificationsModule()
+      .then((Notifications) => {
+        if (cancelled || typeof Notifications.addPushTokenListener !== 'function') {
+          return;
         }
-      } catch (error) {
-        logger.warn('push', 'Push registration failed', error);
-      }
-    };
 
-    void syncPushState();
+        subscription = Notifications.addPushTokenListener((devicePushToken) => {
+          void registerDevicePushToken(user.id, devicePushToken)
+            .then((nextToken) => {
+              if (!cancelled && nextToken) {
+                registeredTokenRef.current = nextToken;
+                registeredUserIdRef.current = user.id;
+              }
+            })
+            .catch((error) => {
+              logger.warn('push', 'Push token refresh registration failed', error);
+            });
+        });
+      })
+      .catch((error) => {
+        logger.warn('push', 'Failed to initialize push token listener', error);
+      });
 
     return () => {
       cancelled = true;
+      subscription?.remove();
     };
-  }, [booted, user]);
+  }, [booted, user?.id]);
 
   return null;
 }

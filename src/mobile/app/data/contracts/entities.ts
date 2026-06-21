@@ -23,6 +23,7 @@ export interface PlaceComment {
   parentCommentId?: string;
   createdAt: string;
   updatedAt: string;
+  isPending?: boolean;
   likes?: number;
   likedBy?: string[];
   likeDetails?: Array<{
@@ -36,6 +37,20 @@ export interface PlaceComment {
     username: string;
     profilePhoto?: string;
   };
+}
+
+export type PlaceMediaType = 'photo' | 'video';
+
+export interface PlaceMedia {
+  id?: string;
+  url: string;
+  type: PlaceMediaType;
+  mimeType?: string;
+  durationMs?: number;
+  thumbnailUrl?: string;
+  width?: number;
+  height?: number;
+  fileName?: string;
 }
 
 export interface Place {
@@ -57,6 +72,7 @@ export interface Place {
   bestTimes?: string[];
   atmosphere?: string[];
   specialFeatures?: string[];
+  media?: PlaceMedia[];
   photos?: string[];
   likes?: number;
   likedBy?: string[];
@@ -68,6 +84,14 @@ export interface Place {
   addedAt: string;
   updatedAt?: string;
   addedBy?: { userId: string; userName: string; userAvatar?: string };
+  sourceAttribution?: {
+    listId?: string;
+    placeId: string;
+    placeName?: string;
+    userAvatar?: string;
+    userId?: string;
+    userName: string;
+  };
 }
 
 export interface PlaceList {

@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
+import { savePersistedVisibleDataSnapshot } from '@/mobile/app/data/cache/visibleDataSnapshotCache';
 import {
   fetchVisibleDataContext,
   fetchVisibleListsPage,
@@ -15,11 +16,13 @@ import {
 } from '@/mobile/app/data/repositories/visibleDataRepository';
 
 const PUBLIC_VIEWER_ID = '__public__';
-const VISIBLE_DATA_STALE_TIME_MS = 1000 * 60 * 2;
+const VISIBLE_DATA_STALE_TIME_MS = 1000 * 60 * 3;
 const DEFAULT_VISIBLE_LISTS_PAGE_SIZE = 20;
 
 export type UseVisibleDataQueryOptions = {
+  enabled?: boolean;
   includeLists?: boolean;
+  includePlaceComments?: boolean;
   listId?: string;
   listPageSize?: number;
   ownerId?: string;
@@ -107,32 +110,123 @@ function getSnapshotLists(
   return filtered.slice(0, options.listId ? 1 : listPageSize);
 }
 
+function isFullSnapshotRequest(
+  includeLists: boolean,
+  options: UseVisibleDataQueryOptions,
+) {
+  return includeLists && !options.listId && !options.ownerId && !options.publicOnly;
+}
+
+function mergeSnapshotLists(existingLists: VisibleDataSnapshot['lists'], nextLists: VisibleDataSnapshot['lists']) {
+  const mergedLists = new Map(existingLists.map((list) => [list.id, list]));
+
+  nextLists.forEach((list) => {
+    mergedLists.set(list.id, list);
+  });
+
+  return Array.from(mergedLists.values()).sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+  );
+}
+
+function buildSnapshotForCache(
+  existingSnapshot: VisibleDataSnapshot | undefined,
+  nextData: VisibleDataSnapshot,
+  includeLists: boolean,
+  options: UseVisibleDataQueryOptions,
+): VisibleDataSnapshot {
+  const nextContext = {
+    allUsers: nextData.allUsers,
+    blockRows: nextData.blockRows,
+    currentUser: nextData.currentUser,
+    users: nextData.users,
+  };
+
+  if (!includeLists) {
+    return {
+      ...nextContext,
+      lists: existingSnapshot?.lists || [],
+    };
+  }
+
+  if (isFullSnapshotRequest(includeLists, options) || !existingSnapshot) {
+    return nextData;
+  }
+
+  if (options.listId || options.ownerId) {
+    return {
+      ...nextContext,
+      lists: mergeSnapshotLists(existingSnapshot.lists, nextData.lists),
+    };
+  }
+
+  return {
+    ...nextContext,
+    lists: existingSnapshot.lists.length > 0 ? existingSnapshot.lists : nextData.lists,
+  };
+}
+
 export function useVisibleDataQuery(
   userId?: string | null,
   options: UseVisibleDataQueryOptions = {},
 ) {
   const queryClient = useQueryClient();
+  const queryEnabled = options.enabled ?? true;
   const viewerId = getViewerId(userId);
   const includeLists = options.includeLists !== false;
+  const includePlaceComments = options.includePlaceComments ?? false;
+  const listId = options.listId;
   const listPageSize = options.listPageSize || DEFAULT_VISIBLE_LISTS_PAGE_SIZE;
+  const ownerId = options.ownerId;
+  const publicOnly = options.publicOnly ?? false;
+  const contextQueryKey = queryKeys.visibleData.context(viewerId);
+  const listsQueryKey = queryKeys.visibleData.lists(viewerId, {
+    includePlaceComments,
+    listId,
+    ownerId,
+    pageSize: listPageSize,
+    publicOnly,
+  });
+  const hasCachedContextQuery = Boolean(
+    queryClient.getQueryData<VisibleDataContext>(contextQueryKey),
+  );
+  const hasCachedListsQuery = Boolean(
+    queryClient.getQueryData<InfiniteData<VisibleDataSnapshot['lists'], number>>(listsQueryKey),
+  );
   const cachedSnapshot = queryClient.getQueryData<VisibleDataSnapshot>(
     queryKeys.visibleData.snapshot(viewerId),
   );
   const snapshotContext = toVisibleDataContext(cachedSnapshot);
-  const snapshotLists = getSnapshotLists(cachedSnapshot, options, listPageSize);
-  const hasContextPlaceholder = Boolean(snapshotContext);
-  const placeholderListsData = includeLists
+  const snapshotLists = getSnapshotLists(cachedSnapshot, {
+    includeLists,
+    includePlaceComments,
+    listId,
+    listPageSize,
+    ownerId,
+    publicOnly,
+  }, listPageSize);
+  const hasContextSnapshot = Boolean(snapshotContext);
+  const hasListSnapshot = Boolean(cachedSnapshot);
+  const initialListsData = includeLists && hasListSnapshot
     ? {
         pages: [snapshotLists],
         pageParams: [0],
       }
     : undefined;
+  const shouldSeedContextFromSnapshot = !hasCachedContextQuery && hasContextSnapshot;
+  const shouldSeedListsFromSnapshot = includeLists && !hasCachedListsQuery && hasListSnapshot;
+  const shouldRefetchContextOnMount = !hasCachedContextQuery && !shouldSeedContextFromSnapshot;
+  const shouldRefetchListsOnMount =
+    includeLists && !hasCachedListsQuery && !shouldSeedListsFromSnapshot;
 
   const contextQuery = useQuery({
-    queryKey: queryKeys.visibleData.context(viewerId),
+    enabled: queryEnabled,
+    queryKey: contextQueryKey,
     queryFn: () => fetchVisibleDataContext(userId),
-    placeholderData: snapshotContext,
-    refetchOnMount: 'always',
+    initialData: shouldSeedContextFromSnapshot ? snapshotContext : undefined,
+    initialDataUpdatedAt: shouldSeedContextFromSnapshot ? 0 : undefined,
+    refetchOnMount: shouldRefetchContextOnMount,
     refetchOnReconnect: 'always',
     staleTime: VISIBLE_DATA_STALE_TIME_MS,
   });
@@ -144,28 +238,25 @@ export function useVisibleDataQuery(
     ReturnType<typeof queryKeys.visibleData.lists>,
     number
   >({
-    enabled: includeLists && (Boolean(contextQuery.data) || hasContextPlaceholder),
+    enabled: queryEnabled && includeLists && (Boolean(contextQuery.data) || hasContextSnapshot),
     initialPageParam: 0,
-    placeholderData: placeholderListsData,
-    queryKey: queryKeys.visibleData.lists(viewerId, {
-      listId: options.listId,
-      ownerId: options.ownerId,
-      pageSize: listPageSize,
-      publicOnly: options.publicOnly,
-    }),
+    initialData: shouldSeedListsFromSnapshot ? initialListsData : undefined,
+    initialDataUpdatedAt: shouldSeedListsFromSnapshot ? 0 : undefined,
+    queryKey: listsQueryKey,
     queryFn: ({ pageParam = 0 }) =>
       fetchVisibleListsPage({
         allUsers: contextQuery.data?.allUsers || snapshotContext?.allUsers || [],
         blockRows: contextQuery.data?.blockRows || snapshotContext?.blockRows || [],
-        limit: options.listId ? 1 : listPageSize,
-        listId: options.listId,
+        includePlaceComments,
+        limit: listId ? 1 : listPageSize,
+        listId,
         offset: pageParam,
-        ownerId: options.ownerId,
-        publicOnly: options.publicOnly,
+        ownerId,
+        publicOnly,
         viewerId: userId,
       }),
     getNextPageParam: (lastPage, allPages) => {
-      if (!Array.isArray(lastPage) || options.listId || lastPage.length < listPageSize) {
+      if (!Array.isArray(lastPage) || listId || lastPage.length < listPageSize) {
         return undefined;
       }
 
@@ -174,21 +265,21 @@ export function useVisibleDataQuery(
         0,
       );
     },
-    refetchOnMount: 'always',
+    refetchOnMount: shouldRefetchListsOnMount,
     refetchOnReconnect: 'always',
     staleTime: VISIBLE_DATA_STALE_TIME_MS,
   });
 
   const resolvedContext = contextQuery.data || snapshotContext;
   const lists = useMemo(
-    () => (includeLists ? flattenListPages(listsQuery.data || placeholderListsData) : []),
-    [includeLists, listsQuery.data, placeholderListsData],
+    () => (includeLists ? flattenListPages(listsQuery.data || initialListsData) : []),
+    [includeLists, initialListsData, listsQuery.data],
   );
   const isWaitingForInitialLists =
     includeLists &&
     Boolean(resolvedContext) &&
     !listsQuery.data &&
-    !placeholderListsData &&
+    !initialListsData &&
     listsQuery.isLoading;
   const error = contextQuery.error || listsQuery.error || null;
   const hasPartialDataError =
@@ -208,10 +299,46 @@ export function useVisibleDataQuery(
   }, [isWaitingForInitialLists, lists, resolvedContext]);
 
   useEffect(() => {
-    if (data) {
-      queryClient.setQueryData(queryKeys.visibleData.snapshot(viewerId), data);
+    if (!data) {
+      return;
     }
-  }, [data, queryClient, viewerId]);
+
+    const existingSnapshot = queryClient.getQueryData<VisibleDataSnapshot>(
+      queryKeys.visibleData.snapshot(viewerId),
+    );
+    const nextSnapshot = buildSnapshotForCache(existingSnapshot, data, includeLists, {
+      includeLists,
+      includePlaceComments,
+      listId,
+      listPageSize,
+      ownerId,
+      publicOnly,
+    });
+
+    queryClient.setQueryData(queryKeys.visibleData.snapshot(viewerId), nextSnapshot);
+
+    if (viewerId === PUBLIC_VIEWER_ID) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void savePersistedVisibleDataSnapshot(viewerId, nextSnapshot).catch(() => undefined);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    data,
+    includeLists,
+    includePlaceComments,
+    listId,
+    listPageSize,
+    ownerId,
+    publicOnly,
+    queryClient,
+    viewerId,
+  ]);
 
   const refetch = async () => {
     const [contextResult, listsResult] = await Promise.allSettled([
@@ -231,7 +358,7 @@ export function useVisibleDataQuery(
               > | undefined)
             : undefined) ||
             listsQuery.data ||
-            placeholderListsData,
+            initialListsData,
         )
       : [];
 

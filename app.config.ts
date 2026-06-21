@@ -44,7 +44,7 @@ const config: ExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   owner: 'cayan',
-  version: '1.0.35',
+  version: '1.0.41',
   newArchEnabled: false,
   orientation: 'portrait',
   scheme: 'sorita',
@@ -82,6 +82,16 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-media-library',
+      {
+        photosPermission:
+          'SoRita, fotograf ve videolari liste kartlarina ekleyebilmeniz icin galerinizdeki iceriklere erisim ister.',
+        savePhotosPermission:
+          'SoRita, kamera ile eklediginiz icerikleri isterseniz galerinizde de saklayabilmeniz icin kaydetme izni ister.',
+        granularPermissions: ['photo', 'video'],
+      },
+    ],
+    [
       'react-native-maps',
       {
         androidGoogleMapsApiKey: googleMapsApiKey,
@@ -101,7 +111,7 @@ const config: ExpoConfig = {
   ],
   android: {
     package: 'com.cayan.sorita.socialmap',
-    versionCode: 38,
+    versionCode: 46,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -121,7 +131,7 @@ const config: ExpoConfig = {
   },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '38',
+    buildNumber: '27',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:

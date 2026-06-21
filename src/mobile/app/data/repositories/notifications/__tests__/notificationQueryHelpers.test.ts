@@ -35,12 +35,14 @@ function createThenableChain(result: { data?: unknown; error?: unknown }) {
 
 describe('notificationQueryHelpers', () => {
   beforeEach(() => {
+    vi.resetModules();
     fromMock.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-01-08T12:00:00.000Z'));
   });
 
   it('maps and filters notifications for hidden users', async () => {
+    const { formatAbsoluteDateTime } = await import('@/mobile/app/shared/utils/dateTime');
     const blocksChain = createThenableChain({
       data: [
         { blocker_user_id: 'viewer', blocked_user_id: 'hidden', created_at: '2025-01-01T00:00:00.000Z' },
@@ -123,13 +125,14 @@ describe('notificationQueryHelpers', () => {
         userName: 'Visible',
         userPhoto: 'photo.jpg',
         userId: 'visible',
-        timestamp: '30 dk once',
+        timestamp: formatAbsoluteDateTime('2025-01-08T11:30:00.000Z'),
         linkTo: { type: 'profile', userId: 'visible' },
       }),
     ]);
   });
 
   it('supports ranged notification pagination', async () => {
+    const { formatAbsoluteDateTime } = await import('@/mobile/app/shared/utils/dateTime');
     const blocksChain = createThenableChain({
       data: [],
       error: null,
@@ -185,7 +188,7 @@ describe('notificationQueryHelpers', () => {
       id: 'n1',
       followRequest: { id: 'request-1', status: 'pending' },
       linkTo: { type: 'list', listId: 'list-1', placeId: undefined },
-      timestamp: '1 gun once',
+      timestamp: formatAbsoluteDateTime('2025-01-07T12:00:00.000Z'),
     });
   });
 });

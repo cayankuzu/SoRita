@@ -5,6 +5,7 @@ import type {
   UserBlockRow,
 } from '@/mobile/app/platform/supabase/databaseTypes';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
 
 export type MobileNotification = {
   id: string;
@@ -14,6 +15,7 @@ export type MobileNotification = {
     | 'follow_request'
     | 'comment'
     | 'place_added'
+    | 'place_quote'
     | 'list_liked'
     | 'comment_like'
     | 'comment_reply';
@@ -56,8 +58,29 @@ const NOTIFICATION_SELECT = `
     responded_at
   )
 `;
+const HIDDEN_USER_IDS_CACHE_TTL_MS = 1000 * 60;
+const hiddenUserIdsCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    pending?: Promise<Set<string>>;
+    value: Set<string>;
+  }
+>();
 
 async function getHiddenUserIds(userId: string) {
+  const cachedEntry = hiddenUserIdsCache.get(userId);
+  const now = Date.now();
+
+  if (cachedEntry && cachedEntry.expiresAt > now) {
+    return cachedEntry.value;
+  }
+
+  if (cachedEntry?.pending) {
+    return cachedEntry.pending;
+  }
+
+  const request = (async () => {
   const { data, error } = await supabase
     .from('user_blocks')
     .select('blocker_user_id, blocked_user_id, created_at')
@@ -79,7 +102,29 @@ async function getHiddenUserIds(userId: string) {
     }
   }
 
-  return hiddenUserIds;
+    hiddenUserIdsCache.set(userId, {
+      expiresAt: Date.now() + HIDDEN_USER_IDS_CACHE_TTL_MS,
+      value: hiddenUserIds,
+    });
+
+    return hiddenUserIds;
+  })().catch((error) => {
+    const entry = hiddenUserIdsCache.get(userId);
+
+    if (entry?.pending === request) {
+      hiddenUserIdsCache.delete(userId);
+    }
+
+    throw error;
+  });
+
+  hiddenUserIdsCache.set(userId, {
+    expiresAt: 0,
+    pending: request,
+    value: cachedEntry?.value ?? new Set<string>(),
+  });
+
+  return request;
 }
 
 async function fetchActorProfilesById(rows: NotificationRecord[]) {
@@ -109,31 +154,6 @@ async function fetchActorProfilesById(rows: NotificationRecord[]) {
   );
 }
 
-function formatRelativeTimestamp(isoDate: string) {
-  const now = Date.now();
-  const diffMs = Math.max(0, now - new Date(isoDate).getTime());
-  const diffMinutes = Math.floor(diffMs / 60000);
-
-  if (diffMinutes < 60) {
-    return `${Math.max(1, diffMinutes)} dk once`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} saat once`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffDays < 7) {
-    return `${diffDays} gun once`;
-  }
-
-  const diffWeeks = Math.floor(diffDays / 7);
-  return `${diffWeeks} hafta once`;
-}
-
 function mapNotification(
   record: NotificationRecord,
   actorProfilesById: Map<string, PublicProfileRow>,
@@ -150,7 +170,7 @@ function mapNotification(
     userPhoto: actorProfile?.profile_photo_url || undefined,
     userId: record.actor_user_id || actorProfile?.id || '',
     message: record.message,
-    timestamp: formatRelativeTimestamp(record.created_at),
+    timestamp: formatAbsoluteDateTime(record.created_at),
     read: record.read,
     followRequest: followRequest
       ? {

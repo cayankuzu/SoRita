@@ -7,6 +7,7 @@ import {
 
 import {
   getNotificationsPage,
+  markAllNotificationsRead,
   markNotificationRead,
   respondToFollowRequestNotification,
   type MobileNotification,
@@ -129,6 +130,49 @@ export function useMarkNotificationReadMutation(userId?: string | null) {
       return { previousItems };
     },
     onError: (_error, _notification, context) => {
+      if (!userId || !context?.previousItems) {
+        return;
+      }
+
+      queryClient.setQueryData(queryKeys.notifications.list(userId), context.previousItems);
+    },
+    onSettled: () => {
+      if (!userId) {
+        return;
+      }
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(userId) });
+    },
+  });
+}
+
+export function useMarkAllNotificationsReadMutation(userId?: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => {
+      if (!userId) {
+        return Promise.resolve();
+      }
+
+      return markAllNotificationsRead(userId);
+    },
+    onMutate: async () => {
+      if (!userId) {
+        return { previousItems: undefined };
+      }
+
+      const queryKey = queryKeys.notifications.list(userId);
+      await queryClient.cancelQueries({ queryKey });
+      const previousItems = queryClient.getQueryData<InfiniteData<MobileNotification[], number>>(queryKey);
+
+      queryClient.setQueryData<InfiniteData<MobileNotification[], number>>(queryKey, (items) =>
+        mapNotificationPages(items, (item) => (item.read ? item : { ...item, read: true })),
+      );
+
+      return { previousItems };
+    },
+    onError: (_error, _variables, context) => {
       if (!userId || !context?.previousItems) {
         return;
       }

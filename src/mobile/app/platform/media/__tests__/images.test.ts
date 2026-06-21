@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requestMediaLibraryPermissionsAsyncMock = vi.fn();
+const requestCameraPermissionsAsyncMock = vi.fn();
+const requestMediaLibrarySavePermissionsAsyncMock = vi.fn();
+const isMediaLibraryAvailableAsyncMock = vi.fn();
 const launchImageLibraryAsyncMock = vi.fn();
+const launchCameraAsyncMock = vi.fn();
+const saveToLibraryAsyncMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
 const makeDirectoryAsyncMock = vi.fn();
 const deleteAsyncMock = vi.fn();
@@ -10,11 +15,22 @@ const readAsStringAsyncMock = vi.fn();
 const writeAsStringAsyncMock = vi.fn();
 
 vi.mock('expo-image-picker', () => ({
+  UIImagePickerControllerQualityType: {
+    High: 'high',
+  },
   UIImagePickerPreferredAssetRepresentationMode: {
     Compatible: 'compatible',
   },
+  requestCameraPermissionsAsync: requestCameraPermissionsAsyncMock,
   requestMediaLibraryPermissionsAsync: requestMediaLibraryPermissionsAsyncMock,
+  launchCameraAsync: launchCameraAsyncMock,
   launchImageLibraryAsync: launchImageLibraryAsyncMock,
+}));
+
+vi.mock('expo-media-library', () => ({
+  isAvailableAsync: isMediaLibraryAvailableAsyncMock,
+  requestPermissionsAsync: requestMediaLibrarySavePermissionsAsyncMock,
+  saveToLibraryAsync: saveToLibraryAsyncMock,
 }));
 
 vi.mock('expo-file-system/legacy', () => ({
@@ -34,7 +50,12 @@ vi.mock('expo-file-system/legacy', () => ({
 describe('platform/media/images', () => {
   beforeEach(() => {
     requestMediaLibraryPermissionsAsyncMock.mockReset();
+    requestCameraPermissionsAsyncMock.mockReset();
+    requestMediaLibrarySavePermissionsAsyncMock.mockReset();
+    isMediaLibraryAvailableAsyncMock.mockReset();
     launchImageLibraryAsyncMock.mockReset();
+    launchCameraAsyncMock.mockReset();
+    saveToLibraryAsyncMock.mockReset();
     getInfoAsyncMock.mockReset();
     makeDirectoryAsyncMock.mockReset();
     deleteAsyncMock.mockReset();
@@ -43,6 +64,10 @@ describe('platform/media/images', () => {
     writeAsStringAsyncMock.mockReset();
 
     requestMediaLibraryPermissionsAsyncMock.mockResolvedValue({ granted: true });
+    requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
+    requestMediaLibrarySavePermissionsAsyncMock.mockResolvedValue({ granted: true });
+    isMediaLibraryAvailableAsyncMock.mockResolvedValue(true);
+    saveToLibraryAsyncMock.mockResolvedValue(undefined);
     getInfoAsyncMock.mockResolvedValue({ exists: true });
     makeDirectoryAsyncMock.mockResolvedValue(undefined);
     deleteAsyncMock.mockResolvedValue(undefined);
@@ -62,11 +87,11 @@ describe('platform/media/images', () => {
     expect(launchImageLibraryAsyncMock).toHaveBeenCalledWith(
       expect.objectContaining({
         allowsEditing: true,
-        base64: true,
+        base64: false,
         legacy: true,
         mediaTypes: ['images'],
         preferredAssetRepresentationMode: 'compatible',
-        quality: 0.8,
+        quality: 0.9,
         selectionLimit: 1,
         shouldDownloadFromNetwork: true,
       }),
@@ -99,6 +124,46 @@ describe('platform/media/images', () => {
     );
     expect(readAsStringAsyncMock).not.toHaveBeenCalled();
     expect(result).toMatch(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/);
+  });
+
+  it('can capture a new photo from the camera', async () => {
+    launchCameraAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file:///cache/camera-shot.jpg', base64: 'Y2FtZXJh' }],
+    });
+
+    const { pickSingleImage } = await import('@/mobile/app/platform/media/images');
+    const result = await pickSingleImage('camera');
+
+    expect(requestCameraPermissionsAsyncMock).toHaveBeenCalledTimes(1);
+    expect(requestMediaLibrarySavePermissionsAsyncMock).toHaveBeenCalledWith(true);
+    expect(isMediaLibraryAvailableAsyncMock).toHaveBeenCalledTimes(1);
+    expect(launchCameraAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowsEditing: true,
+        base64: false,
+        quality: 0.9,
+      }),
+    );
+    expect(saveToLibraryAsyncMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/),
+    );
+    expect(result).toMatch(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/);
+  });
+
+  it('skips gallery saving when the media library native module is unavailable', async () => {
+    isMediaLibraryAvailableAsyncMock.mockResolvedValueOnce(false);
+    launchCameraAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file:///cache/camera-shot.jpg', base64: 'Y2FtZXJh' }],
+    });
+
+    const { pickSingleImage } = await import('@/mobile/app/platform/media/images');
+    const result = await pickSingleImage('camera');
+
+    expect(result).toMatch(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/);
+    expect(requestMediaLibrarySavePermissionsAsyncMock).not.toHaveBeenCalled();
+    expect(saveToLibraryAsyncMock).not.toHaveBeenCalled();
   });
 
   it('returns null when permission is denied or the picker is canceled', async () => {
