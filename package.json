@@ -113,7 +113,7 @@
     "msw": "^2.13.3",
     "react-refresh": "^0.14.2",
     "react-test-renderer": "^19.2.0",
-    "typescript": "^5.9.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.4"
   },
   "overrides": {
