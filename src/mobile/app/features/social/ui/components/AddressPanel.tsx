@@ -1,0 +1,173 @@
+import React from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import {
+  ChevronRight,
+  Copy,
+  ExternalLink,
+} from 'lucide-react-native';
+
+import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { openMapLocationInApp } from '@/mobile/app/shared/utils/mapLinks';
+
+type AddressPanelProps = {
+  location: FeedActionLocation;
+  onCopied?: () => void;
+};
+
+export function AddressPanel({ location, onCopied }: AddressPanelProps) {
+  const [isAddressExpanded, setIsAddressExpanded] = React.useState(false);
+  const addressText = React.useMemo(
+    () => location.address?.trim() || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`,
+    [location.address, location.lat, location.lng],
+  );
+
+  React.useEffect(() => {
+    setIsAddressExpanded(false);
+  }, [addressText, location.name]);
+
+  const copyAddress = async () => {
+    await Clipboard.setStringAsync(addressText);
+    onCopied?.();
+  };
+
+  const openInMaps = () => {
+    void openMapLocationInApp({
+      lat: location.lat,
+      lng: location.lng,
+      name: location.name,
+      address: location.address,
+    });
+  };
+
+  return (
+    <View style={styles.panel}>
+      <Text style={styles.panelTitle}>{location.name}</Text>
+      <View style={styles.addressCard}>
+        <Pressable accessibilityRole="link" onPress={openInMaps} style={styles.addressLinkButton}>
+          <Text style={styles.addressLabel}>{tr.placeEditor.addressLabel}</Text>
+          <Text numberOfLines={isAddressExpanded ? undefined : 1} style={styles.addressLinkText}>
+            {addressText}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={6}
+          onPress={() => setIsAddressExpanded((current) => !current)}
+          style={[
+            styles.addressToggleButton,
+            isAddressExpanded ? styles.addressToggleButtonExpanded : null,
+          ]}
+        >
+          <ChevronRight color={colors.primary} size={16} />
+        </Pressable>
+      </View>
+      <View style={styles.panelActions}>
+        <Pressable style={styles.secondaryPanelButton} onPress={() => void copyAddress()}>
+          <Copy color={colors.textMuted} size={14} />
+          <Text style={styles.secondaryPanelText}>{tr.cards.copy}</Text>
+        </Pressable>
+        <Pressable style={styles.primaryPanelButton} onPress={openInMaps}>
+          <ExternalLink color={colors.primary} size={14} />
+          <Text style={styles.primaryPanelText}>{tr.cards.openInMaps}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  panel: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  panelTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  addressCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  addressLinkButton: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  addressLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSoft,
+    textTransform: 'uppercase',
+  },
+  addressLinkText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.primary,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.primary,
+  },
+  addressToggleButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  addressToggleButtonExpanded: {
+    backgroundColor: colors.primaryBg,
+    transform: [{ rotate: '90deg' }],
+  },
+  panelActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  secondaryPanelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+  },
+  secondaryPanelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  primaryPanelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryBg,
+  },
+  primaryPanelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+});

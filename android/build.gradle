@@ -1,0 +1,210 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+import java.util.Locale
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('com.google.gms:google-services:4.4.2')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"
+
+def isWindowsHost = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+
+if (isWindowsHost) {
+  subprojects {
+    if (project.path == ":app") {
+      layout.buildDirectory.set(file("C:/t/sorita-gradle-build/app"))
+    }
+  }
+}
+
+def normalizePath = { File file ->
+  file.absolutePath.replace("\\", "/")
+}
+
+def ensureMirroredDirectory = { File sourceDir, String mirrorPath ->
+  File mirrorDir = file(mirrorPath)
+  File markerFile = new File(mirrorDir, ".sorita-source")
+  def sourceMarker = normalizePath(sourceDir)
+
+  if (mirrorDir.exists() && markerFile.exists() && markerFile.getText("UTF-8") == sourceMarker) {
+    return
+  }
+
+  if (mirrorDir.exists()) {
+    if (!mirrorDir.deleteDir()) {
+      throw new GradleException("Failed to refresh native path mirror at ${mirrorPath}.")
+    }
+  }
+
+  copy {
+    from(sourceDir)
+    into(mirrorDir)
+  }
+
+  markerFile.write(sourceMarker, "UTF-8")
+}
+
+def cleanupWindowsShortcut = { String linkPath ->
+  File linkFile = file(linkPath)
+
+  if (linkFile.exists()) {
+    def removeProcess = ["cmd", "/c", "rmdir", linkPath].execute()
+    removeProcess.waitFor()
+
+    if (removeProcess.exitValue() == 0 || !linkFile.exists()) {
+      return
+    }
+
+    throw new GradleException("Failed to remove legacy native path shortcut at ${linkPath}.")
+  }
+}
+
+def collectMatchingDirectories = { File rootDir, Closure<Boolean> matcher ->
+  def matches = []
+
+  if (rootDir == null || !rootDir.exists()) {
+    return matches
+  }
+
+  rootDir.eachDirRecurse { candidate ->
+    if (matcher(candidate)) {
+      matches << candidate
+    }
+  }
+
+  return matches
+}
+
+def collectNativePathReplacements = {
+  def cacheRoots = [
+    System.getenv("GRADLE_USER_HOME"),
+    new File(System.getProperty("user.home"), ".gradle").absolutePath,
+  ]
+    .findAll { it != null }
+    .collect { new File(it) }
+    .findAll { it.exists() }
+    .unique { it.absolutePath }
+
+  def localAppData = System.getenv("LOCALAPPDATA")
+  if (localAppData != null) {
+    def cursorSandboxRoot = new File(localAppData, "Temp/cursor-sandbox-cache")
+    if (cursorSandboxRoot.exists()) {
+      cursorSandboxRoot.eachDir { sandboxDir ->
+        def sandboxGradleHome = new File(sandboxDir, "gradle")
+        if (sandboxGradleHome.exists()) {
+          cacheRoots << sandboxGradleHome
+        }
+      }
+    }
+  }
+
+  cacheRoots = cacheRoots.unique { it.absolutePath }
+
+  def replacements = [:]
+
+  cacheRoots.each { cacheRoot ->
+    def transformsDir = new File(cacheRoot, "caches/9.0.0/transforms")
+
+    if (!transformsDir.exists()) {
+      return
+    }
+
+    def reactTransforms = collectMatchingDirectories(transformsDir) { candidate ->
+      candidate.parentFile?.name == "transformed" &&
+        (candidate.name ==~ /react-android-.*-(release|debug)/)
+    }
+
+    reactTransforms.each { reactRoot ->
+      def suffix = reactRoot.name.endsWith("-debug") ? "debug" : "release"
+      def shortcutPath = suffix == "debug" ? "C:\\n\\rd" : "C:\\n\\rr"
+
+      cleanupWindowsShortcut("C:\\ra-${suffix}")
+      ensureMirroredDirectory(reactRoot, shortcutPath)
+      replacements[normalizePath(reactRoot)] = shortcutPath.replace("\\", "/")
+    }
+
+    def fbjniTransforms = collectMatchingDirectories(transformsDir) { candidate ->
+      candidate.parentFile?.name == "transformed" &&
+        (candidate.name ==~ /fbjni-.+/)
+    }
+
+    fbjniTransforms.each { fbjniRoot ->
+      def shortcutPath = "C:\\n\\fb"
+
+      cleanupWindowsShortcut("C:\\fbjni")
+      cleanupWindowsShortcut("C:\\fb")
+      ensureMirroredDirectory(fbjniRoot, shortcutPath)
+      replacements[normalizePath(fbjniRoot)] = shortcutPath.replace("\\", "/")
+    }
+  }
+
+  return replacements
+}
+
+def rewriteNativePrefabPaths = tasks.register("rewriteNativePrefabPaths") {
+  onlyIf { isWindowsHost }
+
+  doLast {
+    def replacements = collectNativePathReplacements()
+
+    if (replacements.isEmpty()) {
+      return
+    }
+
+    def cxxFiles = fileTree(dir: rootDir.getParentFile(), includes: [
+      "node_modules/**/.cxx/**/*.cmake",
+      "node_modules/**/.cxx/**/*.json",
+      "node_modules/**/.cxx/**/*.ninja",
+    ]).files
+
+    cxxFiles.each { cxxFile ->
+      def original = cxxFile.getText("UTF-8")
+      def updated = original
+
+      replacements.each { longPath, shortPath ->
+        updated = updated.replace(longPath, shortPath)
+        updated = updated.replace(longPath.replace("/", "\\\\"), shortPath.replace("/", "\\\\"))
+      }
+
+      if (updated != original) {
+        cxxFile.write(updated, "UTF-8")
+      }
+    }
+  }
+}
+
+gradle.projectsEvaluated {
+  def configureCMakeTasks = allprojects.collectMany { project ->
+    project.tasks.matching { task -> task.name.startsWith("configureCMake") }.toList()
+  }
+  def buildCMakeTasks = allprojects.collectMany { project ->
+    project.tasks.matching { task -> task.name.startsWith("buildCMake") }.toList()
+  }
+
+  rewriteNativePrefabPaths.configure {
+    dependsOn(configureCMakeTasks)
+  }
+
+  buildCMakeTasks.each { task ->
+    task.dependsOn(rewriteNativePrefabPaths)
+  }
+}

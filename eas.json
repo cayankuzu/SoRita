@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 18.5.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "distribution": "store",
+      "autoIncrement": false,
+      "credentialsSource": "local",
+      "environment": "production",
+      "env": {
+        "EXPO_OWNER": "cayann",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6762198781",
+        "appleTeamId": "HBRG8P523Z",
+        "ascApiKeyPath": "./AuthKey_DC34BUDLPC.p8",
+        "ascApiKeyIssuerId": "27f87a66-f102-47b0-be3b-9ab8359d393f",
+        "ascApiKeyId": "DC34BUDLPC"
+      }
+    }
+  }
+}

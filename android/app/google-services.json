@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "646886147418",
+    "project_id": "sorita-91efd",
+    "storage_bucket": "sorita-91efd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:646886147418:android:5dc0b111742adec3895f63",
+        "android_client_info": {
+          "package_name": "com.cayan.sorita.socialmap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXP0mB-NI9HoxS7EZrRYSwAntq5iHRggY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

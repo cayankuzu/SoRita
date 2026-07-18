@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  NODE_OPTIONS: --max-old-space-size=6144
+  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+jobs:
+  security-supply-chain:
+    name: Security & Supply Chain
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Production dependency audit
+        run: npm run security:audit:prod
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Expo dependency compatibility check
+        run: npx expo install --check
+
+      - name: ESLint and architecture boundary check
+        run: npm run lint
+
+      - name: TypeScript type check
+        run: npm run typecheck
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, security-supply-chain]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run app-shell and data tests
+        run: npx vitest run src/mobile/app/app-shell src/mobile/app/data --reporter=verbose
+
+      - name: Run feature tests (auth/discovery/explore/home/lists)
+        run: npx vitest run --passWithNoTests src/mobile/app/features/auth src/mobile/app/features/discovery src/mobile/app/features/explore src/mobile/app/features/home src/mobile/app/features/lists --reporter=verbose
+
+      - name: Run feature tests (map)
+        run: npx vitest run --passWithNoTests src/mobile/app/features/map --reporter=verbose
+
+      - name: Run feature tests (notifications/places)
+        run: npx vitest run --passWithNoTests src/mobile/app/features/notifications src/mobile/app/features/places --reporter=verbose
+
+      - name: Run feature tests (profile/settings)
+        run: npx vitest run --passWithNoTests src/mobile/app/features/profile src/mobile/app/features/settings --reporter=verbose
+
+      - name: Run feature tests (social)
+        run: npx vitest run --passWithNoTests src/mobile/app/features/social --reporter=verbose
+
+      - name: Run platform and shared tests
+        run: npx vitest run src/mobile/app/platform src/mobile/app/shared src/shared --reporter=verbose
+
+      - name: Run Supabase function tests
+        run: npx vitest run supabase/functions --reporter=verbose
+
+      - name: Security tests
+        run: npm run security:verify
+
+      - name: Coverage threshold
+        run: npm run test:coverage
+
+  build-android:
+    name: EAS Build (Android Preview)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.EXPO_TOKEN != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Build Android preview
+        run: eas build --platform android --profile preview --non-interactive
+
+  build-ios:
+    name: EAS Build (iOS Preview)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.EXPO_TOKEN != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Build iOS preview
+        run: eas build --platform ios --profile preview --non-interactive

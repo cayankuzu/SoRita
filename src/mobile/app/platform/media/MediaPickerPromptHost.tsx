@@ -1,0 +1,320 @@
+import React from 'react';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { Camera, Images, Video, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import {
+  resolveMediaPickerPrompt,
+  useMediaPickerPromptState,
+} from '@/mobile/app/platform/media/mediaPickerPromptController';
+import type {
+  CameraCaptureMode,
+  MediaPickerPromptSelection,
+} from '@/mobile/app/platform/media/mediaPickerTypes';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  getAndroidModalWindowProps,
+  getModalContentMaxHeight,
+  getModalSafeAreaPadding,
+} from '@/mobile/app/shared/utils/modalLayout';
+
+type MediaPickerOptionCardProps = {
+  accentColor: string;
+  backgroundColor: string;
+  description: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+  title: string;
+};
+
+function MediaPickerOptionCard({
+  accentColor,
+  backgroundColor,
+  description,
+  icon,
+  onPress,
+  title,
+}: MediaPickerOptionCardProps) {
+  return (
+    <InstantPressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.optionCard,
+        {
+          backgroundColor,
+          borderColor: accentColor,
+        },
+        pressed ? styles.optionCardPressed : null,
+      ]}
+    >
+      <View style={styles.optionIconWrap}>{icon}</View>
+      <View style={styles.optionBody}>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionDescription}>{description}</Text>
+      </View>
+    </InstantPressable>
+  );
+}
+
+export function MediaPickerPromptHost() {
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const { options, requestId, visible } = useMediaPickerPromptState();
+  const [saveToGallery, setSaveToGallery] = React.useState(true);
+  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
+    topInset: insets.top,
+    bottomInset: insets.bottom,
+    topSpacing: Platform.OS === 'android' ? 16 : 20,
+    bottomSpacing: Platform.OS === 'android' ? 18 : 12,
+    minTopPadding: Platform.OS === 'android' ? 20 : 20,
+    minBottomPadding: Platform.OS === 'android' ? 44 : 12,
+  });
+  const sheetMaxHeight = getModalContentMaxHeight({
+    viewportHeight: windowHeight,
+    paddingTop,
+    paddingBottom,
+    maxHeightRatio: 0.88,
+    minHeight: 320,
+  });
+  const availableSources = options.availableSources || ['camera', 'library'];
+  const allowMultiple = Boolean(options.allowMultiple && availableSources.includes('library'));
+  const allowVideos = Boolean(options.allowVideos);
+  const cameraCaptureModes = React.useMemo<CameraCaptureMode[]>(
+    () =>
+      availableSources.includes('camera')
+        ? options.cameraCaptureModes ?? (allowVideos ? ['photo', 'video'] : ['photo'])
+        : [],
+    [allowVideos, availableSources, options.cameraCaptureModes],
+  );
+  const hasDedicatedVideoCaptureOption = cameraCaptureModes.includes('video');
+  const title = allowVideos ? tr.mediaPicker.mixedTitle : tr.mediaPicker.title;
+  const description = allowVideos
+    ? allowMultiple
+      ? tr.mediaPicker.multiMediaDescription
+      : tr.mediaPicker.mediaDescription
+    : allowMultiple
+      ? tr.mediaPicker.multiDescription
+      : tr.mediaPicker.description;
+  const galleryDescription = allowVideos
+    ? allowMultiple
+      ? tr.mediaPicker.galleryMixedMultiDescription
+      : tr.mediaPicker.galleryMixedDescription
+    : allowMultiple
+      ? tr.mediaPicker.galleryMultiDescription
+      : tr.mediaPicker.galleryDescription;
+
+  React.useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    setSaveToGallery(options.saveToGalleryDefault ?? true);
+  }, [options.saveToGalleryDefault, requestId, visible]);
+
+  const handleResolve = React.useCallback(
+    (nextSelection: Omit<MediaPickerPromptSelection, 'saveToGallery'>) => {
+      const selection: MediaPickerPromptSelection = {
+        ...nextSelection,
+        saveToGallery,
+      };
+
+      resolveMediaPickerPrompt(selection);
+    },
+    [saveToGallery],
+  );
+
+  return (
+    <Modal
+      {...getAndroidModalWindowProps({
+        navigationBarTranslucent: true,
+        statusBarTranslucent: true,
+      })}
+      visible={visible}
+      transparent
+      animationType="fade"
+      hardwareAccelerated
+      onRequestClose={() => resolveMediaPickerPrompt(null)}
+      presentationStyle="overFullScreen"
+    >
+      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={() => resolveMediaPickerPrompt(null)}
+        />
+
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+          <View style={styles.handle} />
+
+          <View style={styles.header}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.description}>{description}</Text>
+            </View>
+
+            <InstantPressable
+              onPress={() => resolveMediaPickerPrompt(null)}
+              style={styles.closeButton}
+            >
+              <X color={colors.textSoft} size={18} />
+            </InstantPressable>
+          </View>
+
+          <View style={styles.options}>
+            {cameraCaptureModes.includes('photo') ? (
+              <MediaPickerOptionCard
+                accentColor={colors.primary}
+                backgroundColor={colors.primaryBg}
+                description={
+                  hasDedicatedVideoCaptureOption
+                    ? tr.mediaPicker.cameraPhotoDescription
+                    : allowVideos
+                      ? tr.mediaPicker.cameraMixedDescription
+                      : tr.mediaPicker.cameraDescription
+                }
+                icon={<Camera color={colors.primary} size={20} />}
+                title={
+                  hasDedicatedVideoCaptureOption
+                    ? tr.mediaPicker.cameraPhoto
+                    : tr.mediaPicker.camera
+                }
+                onPress={() => handleResolve({ cameraCaptureMode: 'photo', source: 'camera' })}
+              />
+            ) : null}
+
+            {cameraCaptureModes.includes('video') ? (
+              <MediaPickerOptionCard
+                accentColor={colors.primary}
+                backgroundColor={colors.primaryBg}
+                description={tr.mediaPicker.cameraVideoDescription}
+                icon={<Video color={colors.primary} size={20} />}
+                title={tr.mediaPicker.cameraVideo}
+                onPress={() => handleResolve({ cameraCaptureMode: 'video', source: 'camera' })}
+              />
+            ) : null}
+
+            {availableSources.includes('library') ? (
+              <MediaPickerOptionCard
+                accentColor={colors.secondary}
+                backgroundColor={colors.successBg}
+                description={galleryDescription}
+                icon={<Images color={colors.secondary} size={20} />}
+                title={tr.mediaPicker.gallery}
+                onPress={() => handleResolve({ source: 'library' })}
+              />
+            ) : null}
+          </View>
+
+          <PrimaryButton
+            title={tr.common.cancel}
+            variant="secondary"
+            onPress={() => resolveMediaPickerPrompt(null)}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '88%',
+    alignSelf: 'center',
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 16,
+    gap: 16,
+    overflow: 'hidden',
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 52,
+    height: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.cardBorder,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  description: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  options: {
+    gap: 10,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: 14,
+  },
+  optionCardPressed: {
+    opacity: 0.92,
+  },
+  optionIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  optionBody: {
+    flex: 1,
+    gap: 2,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  optionDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textMuted,
+  },
+});

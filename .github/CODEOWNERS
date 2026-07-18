@@ -1,0 +1,10 @@
+* @cayann
+
+/app.config.ts @cayann
+/eas.json @cayann
+/.github/ @cayann
+/android/ @cayann
+/supabase/functions/ @cayann
+/supabase/migrations/ @cayann
+/src/mobile/app/platform/security/ @cayann
+/src/mobile/app/platform/supabase/ @cayann
