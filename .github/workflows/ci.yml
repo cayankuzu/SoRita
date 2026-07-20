@@ -43,11 +43,11 @@ jobs:
         run: |
           DB_CONTAINER="supabase_db_SoRita"
           docker inspect "$DB_CONTAINER" >/dev/null
-          docker exec -e PGPASSWORD=postgres "$DB_CONTAINER" pg_dump --host 127.0.0.1 --port 5432 --username postgres --format custom --no-owner --no-privileges --file /tmp/sorita.backup postgres
-          docker exec -e PGPASSWORD=postgres "$DB_CONTAINER" createdb --host 127.0.0.1 --port 5432 --username postgres sorita_restore_drill
-          docker exec -e PGPASSWORD=postgres "$DB_CONTAINER" pg_restore --host 127.0.0.1 --port 5432 --username postgres --dbname sorita_restore_drill --exit-on-error --no-owner --no-privileges /tmp/sorita.backup
-          docker exec -e PGPASSWORD=postgres "$DB_CONTAINER" psql --host 127.0.0.1 --port 5432 --username postgres --dbname sorita_restore_drill --set ON_ERROR_STOP=1 --command "select count(*) from pg_catalog.pg_tables where schemaname = 'public';"
-          docker exec -e PGPASSWORD=postgres "$DB_CONTAINER" dropdb --host 127.0.0.1 --port 5432 --username postgres sorita_restore_drill
+          docker exec "$DB_CONTAINER" pg_dump --username supabase_admin --format custom --no-owner --no-privileges --file /tmp/sorita.backup postgres
+          docker exec "$DB_CONTAINER" createdb --username supabase_admin sorita_restore_drill
+          docker exec "$DB_CONTAINER" pg_restore --username supabase_admin --dbname sorita_restore_drill --exit-on-error --no-owner --no-privileges /tmp/sorita.backup
+          docker exec "$DB_CONTAINER" psql --username supabase_admin --dbname sorita_restore_drill --set ON_ERROR_STOP=1 --command "select count(*) from pg_catalog.pg_tables where schemaname = 'public';"
+          docker exec "$DB_CONTAINER" dropdb --username supabase_admin sorita_restore_drill
 
   security-supply-chain:
     name: Security & Supply Chain
