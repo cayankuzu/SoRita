@@ -102,7 +102,8 @@ values
     '{"provider":"email","providers":["email"]}',
     '{"name":"RLS B","username":"rls_b"}',
     timezone('utc', now()),
-    timezone('utc', now());
+    timezone('utc', now())
+  );
 
 insert into public.lists (id, owner_id, name, is_public)
 values
