@@ -1,6 +1,10 @@
 import { NativeModules, TurboModuleRegistry } from 'react-native';
 
 export type NetworkReachabilityState = {
+  details?: {
+    cellularGeneration?: '2g' | '3g' | '4g' | '5g' | null;
+    isConnectionExpensive?: boolean;
+  } | null;
   isConnected: boolean | null;
   isInternetReachable: boolean | null;
 };

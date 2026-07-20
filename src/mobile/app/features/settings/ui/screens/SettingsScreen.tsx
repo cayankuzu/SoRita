@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Ban,
   Lock,
-  LockKeyhole,
   LogOut,
   Shield,
   Trash2,

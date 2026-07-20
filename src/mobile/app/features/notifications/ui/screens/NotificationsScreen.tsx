@@ -23,6 +23,7 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
@@ -57,6 +58,12 @@ export function NotificationsScreen() {
     setCategory,
     unreadCount,
   } = useNotificationsScreenState({ userId: user?.id });
+  useScreenPerformanceMetric({
+    hasContent: filteredItems.length > 0,
+    hasError: Boolean(errorMessage),
+    isLoading: isInitialLoading,
+    screen: 'notifications',
+  });
   const listProps = React.useMemo(
     () =>
       buildAdaptiveFlatListProps({

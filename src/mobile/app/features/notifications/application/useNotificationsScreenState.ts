@@ -88,7 +88,10 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
     };
   }, [loadNotifications, userId]);
 
-  const items = notificationsQuery.data || [];
+  const items = useMemo(
+    () => notificationsQuery.data || [],
+    [notificationsQuery.data],
+  );
 
   const filteredItems = useMemo(() => {
     if (category === 'all') {

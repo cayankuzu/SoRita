@@ -65,7 +65,7 @@ async function readStore(): Promise<PendingAuthRedirectStateStore> {
 
   try {
     const parsed = JSON.parse(rawValue) as PendingAuthRedirectStateStore;
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch {
     await AsyncStorage.removeItem(AUTH_REDIRECT_STATE_STORAGE_KEY);
     return {};

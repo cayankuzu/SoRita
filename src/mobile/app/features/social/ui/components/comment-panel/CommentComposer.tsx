@@ -38,7 +38,6 @@ type CommentComposerProps = {
   onCancelEdit: () => void;
   onCancelReply: () => void;
   onCommentTextChange: (value: string) => void;
-  onHeightChange: (height: number) => void;
   onSubmit: () => void;
 };
 
@@ -54,7 +53,6 @@ export function CommentComposer({
   onCancelEdit,
   onCancelReply,
   onCommentTextChange,
-  onHeightChange,
   onSubmit,
 }: CommentComposerProps) {
   const inputRef = React.useRef<TextInput | null>(null);
@@ -105,9 +103,6 @@ export function CommentComposer({
           marginBottom: composerKeyboardOffset,
         },
       ]}
-      onLayout={(event) => {
-        onHeightChange(event.nativeEvent.layout.height);
-      }}
     >
       {editingCommentId ? (
         <View style={[styles.composerBanner, styles.composerBannerEdit]}>
@@ -155,7 +150,13 @@ export function CommentComposer({
           <Pressable
             key={reaction}
             disabled={submitting}
-            style={[styles.reactionButton, submitting ? styles.disabledAction : null]}
+            accessibilityLabel={tr.cards.quickReactionLabel(reaction)}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.reactionButton,
+              pressed ? styles.reactionButtonPressed : null,
+              submitting ? styles.disabledAction : null,
+            ]}
             onPress={() => appendReaction(reaction)}
           >
             <Text style={styles.reactionEmoji}>{reaction}</Text>
@@ -178,6 +179,7 @@ export function CommentComposer({
             placeholder={composerPlaceholder}
             placeholderTextColor={colors.textSoft}
             style={styles.commentInput}
+            accessibilityLabel={composerPlaceholder}
             editable={!submitting}
             multiline
             returnKeyType="default"
@@ -195,13 +197,17 @@ export function CommentComposer({
           ) : null}
         </View>
         <Pressable
-          style={[styles.sendButton, !canSubmit ? styles.disabledAction : null]}
+          style={({ pressed }) => [
+            styles.sendButton,
+            !canSubmit ? styles.sendButtonDisabled : null,
+            pressed && canSubmit ? styles.sendButtonPressed : null,
+          ]}
           onPress={onSubmit}
           disabled={!canSubmit}
           accessibilityLabel={tr.common.send}
           accessibilityRole="button"
         >
-          <Send color={colors.onPrimary} size={16} />
+          <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={17} />
         </Pressable>
       </View>
     </View>

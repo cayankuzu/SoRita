@@ -15,10 +15,11 @@ export type OutboxEntryState =
 
 export type OutboxEntryKind =
   | 'comment-create'
-  | 'follow-toggle'
+  | 'lists-update'
+  | 'media-cleanup'
+  | 'moderation-report'
   | 'notification-read'
-  | 'place-like-toggle'
-  | 'upload';
+  | 'user-block-state';
 
 export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -45,7 +46,7 @@ type PersistedOutbox = {
   version: number;
 };
 
-type EnqueueOutboxEntryInput<TPayload extends JsonValue> = {
+export type EnqueueOutboxEntryInput<TPayload extends JsonValue> = {
   dependencies?: string[];
   id?: string;
   idempotencyKey?: string;

@@ -8,9 +8,9 @@ import {
   applyOptimisticUserProfile,
   applyOptimisticUnblock,
   inferOptimisticFollowResult,
-  socialMutationScope,
   type QuerySnapshot,
 } from '@/mobile/app/data/query/optimisticSocialCache';
+import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
 import {
   buildOptimisticMutation,
   useInvalidateVisibleData,
@@ -43,15 +43,16 @@ export function useUpdateUserMutation() {
 export function useFollowUserMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('user-follow');
 
   type FollowInput = { currentUserId: string; targetUserId: string };
 
   return useMutation({
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: FollowInput) =>
       followUser(input.currentUserId, input.targetUserId),
     onMutate: async (input: FollowInput) => {
-      await Promise.all([
+      const cancellation = Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all }),
         queryClient.cancelQueries({ queryKey: queryKeys.explore.all }),
       ]);
@@ -60,6 +61,7 @@ export function useFollowUserMutation() {
       const optimisticResult = inferOptimisticFollowResult(queryClient, input);
       applyOptimisticFollow(queryClient, input, optimisticResult);
       applyOptimisticExploreFollow(queryClient, input, optimisticResult);
+      await cancellation;
       return { exploreSnapshot, snapshot };
     },
     onSuccess: (result: FollowStateResult, input: FollowInput) => {
@@ -85,19 +87,21 @@ export function useFollowUserMutation() {
 
 export function useBlockUserMutation() {
   const queryClient = useQueryClient();
+  const mutationScope = useMutationScope('user-block');
 
   return useMutation({
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: { currentUserId: string; targetUserId: string }) =>
       blockUser(input.currentUserId, input.targetUserId),
     onMutate: async (input: { currentUserId: string; targetUserId: string }) => {
-      await Promise.all([
+      const cancellation = Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all }),
         queryClient.cancelQueries({ queryKey: queryKeys.notifications.all }),
       ]);
       const visibleSnapshot = snapshotQueries(queryClient, queryKeys.visibleData.all);
       const notificationsSnapshot = snapshotQueries(queryClient, queryKeys.notifications.all);
       applyOptimisticBlock(queryClient, input);
+      await cancellation;
       return { notificationsSnapshot, visibleSnapshot };
     },
     onError: (
@@ -120,9 +124,10 @@ export function useBlockUserMutation() {
 
 export function useUnblockUserMutation() {
   const queryClient = useQueryClient();
+  const mutationScope = useMutationScope('user-unblock');
 
   return useMutation({
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: { currentUserId: string; targetUserId: string }) =>
       unblockUser(input.currentUserId, input.targetUserId),
     ...buildOptimisticMutation(queryClient, applyOptimisticUnblock),

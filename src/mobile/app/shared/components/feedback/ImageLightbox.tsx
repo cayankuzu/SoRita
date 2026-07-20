@@ -191,7 +191,7 @@ export function ImageLightbox({
                     uri={item}
                     style={styles.image}
                     resizeMode="contain"
-                    accessibilityLabel={`Büyütülmüş fotoğraf ${index + 1}`}
+                    accessibilityLabel={tr.common.enlargedPhotoLabel(index + 1)}
                     backgroundColor="transparent"
                   />
                 </View>

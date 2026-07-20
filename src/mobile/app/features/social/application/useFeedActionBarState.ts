@@ -34,6 +34,8 @@ function getErrorMessage(error: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
+export const feedActionBarInternals = { getErrorMessage };
+
 export function useFeedActionBarState({
   comments,
   commentCountOverride,

@@ -250,10 +250,19 @@ function mapPlace(payload: ProfilePlacePayload, viewerId?: string | null): Place
   };
 }
 
-export async function fetchProfileSummary(userId: string): Promise<ProfileSummary | null> {
-  const { data, error } = await supabase.rpc('profile_summary', {
+export async function fetchProfileSummary(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<ProfileSummary | null> {
+  let request = supabase.rpc('profile_summary', {
     p_user_id: userId,
   });
+
+  if (signal) {
+    request = request.abortSignal(signal);
+  }
+
+  const { data, error } = await request;
 
   if (error) {
     throw error;
@@ -292,18 +301,25 @@ export async function fetchProfileSummary(userId: string): Promise<ProfileSummar
 export async function fetchProfileContentPage(params: {
   cursor?: ProfileContentCursor | null;
   limit?: number;
+  signal?: AbortSignal;
   tab: ProfileContentTab;
   userId: string;
   viewerId?: string | null;
 }): Promise<ProfileContentPage> {
   const limit = params.limit ?? PROFILE_CONTENT_PAGE_SIZE;
-  const { data, error } = await supabase.rpc('profile_content_page', {
+  let request = supabase.rpc('profile_content_page', {
     p_cursor: params.cursor?.sortAt ?? null,
     p_cursor_id: params.cursor?.id ?? null,
     p_limit: limit,
     p_tab: params.tab,
     p_user_id: params.userId,
   });
+
+  if (params.signal) {
+    request = request.abortSignal(params.signal);
+  }
+
+  const { data, error } = await request;
 
   if (error) {
     throw error;

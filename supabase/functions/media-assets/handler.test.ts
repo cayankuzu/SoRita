@@ -5,6 +5,7 @@ import { createMediaAssetsHandler } from './handler';
 
 const validPngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HwAIAgMBgOnl9QAAAABJRU5ErkJggg==';
+const validPngBytes = Uint8Array.from(Buffer.from(validPngBase64, 'base64'));
 
 function createDeps(options?: {
   allowedOrigins?: string[];
@@ -31,6 +32,15 @@ function createDeps(options?: {
     error?: { message: string } | null;
   };
   removeError?: { message: string } | null;
+  objectInfoResult?: {
+    data?: {
+      contentType?: string | null;
+      metadata?: { mimetype?: string | null; size?: number | null } | null;
+      size?: number | null;
+    } | null;
+    error?: { message: string } | null;
+  };
+  objectPrefixBytes?: Uint8Array;
   uploadError?: { message: string } | null;
 }) {
   const uploadMock = vi.fn().mockResolvedValue({ error: options?.uploadError ?? null });
@@ -49,6 +59,25 @@ function createDeps(options?: {
       },
       error: null,
     }));
+  const createSignedUrlsMock = vi.fn().mockImplementation((paths: string[]) =>
+    Promise.resolve({
+      data: paths.map((path) => ({
+        error: null,
+        path,
+        signedUrl: `https://storage.example/read/${encodeURIComponent(path)}`,
+      })),
+      error: null,
+    }));
+  const infoMock = vi.fn().mockResolvedValue(options?.objectInfoResult ?? {
+    data: {
+      contentType: 'image/png',
+      size: 1024,
+    },
+    error: null,
+  });
+  const fetchObjectPrefixMock = vi.fn().mockResolvedValue(
+    options?.objectPrefixBytes ?? validPngBytes,
+  );
   const nonceDeleteLtMock = vi.fn().mockResolvedValue({ error: null });
   const seenNonces = new Set<string>();
   const nonceInsertMock = vi.fn().mockImplementation(async (payload: { nonce?: string }) => {
@@ -77,7 +106,10 @@ function createDeps(options?: {
       },
     error: null,
   });
-  const rpcMock = vi.fn().mockImplementation((functionName: string) => {
+  const rpcMock = vi.fn().mockImplementation((
+    functionName: string,
+    args?: Record<string, unknown>,
+  ) => {
     if (functionName === 'enforce_edge_rate_limit') {
       return Promise.resolve({
         data: options?.rateLimitResult ?? {
@@ -92,6 +124,14 @@ function createDeps(options?: {
     if (functionName === 'can_read_private_place_media') {
       return Promise.resolve(options?.privateMediaAuthResult ?? {
         data: true,
+        error: null,
+      });
+    }
+
+    if (functionName === 'can_read_private_place_media_batch') {
+      const paths = Array.isArray(args?.p_paths) ? args.p_paths : [];
+      return Promise.resolve({
+        data: paths.map((path) => ({ allowed: true, path })),
         error: null,
       });
     }
@@ -133,11 +173,13 @@ function createDeps(options?: {
         from: () => ({
           createSignedUploadUrl: createSignedUploadUrlMock,
           createSignedUrl: createSignedUrlMock,
+          createSignedUrls: createSignedUrlsMock,
           getPublicUrl: (path: string) => ({
             data: {
               publicUrl: `https://example.supabase.co/storage/v1/object/public/place-media/${path}`,
             },
           }),
+          info: infoMock,
           remove: removeMock,
           upload: uploadMock,
         }),
@@ -149,6 +191,7 @@ function createDeps(options?: {
       },
     }),
     createRequestId: () => 'request-1',
+    fetchObjectPrefix: fetchObjectPrefixMock,
   });
 
   return {
@@ -159,6 +202,9 @@ function createDeps(options?: {
     rpcMock,
     createSignedUploadUrlMock,
     createSignedUrlMock,
+    createSignedUrlsMock,
+    fetchObjectPrefixMock,
+    infoMock,
     uploadMock,
   };
 }
@@ -589,6 +635,7 @@ describe('media-assets handler', () => {
       'user-1/list-1/cover-request-1.png',
       expect.any(Uint8Array),
       {
+        cacheControl: '31536000',
         contentType: 'image/png',
         upsert: false,
       },
@@ -666,6 +713,139 @@ describe('media-assets handler', () => {
     expect(forbiddenResponse.status).toBe(403);
     await expect(forbiddenResponse.json()).resolves.toMatchObject({
       error: 'Media asset is not visible to this user.',
+    });
+  });
+
+  it('finalizes signed uploads only after storage metadata and signature verification', async () => {
+    const {
+      createSignedUrlMock,
+      fetchObjectPrefixMock,
+      handler,
+      infoMock,
+      removeMock,
+    } = createDeps();
+    const body = JSON.stringify({
+      action: 'complete-upload',
+      bucket: 'place-media-private',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      height: 1,
+      mediaType: 'photo',
+      objectPath: 'user-1/list-1/place-1/0-request-1.png',
+      width: 1,
+    });
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        method: 'POST',
+        headers: await createSignedHeaders(body),
+        body,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(infoMock).toHaveBeenCalledWith('user-1/list-1/place-1/0-request-1.png');
+    expect(createSignedUrlMock).toHaveBeenCalledWith(
+      'user-1/list-1/place-1/0-request-1.png',
+      60,
+    );
+    expect(fetchObjectPrefixMock).toHaveBeenCalledWith(
+      expect.stringContaining('https://storage.example/read/'),
+      512 * 1024,
+      1024,
+    );
+    expect(removeMock).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      storageUri: 'sorita-storage://place-media-private/user-1/list-1/place-1/0-request-1.png',
+      verified: true,
+    });
+  });
+
+  it('removes signed uploads whose actual metadata or signature is invalid', async () => {
+    const invalidSizeDeps = createDeps({
+      objectInfoResult: {
+        data: { contentType: 'image/png', size: 2048 },
+        error: null,
+      },
+    });
+    const body = JSON.stringify({
+      action: 'complete-upload',
+      bucket: 'place-media-private',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      mediaType: 'photo',
+      objectPath: 'user-1/list-1/place-1/invalid.png',
+    });
+    const invalidSizeResponse = await invalidSizeDeps.handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        method: 'POST',
+        headers: await createSignedHeaders(body),
+        body,
+      }),
+    );
+
+    expect(invalidSizeResponse.status).toBe(422);
+    expect(invalidSizeDeps.removeMock).toHaveBeenCalledWith([
+      'user-1/list-1/place-1/invalid.png',
+    ]);
+
+    const invalidSignatureDeps = createDeps({
+      objectPrefixBytes: Uint8Array.from([0, 1, 2, 3, 4, 5]),
+    });
+    const invalidSignatureResponse = await invalidSignatureDeps.handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        method: 'POST',
+        headers: await createSignedHeaders(body),
+        body,
+      }),
+    );
+
+    expect(invalidSignatureResponse.status).toBe(422);
+    expect(invalidSignatureDeps.removeMock).toHaveBeenCalledWith([
+      'user-1/list-1/place-1/invalid.png',
+    ]);
+  });
+
+  it('authorizes and signs private media paths in one batch response', async () => {
+    const { createSignedUrlsMock, handler, rpcMock } = createDeps();
+    const body = JSON.stringify({
+      action: 'create-read-urls',
+      bucket: 'place-media-private',
+      paths: [
+        'other-user/list-1/place-1/0.jpg',
+        'other-user/list-1/place-1/1.jpg',
+      ],
+    });
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        method: 'POST',
+        headers: await createSignedHeaders(body),
+        body,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+    expect(rpcMock).toHaveBeenCalledWith('can_read_private_place_media_batch', {
+      p_bucket: 'place-media-private',
+      p_paths: [
+        'other-user/list-1/place-1/0.jpg',
+        'other-user/list-1/place-1/1.jpg',
+      ],
+      p_viewer_id: 'user-1',
+    });
+    expect(createSignedUrlsMock).toHaveBeenCalledWith(
+      [
+        'other-user/list-1/place-1/0.jpg',
+        'other-user/list-1/place-1/1.jpg',
+      ],
+      300,
+    );
+    await expect(response.json()).resolves.toMatchObject({
+      expiresInSeconds: 300,
+      items: [
+        { path: 'other-user/list-1/place-1/0.jpg' },
+        { path: 'other-user/list-1/place-1/1.jpg' },
+      ],
     });
   });
 

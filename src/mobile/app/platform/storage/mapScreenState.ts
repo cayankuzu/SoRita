@@ -1,12 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type {
-  ExistingPlaceSelection,
   MapViewport,
-  MarkerFilterOption,
-  MinimizedEditorState,
-  MinimizedPlacePreviewState,
-  PanelData,
   PersistedMapScreenState,
 } from '@/mobile/app/contracts/mapScreenState';
 

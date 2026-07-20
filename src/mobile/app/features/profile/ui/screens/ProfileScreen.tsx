@@ -1,6 +1,6 @@
 import React, { startTransition, useCallback, useMemo, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
 import { Image as ImageIcon, List, MapPin } from 'lucide-react-native';
 
@@ -10,25 +10,24 @@ import {
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
-import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
-import {
-  ListGridTile,
-  PlaceGridTile,
-} from '@/mobile/app/features/discovery/public/components';
+import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/public/ownedPlaceListUpdates';
 import { useOwnProfileScreenState } from '@/mobile/app/features/profile/application/useOwnProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
 import { ProfileConnectionsSummary } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsSummary';
+import {
+  ProfileContentPager,
+  type ProfileContentTab,
+  type ProfileGridItem,
+} from '@/mobile/app/features/profile/ui/components/ProfileContentPager';
 import { OwnProfileActionBar } from '@/mobile/app/features/profile/ui/components/OwnProfileActionBar';
 import { ProfilePagedScrollContainer } from '@/mobile/app/features/profile/ui/components/ProfilePagedScrollContainer';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
-import { SwipeableCategoryPager } from '@/mobile/app/shared/components/navigation/SwipeableCategoryPager';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
-import { StaticDiscoveryGrid } from '@/mobile/app/shared/components/ui/StaticDiscoveryGrid';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -41,12 +40,9 @@ import {
   type ProfileVisibilityFilter,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 import { estimateProfilePagerHeights } from '@/mobile/app/features/profile/ui/profilePagerLayout';
-import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
-import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
-import { createUuid } from '@/shared/utils/id';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
-type ProfileTab = 'lists' | 'places' | 'gallery';
-type ProfileGridItem = PlaceList | PlaceFeedCardItem;
+type ProfileTab = ProfileContentTab;
 const PROFILE_VISIBILITY_OPTIONS: Array<{
   key: ProfileVisibilityFilter;
   label: string;
@@ -65,26 +61,6 @@ function matchesVisibilityFilter(
   }
 
   return filter === 'public' ? isPublic : !isPublic;
-}
-
-function normalizePlaceIdentityValue(value: string) {
-  return normalizeSearchText(value);
-}
-
-function isMatchingPlace(
-  left: Pick<Place, 'id' | 'name' | 'lat' | 'lng'>,
-  right: Pick<Place, 'id' | 'name' | 'lat' | 'lng'>,
-) {
-  if (left.id === right.id) {
-    return true;
-  }
-
-  return (
-    Math.abs(left.lat - right.lat) < 0.00001 &&
-    Math.abs(left.lng - right.lng) < 0.00001 &&
-    normalizePlaceIdentityValue(left.name) ===
-      normalizePlaceIdentityValue(right.name)
-  );
 }
 
 export function ProfileScreen() {
@@ -136,7 +112,7 @@ export function ProfileScreen() {
     refreshing,
     retry,
     updateLists,
-  } = useOwnProfileScreenState({ user });
+  } = useOwnProfileScreenState({ activeTab, user });
   const filteredLists = useMemo(
     () =>
       lists.filter((list) =>
@@ -160,7 +136,20 @@ export function ProfileScreen() {
   );
   const hasAnyContent =
     lists.length > 0 || allPlaces.length > 0 || allPhotos.length > 0;
+  useScreenPerformanceMetric({
+    hasContent: hasAnyContent,
+    hasError: Boolean(errorMessage),
+    isLoading: isInitialLoading,
+    screen: 'profile',
+  });
   const shouldShowErrorState = Boolean(errorMessage && !hasAnyContent);
+  const pagerSwipeEnabled = ![
+    refreshing,
+    deletePlaceId,
+    editingPlaceTarget,
+    lightboxUri,
+    connectionMode,
+  ].some(Boolean);
   const dataByTab = {
     gallery: filteredPhotos,
     lists: filteredLists,
@@ -306,6 +295,13 @@ export function ProfileScreen() {
   const handleTabPreviewChange = useCallback((key: ProfileTab) => {
     setVisibleTab(key);
   }, []);
+  const handleProfileEndReached = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) {
+      return;
+    }
+
+    void fetchNextPage?.();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (isInitialLoading) {
     return (
@@ -333,50 +329,14 @@ export function ProfileScreen() {
       return;
     }
 
-    const previousPlace = editingPlaceTarget.place;
-    const selectedListIds = Array.from(new Set(targetListIds));
     const nextUpdatedAt = new Date().toISOString();
-    const changedLists = lists
-      .map((list) => {
-        const matchedPlaceIndex = list.places.findIndex((place) =>
-          isMatchingPlace(place, previousPlace),
-        );
-        const hasPlace = matchedPlaceIndex >= 0;
-        const shouldContainPlace = selectedListIds.includes(list.id);
-        const listMembershipChanged =
-          (hasPlace && !shouldContainPlace) ||
-          (!hasPlace && shouldContainPlace);
-
-        if (!hasPlace && !shouldContainPlace) {
-          return null;
-        }
-
-        const matchedPlace =
-          matchedPlaceIndex >= 0 ? list.places[matchedPlaceIndex] : null;
-        const nextPlace: Place = {
-          ...placeData,
-          id: matchedPlace?.id || createUuid(),
-          addedAt: matchedPlace?.addedAt || previousPlace.addedAt,
-          updatedAt: nextUpdatedAt,
-          addedBy:
-            matchedPlace?.addedBy || placeData.addedBy || previousPlace.addedBy,
-        };
-
-        const nextPlaces = shouldContainPlace
-          ? hasPlace
-            ? list.places.map((place, index) =>
-                index === matchedPlaceIndex ? nextPlace : place,
-              )
-            : [...list.places, nextPlace]
-          : list.places.filter((_, index) => index !== matchedPlaceIndex);
-
-        return {
-          ...list,
-          places: nextPlaces,
-          updatedAt: listMembershipChanged ? nextUpdatedAt : list.updatedAt,
-        };
-      })
-      .filter((item): item is PlaceList => Boolean(item));
+    const changedLists = buildOwnedPlaceListUpdates({
+      editableLists: lists,
+      place: editingPlaceTarget.place,
+      placeData,
+      targetListIds,
+      updatedAt: nextUpdatedAt,
+    });
 
     await updateLists(changedLists);
 
@@ -574,99 +534,36 @@ export function ProfileScreen() {
         <ProfilePagedScrollContainer
           header={renderProfileHeader()}
           listRef={profileListRef}
+          onEndReached={handleProfileEndReached}
           onRefresh={onRefresh}
+          pagerHeight={pagerHeight}
           pager={
-            <View style={[styles.pagerShell, { height: pagerHeight }]}>
-              <SwipeableCategoryPager
-                activeTab={activeTab}
-                keepAlive={false}
-                layoutMode="fill"
-                lazy
-                tabs={pagerTabs}
-                onPageProgressChange={handlePageProgressChange}
-                onTabChange={(tab) => handleTabChange(tab)}
-                onTabPreviewChange={handleTabPreviewChange}
-                renderPage={(tab) => (
-                  <StaticDiscoveryGrid<ProfileGridItem>
-                    data={shouldShowErrorState ? [] : dataByTab[tab]}
-                    contentContainerStyle={styles.gridContent}
-                    onContentHeightChange={(height) =>
-                      handlePagerContentHeightChange(tab, height)
-                    }
-                    ListEmptyComponent={renderEmptyState(tab)}
-                    ListFooterComponent={
-                      !shouldShowErrorState && hasNextPage ? (
-                        <Pressable
-                          style={styles.loadMoreButton}
-                          onPress={() => {
-                            if (isFetchingNextPage || tab !== activeTab) {
-                              return;
-                            }
-
-                            void fetchNextPage?.();
-                          }}
-                        >
-                          <Text style={styles.loadMoreLabel}>
-                            {isFetchingNextPage && tab === activeTab
-                              ? tr.common.loadingMore
-                              : tr.profile.loadMore}
-                          </Text>
-                        </Pressable>
-                      ) : null
-                    }
-                    keyExtractor={(item, index) =>
-                      tab === 'lists'
-                        ? (item as PlaceList).id
-                        : (item as unknown as PlaceFeedCardItem).key ||
-                          `${tab}:${index}`
-                    }
-                    renderItem={({ item, index }) => {
-                      if (tab === 'lists') {
-                        const list = item as PlaceList;
-
-                        return (
-                          <ListGridTile
-                            list={list}
-                            fillWidth
-                            showPrivacyBadge
-                            allListsForMarkerColor={filteredLists}
-                            onPress={() =>
-                              openStackScreen(navigation, 'ListDetail', {
-                                listId: list.id,
-                              })
-                            }
-                          />
-                        );
-                      }
-
-                      const placeItem = item as unknown as PlaceFeedCardItem;
-
-                      return (
-                        <PlaceGridTile
-                          place={placeItem.place}
-                          fillWidth
-                          mode={tab === 'gallery' ? 'photo' : 'place'}
-                          listCoverImage={placeItem.listCoverImage}
-                          listEmoji={placeItem.listEmoji}
-                          listIsPublic={placeItem.listIsPublic}
-                          listName={placeItem.listName}
-                          markerColor={getMarkerColorForMemberships(
-                            placeItem.memberships,
-                            placeItem.listIsPublic,
-                          )}
-                          onPress={() =>
-                            setFeedMode({
-                              startIndex: index,
-                              kind: tab === 'gallery' ? 'gallery' : 'places',
-                            })
-                          }
-                        />
-                      );
-                    }}
-                  />
-                )}
-              />
-            </View>
+            <ProfileContentPager
+              activeTab={activeTab}
+              dataByTab={dataByTab}
+              emptyStateForTab={renderEmptyState}
+              enabled={pagerSwipeEnabled}
+              filteredLists={filteredLists}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onContentHeightChange={handlePagerContentHeightChange}
+              onListPress={(list) =>
+                openStackScreen(navigation, 'ListDetail', { listId: list.id })
+              }
+              onPageProgressChange={handlePageProgressChange}
+              onPlacePress={(tab, index) =>
+                setFeedMode({
+                  startIndex: index,
+                  kind: tab === 'gallery' ? 'gallery' : 'places',
+                })
+              }
+              onTabChange={handleTabChange}
+              onTabPreviewChange={handleTabPreviewChange}
+              pagerHeight={pagerHeight}
+              shouldShowErrorState={shouldShowErrorState}
+              showPrivacyBadge
+              tabs={pagerTabs}
+            />
           }
           refreshing={refreshing}
         />
@@ -747,22 +644,7 @@ const styles = StyleSheet.create({
   headerContent: {
     paddingTop: 14,
   },
-  gridContent: {
-    paddingTop: 0,
-  },
-  pagerShell: {
-    width: '100%',
-  },
   noticeWrap: {
     paddingBottom: 14,
-  },
-  loadMoreButton: {
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  loadMoreLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
   },
 });

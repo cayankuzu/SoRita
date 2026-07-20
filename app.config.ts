@@ -70,13 +70,18 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-    version: '1.0.87',
+    version: '1.0.90',
   newArchEnabled: true,
   orientation: 'default',
   scheme: 'sorita',
-  icon: './assets/app-icons_background_removed/playstore.png',
+  icon: './assets/app-icons_background_removed/appstore.png',
   userInterfaceStyle: 'light',
-  assetBundlePatterns: ['**/*'],
+  // OTA/runtime bundle: keep only assets required by JavaScript. Native app
+  // icon catalogs and source variants must not be shipped as duplicate assets.
+  assetBundlePatterns: [
+    'assets/app-icons_background_removed/playstore.png',
+    'assets/splash/launch-splash.png',
+  ],
   plugins: [
     'expo-image',
     'expo-video',
@@ -152,7 +157,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 92,
+    versionCode: 95,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -172,13 +177,15 @@ const config: SoRitaExpoConfig = {
       'RECORD_AUDIO',
     ],
     adaptiveIcon: {
-      foregroundImage: './assets/app-icons_background_removed/playstore.png',
+      foregroundImage:
+        './assets/app-icons_background_removed/android/adaptive-foreground.png',
       backgroundColor: '#ffffff',
     },
+    icon: './assets/app-icons_background_removed/playstore.png',
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '72',
+    buildNumber: '75',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,

@@ -42,10 +42,10 @@ import {
 } from '@/mobile/app/shared/validation/contentLimits';
 
 const DISCARD_LIST_EDITOR_CONFIRMATION = {
-  cancelLabel: 'Düzenlemeye Dön',
-  confirmLabel: 'İptal Et',
-  description: 'Kaydedilmemis liste degisiklikleri silinecek.',
-  title: 'Degisiklikler iptal edilsin mi?',
+  cancelLabel: t.common.returnToEditing,
+  confirmLabel: t.common.cancelAction,
+  description: t.listDetail.editorDiscardDescription,
+  title: t.listDetail.editorDiscardTitle,
 } as const;
 
 function serializeListEditorState(state: {
@@ -318,7 +318,7 @@ export function ListEditorModal({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{t.listEditor.coverTitle}</Text>
-                <Text style={styles.sectionHint}>Profilde ve listelerde gorunur</Text>
+                <Text style={styles.sectionHint}>{t.listEditor.coverVisibilityHint}</Text>
               </View>
 
               <View style={styles.coverPickerRow}>
@@ -338,15 +338,15 @@ export function ListEditorModal({
                         </Text>
                         <Text style={styles.coverPickerHint}>
                           {coverImage
-                            ? 'Kapak secildi. Degistirmek icin dokun.'
-                            : 'Liste kartinda genis banner olarak kullanilir.'}
+                            ? t.listEditor.coverSelectedHint
+                            : t.listEditor.coverUsageHint}
                         </Text>
                       </View>
                     </View>
 
                     {coverImage ? (
                       <Pressable
-                        accessibilityLabel="Liste kapak onizlemesini buyut"
+                        accessibilityLabel={t.listEditor.coverPreviewExpand}
                         accessibilityRole="imagebutton"
                         disabled={loading}
                         onPress={(event) => {
@@ -355,13 +355,13 @@ export function ListEditorModal({
                         }}
                         style={styles.selectionBadge}
                       >
-                        <Text style={styles.selectionBadgeText}>On izleme</Text>
+                        <Text style={styles.selectionBadgeText}>{t.common.previewTitle}</Text>
                       </Pressable>
                     ) : null}
                   </View>
 
                   <MediaSelectionPreview
-                    accessibilityLabel="Liste kapak onizlemesi"
+                    accessibilityLabel={t.listEditor.coverPreview}
                     uri={coverImage}
                     variant="list-cover"
                   />
@@ -369,7 +369,10 @@ export function ListEditorModal({
 
                 {coverImage ? (
                   <Pressable
+                    accessibilityLabel={t.listEditor.removeCover}
+                    accessibilityRole="button"
                     disabled={loading}
+                    hitSlop={9}
                     onPress={() => setCoverImage('')}
                     style={styles.coverClearButton}
                   >
@@ -381,8 +384,8 @@ export function ListEditorModal({
 
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Temel bilgiler</Text>
-                <Text style={styles.sectionHint}>Listeyi hizlica anlasilir yap</Text>
+                <Text style={styles.sectionTitle}>{t.listEditor.basicsTitle}</Text>
+                <Text style={styles.sectionHint}>{t.listEditor.basicsHint}</Text>
               </View>
               <TextField
                 label={t.listEditor.titleLabel}
@@ -409,7 +412,7 @@ export function ListEditorModal({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{t.listEditor.privacyTitle}</Text>
-                <Text style={styles.sectionHint}>Kimlerin gorecegini sec</Text>
+                <Text style={styles.sectionHint}>{t.listEditor.privacyHint}</Text>
               </View>
               <View style={styles.privacyRow}>
                 <Pressable
@@ -433,7 +436,7 @@ export function ListEditorModal({
                         isPublic ? styles.privacyCaptionActivePublic : null,
                       ]}
                     >
-                      Profilinde ve kesif yuzeylerinde gorunebilir.
+                      {t.listEditor.privacyPublicDescription}
                     </Text>
                   </View>
                 </Pressable>
@@ -459,7 +462,7 @@ export function ListEditorModal({
                         !isPublic ? styles.privacyCaptionActivePrivate : null,
                       ]}
                     >
-                      Sadece sen yonetir ve goruntulersin.
+                      {t.listEditor.privacyPrivateDescription}
                     </Text>
                   </View>
                 </Pressable>
@@ -568,8 +571,8 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   closeButton: {
-    width: 34,
-    height: 34,
+    width: 48,
+    height: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
@@ -581,7 +584,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cancelButton: {
-    minHeight: 34,
+    minHeight: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',

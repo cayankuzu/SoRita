@@ -4,7 +4,11 @@ import {
 } from '@tanstack/react-query';
 
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
-import { getPlaceCommentsPage } from '@/mobile/app/data/repositories/placesRepository';
+import {
+  getPlaceCommentThreadsPage,
+  type PlaceCommentCursor,
+  type PlaceCommentPage,
+} from '@/mobile/app/data/repositories/placesRepository';
 import type {
   ListPlaceCommentLikeRow,
   ListPlaceCommentRow,
@@ -15,7 +19,9 @@ const PLACE_COMMENTS_STALE_TIME_MS = 1000 * 60 * 2;
 
 type PlaceCommentRecord = ListPlaceCommentRow & {
   is_pending?: boolean;
+  like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
+  viewer_has_liked?: boolean;
 };
 
 export function usePlaceCommentsQuery(
@@ -26,26 +32,26 @@ export function usePlaceCommentsQuery(
   return useInfiniteQuery<
     PlaceCommentRecord[],
     Error,
-    InfiniteData<PlaceCommentRecord[], number>,
+    InfiniteData<PlaceCommentRecord[], PlaceCommentCursor | null>,
     ReturnType<typeof queryKeys.placeComments.list> | typeof queryKeys.placeComments.all,
-    number
+    PlaceCommentCursor | null
   >({
     enabled: Boolean(placeId) && enabled,
-    initialPageParam: 0,
+    initialPageParam: null,
     queryKey: placeId
       ? queryKeys.placeComments.list(placeId, viewerId || '__public__')
       : queryKeys.placeComments.all,
-    queryFn: ({ pageParam = 0 }) =>
+    queryFn: ({ pageParam, signal }) =>
       placeId
-        ? getPlaceCommentsPage(placeId, pageParam, PLACE_COMMENTS_PAGE_SIZE)
+        ? getPlaceCommentThreadsPage({
+            cursor: pageParam,
+            pageSize: PLACE_COMMENTS_PAGE_SIZE,
+            placeId,
+            signal,
+            viewerId,
+          })
         : Promise.resolve([]),
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.filter((item) => !item.parent_comment_id).length < PLACE_COMMENTS_PAGE_SIZE
-        ? undefined
-        : allPages.reduce(
-            (total, page) => total + page.filter((item) => !item.parent_comment_id).length,
-            0,
-          ),
+    getNextPageParam: (lastPage) => (lastPage as PlaceCommentPage).nextCursor,
     staleTime: PLACE_COMMENTS_STALE_TIME_MS,
   });
 }

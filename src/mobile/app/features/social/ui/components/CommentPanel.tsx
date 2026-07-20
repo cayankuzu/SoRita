@@ -32,9 +32,9 @@ import {
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
 
-const ANDROID_COMPOSER_BASE_INSET = 12;
 const ANDROID_MODAL_BASE_INSET = 22;
 const ANDROID_KEYBOARD_EXTRA_LIFT = 10;
+const COMPOSER_DOCK_BOTTOM_PADDING = 10;
 
 type CommentPanelProps = {
   visible: boolean;
@@ -118,7 +118,6 @@ export function CommentPanel({
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [activeLikedComment, setActiveLikedComment] = useState<FeedActionComment | null>(null);
   const [activeMenuComment, setActiveMenuComment] = useState<FeedActionComment | null>(null);
-  const [composerHeight, setComposerHeight] = useState(132);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const totalComments = useMemo(() => {
@@ -180,16 +179,14 @@ export function CommentPanel({
     }));
   };
 
-  const composerInset =
-    Platform.OS === 'android'
-      ? Math.max(insets.bottom + 6, ANDROID_COMPOSER_BASE_INSET)
-      : Math.max(insets.bottom, 12);
+  // The modal overlay already reserves the device safe area. Keeping a second
+  // system inset inside the composer created a large empty block below the input.
+  const composerInset = COMPOSER_DOCK_BOTTOM_PADDING;
   const modalBottomInset = overlayBottomPadding;
   const composerKeyboardOffset =
     Platform.OS === 'android'
       ? Math.max(keyboardHeight - modalBottomInset + ANDROID_KEYBOARD_EXTRA_LIFT, 0)
       : 0;
-  const commentScrollBottomPadding = composerHeight + composerKeyboardOffset + composerInset + 18;
   const commentSheetMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
     paddingTop: overlayTopPadding,
@@ -269,7 +266,7 @@ export function CommentPanel({
                   contentContainerStyle={[
                     styles.commentScrollContent,
                     comments.length === 0 ? styles.commentScrollContentEmpty : null,
-                    { paddingBottom: commentScrollBottomPadding },
+                    { paddingBottom: 18 },
                   ]}
                   initialNumToRender={8}
                   keyboardShouldPersistTaps="handled"
@@ -313,7 +310,6 @@ export function CommentPanel({
                   onCancelEdit={onCancelEdit}
                   onCancelReply={onCancelReply}
                   onCommentTextChange={onCommentTextChange}
-                  onHeightChange={setComposerHeight}
                   onSubmit={onSubmit}
                 />
               </View>

@@ -333,6 +333,59 @@ export function useAuthScreenState({
     setRegisterFieldErrors((current) => ({ ...current, password: message }));
   }, []);
 
+  const validateRegisterStep = useCallback((step: number): RegisterFieldErrors => {
+    const errors: RegisterFieldErrors = {};
+
+    if (step === 0) {
+      if (normalizedRegName.length < 2) {
+        errors.name = tr.auth.register.nameRequired;
+      }
+
+      if (!isUsernameFormatValid) {
+        errors.username = tr.auth.toast.usernameTooShort;
+      } else if (!isAvailabilityUsable(usernameAvailability.status)) {
+        errors.username = usernameAvailability.message || tr.auth.register.usernameError;
+      }
+    }
+
+    if (step === 1) {
+      if (!isEmailFormatValid) {
+        errors.email = tr.auth.register.emailInvalid;
+      } else if (!isAvailabilityUsable(emailAvailability.status)) {
+        errors.email = emailAvailability.message || tr.auth.register.emailUnavailable;
+      }
+
+      if (regPassword.length < PASSWORD_MIN_LENGTH) {
+        errors.password = tr.auth.passwordHint.min;
+      } else if (!passwordMeetsCompositionRequirements) {
+        errors.password = tr.auth.passwordHint.complexity;
+      } else if (registerPasswordPolicyError) {
+        errors.password = registerPasswordPolicyError;
+      } else if (registerPasswordError) {
+        errors.password = registerPasswordError;
+      }
+    }
+
+    if (step === 2 && regInterests.length === 0) {
+      errors.interests = tr.auth.register.interestsRequired;
+    }
+
+    return errors;
+  }, [
+    emailAvailability.message,
+    emailAvailability.status,
+    isEmailFormatValid,
+    isUsernameFormatValid,
+    normalizedRegName,
+    passwordMeetsCompositionRequirements,
+    regInterests.length,
+    regPassword.length,
+    registerPasswordError,
+    registerPasswordPolicyError,
+    usernameAvailability.message,
+    usernameAvailability.status,
+  ]);
+
   const openRegister = useCallback(() => {
     if (!requireLegalConsent()) {
       return;
@@ -403,47 +456,7 @@ export function useAuthScreenState({
       );
 
       setRegisterFieldErrors(mergedStepErrors);
-      setRegStep(firstInvalidStep >= 0 ? firstInvalidStep : regStep);
-      return;
-    }
-
-    if (regPassword.length < PASSWORD_MIN_LENGTH) {
-      focusPasswordStepError(tr.auth.passwordHint.min);
-      return;
-    }
-
-    if (!passwordMeetsCompositionRequirements) {
-      focusPasswordStepError(tr.auth.passwordHint.complexity);
-      return;
-    }
-
-    if (!isUsernameFormatValid) {
-      showToast(tr.auth.toast.usernameTooShort, 'error');
-      return;
-    }
-
-    if (!isAvailabilityUsable(usernameAvailability.status)) {
-      showToast(usernameAvailability.message || tr.auth.register.usernameError, 'error');
-      return;
-    }
-
-    if (!isEmailFormatValid) {
-      showToast(tr.auth.register.emailInvalid, 'error');
-      return;
-    }
-
-    if (!isAvailabilityUsable(emailAvailability.status)) {
-      showToast(emailAvailability.message || tr.auth.register.emailUnavailable, 'error');
-      return;
-    }
-
-    if (regInterests.length === 0) {
-      showToast(tr.auth.register.interestsRequired, 'error');
-      return;
-    }
-
-    if (registerPasswordPolicyError) {
-      focusPasswordStepError(registerPasswordPolicyError);
+      setRegStep(firstInvalidStep);
       return;
     }
 
@@ -502,25 +515,18 @@ export function useAuthScreenState({
     }
   }, [
     coverPhoto,
-    emailAvailability.status,
-    isEmailFormatValid,
-    isUsernameFormatValid,
     normalizedRegUsername,
     normalizedRegBio,
     normalizedRegEmail,
     normalizedRegName,
     profilePhoto,
-    passwordMeetsCompositionRequirements,
     regInterests,
     regPassword,
-    registerPasswordPolicyError,
     register,
     focusPasswordStepError,
     resetRegisterState,
     requireLegalConsent,
-    usernameAvailability.status,
     validateRegisterStep,
-    regStep,
   ]);
 
   const handleResendConfirmation = useCallback(async () => {
@@ -622,46 +628,6 @@ export function useAuthScreenState({
 
     setRegStep((value) => value - 1);
   }, [regStep]);
-
-  function validateRegisterStep(step: number): RegisterFieldErrors {
-    const errors: RegisterFieldErrors = {};
-
-    if (step === 0) {
-      if (normalizedRegName.length < 2) {
-        errors.name = tr.auth.register.nameRequired;
-      }
-
-      if (!isUsernameFormatValid) {
-        errors.username = tr.auth.toast.usernameTooShort;
-      } else if (!isAvailabilityUsable(usernameAvailability.status)) {
-        errors.username = usernameAvailability.message || tr.auth.register.usernameError;
-      }
-    }
-
-    if (step === 1) {
-      if (!isEmailFormatValid) {
-        errors.email = tr.auth.register.emailInvalid;
-      } else if (!isAvailabilityUsable(emailAvailability.status)) {
-        errors.email = emailAvailability.message || tr.auth.register.emailUnavailable;
-      }
-
-      if (regPassword.length < PASSWORD_MIN_LENGTH) {
-        errors.password = tr.auth.passwordHint.min;
-      } else if (!passwordMeetsCompositionRequirements) {
-        errors.password = tr.auth.passwordHint.complexity;
-      } else if (registerPasswordPolicyError) {
-        errors.password = registerPasswordPolicyError;
-      } else if (registerPasswordError) {
-        errors.password = registerPasswordError;
-      }
-    }
-
-    if (step === 2 && regInterests.length === 0) {
-      errors.interests = tr.auth.register.interestsRequired;
-    }
-
-    return errors;
-  }
 
   const goToNextRegisterStep = useCallback(() => {
     if (!requireLegalConsent()) {

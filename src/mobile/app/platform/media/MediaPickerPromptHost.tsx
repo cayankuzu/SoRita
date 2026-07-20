@@ -87,7 +87,10 @@ export function MediaPickerPromptHost() {
     maxHeightRatio: 0.88,
     minHeight: 320,
   });
-  const availableSources = options.availableSources || ['camera', 'library'];
+  const availableSources = React.useMemo(
+    () => options.availableSources || ['camera', 'library'],
+    [options.availableSources],
+  );
   const allowMultiple = Boolean(options.allowMultiple && availableSources.includes('library'));
   const allowVideos = Boolean(options.allowVideos);
   const cameraCaptureModes = React.useMemo<CameraCaptureMode[]>(

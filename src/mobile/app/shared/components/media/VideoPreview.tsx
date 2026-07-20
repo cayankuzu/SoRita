@@ -18,6 +18,11 @@ import {
 
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { resolveStorageAssetUrl } from '@/mobile/app/platform/supabase/media';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import {
+  VIDEO_FORWARD_BUFFER_SECONDS,
+  VIDEO_START_BUFFER_SECONDS,
+} from '@/mobile/app/shared/performance/budgets';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
@@ -28,6 +33,7 @@ type VideoPreviewProps = {
   loop?: boolean;
   muted?: boolean;
   nativeControls?: boolean;
+  posterUri?: string;
   seekTimeMs?: number;
   showPlayOverlay?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -62,15 +68,32 @@ export function VideoPreview({
   loop = false,
   muted = false,
   nativeControls = false,
+  posterUri,
   seekTimeMs,
   showPlayOverlay = true,
   style,
   surfaceType,
   uri,
 }: VideoPreviewProps) {
-  const [resolvedUri, setResolvedUri] = React.useState<string | null>(uri);
-  const player = useVideoPlayer(resolvedUri, (videoPlayer) => {
+  const [hasRenderedFirstFrame, setHasRenderedFirstFrame] = React.useState(false);
+  const [resolvedUri, setResolvedUri] = React.useState<string | null>(null);
+  const videoSource = React.useMemo(
+    () => resolvedUri
+      ? {
+          contentType: 'progressive' as const,
+          uri: resolvedUri,
+          useCaching: true,
+        }
+      : null,
+    [resolvedUri],
+  );
+  const player = useVideoPlayer(videoSource, (videoPlayer) => {
     videoPlayer.audioMixingMode = 'auto';
+    videoPlayer.bufferOptions = {
+      minBufferForPlayback: VIDEO_START_BUFFER_SECONDS,
+      preferredForwardBufferDuration: VIDEO_FORWARD_BUFFER_SECONDS,
+      prioritizeTimeOverSizeThreshold: true,
+    };
     videoPlayer.loop = loop;
     videoPlayer.muted = muted;
 
@@ -84,7 +107,8 @@ export function VideoPreview({
 
   React.useEffect(() => {
     let cancelled = false;
-    setResolvedUri(uri);
+    setHasRenderedFirstFrame(false);
+    setResolvedUri(null);
 
     void resolveStorageAssetUrl(uri)
       .then((nextUri) => {
@@ -144,11 +168,25 @@ export function VideoPreview({
     <View style={[styles.container, { backgroundColor }, style]}>
       <VideoView
         player={player}
+        allowsVideoFrameAnalysis={false}
         contentFit={contentFit}
         nativeControls={nativeControls}
+        onFirstFrameRender={() => setHasRenderedFirstFrame(true)}
         surfaceType={resolvedSurfaceType}
         style={StyleSheet.absoluteFillObject}
+        useExoShutter={false}
       />
+      {posterUri && !hasRenderedFirstFrame ? (
+        <AppImage
+          uri={posterUri}
+          backgroundColor={backgroundColor}
+          priority="high"
+          resizeMode={contentFit === 'contain' ? 'contain' : 'cover'}
+          showLoader={false}
+          style={StyleSheet.absoluteFillObject}
+          transition={0}
+        />
+      ) : null}
       {showPlayOverlay && !nativeControls ? (
         <View pointerEvents="none" style={styles.playOverlay}>
           <View style={styles.playBadge}>

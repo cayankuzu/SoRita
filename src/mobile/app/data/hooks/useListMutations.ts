@@ -19,14 +19,27 @@ import {
   updateList,
   updateLists,
 } from '@/mobile/app/data/repositories/listsRepository';
-
-const listMutationScope = { id: 'list-write-queue' } as const;
+import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
+import type { JsonValue } from '@/mobile/app/data/outbox/outboxStorage';
+import { getCurrentConnectionStatus } from '@/mobile/app/platform/network/connectivityStatus';
+import { isAbortError } from '@/mobile/app/shared/utils/abort';
+import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
 
 type UpdateListsMutationInput = {
   lists: PlaceList[];
+  previousLists?: PlaceList[];
   onProgress?: (progress: number) => void;
   abortSignal?: AbortSignal;
 };
+
+type UpdateListMutationInput = PlaceList | {
+  list: PlaceList;
+  previousList?: PlaceList | null;
+};
+
+function normalizeUpdateListMutationInput(input: UpdateListMutationInput) {
+  return 'list' in input ? input : { list: input };
+}
 
 function normalizeUpdateListsMutationInput(
   input: PlaceList[] | UpdateListsMutationInput,
@@ -34,13 +47,73 @@ function normalizeUpdateListsMutationInput(
   return Array.isArray(input) ? { lists: input } : input;
 }
 
+function readMutationStatus(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  if ('status' in error && typeof error.status === 'number') {
+    return error.status;
+  }
+
+  return undefined;
+}
+
+function shouldQueueListsUpdate(error: unknown) {
+  if (isAbortError(error)) {
+    return false;
+  }
+
+  const status = readMutationStatus(error);
+  return (
+    getCurrentConnectionStatus() !== 'online' ||
+    error instanceof TypeError ||
+    status === 429 ||
+    (status != null && status >= 500)
+  );
+}
+
+async function updateListsOrQueue(input: UpdateListsMutationInput) {
+  try {
+    await updateLists(
+      input.lists,
+      input.onProgress,
+      input.abortSignal,
+      input.previousLists,
+    );
+  } catch (error) {
+    const userId = input.lists[0]?.userId;
+
+    if (!userId || !shouldQueueListsUpdate(error)) {
+      throw error;
+    }
+
+    const payload = JSON.parse(JSON.stringify({ lists: input.lists })) as JsonValue;
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `lists-update:${input.lists.map((list) => list.id).sort().join(',')}`,
+      kind: 'lists-update',
+      payloadRef: payload,
+      userId,
+    });
+  }
+}
+
+export const listMutationInternals = {
+  normalizeUpdateListMutationInput,
+  normalizeUpdateListsMutationInput,
+  readMutationStatus,
+  shouldQueueListsUpdate,
+  updateListsOrQueue,
+};
+
 export function useCreateListMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('list-create');
 
   return useMutation({
     mutationKey: ['lists', 'create'],
-    scope: listMutationScope,
+    scope: mutationScope,
     mutationFn: (list: PlaceList) => createList(list),
     ...buildOptimisticMutation(queryClient, applyOptimisticListCreate),
     onSettled: invalidateVisibleData,
@@ -50,12 +123,18 @@ export function useCreateListMutation() {
 export function useUpdateListMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('list-update');
 
   return useMutation({
     mutationKey: ['lists', 'update'],
-    scope: listMutationScope,
-    mutationFn: (list: PlaceList) => updateList(list),
-    ...buildOptimisticMutation(queryClient, applyOptimisticListUpdate),
+    scope: mutationScope,
+    mutationFn: (input: UpdateListMutationInput) => {
+      const { list, previousList } = normalizeUpdateListMutationInput(input);
+      return updateList(list, previousList);
+    },
+    ...buildOptimisticMutation<UpdateListMutationInput>(queryClient, (qc, input) =>
+      applyOptimisticListUpdate(qc, normalizeUpdateListMutationInput(input).list),
+    ),
     onSettled: invalidateVisibleData,
   });
 }
@@ -63,12 +142,12 @@ export function useUpdateListMutation() {
 export function useUpdateListsMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('lists-update');
 
   const mutation = useMutation({
     mutationKey: ['lists', 'update-many'],
-    scope: listMutationScope,
-    mutationFn: (input: UpdateListsMutationInput) =>
-      updateLists(input.lists, input.onProgress, input.abortSignal),
+    scope: mutationScope,
+    mutationFn: updateListsOrQueue,
     ...buildOptimisticMutation<UpdateListsMutationInput>(queryClient, (qc, input) =>
       applyOptimisticListsUpdate(qc, input.lists),
     ),
@@ -93,10 +172,11 @@ export function useUpdateListsMutation() {
 export function useDeleteListMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('list-delete');
 
   return useMutation({
     mutationKey: ['lists', 'delete'],
-    scope: listMutationScope,
+    scope: mutationScope,
     mutationFn: (listId: string) => deleteList(listId),
     ...buildOptimisticMutation(queryClient, applyOptimisticListDelete),
     onSettled: invalidateVisibleData,

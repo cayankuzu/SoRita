@@ -33,9 +33,10 @@ export function buildOptimisticMutation<TInput>(
 ) {
   return {
     onMutate: async (input: TInput) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all });
+      const cancellation = queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all });
       const snapshot = snapshotQueries(queryClient, queryKeys.visibleData.all);
       applyOptimistic(queryClient, input);
+      await cancellation;
       return { snapshot };
     },
     onError: (_error: unknown, _input: TInput, context?: { snapshot?: QuerySnapshot }) => {
@@ -54,13 +55,14 @@ export function buildDualOptimisticMutation<TInput>(
 ) {
   return {
     onMutate: async (input: TInput) => {
-      await Promise.all([
+      const cancellation = Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all }),
         queryClient.cancelQueries({ queryKey: queryKeys.placeComments.all }),
       ]);
       const visibleSnapshot = snapshotQueries(queryClient, queryKeys.visibleData.all);
       const commentsSnapshot = snapshotQueries(queryClient, queryKeys.placeComments.all);
       applyOptimistic(queryClient, input);
+      await cancellation;
       return { visibleSnapshot, commentsSnapshot };
     },
     onError: (

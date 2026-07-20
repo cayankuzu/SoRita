@@ -18,6 +18,7 @@ vi.mock('@/shared/utils/id', () => ({
 describe('mapScreenUtils', () => {
   it('normalizes and compares equivalent places', () => {
     expect(normalizePlaceLabel('  Kahve  Dunyasi ')).toBe('kahve dunyasi');
+    expect(normalizePlaceLabel()).toBeUndefined();
     expect(
       isEquivalentPlace(
         { id: 'a', name: 'Cafe', lat: 1, lng: 1 },
@@ -59,13 +60,31 @@ describe('mapScreenUtils', () => {
             addedAt: '2025-01-01T00:00:00.000Z',
           },
         },
+        {
+          list: {
+            id: 'list-2',
+            userId: 'viewer',
+            name: 'Closer list',
+            places: [],
+            isPublic: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+          place: {
+            id: 'place-2',
+            name: 'Kahve Dunyasi',
+            lat: 39.933401,
+            lng: 32.859699,
+            addedAt: '2025-01-01T00:00:00.000Z',
+          },
+        },
       ],
       39.933401,
       32.859699,
       ' kahve   dunyasi ',
     );
 
-    expect(match?.place.id).toBe('place-1');
+    expect(match?.place.id).toBe('place-2');
   });
 
   it('finds an existing nearby place match by coordinates only', () => {
@@ -128,6 +147,7 @@ describe('mapScreenUtils', () => {
   });
 
   it('builds search and editor markers only when they are unique', () => {
+    expect(buildSelectedSearchMarker(null, [], '#000')).toBeNull();
     expect(
       buildSelectedSearchMarker(
         { lat: 1, lng: 1, name: 'Cafe' },
@@ -162,6 +182,43 @@ describe('mapScreenUtils', () => {
       name: 'Draft',
       markerColor: '#222',
     });
+
+    expect(buildActiveEditorMarker(null, false, '#222', 'Fallback')).toBeNull();
+    expect(
+      buildActiveEditorMarker({ lat: 2, lng: 2, name: '' }, true, '#222', 'Fallback'),
+    ).toBeNull();
+    expect(
+      buildActiveEditorMarker(
+        {
+          lat: 2,
+          lng: 2,
+          name: '',
+          existingPlace: { id: 'place-1', name: 'Existing', lat: 2, lng: 2, addedAt: '' },
+        },
+        false,
+        '#222',
+        'Fallback',
+      ),
+    ).toMatchObject({ name: 'Existing' });
+    expect(
+      buildActiveEditorMarker({ lat: 2, lng: 2, name: '' }, false, '#222', 'Fallback'),
+    ).toMatchObject({ name: 'Fallback' });
+  });
+
+  it('returns null for unnamed searches and skips unaffected lists', () => {
+    expect(findExistingPlaceMatch([], 1, 2)).toBeNull();
+    expect(
+      buildChangedListsForPlaceSave({
+        lists: [{
+          id: 'list-1', userId: 'viewer', name: 'List', isPublic: true,
+          createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z', places: [],
+        }],
+        selectedListIds: [],
+        sourcePlace: null,
+        placeData: { name: 'Cafe', lat: 1, lng: 2 },
+        user: { id: 'viewer', name: 'Viewer' },
+      }),
+    ).toEqual([]);
   });
 
   it('builds list updates for new, updated, and removed places', () => {

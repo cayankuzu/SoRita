@@ -71,7 +71,9 @@ export function PlaceEditorDetailsStep({
           onToggle={onToggleFeature}
         />
         {dietarySelections.length > 0 ? (
-          <Text style={styles.selectionMeta}>{dietarySelections.length} seçenek seçildi</Text>
+          <Text style={styles.selectionMeta}>
+            {tr.placeEditor.optionSelectionCount(dietarySelections.length)}
+          </Text>
         ) : null}
       </View>
 
@@ -98,9 +100,13 @@ export function PlaceEditorDetailsStep({
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.bestTimes}</Text>
-        <Text style={styles.sectionHelper}>Birden fazla zaman seç</Text>
+        <Text style={styles.sectionHelper}>{tr.placeEditor.bestTimesHelper}</Text>
         <OptionRail options={PLACE_BEST_TIME_OPTIONS} selectedValues={bestTimes} onToggle={onToggleBestTime} />
-        {bestTimes.length > 0 ? <Text style={styles.selectionMeta}>{bestTimes.length} zaman seçildi</Text> : null}
+        {bestTimes.length > 0 ? (
+          <Text style={styles.selectionMeta}>
+            {tr.placeEditor.timeSelectionCount(bestTimes.length)}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { InteractionManager, StyleSheet, Text, View } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
-import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
+import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { t } from '@/mobile/app/shared/i18n';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
@@ -26,6 +26,12 @@ type MiniMapPreviewProps = {
 type MiniMapFallbackProps = {
   places: MapMarkerItem[];
 };
+
+function DeferredAppMapView(props: SharedMapProps) {
+  const { AppMapView } = require('@/mobile/app/shared/components/maps/AppMapView') as
+    typeof import('@/mobile/app/shared/components/maps/AppMapView');
+  return <AppMapView {...props} />;
+}
 
 const STATIC_MAP_URL_CACHE = new Map<string, string | null>();
 
@@ -125,6 +131,7 @@ function MiniMapPreviewComponent({
   focusTrigger = 0,
 }: MiniMapPreviewProps) {
   const isFocused = useIsFocused();
+  const [staticPreviewReady, setStaticPreviewReady] = useState(false);
   const [staticPreviewFailed, setStaticPreviewFailed] = useState(false);
   const [focusRecoveryInstanceId, setFocusRecoveryInstanceId] = useState(0);
   const wasInteractiveMapVisibleRef = React.useRef(false);
@@ -134,15 +141,29 @@ function MiniMapPreviewComponent({
         `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
     )
     .join('|');
-  const staticMapUrl = useMemo(() => buildStaticMapUrl(places, height), [height, placesSignature]);
+  const staticMapUrl = useMemo(() => buildStaticMapUrl(places, height), [height, places]);
   const shouldRenderInteractiveMap = interactive && isFocused;
   const shouldRenderNativePreview = shouldRenderInteractiveMap;
-  const staticPreviewUri = !shouldRenderInteractiveMap && !staticPreviewFailed ? staticMapUrl : null;
+  const staticPreviewUri =
+    !shouldRenderInteractiveMap && staticPreviewReady && !staticPreviewFailed ? staticMapUrl : null;
   const effectiveInstanceId = instanceId * 1000 + focusRecoveryInstanceId;
 
   useEffect(() => {
     setStaticPreviewFailed(false);
   }, [staticMapUrl, placesSignature]);
+
+  useEffect(() => {
+    if (shouldRenderInteractiveMap || !staticMapUrl) {
+      setStaticPreviewReady(false);
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setStaticPreviewReady(true);
+    });
+
+    return () => task.cancel();
+  }, [shouldRenderInteractiveMap, staticMapUrl]);
 
   useEffect(() => {
     if (!shouldRenderInteractiveMap) {
@@ -167,7 +188,7 @@ function MiniMapPreviewComponent({
             style={StyleSheet.absoluteFillObject}
             accessibilityLabel={t.map.previewAccessibilityLabel}
             fallback={<MiniMapFallback places={places} />}
-            backgroundColor="#ebe7de"
+            backgroundColor={colors.mapBackground}
             showLoader={Boolean(staticPreviewUri)}
             onError={() => setStaticPreviewFailed(true)}
           />
@@ -179,7 +200,7 @@ function MiniMapPreviewComponent({
   return (
     <View pointerEvents={interactive ? 'auto' : 'none'} style={[styles.container, { height }]}>
       <View collapsable={false} style={StyleSheet.absoluteFillObject}>
-        <AppMapView
+        <DeferredAppMapView
           instanceId={effectiveInstanceId}
           places={places}
           interactive={interactive}

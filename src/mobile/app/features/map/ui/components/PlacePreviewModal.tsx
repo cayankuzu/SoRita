@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -69,7 +70,7 @@ export function PlacePreviewModal({
     [entries],
   );
   const headerTitle =
-    locationStats.values().next().value?.originalPlaceName || primaryEntry?.place.name || 'Bu konumdaki kartlar';
+    locationStats.values().next().value?.originalPlaceName || primaryEntry?.place.name || tr.map.locationCardsTitle;
   const headerSubtitle = formatLocationPlaceCardsCount(entries.length);
 
   if (!primaryEntry) {
@@ -93,7 +94,12 @@ export function PlacePreviewModal({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
-          <Pressable style={styles.handleWrap} onPress={onClose}>
+          <Pressable
+            accessibilityLabel={tr.common.close}
+            accessibilityRole="button"
+            style={styles.handleWrap}
+            onPress={onClose}
+          >
             <View style={styles.handle} />
           </Pressable>
 
@@ -109,7 +115,8 @@ export function PlacePreviewModal({
             <View style={styles.headerActions}>
               {onCreatePlaceCard ? (
                 <Pressable
-                  accessibilityLabel="Yeni mekan karti"
+                  accessibilityLabel={tr.map.newPlaceCard}
+                  accessibilityRole="button"
                   onPress={onCreatePlaceCard}
                   style={styles.headerButton}
                 >
@@ -117,11 +124,21 @@ export function PlacePreviewModal({
                 </Pressable>
               ) : null}
               {onMinimize ? (
-                <Pressable onPress={onMinimize} style={styles.headerButton}>
+                <Pressable
+                  accessibilityLabel={tr.common.minimize}
+                  accessibilityRole="button"
+                  onPress={onMinimize}
+                  style={styles.headerButton}
+                >
                   <Minus color={colors.textMuted} size={20} />
                 </Pressable>
               ) : null}
-              <Pressable onPress={onClose} style={styles.headerButton}>
+              <Pressable
+                accessibilityLabel={tr.common.close}
+                accessibilityRole="button"
+                onPress={onClose}
+                style={styles.headerButton}
+              >
                 <X color={colors.textMuted} size={20} />
               </Pressable>
             </View>
@@ -177,6 +194,7 @@ const styles = StyleSheet.create({
   },
   handleWrap: {
     alignItems: 'center',
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     paddingTop: 10,
     paddingBottom: 2,
   },
@@ -213,8 +231,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerButton: {
-    width: 38,
-    height: 38,
+    width: Platform.OS === 'ios' ? touch.ios : touch.android,
+    height: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

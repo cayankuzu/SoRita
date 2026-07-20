@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  PLACE_CATEGORY_META,
   PLACE_DIETARY_OPTIONS,
   PLACE_FEATURE_OPTIONS,
 } from '@/mobile/app/catalog/placeOptions';
@@ -22,9 +21,15 @@ import {
   getInitialSelectedCategories,
   getInitialSelectedLists,
   sortSelectedCategories,
-  swapPhotos,
   toggleArrayValue,
 } from '@/mobile/app/features/map/application/placeEditorStateUtils';
+import {
+  appendPlaceMediaWithinLimits,
+  replacePlaceMediaWithinLimits,
+  usePlaceEditorMediaController,
+  type MediaSelectionIssueSummary,
+} from '@/mobile/app/features/map/application/usePlaceEditorMediaController';
+import { usePreparedPlaceMediaUploads } from '@/mobile/app/features/map/application/usePreparedPlaceMediaUploads';
 import {
   MAX_PLACE_MEDIA_ITEMS,
   MAX_PLACE_PHOTOS,
@@ -34,7 +39,6 @@ import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgres
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import {
-  pickPlaceMediaFromPrompt,
   pickSingleImageFromPrompt,
 } from '@/mobile/app/platform/media/images';
 import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
@@ -43,10 +47,8 @@ import {
   PLACE_MEDIA_MAX_FILE_SIZE_MB,
 } from '@/mobile/app/platform/media/placeMediaSize';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import {
   getPlaceMedia,
-  getPlaceMediaCounts,
   getPlacePhotoUrls,
 } from '@/mobile/app/shared/utils/placeMedia';
 import {
@@ -96,87 +98,18 @@ function sanitizeNumericInput(value: string) {
   return value.replace(/[^\d]/g, '');
 }
 
-type MediaSelectionIssueSummary = {
-  rejectedPhotos: number;
-  rejectedTotal: number;
-  rejectedVideos: number;
-};
-
 type EditorBlockingNotice = {
   description: string;
   title: string;
 };
 
-function appendPlaceMediaWithinLimits(currentMedia: PlaceMedia[], incomingMedia: PlaceMedia[]) {
-  const nextMedia = [...currentMedia];
-  const issues: MediaSelectionIssueSummary = {
-    rejectedPhotos: 0,
-    rejectedTotal: 0,
-    rejectedVideos: 0,
-  };
-
-  for (const item of incomingMedia) {
-    const counts = getPlaceMediaCounts(nextMedia);
-
-    if (counts.total >= MAX_PLACE_MEDIA_ITEMS) {
-      issues.rejectedTotal += 1;
-      continue;
-    }
-
-    if (item.type === 'video' && counts.videos >= MAX_PLACE_VIDEOS) {
-      issues.rejectedVideos += 1;
-      continue;
-    }
-
-    if (item.type === 'photo' && counts.photos >= MAX_PLACE_PHOTOS) {
-      issues.rejectedPhotos += 1;
-      continue;
-    }
-
-    nextMedia.push(item);
-  }
-
-  return { issues, nextMedia };
-}
-
-function replacePlaceMediaWithinLimits(
-  currentMedia: PlaceMedia[],
-  index: number,
-  replacement: PlaceMedia,
-) {
-  if (index < 0 || index >= currentMedia.length) {
-    return {
-      issues: {
-        rejectedPhotos: 0,
-        rejectedTotal: 0,
-        rejectedVideos: 0,
-      },
-      nextMedia: currentMedia,
-      replaced: false,
-    };
-  }
-
-  const nextWithoutItem = currentMedia.filter((_, itemIndex) => itemIndex !== index);
-  const { issues, nextMedia: appendedMedia } = appendPlaceMediaWithinLimits(nextWithoutItem, [replacement]);
-  const acceptedReplacement = appendedMedia[appendedMedia.length - 1];
-
-  if (!acceptedReplacement || appendedMedia.length === nextWithoutItem.length) {
-    return {
-      issues,
-      nextMedia: currentMedia,
-      replaced: false,
-    };
-  }
-
-  const reorderedMedia = [...nextWithoutItem];
-  reorderedMedia.splice(Math.min(index, reorderedMedia.length), 0, acceptedReplacement);
-
-  return {
-    issues,
-    nextMedia: reorderedMedia,
-    replaced: true,
-  };
-}
+// Narrow pure-function surface for exhaustive media-limit contract tests.
+export const placeEditorInternals = {
+  appendPlaceMediaWithinLimits,
+  getErrorMessage,
+  replacePlaceMediaWithinLimits,
+  sanitizeNumericInput,
+};
 
 export function usePlaceEditorState({
   visible,
@@ -215,11 +148,8 @@ export function usePlaceEditorState({
   const [newListCoverImage, setNewListCoverImage] = useState('');
   const [newListPublic, setNewListPublic] = useState(true);
   const [showNewListForm, setShowNewListForm] = useState(false);
-  const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
-  const [editingVideoThumbnailIndex, setEditingVideoThumbnailIndex] = useState<number | null>(null);
   const [blockingNotice, setBlockingNotice] = useState<EditorBlockingNotice | null>(null);
   const [listSelectionNotice, setListSelectionNotice] = useState<string | null>(null);
-  const [isAddingMedia, setIsAddingMedia] = useState(false);
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [isPickingListCover, setIsPickingListCover] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -233,6 +163,9 @@ export function usePlaceEditorState({
   const blockingNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listSelectionNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
+  const listsRef = useRef(lists);
+  listsRef.current = lists;
+  usePreparedPlaceMediaUploads({ lists, media, selectedListIds: selectedLists, visible });
 
   const clearBlockingNotice = useCallback(() => {
     if (blockingNoticeTimeoutRef.current) {
@@ -378,15 +311,13 @@ export function usePlaceEditorState({
       setBestTimes(getInitialBestTimes(existingPlace));
       setAtmosphere(existingPlace?.atmosphere || []);
       setFeatures(existingPlace?.specialFeatures || []);
-      setSelectedLists(getInitialSelectedLists(existingPlace, lists));
+      setSelectedLists(getInitialSelectedLists(existingPlace, listsRef.current));
       setNewListName('');
       setNewListDescription('');
       setNewListCoverImage('');
       setNewListPublic(true);
       setShowNewListForm(false);
     }
-    setSelectedMediaIndex(null);
-    setEditingVideoThumbnailIndex(null);
   }, [clearBlockingNotice, clearListSelectionNotice, draft, existingPlace, lat, lng, placeAddress, placeName, visible]);
 
   const dietarySelections = useMemo(
@@ -416,12 +347,6 @@ export function usePlaceEditorState({
     () => new Set<string>(),
     [],
   );
-
-  useEffect(() => {
-    setSelectedLists((prev) =>
-      prev.filter((listId) => !duplicateListIds.has(listId) || currentMembershipListIds.has(listId)),
-    );
-  }, [currentMembershipListIds, duplicateListIds]);
 
   const availableListIds = useMemo(() => new Set(lists.map((list) => list.id)), [lists]);
 
@@ -489,6 +414,37 @@ export function usePlaceEditorState({
     },
     [showBlockingNotice],
   );
+
+  const {
+    applyVideoThumbnail,
+    closeVideoThumbnailEditor,
+    editingVideoThumbnailIndex,
+    handleAddMedia,
+    handleEditMedia,
+    handleMediaPress,
+    handleRemoveMedia,
+    isAddingMedia,
+    openVideoThumbnailEditor,
+    resetMediaInteraction,
+    selectedMediaIndex,
+  } = usePlaceEditorMediaController({
+    media,
+    setMedia,
+    showSelectionFeedback: showMediaSelectionFeedback,
+  });
+
+  useEffect(() => {
+    resetMediaInteraction();
+  }, [
+    draft,
+    existingPlace,
+    lat,
+    lng,
+    placeAddress,
+    placeName,
+    resetMediaInteraction,
+    visible,
+  ]);
 
   const handleNameChange = useCallback((value: string) => {
     setName(clampTextLength(value, PLACE_NAME_MAX_LENGTH));
@@ -604,175 +560,6 @@ export function usePlaceEditorState({
   const toggleFeature = useCallback((value: string) => {
     toggleArrayValue(value, setFeatures);
   }, []);
-
-  const handleAddMedia = useCallback(async () => {
-    if (isAddingMedia) {
-      return;
-    }
-
-    const currentCounts = getPlaceMediaCounts(media);
-    const remainingSlots = Math.max(MAX_PLACE_MEDIA_ITEMS - currentCounts.total, 0);
-
-    if (remainingSlots === 0) {
-      showToast(tr.placeEditor.mediaLimitNotice(MAX_PLACE_MEDIA_ITEMS), 'error');
-      return;
-    }
-
-    setIsAddingMedia(true);
-
-    try {
-      await waitForMediaPickerTransition();
-
-      const selection = await pickPlaceMediaFromPrompt({
-        remainingVideos: Math.max(MAX_PLACE_VIDEOS - currentCounts.videos, 0),
-      });
-
-      if (selection.items.length > 0) {
-        const { issues, nextMedia } = appendPlaceMediaWithinLimits(media, selection.items);
-        const nextVideoIndex = nextMedia.findIndex(
-          (item, index) => index >= media.length && item.type === 'video',
-        );
-
-        setMedia(nextMedia);
-        setSelectedMediaIndex(null);
-        setEditingVideoThumbnailIndex(nextVideoIndex >= 0 ? nextVideoIndex : null);
-        showMediaSelectionFeedback(
-          issues,
-          selection.rejectedVideoCount,
-          selection.rejectedOversizeCount,
-        );
-      } else if (selection.rejectedVideoCount > 0 || selection.rejectedOversizeCount > 0) {
-        showMediaSelectionFeedback(
-          {
-            rejectedPhotos: 0,
-            rejectedTotal: 0,
-            rejectedVideos: 0,
-          },
-          selection.rejectedVideoCount,
-          selection.rejectedOversizeCount,
-        );
-      }
-    } finally {
-      await waitForMediaPickerTransition();
-      setIsAddingMedia(false);
-    }
-  }, [isAddingMedia, media, showMediaSelectionFeedback]);
-
-  const handleRemoveMedia = useCallback((index: number) => {
-    setMedia((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-
-    setSelectedMediaIndex((current) => {
-      if (current == null) {
-        return null;
-      }
-
-      if (current === index) {
-        return null;
-      }
-
-      return current > index ? current - 1 : current;
-    });
-    setEditingVideoThumbnailIndex((current) => {
-      if (current == null) {
-        return null;
-      }
-
-      if (current === index) {
-        return null;
-      }
-
-      return current > index ? current - 1 : current;
-    });
-  }, []);
-
-  const handleMediaPress = useCallback((index: number) => {
-    setSelectedMediaIndex((current) => {
-      if (current == null) {
-        return index;
-      }
-
-      if (current === index) {
-        return null;
-      }
-
-      setMedia((prev) => swapPhotos(prev, current, index));
-      return null;
-    });
-  }, []);
-
-  const handleEditMedia = useCallback(async (index: number) => {
-    if (isAddingMedia || index < 0 || index >= media.length) {
-      return;
-    }
-
-    setIsAddingMedia(true);
-
-    try {
-      await waitForMediaPickerTransition();
-
-      const mediaWithoutEditedItem = media.filter((_, itemIndex) => itemIndex !== index);
-      const remainingCounts = getPlaceMediaCounts(mediaWithoutEditedItem);
-      const selection = await pickPlaceMediaFromPrompt({
-        allowMultiple: false,
-        maxSelection: 1,
-        remainingPhotos: Math.max(MAX_PLACE_PHOTOS - remainingCounts.photos, 0),
-        remainingVideos: Math.max(MAX_PLACE_VIDEOS - remainingCounts.videos, 0),
-      });
-
-      const replacement = selection.items[0];
-
-      if (!replacement) {
-        if (selection.rejectedVideoCount > 0 || selection.rejectedOversizeCount > 0) {
-          showMediaSelectionFeedback(
-            {
-              rejectedPhotos: 0,
-              rejectedTotal: 0,
-              rejectedVideos: 0,
-            },
-            selection.rejectedVideoCount,
-            selection.rejectedOversizeCount,
-          );
-        }
-        return;
-      }
-
-      const { issues, nextMedia } = replacePlaceMediaWithinLimits(media, index, replacement);
-      setMedia(nextMedia);
-      setSelectedMediaIndex(null);
-      setEditingVideoThumbnailIndex(replacement.type === 'video' ? index : null);
-      showMediaSelectionFeedback(
-        issues,
-        selection.rejectedVideoCount,
-        selection.rejectedOversizeCount,
-      );
-    } finally {
-      await waitForMediaPickerTransition();
-      setIsAddingMedia(false);
-    }
-  }, [isAddingMedia, media, showMediaSelectionFeedback]);
-
-  const openVideoThumbnailEditor = useCallback((index: number) => {
-    if (index < 0 || index >= media.length || media[index]?.type !== 'video') {
-      return;
-    }
-
-    setEditingVideoThumbnailIndex(index);
-  }, [media]);
-
-  const applyVideoThumbnail = useCallback((selection: { thumbnailTimeMs: number; thumbnailUrl?: string }) => {
-    setMedia((current) =>
-      current.map((item, index) =>
-        index === editingVideoThumbnailIndex
-          ? {
-              ...item,
-              thumbnailTimeMs: selection.thumbnailTimeMs,
-              thumbnailUrl: selection.thumbnailUrl || undefined,
-            }
-          : item,
-      ),
-    );
-    setEditingVideoThumbnailIndex(null);
-  }, [editingVideoThumbnailIndex]);
 
   const buildDraft = useCallback(
     (): PlaceEditorDraft =>
@@ -891,10 +678,7 @@ export function usePlaceEditorState({
           (listId) => !currentMembershipListIds.has(listId),
         ).length;
 
-        if (
-          prev.includes(newListId) ||
-          pendingSelectionCount >= MAX_SELECTED_LISTS_PER_PLACE_SAVE
-        ) {
+        if (pendingSelectionCount >= MAX_SELECTED_LISTS_PER_PLACE_SAVE) {
           blockedBySelectionLimit = true;
           return prev;
         }
@@ -1063,6 +847,8 @@ export function usePlaceEditorState({
     safeSelectedLists,
     selectedCategories,
     showValidationFeedback,
+    showBlockingNotice,
+    showListSelectionNotice,
     studentFriendly,
     title,
     isCreatingList,
@@ -1158,7 +944,7 @@ export function usePlaceEditorState({
     isAddingPhoto: isAddingMedia,
     openVideoThumbnailEditor,
     applyVideoThumbnail,
-    closeVideoThumbnailEditor: () => setEditingVideoThumbnailIndex(null),
+    closeVideoThumbnailEditor,
     toggleAtmosphere,
     toggleBestTime,
     toggleCategory,

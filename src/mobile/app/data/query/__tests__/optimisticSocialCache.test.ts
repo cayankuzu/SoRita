@@ -353,4 +353,129 @@ describe('optimisticSocialCache', () => {
     ]);
     expect(finalVisibleData?.lists?.[0]?.places).toEqual([]);
   });
+
+  it('handles absent snapshots and ignores malformed cache shapes without throwing', () => {
+    restoreQueries(queryClient);
+    const malformedValues = [null, [], {}, { pages: [] }, { pageParams: [] }];
+    malformedValues.forEach((value, index) => {
+      queryClient.setQueryData([...queryKeys.visibleData.all, `bad-${index}`], value);
+      queryClient.setQueryData([...queryKeys.notifications.all, `bad-${index}`], value);
+      queryClient.setQueryData([...queryKeys.explore.all, `bad-${index}`], value);
+    });
+    expect(() => {
+      applyOptimisticFollow(queryClient, { currentUserId: 'viewer', targetUserId: 'target' }, 'following');
+      applyOptimisticExploreFollow(queryClient, { targetUserId: 'target' }, 'following');
+      applyOptimisticBlock(queryClient, { currentUserId: 'viewer', targetUserId: 'target' }, createdAt);
+      applyOptimisticUnblock(queryClient, { currentUserId: 'viewer', targetUserId: 'target' });
+      applyOptimisticPlaceLike(queryClient, { placeId: 'missing', userId: 'viewer' }, createdAt);
+      applyOptimisticCommentDelete(queryClient, 'missing');
+      applyOptimisticListDelete(queryClient, 'missing');
+      applyOptimisticPlaceDelete(queryClient, 'missing');
+    }).not.toThrow();
+  });
+
+  it('applies following/requested states to both sides and infers users from allUsers', () => {
+    const viewer = createUser({ id: 'viewer', following: undefined, pendingFollowRequestsSent: undefined });
+    const publicTarget = createUser({ id: 'target', isPublicAccount: true, followers: undefined });
+    const privateTarget = createUser({ id: 'private', isPublicAccount: false });
+    queryClient.setQueryData(queryKeys.visibleData.context('viewer'), {
+      allUsers: [viewer, publicTarget, privateTarget], blockRows: [], currentUser: null,
+      users: [viewer, publicTarget, privateTarget], lists: [],
+    });
+    expect(inferOptimisticFollowResult(queryClient, {
+      currentUserId: 'viewer', targetUserId: 'target',
+    })).toBe('following');
+    expect(inferOptimisticFollowResult(queryClient, {
+      currentUserId: 'viewer', targetUserId: 'private',
+    })).toBe('requested');
+
+    applyOptimisticFollow(queryClient, { currentUserId: 'viewer', targetUserId: 'target' }, 'following');
+    let data = queryClient.getQueryData<ReturnType<typeof seedVisibleData>>(queryKeys.visibleData.context('viewer'));
+    expect(data?.allUsers.find((user) => user.id === 'viewer')?.following).toEqual(['target']);
+    expect(data?.allUsers.find((user) => user.id === 'target')?.followers).toEqual(['viewer']);
+
+    applyOptimisticFollow(queryClient, { currentUserId: 'viewer', targetUserId: 'private' }, 'requested');
+    data = queryClient.getQueryData(queryKeys.visibleData.context('viewer'));
+    expect(data?.allUsers.find((user) => user.id === 'viewer')?.pendingFollowRequestsSent).toEqual(['private']);
+    expect(data?.allUsers.find((user) => user.id === 'private')?.pendingFollowRequestsReceived).toEqual(['viewer']);
+
+    queryClient.setQueryData(queryKeys.explore.page('viewer', 'all', ''), {
+      pageParams: [null], pages: [{ listItems: [], placeItems: [], userItems: [publicTarget] }],
+    });
+    applyOptimisticExploreFollow(queryClient, { targetUserId: 'target' }, 'unfollowed');
+    expect(queryClient.getQueryData(queryKeys.explore.page('viewer', 'all', ''))).toBeTruthy();
+  });
+
+  it('restores a filtered target on unblock and toggles like details back to empty', () => {
+    seedVisibleData(queryClient);
+    applyOptimisticBlock(queryClient, { currentUserId: 'viewer', targetUserId: 'target' }, createdAt);
+    applyOptimisticUnblock(queryClient, { currentUserId: 'viewer', targetUserId: 'target' });
+    const restored = queryClient.getQueryData<ReturnType<typeof seedVisibleData>>(
+      queryKeys.visibleData.context('viewer'),
+    );
+    expect(restored?.users.some((user) => user.id === 'target')).toBe(true);
+    expect(restored?.allUsers.find((user) => user.id === 'target')?.blockedByUsers).toBeUndefined();
+
+    seedVisibleData(queryClient);
+    applyOptimisticPlaceLike(queryClient, { placeId: 'place-1', userId: 'viewer' }, createdAt);
+    applyOptimisticPlaceLike(queryClient, { placeId: 'place-1', userId: 'viewer' }, createdAt);
+    const data = queryClient.getQueryData<ReturnType<typeof seedVisibleData>>(
+      queryKeys.visibleData.context('viewer'),
+    );
+    expect(data?.lists?.[0]?.places[0]).toMatchObject({ likes: 0, likedBy: undefined, likeDetails: undefined });
+  });
+
+  it('creates comments in empty caches, preserves missing parents, and toggles raw likes', () => {
+    seedVisibleData(queryClient);
+    queryClient.setQueryData(queryKeys.placeComments.list('place-1', 'viewer'), {
+      pageParams: [], pages: [],
+    });
+    applyOptimisticCommentCreate(queryClient, {
+      commentId: 'first', content: 'First', placeId: 'place-1', userId: 'viewer', parentCommentId: null,
+    }, createdAt);
+    expect(queryClient.getQueryData(queryKeys.placeComments.list('place-1', 'viewer'))).toMatchObject({
+      pages: [[expect.objectContaining({ id: 'first', parent_comment_id: null })]],
+    });
+    applyOptimisticCommentCreate(queryClient, {
+      commentId: 'orphan', content: 'Orphan', placeId: 'place-1', userId: 'viewer', parentCommentId: 'missing',
+    }, createdAt);
+
+    queryClient.setQueryData(queryKeys.placeComments.list('place-1', 'viewer'), {
+      pageParams: [0],
+      pages: [[
+        {
+          id: 'comment-1', list_place_id: 'place-1', user_id: 'target', parent_comment_id: null,
+          content: 'Original', created_at: createdAt, updated_at: createdAt,
+          list_place_comment_likes: null,
+        },
+        {
+          id: 'other', list_place_id: 'place-1', user_id: 'target', parent_comment_id: null,
+          content: 'Other', created_at: createdAt, updated_at: createdAt,
+          list_place_comment_likes: [],
+        },
+      ]],
+    });
+    applyOptimisticCommentLike(queryClient, { commentId: 'comment-1', userId: 'viewer' }, createdAt);
+    applyOptimisticCommentLike(queryClient, { commentId: 'comment-1', userId: 'viewer' }, createdAt);
+    const rows = queryClient.getQueryData<{ pages: Array<Array<{ id: string; list_place_comment_likes: unknown[] }>> }>(
+      queryKeys.placeComments.list('place-1', 'viewer'),
+    );
+    expect(rows?.pages[0]?.find((row) => row.id === 'comment-1')?.list_place_comment_likes).toEqual([]);
+    expect(rows?.pages[0]?.find((row) => row.id === 'other')?.list_place_comment_likes).toEqual([]);
+  });
+
+  it('updates and deletes lists/places inside infinite list caches', () => {
+    const list = createList();
+    queryClient.setQueryData(queryKeys.visibleData.lists('viewer'), {
+      pageParams: [0], pages: [[list]],
+    });
+    applyOptimisticUserProfile(queryClient, createUser({ id: 'unrelated', username: 'UPPER' }));
+    applyOptimisticListCreate(queryClient, createList({ id: 'list-2' }));
+    applyOptimisticListUpdate(queryClient, { ...list, name: 'Updated' });
+    applyOptimisticListsUpdate(queryClient, [{ ...list, name: 'Bulk' }]);
+    applyOptimisticPlaceDelete(queryClient, 'place-1');
+    applyOptimisticListDelete(queryClient, 'list-2');
+    const data = queryClient.getQueryData<{ pages: PlaceList[][] }>(queryKeys.visibleData.lists('viewer'));
+    expect(data?.pages[0]).toEqual([expect.objectContaining({ id: 'list-1', name: 'Bulk', places: [] })]);
+  });
 });

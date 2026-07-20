@@ -35,6 +35,32 @@ export type MobileNotification = {
     | { type: 'list'; listId: string; placeId?: string };
 };
 
+export type NotificationCursor = {
+  createdAt: string;
+  id: string;
+};
+
+export type NotificationPage = MobileNotification[] & {
+  nextCursor?: NotificationCursor;
+};
+
+type NotificationPageRow = {
+  actor_name?: string | null;
+  actor_profile_photo_url?: string | null;
+  actor_user_id?: string | null;
+  actor_username?: string | null;
+  created_at: string;
+  follow_request_id?: string | null;
+  follow_request_status?: FollowRequestRow['status'] | null;
+  id: string;
+  list_id?: string | null;
+  list_place_id?: string | null;
+  message: string;
+  read: boolean;
+  recipient_user_id: string;
+  type: MobileNotification['type'];
+};
+
 type NotificationRecord = NotificationRow & {
   follow_request?: FollowRequestRow[] | FollowRequestRow | null;
 };
@@ -203,4 +229,64 @@ export async function fetchNotificationsPage(
   const rows = (data || []) as unknown as NotificationRecord[];
   const actorProfilesById = await fetchActorProfilesById(rows);
   return mapAndFilterNotifications(rows, userId, hiddenUserIds, actorProfilesById);
+}
+
+export async function fetchNotificationsCursorPage(params: {
+  cursor?: NotificationCursor | null;
+  pageSize: number;
+  signal?: AbortSignal;
+  userId: string;
+}): Promise<NotificationPage> {
+  let request = supabase.rpc('notifications_page', {
+    p_cursor_created_at: params.cursor?.createdAt ?? null,
+    p_cursor_id: params.cursor?.id ?? null,
+    p_limit: params.pageSize,
+  });
+
+  if (params.signal) {
+    request = request.abortSignal(params.signal);
+  }
+
+  const { data, error } = await request;
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = ((data || []) as unknown) as NotificationPageRow[];
+  const items = rows
+    .filter((row) => !row.actor_user_id || row.actor_user_id !== params.userId)
+    .map<MobileNotification>((row) => ({
+      followRequest: row.follow_request_id
+        ? {
+            id: row.follow_request_id,
+            status: row.follow_request_status ?? 'pending',
+          }
+        : undefined,
+      id: row.id,
+      linkTo: row.list_id
+        ? {
+            listId: row.list_id,
+            placeId: row.list_place_id || undefined,
+            type: 'list',
+          }
+        : row.actor_user_id
+          ? { type: 'profile', userId: row.actor_user_id }
+          : undefined,
+      message: row.message,
+      read: row.read,
+      timestamp: formatAbsoluteDateTime(row.created_at),
+      type: row.type,
+      userId: row.actor_user_id || '',
+      userName: row.actor_name || 'SoRita',
+      userPhoto: row.actor_profile_photo_url || undefined,
+    }));
+  const lastRow = rows[rows.length - 1];
+
+  return Object.assign(items, {
+    nextCursor:
+      rows.length >= params.pageSize && lastRow
+        ? { createdAt: lastRow.created_at, id: lastRow.id }
+        : undefined,
+  });
 }

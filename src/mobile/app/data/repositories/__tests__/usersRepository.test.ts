@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { onlineManager } from '@tanstack/react-query';
+import {
+  clearAllOutboxEntries,
+  readOutboxEntries,
+} from '@/mobile/app/data/outbox/outboxStorage';
 import {
   USER_BIO_MAX_LENGTH,
   USER_NAME_MAX_LENGTH,
@@ -14,6 +19,11 @@ const getSessionMock = vi.fn();
 const createSignedEdgeHeadersMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const submitModerationReportMock = vi.fn();
+
+beforeEach(async () => {
+  onlineManager.setOnline(true);
+  await clearAllOutboxEntries();
+});
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
   env: {
@@ -38,6 +48,7 @@ vi.mock('@/mobile/app/platform/security/requestSigning', () => ({
 
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: {
+    debug: () => undefined,
     warn: loggerWarnMock,
   },
 }));
@@ -654,6 +665,23 @@ describe('usersRepository unblock/report/delete', () => {
 
     const { unblockUser } = await import('@/mobile/app/data/repositories/usersRepository');
     await expect(unblockUser('viewer-1', 'target-1')).rejects.toThrow('unblock failed');
+  });
+
+  it('coalesces offline block changes to the latest desired state', async () => {
+    onlineManager.setOnline(false);
+    const { blockUser, unblockUser } = await import('@/mobile/app/data/repositories/usersRepository');
+
+    await blockUser('viewer-1', 'target-1');
+    await unblockUser('viewer-1', 'target-1');
+
+    await expect(readOutboxEntries('viewer-1')).resolves.toEqual([
+      expect.objectContaining({
+        idempotencyKey: 'user-block-state:viewer-1:target-1',
+        kind: 'user-block-state',
+        payloadRef: { blocked: false, targetUserId: 'target-1' },
+      }),
+    ]);
+    expect(fromMock).not.toHaveBeenCalled();
   });
 
   it('rejects self-reports and propagates report persistence failures', async () => {

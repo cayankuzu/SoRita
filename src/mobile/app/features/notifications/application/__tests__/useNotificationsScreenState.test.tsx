@@ -1,4 +1,3 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook } from '@/mobile/app/test/hookTestUtils';

@@ -15,11 +15,6 @@ vi.mock('@/mobile/app/data/hooks/useVisibleDataQuery', () => ({
   useVisibleDataQuery: useVisibleDataQueryMock,
 }));
 
-vi.mock('@/mobile/app/data/query/readModelErrors', () => ({
-  isMissingReadModelError: (error: unknown) =>
-    Boolean(error && typeof error === 'object' && 'missingReadModel' in error),
-}));
-
 vi.mock('@/mobile/app/data/hooks/useUserMutations', () => ({
   useFollowUserMutation: useFollowUserMutationMock,
 }));
@@ -49,13 +44,31 @@ describe('useExploreScreenState', () => {
     };
 
     useExploreQueryMock.mockReturnValue({
-      data: undefined,
-      error: { missingReadModel: true },
+      data: {
+        pages: [{
+          listItems: [{
+            list: {
+              id: 'public-list', userId: 'public-user', name: 'Coffee Run',
+              description: 'Best coffee', isPublic: true,
+              createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-03T00:00:00.000Z',
+              places: [],
+            },
+            owner: { id: 'public-user', email: 'public@example.com', name: 'Public User', username: 'publicuser' },
+          }],
+          placeItems: [{
+            key: 'place-1:public-list', ownerId: 'public-user', listId: 'public-list',
+            listName: 'Coffee Run', memberships: [], sortTime: 2,
+            place: { id: 'place-1', name: 'Coffee Spot', lat: 1, lng: 1, address: 'Ankara', photos: ['photo'], addedAt: '2025-01-02T00:00:00.000Z' },
+          }],
+          userItems: [{ id: 'public-user', email: 'public@example.com', name: 'Public User', username: 'publicuser', bio: 'great coffee', isPublicAccount: true }],
+        }],
+      },
+      error: new Error('Network request failed'),
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
       isLoading: false,
-      refetch: vi.fn().mockResolvedValue(undefined),
+      refetch: refetchMock,
     });
     useVisibleDataQueryMock.mockReturnValue({
       data: {
@@ -205,5 +218,152 @@ describe('useExploreScreenState', () => {
     await expect(hook.result.current.followUser('public-user')).rejects.toThrow(
       'Takip işlemi için aktif kullanıcı gerekli.',
     );
+  });
+
+  it('hydrates every read-model tab, filters duplicates, and exposes per-tab pagination', async () => {
+    const viewer = {
+      id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
+    };
+    const owner = {
+      id: 'owner', email: 'owner@example.com', name: 'Needle Owner', username: 'owner',
+      bio: 'Guide', isPublicAccount: true,
+    };
+    const otherOwner = {
+      id: 'other-owner', email: 'other@example.com', name: 'Other', username: 'other',
+      bio: 'Needle bio', isPublicAccount: true,
+    };
+    const createPlaceItem = (overrides: Record<string, unknown> = {}) => ({
+      key: 'place-key', owner, ownerId: owner.id, listId: 'list-1',
+      listName: 'Ordinary list', listIsPublic: true,
+      memberships: [{
+        listId: 'membership-list', listName: 'Needle membership', listIsPublic: true,
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      }],
+      place: {
+        id: 'place-1', name: 'Ordinary place', address: 'Ordinary address',
+        notes: 'Ordinary notes', lat: 1, lng: 2, photos: [],
+        addedAt: '2025-01-01T00:00:00.000Z',
+      },
+      sortTime: 1,
+      ...overrides,
+    });
+    const fetchers = {
+      lists: vi.fn().mockResolvedValue(undefined),
+      photos: vi.fn().mockResolvedValue(undefined),
+      places: vi.fn().mockResolvedValue(undefined),
+      users: vi.fn().mockResolvedValue(undefined),
+    };
+    const emptyPage = { listItems: [], placeItems: [], userItems: [] };
+    const queryByKind = {
+      lists: {
+        data: { pages: [{
+          ...emptyPage,
+          listItems: [
+            {
+              list: {
+                id: 'list-1', userId: owner.id, name: 'Ordinary',
+                description: 'Needle description', isPublic: true, places: [],
+                createdAt: '2025-01-01T00:00:00.000Z', updatedAt: null,
+              },
+              owner,
+            },
+            {
+              list: {
+                id: 'viewer-list', userId: viewer.id, name: 'Needle own list',
+                isPublic: true, places: [], createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-03T00:00:00.000Z',
+              },
+              owner: viewer,
+            },
+          ],
+        }] },
+        error: null, fetchNextPage: fetchers.lists, hasNextPage: true,
+        isFetchingNextPage: false, isLoading: false,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      },
+      places: {
+        data: { pages: [{
+          ...emptyPage,
+          placeItems: [
+            createPlaceItem(),
+            createPlaceItem({ key: 'place-key', sortTime: 5 }),
+            createPlaceItem({ key: 'own-place', owner: viewer, ownerId: viewer.id }),
+          ],
+        }] },
+        error: null, fetchNextPage: fetchers.places, hasNextPage: false,
+        isFetchingNextPage: true, isLoading: false,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      },
+      photos: {
+        data: { pages: [{
+          ...emptyPage,
+          placeItems: [
+            createPlaceItem({
+              key: 'photo-key',
+              place: {
+                id: 'photo-place', name: 'Needle photo place', lat: 1, lng: 2,
+                media: [{ type: 'photo', url: 'https://cdn.example.com/photo.jpg' }],
+                addedAt: '2025-01-01T00:00:00.000Z',
+              },
+              sortTime: 4,
+            }),
+            createPlaceItem({ key: 'no-media', sortTime: 3 }),
+          ],
+        }] },
+        error: null, fetchNextPage: fetchers.photos, hasNextPage: true,
+        isFetchingNextPage: true, isLoading: false,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      },
+      users: {
+        data: { pages: [{ ...emptyPage, userItems: [otherOwner, owner, viewer, otherOwner] }] },
+        error: null, fetchNextPage: fetchers.users, hasNextPage: false,
+        isFetchingNextPage: false, isLoading: true,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+
+    useExploreQueryMock.mockImplementation(
+      (_userId: string | undefined, _search: string, options: { kind: keyof typeof queryByKind }) =>
+        queryByKind[options.kind],
+    );
+    useVisibleDataQueryMock.mockReturnValue({
+      data: undefined, error: null, fetchNextPage: undefined, hasNextPage: false,
+      hasPartialDataError: false, isFetchingNextPage: false, isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useFollowUserMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: true,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/explore/application/useExploreScreenState');
+    const renderTab = (activeTab: 'lists' | 'places' | 'photos' | 'people') =>
+      renderHook(() => hooks.useExploreScreenState({ activeTab, user: viewer, searchQuery: 'needle' }));
+    const listHook = renderTab('lists');
+    const placeHook = renderTab('places');
+    const photoHook = renderTab('photos');
+    const peopleHook = renderTab('people');
+    const invalidTabHook = renderHook(() =>
+      hooks.useExploreScreenState({
+        activeTab: 'invalid' as 'lists', user: viewer, searchQuery: 'needle',
+      }),
+    );
+
+    expect(listHook.result.current.filteredListItems.map((item) => item.list.id)).toEqual(['list-1']);
+    expect(listHook.result.current.fetchNextPage).toBe(fetchers.lists);
+    expect(listHook.result.current.hasNextPage).toBe(true);
+    expect(placeHook.result.current.filteredPlaces).toHaveLength(1);
+    expect(placeHook.result.current.filteredPlaces[0]?.sortTime).toBe(5);
+    expect(placeHook.result.current.isFetchingNextPage).toBe(true);
+    expect(photoHook.result.current.filteredPhotos.map((item) => item.key)).toEqual(['photo-key']);
+    expect(photoHook.result.current.hasNextPage).toBe(true);
+    expect(peopleHook.result.current.filteredUsers.map((item) => item.id)).toEqual([
+      otherOwner.id, owner.id,
+    ]);
+    expect(peopleHook.result.current.isInitialLoading).toBe(false);
+    expect(invalidTabHook.result.current.filteredListItems).toHaveLength(1);
+    expect(listHook.result.current.refreshing).toBe(true);
+    expect(listHook.result.current.hasPartialDataError).toBe(false);
   });
 });

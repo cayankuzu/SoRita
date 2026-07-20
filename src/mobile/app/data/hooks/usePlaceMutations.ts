@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { onlineManager, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   applyOptimisticCommentCreate,
@@ -7,8 +7,8 @@ import {
   applyOptimisticCommentUpdate,
   applyOptimisticPlaceDelete,
   applyOptimisticPlaceLike,
-  socialMutationScope,
 } from '@/mobile/app/data/query/optimisticSocialCache';
+import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
 import {
   buildDualOptimisticMutation,
   buildOptimisticMutation,
@@ -25,7 +25,8 @@ import {
   toggleLikePlaceComment,
   updatePlaceComment,
 } from '@/mobile/app/data/repositories/placesRepository';
-import { createUuid } from '@/shared/utils/id';
+import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
+import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 
 export function useDeletePlaceMutation() {
   const queryClient = useQueryClient();
@@ -42,10 +43,11 @@ export function useDeletePlaceMutation() {
 export function useToggleLikePlaceMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
+  const mutationScope = useMutationScope('place-like');
 
   return useMutation({
     mutationKey: ['place', 'like-toggle'],
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: { placeId: string; userId: string }) =>
       toggleLikePlace(input.placeId, input.userId),
     ...buildOptimisticMutation(queryClient, applyOptimisticPlaceLike),
@@ -57,17 +59,44 @@ export function useCreatePlaceCommentMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
   const invalidatePlaceComments = useInvalidatePlaceComments();
+  const mutationScope = useMutationScope('comment-create');
 
   return useMutation({
     mutationKey: ['place-comment', 'create'],
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: {
+      commentId: string;
       placeId: string;
       userId: string;
       content: string;
       parentCommentId?: string | null;
-    }) => createPlaceComment(input.placeId, input.userId, input.content, input.parentCommentId),
+    }) => {
+      if (!onlineManager.isOnline()) {
+        return enqueueDurableOutboxEntry({
+          idempotencyKey: `comment-create:${input.commentId}`,
+          kind: 'comment-create',
+          payloadRef: {
+            commentId: input.commentId,
+            content: input.content,
+            parentCommentId: input.parentCommentId ?? null,
+            placeId: input.placeId,
+          },
+          userId: input.userId,
+        }).then(() => {
+          trackEvent({ name: 'outbox_enqueued', params: { operation: 'comment-create' } });
+        });
+      }
+
+      return createPlaceComment(
+        input.placeId,
+        input.userId,
+        input.content,
+        input.parentCommentId,
+        input.commentId,
+      );
+    },
     ...buildDualOptimisticMutation(queryClient, (qc, input: {
+      commentId: string;
       placeId: string;
       userId: string;
       content: string;
@@ -75,7 +104,6 @@ export function useCreatePlaceCommentMutation() {
     }) =>
       applyOptimisticCommentCreate(qc, {
         ...input,
-        commentId: createUuid(),
         content: input.content.trim(),
       }),
     ),
@@ -90,10 +118,11 @@ export function useUpdatePlaceCommentMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
   const invalidatePlaceComments = useInvalidatePlaceComments();
+  const mutationScope = useMutationScope('comment-update');
 
   return useMutation({
     mutationKey: ['place-comment', 'update'],
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: { commentId: string; userId: string; content: string }) =>
       updatePlaceComment(input.commentId, input.userId, input.content),
     ...buildDualOptimisticMutation(queryClient, (qc, input: { commentId: string; content: string }) =>
@@ -113,10 +142,11 @@ export function useDeletePlaceCommentMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
   const invalidatePlaceComments = useInvalidatePlaceComments();
+  const mutationScope = useMutationScope('comment-delete');
 
   return useMutation({
     mutationKey: ['place-comment', 'delete'],
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (commentId: string) => deletePlaceComment(commentId),
     ...buildDualOptimisticMutation(queryClient, applyOptimisticCommentDelete),
     onSettled: () => {
@@ -130,10 +160,11 @@ export function useToggleLikePlaceCommentMutation() {
   const queryClient = useQueryClient();
   const invalidateVisibleData = useInvalidateVisibleData();
   const invalidatePlaceComments = useInvalidatePlaceComments();
+  const mutationScope = useMutationScope('comment-like');
 
   return useMutation({
     mutationKey: ['place-comment', 'like-toggle'],
-    scope: socialMutationScope,
+    scope: mutationScope,
     mutationFn: (input: { commentId: string; userId: string }) =>
       toggleLikePlaceComment(input.commentId, input.userId),
     ...buildDualOptimisticMutation(queryClient, applyOptimisticCommentLike),

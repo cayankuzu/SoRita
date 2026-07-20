@@ -18,11 +18,6 @@ vi.mock('@/mobile/app/data/hooks/useVisibleDataQuery', () => ({
   useVisibleDataQuery: useVisibleDataQueryMock,
 }));
 
-vi.mock('@/mobile/app/data/query/readModelErrors', () => ({
-  isMissingReadModelError: (error: unknown) =>
-    Boolean(error && typeof error === 'object' && 'missingReadModel' in error),
-}));
-
 vi.mock('@/mobile/app/data/hooks/useUserMutations', () => ({
   useFollowUserMutation: useFollowUserMutationMock,
   useReportUserMutation: useReportUserMutationMock,
@@ -78,16 +73,24 @@ describe('useUserProfileScreenState', () => {
     };
 
     useProfileReadModelQueryMock.mockReturnValue({
-      error: { missingReadModel: true },
+      error: new Error('Request timed out after 8000ms'),
       fetchNextPage: vi.fn(),
       hasNextPage: false,
-      hasPartialDataError: false,
+      hasPartialDataError: true,
       isFetchingNextPage: false,
       isLoading: false,
-      lists: [],
-      places: [],
+      lists: [publicList],
+      places: [{
+        key: 'place-1:list-1', listId: 'list-1', listIsPublic: true,
+        ownerId: 'target', memberships: [], place: publicList.places[0], sortTime: 1,
+      }],
       refetch: vi.fn().mockResolvedValue(undefined),
-      summary: undefined,
+      summary: {
+        canViewContent: true, followerCount: 1, followingCount: 0,
+        isBlockedByViewer: false, isBlockingViewer: false,
+        user: targetUser, viewerHasFollowed: true,
+        viewerHasPendingFollowRequest: false,
+      },
     });
     useVisibleDataQueryMock.mockReturnValue({
       data: {
@@ -179,7 +182,7 @@ describe('useUserProfileScreenState', () => {
     };
 
     useProfileReadModelQueryMock.mockReturnValue({
-      error: { missingReadModel: true },
+      error: null,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       hasPartialDataError: false,
@@ -188,7 +191,12 @@ describe('useUserProfileScreenState', () => {
       lists: [],
       places: [],
       refetch: vi.fn().mockResolvedValue(undefined),
-      summary: undefined,
+      summary: {
+        canViewContent: false, followerCount: 1, followingCount: 1,
+        isBlockedByViewer: true, isBlockingViewer: false,
+        user: targetUser, viewerHasFollowed: false,
+        viewerHasPendingFollowRequest: true,
+      },
     });
     useVisibleDataQueryMock.mockReturnValue({
       data: {
@@ -258,8 +266,8 @@ describe('useUserProfileScreenState', () => {
     expect(missingHook.result.current.profileUser).toBeUndefined();
     expect(missingHook.result.current.currentUser).toBeNull();
     expect(missingHook.result.current.isFollowing).toBe(false);
-    expect(missingHook.result.current.isOwnProfile).toBe(true);
-    expect(missingHook.result.current.canViewProfileContent).toBe(true);
+    expect(missingHook.result.current.isOwnProfile).toBe(false);
+    expect(missingHook.result.current.canViewProfileContent).toBe(false);
 
     await expect(missingHook.result.current.followUser()).rejects.toThrow(
       'Takip işlemi için kullanıcı bulunamadı.',
@@ -269,5 +277,130 @@ describe('useUserProfileScreenState', () => {
     );
     await expect(missingHook.result.current.blockUser()).rejects.toThrow('Kullanıcı bulunamadı.');
     await expect(missingHook.result.current.unblockUser()).rejects.toThrow('Kullanıcı bulunamadı.');
+  });
+
+  it('uses the profile read model for pagination, privacy, counts, and refresh recovery', async () => {
+    const profileRefetch = vi.fn().mockRejectedValue(new Error('profile unavailable'));
+    const contextRefetch = vi.fn().mockResolvedValue(undefined);
+    const currentUser = {
+      id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
+    };
+    const targetUser = {
+      id: 'target', email: 'target@example.com', name: 'Target', username: 'target',
+      isPublicAccount: false,
+    };
+    const follower = {
+      id: 'follower', email: 'follower@example.com', name: 'Follower', username: 'follower',
+    };
+    const following = {
+      id: 'following', email: 'following@example.com', name: 'Following', username: 'following',
+    };
+    const publicList = {
+      id: 'public-list', userId: 'target', name: 'Public', isPublic: true, places: [],
+      createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-02T00:00:00.000Z',
+    };
+    const privateList = { ...publicList, id: 'private-list', name: 'Private', isPublic: false };
+    const publicPlace = {
+      key: 'public-place', ownerId: 'target', owner: targetUser, listId: 'public-list',
+      listName: 'Public', listIsPublic: true, memberships: [], sortTime: 2,
+      place: {
+        id: 'place-1', name: 'Cafe', lat: 1, lng: 2,
+        photos: ['https://cdn.example.com/place.jpg'], addedAt: '2025-01-01T00:00:00.000Z',
+      },
+    };
+    const privatePlace = {
+      ...publicPlace, key: 'private-place', listId: 'private-list', listIsPublic: false,
+      place: { ...publicPlace.place, id: 'place-2', photos: [] },
+    };
+    const fetchNextPage = vi.fn().mockResolvedValue(undefined);
+    const summary = {
+      user: targetUser,
+      canViewContent: true,
+      followerCount: 8,
+      followingCount: 6,
+      isBlockedByViewer: false,
+      isBlockingViewer: false,
+      viewerHasFollowed: false,
+      viewerHasPendingFollowRequest: true,
+    };
+
+    useProfileReadModelQueryMock.mockReturnValue({
+      error: null, fetchNextPage, hasNextPage: true, hasPartialDataError: true,
+      isFetchingNextPage: true, isLoading: false,
+      lists: [privateList, publicList], places: [privatePlace, publicPlace],
+      refetch: profileRefetch, summary,
+    });
+    useVisibleDataQueryMock.mockReturnValue({
+      data: {
+        users: [currentUser, follower, following],
+        allUsers: [
+          { ...targetUser, followers: ['follower', 'missing'], following: ['following', 'missing'] },
+        ],
+        blockRows: [], lists: [], currentUser,
+      },
+      error: null, hasPartialDataError: false, isLoading: false, refetch: contextRefetch,
+    });
+    useFollowUserMutationMock.mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue('requested') });
+    useReportUserMutationMock.mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue(undefined) });
+    useBlockUserMutationMock.mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue(undefined) });
+    useUnblockUserMutationMock.mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue(undefined) });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: true,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/profile/application/useUserProfileScreenState');
+    const hook = renderHook(() =>
+      hooks.useUserProfileScreenState({
+        activeTab: 'gallery', allowBlockedView: false, user: currentUser, userId: 'target',
+      }),
+    );
+
+    expect(hook.result.current.profileUser).toMatchObject({
+      id: 'target', followers: ['follower', 'missing'], following: ['following', 'missing'],
+    });
+    expect(hook.result.current.isFollowing).toBe(false);
+    expect(hook.result.current.hasPendingFollowRequest).toBe(true);
+    expect(hook.result.current.canViewProfileContent).toBe(true);
+    expect(hook.result.current.publicLists.map((item) => item.id)).toEqual(['public-list']);
+    expect(hook.result.current.allPlaces.map((item) => item.key)).toEqual(['public-place']);
+    expect(hook.result.current.allPhotos.map((item) => item.key)).toEqual(['public-place']);
+    expect(hook.result.current.followerUsers.map((item) => item.id)).toEqual(['follower']);
+    expect(hook.result.current.followingUsers.map((item) => item.id)).toEqual(['following']);
+    expect(hook.result.current.followerCount).toBe(8);
+    expect(hook.result.current.followingCount).toBe(6);
+    expect(hook.result.current.fetchNextPage).toBe(fetchNextPage);
+    expect(hook.result.current.hasNextPage).toBe(true);
+    expect(hook.result.current.isFetchingNextPage).toBe(true);
+    expect(hook.result.current.hasPartialDataError).toBe(true);
+    expect(hook.result.current.isInitialLoading).toBe(false);
+    expect(hook.result.current.refreshing).toBe(true);
+
+    await hook.result.current.retry();
+    expect(profileRefetch).toHaveBeenCalledOnce();
+    expect(contextRefetch).toHaveBeenCalledOnce();
+
+    useProfileReadModelQueryMock.mockReturnValue({
+      error: new Error('read model failed'), fetchNextPage: undefined, hasNextPage: false,
+      hasPartialDataError: false, isFetchingNextPage: false, isLoading: true,
+      lists: [publicList], places: [publicPlace], refetch: vi.fn().mockResolvedValue(undefined),
+      summary: {
+        ...summary, canViewContent: false, isBlockingViewer: true,
+        viewerHasFollowed: true, viewerHasPendingFollowRequest: false,
+      },
+    });
+    const blockedHook = renderHook(() =>
+      hooks.useUserProfileScreenState({
+        allowBlockedView: false, user: currentUser, userId: 'target',
+      }),
+    );
+
+    expect(blockedHook.result.current.isBlockedByTarget).toBe(true);
+    expect(blockedHook.result.current.isFollowing).toBe(true);
+    expect(blockedHook.result.current.hasPendingFollowRequest).toBe(false);
+    expect(blockedHook.result.current.canViewProfileContent).toBe(false);
+    expect(blockedHook.result.current.publicLists).toEqual([]);
+    expect(blockedHook.result.current.isInitialLoading).toBe(false);
+    expect(blockedHook.result.current.errorMessage).not.toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MapView, {
   Marker,
   PROVIDER_GOOGLE,
@@ -8,6 +8,11 @@ import MapView, {
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
+import {
+  clusterMapMarkers,
+  type MapMarkerCluster,
+} from '@/mobile/app/shared/components/maps/mapMarkerClustering';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 const DEFAULT_LATITUDE = 39.9334;
@@ -100,12 +105,31 @@ function buildRegion(places: SharedMapProps['places'], viewport: SharedMapProps[
 }
 
 function MapMarkerGlyph({
+  clusterCount,
   color,
   highlighted,
 }: {
+  clusterCount: number;
   color: string;
   highlighted: boolean;
 }) {
+  if (clusterCount > 1) {
+    return (
+      <View
+        pointerEvents="none"
+        style={[
+          styles.clusterMarker,
+          { backgroundColor: color },
+          highlighted ? styles.markerShellHighlighted : null,
+        ]}
+      >
+        <Text allowFontScaling={false} style={styles.clusterMarkerText}>
+          {clusterCount > 999 ? '999+' : clusterCount}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View
       pointerEvents="none"
@@ -162,6 +186,11 @@ function GoogleMapViewComponent({
   const viewportSignature = useMemo(() => getViewportSignature(viewport), [viewport]);
   const mapKey = `${interactive ? 'interactive' : 'static'}:${liteMode ? 'lite' : 'full'}:${instanceId}`;
   const initialRegion = buildRegion(places, viewport);
+  const [visibleRegion, setVisibleRegion] = useState<Region>(initialRegion);
+  const visibleMarkerClusters = useMemo(
+    () => clusterMapMarkers(places, visibleRegion),
+    [places, visibleRegion],
+  );
 
   useEffect(() => {
     setIsReady(false);
@@ -181,6 +210,25 @@ function GoogleMapViewComponent({
     lastHandledMarkerPress.current = { index, at: now };
     lastSelectionPressAt.current = now;
     onMarkerPress?.(index);
+  };
+
+  const commitClusterPress = (cluster: MapMarkerCluster) => {
+    if (cluster.memberIndices.length === 1) {
+      commitMarkerPress(cluster.memberIndices[0]);
+      return;
+    }
+
+    lastSelectionPressAt.current = Date.now();
+    mapRef.current?.fitToCoordinates(
+      cluster.memberIndices.map((index) => ({
+        latitude: places[index].lat,
+        longitude: places[index].lng,
+      })),
+      {
+        animated: true,
+        edgePadding: FIT_EDGE_PADDING,
+      },
+    );
   };
 
   useEffect(() => {
@@ -330,6 +378,7 @@ function GoogleMapViewComponent({
           onMapGesture?.();
         }}
         onMapReady={() => setIsReady(true)}
+        onRegionChangeComplete={setVisibleRegion}
         onPoiClick={(event) => {
           if (!interactive || !onPoiPress) {
             return;
@@ -358,23 +407,32 @@ function GoogleMapViewComponent({
           });
         }}
       >
-        {places.map((place, index) => {
-          const isHighlighted = highlightedIndex === index || focusIndex === index;
+        {visibleMarkerClusters.map((cluster) => {
+          const isHighlighted = cluster.memberIndices.some(
+            (index) => highlightedIndex === index || focusIndex === index,
+          );
 
           return (
             <Marker
-              key={`${place.name}-${place.lat}-${place.lng}-${index}`}
-              coordinate={{ latitude: place.lat, longitude: place.lng }}
+              accessibilityLabel={
+                cluster.memberIndices.length > 1
+                  ? tr.map.clusterMarkerLabel(cluster.memberIndices.length)
+                  : places[cluster.memberIndices[0]]?.name || tr.common.place
+              }
+              accessibilityRole="button"
+              key={cluster.memberIndices.join(':')}
+              coordinate={{ latitude: cluster.lat, longitude: cluster.lng }}
               anchor={{ x: 0.5, y: 1 }}
               tracksViewChanges={false}
               zIndex={isHighlighted ? 2 : 1}
               onPress={(event) => {
                 event.stopPropagation?.();
-                commitMarkerPress(index);
+                commitClusterPress(cluster);
               }}
             >
               <MapMarkerGlyph
-                color={place.markerColor || colors.secondary}
+                clusterCount={cluster.memberIndices.length}
+                color={cluster.markerColor || colors.secondary}
                 highlighted={isHighlighted}
               />
             </Marker>
@@ -447,5 +505,20 @@ const styles = StyleSheet.create({
       width: 0,
       height: 5,
     },
+  },
+  clusterMarker: {
+    alignItems: 'center',
+    borderColor: colors.surface,
+    borderRadius: 22,
+    borderWidth: 3,
+    height: 44,
+    justifyContent: 'center',
+    minWidth: 44,
+    paddingHorizontal: 6,
+  },
+  clusterMarkerText: {
+    color: colors.surface,
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

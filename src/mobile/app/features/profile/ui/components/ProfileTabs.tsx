@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from "react-native";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react-native";
 
 import { InstantPressable } from "@/mobile/app/shared/components/ui/InstantPressable";
+import { tr } from "@/mobile/app/shared/i18n/tr";
 import { colors } from "@/mobile/app/shared/theme/tokens";
 
 export type ProfileTabOption = {
@@ -127,7 +128,7 @@ export function ProfileTabs({
         </View>
         {showFilterControls ? (
           <InstantPressable
-            accessibilityLabel="Gorunurluk filtresi"
+        accessibilityLabel={tr.profile.visibilityFilter}
             accessibilityRole="button"
             accessibilityState={{ expanded: filterOpen }}
             onPress={onFilterToggle}

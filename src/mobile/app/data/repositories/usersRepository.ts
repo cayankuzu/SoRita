@@ -1,4 +1,7 @@
 import type { User } from '@/mobile/app/data/contracts/entities';
+import { onlineManager } from '@tanstack/react-query';
+import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
+import { deleteStorageAssetsWithRetry } from '@/mobile/app/data/outbox/mediaCleanupOutbox';
 import { submitModerationReport } from '@/mobile/app/data/repositories/moderationReports';
 import {
   fetchBlockState,
@@ -8,7 +11,7 @@ import { env } from '@/mobile/app/platform/config/env';
 import { getFunctionUrl } from '@/mobile/app/platform/api/edgeFunctions';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { createSignedEdgeHeaders } from '@/mobile/app/platform/security/requestSigning';
-import { deleteStorageAssetsByUrls, uploadImageAsset } from '@/mobile/app/platform/supabase/media';
+import { uploadImageAsset } from '@/mobile/app/platform/supabase/media';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { assertNoObjectionableContent } from '@/mobile/app/shared/utils/contentModeration';
@@ -151,16 +154,15 @@ export async function updateUser(user: User) {
   }
 
   void Promise.resolve(
-    deleteStorageAssetsByUrls({
+    deleteStorageAssetsWithRetry({
       bucket: 'profile-media',
       urls: [
         previousUser?.profilePhoto && previousUser.profilePhoto !== profilePhoto ? previousUser.profilePhoto : undefined,
         previousUser?.coverPhoto && previousUser.coverPhoto !== coverPhoto ? previousUser.coverPhoto : undefined,
       ],
+      userId: user.id,
     }),
-  ).catch((cleanupError) => {
-    logger.warn('users', 'Failed to clean up replaced profile media assets', cleanupError);
-  });
+  );
 
   return {
     ...user,
@@ -234,6 +236,16 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
     throw new Error(tr.profile.userActions.cannotBlockSelf);
   }
 
+  if (!onlineManager.isOnline()) {
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `user-block-state:${currentUserId}:${targetUserId}`,
+      kind: 'user-block-state',
+      payloadRef: { blocked: true, targetUserId },
+      userId: currentUserId,
+    });
+    return;
+  }
+
   const { error } = await supabase.from('user_blocks').upsert(
     {
       blocker_user_id: currentUserId,
@@ -266,6 +278,16 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
 }
 
 export async function unblockUser(currentUserId: string, targetUserId: string) {
+  if (!onlineManager.isOnline()) {
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `user-block-state:${currentUserId}:${targetUserId}`,
+      kind: 'user-block-state',
+      payloadRef: { blocked: false, targetUserId },
+      userId: currentUserId,
+    });
+    return;
+  }
+
   const { error } = await supabase
     .from('user_blocks')
     .delete()

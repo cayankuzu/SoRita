@@ -34,6 +34,10 @@ type StorageBucketLike = {
 };
 
 type AdminClientLike = RateLimitAdminClientLike & {
+  rpc: (
+    functionName: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data?: unknown; error?: ErrorLike | null }>;
   auth: {
     admin: {
       deleteUser: (userId: string, hardDelete: boolean) => Promise<{ error?: ErrorLike | null }>;
@@ -48,6 +52,31 @@ type AdminClientLike = RateLimitAdminClientLike & {
     from: (bucket: string) => StorageBucketLike;
   };
 };
+
+type AccountDeletionStep =
+  | 'requested'
+  | 'storage_deleted'
+  | 'notifications_deleted'
+  | 'auth_delete_started'
+  | 'completed'
+  | 'failed';
+
+async function recordAccountDeletionStep(
+  adminClient: AdminClientLike,
+  userId: string,
+  step: AccountDeletionStep,
+  error?: string,
+) {
+  const { error: ledgerError } = await adminClient.rpc('record_account_deletion_step', {
+    p_error: error ?? null,
+    p_step: step,
+    p_user_id: userId,
+  });
+
+  if (ledgerError) {
+    throw new Error(ledgerError.message);
+  }
+}
 
 export type DeleteUserHandlerConfig = {
   allowedOrigins: string[];
@@ -247,23 +276,39 @@ export function createDeleteUserHandler({
         );
       }
 
-      await deleteBucketFolder(adminClient, 'profile-media', userId);
-      await deleteBucketFolder(adminClient, 'place-media', userId);
-      await deleteBucketFolder(adminClient, 'place-media-private', userId);
+      await recordAccountDeletionStep(adminClient, userId, 'requested');
 
-      const { error: deleteActorNotificationsError } = await adminClient
-        .from('notifications')
-        .delete()
-        .eq('actor_user_id', userId);
+      try {
+        await deleteBucketFolder(adminClient, 'profile-media', userId);
+        await deleteBucketFolder(adminClient, 'place-media', userId);
+        await deleteBucketFolder(adminClient, 'place-media-private', userId);
+        await recordAccountDeletionStep(adminClient, userId, 'storage_deleted');
 
-      if (deleteActorNotificationsError) {
-        throw new Error(deleteActorNotificationsError.message);
-      }
+        const { error: deleteActorNotificationsError } = await adminClient
+          .from('notifications')
+          .delete()
+          .eq('actor_user_id', userId);
 
-      const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId, false);
+        if (deleteActorNotificationsError) {
+          throw new Error(deleteActorNotificationsError.message);
+        }
+        await recordAccountDeletionStep(adminClient, userId, 'notifications_deleted');
 
-      if (deleteError) {
-        throw new Error(deleteError.message);
+        await recordAccountDeletionStep(adminClient, userId, 'auth_delete_started');
+        const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId, false);
+
+        if (deleteError) {
+          throw new Error(deleteError.message);
+        }
+        await recordAccountDeletionStep(adminClient, userId, 'completed');
+      } catch (error) {
+        await recordAccountDeletionStep(
+          adminClient,
+          userId,
+          'failed',
+          error instanceof Error ? error.message : 'unknown',
+        ).catch(() => undefined);
+        throw error;
       }
 
       return jsonResponse(

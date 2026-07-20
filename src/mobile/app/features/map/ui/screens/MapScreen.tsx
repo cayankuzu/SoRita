@@ -16,8 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useMapScreenState } from '@/mobile/app/features/map/application/useMapScreenState';
-import { PlaceEditorModal } from '@/mobile/app/features/map/ui/components/PlaceEditorModal';
-import { PlacePreviewModal } from '@/mobile/app/features/map/ui/components/PlacePreviewModal';
 import { env } from '@/mobile/app/platform/config/env';
 import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
@@ -25,6 +23,26 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
+
+type PlaceEditorModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/map/ui/components/PlaceEditorModal')['PlaceEditorModal']
+>;
+type PlacePreviewModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/map/ui/components/PlacePreviewModal')['PlacePreviewModal']
+>;
+
+function DeferredPlaceEditorModal(props: PlaceEditorModalProps) {
+  const { PlaceEditorModal } = require('@/mobile/app/features/map/ui/components/PlaceEditorModal') as
+    typeof import('@/mobile/app/features/map/ui/components/PlaceEditorModal');
+  return <PlaceEditorModal {...props} />;
+}
+
+function DeferredPlacePreviewModal(props: PlacePreviewModalProps) {
+  const { PlacePreviewModal } = require('@/mobile/app/features/map/ui/components/PlacePreviewModal') as
+    typeof import('@/mobile/app/features/map/ui/components/PlacePreviewModal');
+  return <PlacePreviewModal {...props} />;
+}
 
 export function MapScreen() {
   const navigation = useAppNavigation();
@@ -57,6 +75,7 @@ export function MapScreen() {
     isEditorInteractionLocked,
     isSearching,
     isLocating,
+    isMapInitialLoading,
     lists,
     locationErrorMessage,
     locationPermissionDenied,
@@ -84,6 +103,12 @@ export function MapScreen() {
     unlockEditorAfterSaveFailure,
     visibleDataErrorMessage,
   } = useMapScreenState({ user });
+  useScreenPerformanceMetric({
+    hasContent: mapPlaces.length > 0,
+    hasError: Boolean(visibleDataErrorMessage),
+    isLoading: isMapInitialLoading,
+    screen: 'map',
+  });
   const locateButtonBottomOffset = Math.max(insets.bottom, 8) + 8;
   const searchLayerTopOffset = Platform.OS === 'ios' ? 10 : 12;
   const markerFilterOptions = React.useMemo(
@@ -174,8 +199,8 @@ export function MapScreen() {
             {env.isExpoGo ? (
               <InlineNotice
                 tone="warning"
-                title="Android Expo Go harita kısıtı"
-                description="Bu emülatör şu an Expo Go ile açılıyor. Android native Google Maps, Expo Go paketinde gerekli yetkileri alamadığı için boş görünebilir. Gerçek SoRita geliştirici build'inde harita düzgün yüklenir."
+                title={tr.system.expoGoMapLimitationTitle}
+                description={tr.system.expoGoMapLimitationDescription}
               />
             ) : null}
 
@@ -435,39 +460,43 @@ export function MapScreen() {
         </View>
       </Screen>
 
-      <PlacePreviewModal
-        visible={selectedExistingEntries.length > 0}
-        entries={selectedExistingEntries}
-        markerColor={selectedExistingMarkerColor}
-        onRefresh={onRefresh}
-        onClose={closeSelectedExistingPlace}
-        onCreatePlaceCard={createPlaceCardForSelectedLocation}
-        onMinimize={minimizeSelectedExistingPlace}
-        onOpenList={(list, placeId) => {
-          closeSelectedExistingPlace();
-          openStackScreen(navigation, 'ListDetail', { listId: list.id, placeId });
-        }}
-      />
+      {selectedExistingEntries.length > 0 ? (
+        <DeferredPlacePreviewModal
+          visible
+          entries={selectedExistingEntries}
+          markerColor={selectedExistingMarkerColor}
+          onRefresh={onRefresh}
+          onClose={closeSelectedExistingPlace}
+          onCreatePlaceCard={createPlaceCardForSelectedLocation}
+          onMinimize={minimizeSelectedExistingPlace}
+          onOpenList={(list, placeId) => {
+            closeSelectedExistingPlace();
+            openStackScreen(navigation, 'ListDetail', { listId: list.id, placeId });
+          }}
+        />
+      ) : null}
 
-      <PlaceEditorModal
-        visible={Boolean(editorData)}
-        lat={editorData?.lat || 0}
-        lng={editorData?.lng || 0}
-        placeName={editorData?.name}
-        placeAddress={editorData?.address}
-        existingPlace={editorData?.existingPlace}
-        existingPlaceListName={editorData?.existingPlaceListName}
-        isInteractionLocked={isEditorInteractionLocked}
-        lists={lists}
-        draft={editorDraft}
-        onClose={closeEditor}
-        onMinimize={minimizeEditor}
-        onSaveError={unlockEditorAfterSaveFailure}
-        onSaveStart={beginEditorSave}
-        onSave={handleSavePlace}
-        onDelete={handleDeletePlace}
-        onCreateList={createList}
-      />
+      {editorData ? (
+        <DeferredPlaceEditorModal
+          visible
+          lat={editorData.lat}
+          lng={editorData.lng}
+          placeName={editorData.name}
+          placeAddress={editorData.address}
+          existingPlace={editorData.existingPlace}
+          existingPlaceListName={editorData.existingPlaceListName}
+          isInteractionLocked={isEditorInteractionLocked}
+          lists={lists}
+          draft={editorDraft}
+          onClose={closeEditor}
+          onMinimize={minimizeEditor}
+          onSaveError={unlockEditorAfterSaveFailure}
+          onSaveStart={beginEditorSave}
+          onSave={handleSavePlace}
+          onDelete={handleDeletePlace}
+          onCreateList={createList}
+        />
+      ) : null}
     </>
   );
 }
@@ -521,8 +550,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   clearButton: {
-    width: 30,
-    height: 30,
+    width: 48,
+    height: 48,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -534,8 +563,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBorder,
   },
   refreshButton: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -545,8 +574,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   filterButton: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

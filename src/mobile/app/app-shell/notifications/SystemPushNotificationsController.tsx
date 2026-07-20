@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
-import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/RootNavigator';
+import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
   presentForegroundSystemPushNotification,
   syncSystemPushNotifications,

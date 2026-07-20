@@ -50,6 +50,11 @@ export const queryKeys = {
     places: (viewerId: string, listId: string) =>
       [...queryKeys.list.all, 'places', viewerId, listId] as const,
   },
+  map: {
+    all: ['map'] as const,
+    markers: (viewerId: string) =>
+      [...queryKeys.map.all, 'markers', viewerId] as const,
+  },
   placeComments: {
     all: ['placeComments'] as const,
     list: (placeId: string, viewerId: string) =>

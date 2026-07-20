@@ -254,4 +254,82 @@ describe('useFeedActionBarState', () => {
     expect(hook.result.current.commentText).toBe('');
     expect(showToastMock).toHaveBeenCalled();
   });
+
+  it('guards absent callbacks, clamps count overrides, and clears deleted active comment state', async () => {
+    const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
+    expect(hooks.feedActionBarInternals.getErrorMessage(new Error('specific'), 'fallback')).toBe('specific');
+    expect(hooks.feedActionBarInternals.getErrorMessage(new Error(' '), 'fallback')).toBe('fallback');
+    expect(hooks.feedActionBarInternals.getErrorMessage('failure', 'fallback')).toBe('fallback');
+    const comment = {
+      id: 'comment-1', userId: 'user-1', userName: 'Ada', username: 'ada', content: 'hello',
+      createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+      replies: [],
+    };
+    const guardedHook = renderHook(() => hooks.useFeedActionBarState({
+      comments: [comment], commentCountOverride: -4,
+    }));
+    expect(guardedHook.result.current.commentCount).toBe(0);
+    await act(async () => {
+      await guardedHook.result.current.handleLikePress();
+      await guardedHook.result.current.handleCommentSubmit();
+      await guardedHook.result.current.handleDeleteComment(comment.id);
+      await guardedHook.result.current.handleRefreshComments();
+      await guardedHook.result.current.handleRefreshLikers();
+      await guardedHook.result.current.handleCommentReport(comment.id);
+      await guardedHook.result.current.handleCommentLikeToggle(comment.id);
+      await guardedHook.result.current.handleItemReport();
+    });
+
+    let releaseRefresh!: () => void;
+    const refreshPromise = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+    const onRefresh = vi.fn().mockReturnValue(refreshPromise);
+    const onCommentDelete = vi.fn().mockResolvedValue(undefined);
+    const hook = renderHook(() => hooks.useFeedActionBarState({
+      comments: [comment], onCommentDelete, onCommentSubmit: vi.fn(), onRefresh,
+    }));
+    act(() => {
+      hook.result.current.handleStartEdit(comment);
+      hook.result.current.setReplyingTo({
+        commentId: comment.id, userName: comment.userName, username: comment.username,
+      });
+      hook.result.current.setActiveReportCommentId(comment.id);
+      hook.result.current.setReportReason('spam');
+      hook.result.current.setReportDetails('details');
+    });
+    await act(async () => {
+      await hook.result.current.handleDeleteComment(comment.id);
+    });
+    expect(hook.result.current.editingCommentId).toBeNull();
+    expect(hook.result.current.replyingTo).toBeNull();
+    expect(hook.result.current.activeReportCommentId).toBeNull();
+    expect(hook.result.current.reportReason).toBe('');
+
+    let firstRefresh: Promise<void> | undefined;
+    await act(async () => {
+      firstRefresh = hook.result.current.handleRefreshComments();
+      await Promise.resolve();
+    });
+    await hook.result.current.handleRefreshComments();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    releaseRefresh();
+    await act(async () => {
+      await firstRefresh;
+    });
+
+    let firstLikerRefresh: Promise<void> | undefined;
+    const secondRefreshPromise = Promise.resolve();
+    onRefresh.mockReturnValue(secondRefreshPromise);
+    await act(async () => {
+      firstLikerRefresh = hook.result.current.handleRefreshLikers();
+      await firstLikerRefresh;
+    });
+    expect(onRefresh).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      hook.result.current.handleStartEdit(comment);
+      hook.result.current.setCommentText('edited');
+    });
+    await hook.result.current.handleCommentSubmit();
+    expect(hook.result.current.editingCommentId).toBe(comment.id);
+  });
 });

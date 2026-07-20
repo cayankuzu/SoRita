@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createEdgeRequestContext, logEdgeEvent } from '../_shared/edgeLogger.ts';
 import {
   corsPreflightResponse,
+  isHttpRequestError,
   jsonResponse,
   parseJsonBody,
 } from '../_shared/httpHelpers.ts';
@@ -185,6 +186,16 @@ export function createAdminBroadcastNotificationHandler({
         { requestId },
       );
     } catch (error) {
+      if (isHttpRequestError(error)) {
+        return jsonResponse(
+          request,
+          normalizedAllowedOrigins,
+          error.status,
+          { code: error.code, error: error.message },
+          { requestId },
+        );
+      }
+
       logEdgeEvent('error', 'Unhandled admin-broadcast-notification error', requestContext, {
         error: error instanceof Error ? error.message : 'Unknown admin broadcast error',
       });

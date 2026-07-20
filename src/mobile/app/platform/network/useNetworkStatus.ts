@@ -7,6 +7,7 @@ import { showToast } from '@/mobile/app/platform/feedback/toast';
 import {
   getConnectivityStatusFromHttpProbe,
   getConnectivityStatusFromProbeFailure,
+  setCurrentConnectionStatus,
   type ConnectionStatus,
 } from '@/mobile/app/platform/network/connectivityStatus';
 import {
@@ -15,6 +16,7 @@ import {
   type NetworkReachabilityState,
 } from '@/mobile/app/platform/network/netInfoAdapter';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 
 const CONNECTIVITY_CHECK_PATH = '/auth/v1/health';
 const CONNECTIVITY_TIMEOUT_MS = 5000;
@@ -33,8 +35,8 @@ function getConnectivityCheckUrl() {
  * - Shows user-friendly toast on status change
  */
 export function useNetworkStatus() {
-  const [status, setStatus] = useState<ConnectionStatus>('online');
-  const lastToastRef = useRef<ConnectionStatus>('online');
+  const [status, setStatus] = useState<ConnectionStatus>('unknown');
+  const lastToastRef = useRef<ConnectionStatus>('unknown');
 
   useEffect(() => {
     let disposed = false;
@@ -46,14 +48,19 @@ export function useNetworkStatus() {
       }
 
       setStatus(nextStatus);
+      setCurrentConnectionStatus(nextStatus);
       onlineManager.setOnline(nextStatus !== 'offline');
 
-      if (nextStatus === 'slow' && lastToastRef.current !== 'slow') {
+      if (
+        nextStatus === 'constrained' &&
+        lastToastRef.current !== 'constrained'
+      ) {
         showToast(tr.system.connectionSlow, 'info');
       }
 
       if (nextStatus === 'offline' && lastToastRef.current !== 'offline') {
         showToast(tr.system.connectionUnavailable, 'error');
+        trackEvent({ name: 'offline_entered', params: { source: 'connectivity-monitor' } });
       }
 
       lastToastRef.current = nextStatus;
@@ -103,12 +110,26 @@ export function useNetworkStatus() {
       }
 
       eventDebounceTimer = setTimeout(() => {
-        if (nextState.isConnected === false || nextState.isInternetReachable === false) {
+        if (
+          nextState.isConnected === false ||
+          nextState.isInternetReachable === false
+        ) {
           updateStatus('offline');
           return;
         }
 
-        if (nextState.isConnected === true || nextState.isInternetReachable === true) {
+        if (
+          nextState.details?.isConnectionExpensive === true ||
+          nextState.details?.cellularGeneration === '2g'
+        ) {
+          updateStatus('constrained');
+          return;
+        }
+
+        if (
+          nextState.isConnected === true ||
+          nextState.isInternetReachable === true
+        ) {
           void checkConnectivity();
         }
       }, CONNECTIVITY_EVENT_DEBOUNCE_MS);

@@ -2,14 +2,20 @@ import { supabase } from '@/mobile/app/platform/supabase/client';
 
 import {
   fetchNotifications,
-  fetchNotificationsPage,
+  fetchNotificationsCursorPage,
   type MobileNotification,
+  type NotificationCursor,
+  type NotificationPage,
 } from '@/mobile/app/data/repositories/notifications/notificationQueryHelpers';
 
-export type { MobileNotification } from '@/mobile/app/data/repositories/notifications/notificationQueryHelpers';
+export type {
+  MobileNotification,
+  NotificationCursor,
+  NotificationPage,
+} from '@/mobile/app/data/repositories/notifications/notificationQueryHelpers';
 
 export async function refreshNotifications(userId: string): Promise<MobileNotification[]> {
-  return fetchNotificationsPage(userId, 0, 20);
+  return fetchNotificationsCursorPage({ pageSize: 20, userId });
 }
 
 export async function getNotifications(userId: string): Promise<MobileNotification[]> {
@@ -21,10 +27,41 @@ export async function getNotificationsPage(
   pageOffset: number,
   pageSize: number,
 ): Promise<MobileNotification[]> {
-  return fetchNotificationsPage(userId, pageOffset, pageSize);
+  if (pageOffset === 0) {
+    return fetchNotificationsCursorPage({ pageSize, userId });
+  }
+
+  const collected: MobileNotification[] = [];
+  let cursor: NotificationCursor | undefined;
+
+  while (collected.length < pageOffset + pageSize) {
+    const page = await fetchNotificationsCursorPage({
+      cursor,
+      pageSize: Math.min(50, pageOffset + pageSize - collected.length),
+      userId,
+    });
+    collected.push(...page);
+
+    if (!page.nextCursor) {
+      break;
+    }
+
+    cursor = page.nextCursor;
+  }
+
+  return collected.slice(pageOffset, pageOffset + pageSize);
 }
 
-export async function getNotificationCount(userId: string): Promise<number> {
+export function getNotificationsCursorPage(params: {
+  cursor?: NotificationCursor | null;
+  pageSize: number;
+  signal?: AbortSignal;
+  userId: string;
+}): Promise<NotificationPage> {
+  return fetchNotificationsCursorPage(params);
+}
+
+export async function getNotificationCount(_userId: string): Promise<number> {
   const { data, error } = await supabase.rpc('notification_unread_count');
 
   if (!error && typeof data === 'number') {
@@ -38,8 +75,11 @@ export async function getNotificationCount(userId: string): Promise<number> {
     }
   }
 
-  const items = await fetchNotifications(userId);
-  return items.filter((item) => !item.read).length;
+  if (error) {
+    throw error;
+  }
+
+  throw new Error('Notification count response was invalid.');
 }
 
 export async function markNotificationRead(notificationId: string) {

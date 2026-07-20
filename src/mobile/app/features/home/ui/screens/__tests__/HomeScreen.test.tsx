@@ -7,6 +7,16 @@ const useHomeFeedScreenStateMock = vi.fn();
 const navigateMock = vi.fn();
 const openStackScreenMock = vi.fn();
 const buildAdaptiveFlatListPropsMock = vi.fn(() => ({}));
+const prefetchAppImagesMock = vi.fn().mockResolvedValue(true);
+
+vi.mock('@/mobile/app/app-shell/startup/startupDataWarmup', () => ({
+  warmListDetailData: vi.fn(),
+  warmUserProfileData: vi.fn(),
+}));
+
+vi.mock('@/mobile/app/data/query/queryClient', () => ({
+  queryClient: {},
+}));
 
 vi.mock('@react-navigation/native', () => ({
   useScrollToTop: vi.fn(),
@@ -42,7 +52,7 @@ vi.mock('@/mobile/app/shared/components/ui/EmptyState', () => ({
 
 vi.mock('@/mobile/app/shared/components/ui/AppImage', () => ({
   AppImage: () => null,
-  prefetchAppImages: vi.fn(),
+  prefetchAppImages: prefetchAppImagesMock,
 }));
 
 vi.mock('@/mobile/app/shared/components/ui/InlineNotice', () => ({
@@ -55,6 +65,9 @@ vi.mock('@/mobile/app/shared/components/ui/Screen', () => ({
 
 vi.mock('@/mobile/app/shared/i18n/tr', () => ({
   tr: {
+    common: {
+      loading: 'Yukleniyor',
+    },
     categories: {
       other: 'Diger',
     },
@@ -79,6 +92,7 @@ describe('HomeScreen', () => {
     buildAdaptiveFlatListPropsMock.mockClear();
     navigateMock.mockReset();
     openStackScreenMock.mockReset();
+    prefetchAppImagesMock.mockClear();
   });
 
   it('keeps hook order stable when loading resolves on rerender', async () => {
@@ -105,7 +119,16 @@ describe('HomeScreen', () => {
     };
     const loadedState = {
       ...loadingState,
-      feedItems: [{ key: 'item-1' }],
+      feedItems: [{
+        key: 'item-1',
+        listCoverImage: 'https://cdn.example/list.jpg',
+        owner: { profilePhoto: 'https://cdn.example/avatar.jpg' },
+        place: {
+          media: [
+            { type: 'photo', thumbnailUrl: 'https://cdn.example/thumb.jpg', url: 'https://cdn.example/photo.jpg' },
+          ],
+        },
+      }],
       isInitialLoading: false,
     };
     let isLoaded = false;
@@ -131,5 +154,10 @@ describe('HomeScreen', () => {
     }).not.toThrow();
 
     expect(buildAdaptiveFlatListPropsMock).toHaveBeenCalledTimes(2);
+    expect(prefetchAppImagesMock).toHaveBeenLastCalledWith([
+      'https://cdn.example/thumb.jpg',
+      'https://cdn.example/list.jpg',
+      'https://cdn.example/avatar.jpg',
+    ], { priority: 'high' });
   });
 });

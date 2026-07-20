@@ -4,6 +4,8 @@ import {
   FlatList,
   StyleSheet,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -24,16 +26,18 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
     info: VirtualizedDiscoveryGridRenderInfo<ItemT>,
   ) => React.ReactElement | null;
   listKey?: string;
-  listRef?: React.RefObject<FlatList<ItemT> | null>;
+  listRef?: React.Ref<FlatList<ItemT>>;
   ListEmptyComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
   ListHeaderComponent?: React.ReactElement | null;
   contentContainerStyle?: StyleProp<ViewStyle>;
   containsNativeMaps?: boolean;
   extraData?: unknown;
+  onContentSizeChange?: (width: number, height: number) => void;
   onRefresh?: () => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  onScrollOffsetChange?: (offset: number) => void;
   refreshing?: boolean;
 };
 
@@ -49,9 +53,11 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   contentContainerStyle,
   containsNativeMaps = true,
   extraData,
+  onContentSizeChange,
   onEndReached,
   onEndReachedThreshold = 0.55,
   onRefresh,
+  onScrollOffsetChange,
   refreshing = false,
 }: VirtualizedDiscoveryGridProps<ItemT>) {
   const bottomTabBarHeight = React.useContext(BottomTabBarHeightContext);
@@ -78,6 +84,12 @@ export function VirtualizedDiscoveryGrid<ItemT>({
         viewportWidth: width,
       }),
     [containsNativeMaps, data.length, height, width],
+  );
+  const handleScroll = React.useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onScrollOffsetChange?.(event.nativeEvent.contentOffset.y);
+    },
+    [onScrollOffsetChange],
   );
 
   return (
@@ -115,6 +127,9 @@ export function VirtualizedDiscoveryGrid<ItemT>({
       onRefresh={onRefresh}
       onEndReached={onEndReached}
       onEndReachedThreshold={onEndReachedThreshold}
+      onContentSizeChange={onContentSizeChange}
+      onScroll={onScrollOffsetChange ? handleScroll : undefined}
+      scrollEventThrottle={onScrollOffsetChange ? 16 : undefined}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={ListFooterComponent}

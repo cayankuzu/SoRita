@@ -39,6 +39,132 @@ type AuthFieldProps = Omit<
   status?: AuthFieldStatus;
 };
 
+type HelperTone = NonNullable<AuthFieldProps['helperTone']>;
+
+function AuthFieldStatusAccessory({
+  checking,
+  passwordToggleVisible,
+  tone,
+}: {
+  checking: boolean;
+  passwordToggleVisible: boolean;
+  tone: HelperTone;
+}) {
+  const style = [styles.statusIcon, passwordToggleVisible ? styles.statusIconWithToggle : null];
+
+  if (checking) {
+    return (
+      <ActivityIndicator
+        accessibilityElementsHidden
+        color={colors.primary}
+        importantForAccessibility="no-hide-descendants"
+        size="small"
+        style={style}
+      />
+    );
+  }
+
+  if (tone !== 'danger' && tone !== 'success') {
+    return null;
+  }
+
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={style}
+    >
+      {tone === 'success' ? (
+        <CircleCheck color={colors.secondary} size={17} />
+      ) : (
+        <CircleAlert color={colors.danger} size={17} />
+      )}
+    </View>
+  );
+}
+
+function PasswordVisibilityButton({
+  visible,
+  onToggle,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <IconButton
+      accessibilityLabel={visible ? tr.common.hidePassword : tr.common.showPassword}
+      accessibilityState={{ checked: visible }}
+      onPress={onToggle}
+      style={styles.passwordToggle}
+    >
+      {visible ? (
+        <EyeOff color={colors.textMuted} size={18} />
+      ) : (
+        <Eye color={colors.textMuted} size={18} />
+      )}
+    </IconButton>
+  );
+}
+
+function AuthFieldHelper({ id, message, tone }: { id: string; message?: string; tone: HelperTone }) {
+  return (
+    <View style={styles.helperSlot}>
+      {message ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          nativeID={id}
+          style={[
+            styles.helper,
+            tone === 'danger' ? styles.helperDanger : null,
+            tone === 'success' ? styles.helperSuccess : null,
+          ]}
+        >
+          {message}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function getAuthFieldHelper(
+  status: AuthFieldStatus | undefined,
+  helper: string | undefined,
+  value: string,
+  maxLength: number | undefined,
+) {
+  if (status?.message) {
+    return status.message;
+  }
+
+  if (helper) {
+    return helper;
+  }
+
+  return typeof maxLength === 'number'
+    ? buildCharacterLimitLabel(value, maxLength)
+    : undefined;
+}
+
+function getAuthFieldHelperTone(status: AuthFieldStatus | undefined, fallback: HelperTone) {
+  if (status?.kind === 'invalid' || status?.kind === 'server-error') {
+    return 'danger';
+  }
+
+  return status?.kind === 'valid' ? 'success' : fallback;
+}
+
+function getAutoCorrect(
+  provided: boolean | undefined,
+  autoCapitalize: NonNullable<AuthFieldProps['autoCapitalize']>,
+  secureTextEntry: boolean,
+) {
+  if (provided !== undefined) {
+    return provided;
+  }
+
+  return autoCapitalize !== 'none' && !secureTextEntry;
+}
+
 export function AuthField({
   label,
   placeholder,
@@ -72,20 +198,18 @@ export function AuthField({
   const shouldShowPasswordToggle = secureTextEntry;
   const shouldFloatLabel = focused || value.length > 0;
   const accessibilityLabel = providedAccessibilityLabel || label;
-  const autoCorrect =
-    restInputProps.autoCorrect ?? !(autoCapitalize === 'none' || secureTextEntry);
-  const valueLengthHelper =
-    typeof restInputProps.maxLength === 'number'
-      ? buildCharacterLimitLabel(value, restInputProps.maxLength)
-      : null;
-  const resolvedHelper = status?.message || helper || valueLengthHelper || undefined;
-  const resolvedHelperTone =
-    status?.kind === 'invalid' || status?.kind === 'server-error'
-      ? 'danger'
-      : status?.kind === 'valid'
-        ? 'success'
-        : helperTone;
-  const showStatusIcon = resolvedHelperTone === 'danger' || resolvedHelperTone === 'success';
+  const autoCorrect = getAutoCorrect(
+    restInputProps.autoCorrect,
+    autoCapitalize,
+    secureTextEntry,
+  );
+  const resolvedHelper = getAuthFieldHelper(
+    status,
+    helper,
+    value,
+    restInputProps.maxLength,
+  );
+  const resolvedHelperTone = getAuthFieldHelperTone(status, helperTone);
   const showCheckingIndicator = status?.kind === 'checking';
   const handleFocus = React.useCallback<NonNullable<TextInputProps['onFocus']>>(
     (event) => {
@@ -139,57 +263,19 @@ export function AuthField({
           autoCorrect={autoCorrect}
           style={[styles.input, shouldShowPasswordToggle ? styles.inputWithToggle : null]}
         />
-        {showStatusIcon ? (
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.statusIcon, shouldShowPasswordToggle ? styles.statusIconWithToggle : null]}
-        >
-            {resolvedHelperTone === 'success' ? (
-              <CircleCheck color={colors.secondary} size={17} />
-            ) : (
-              <CircleAlert color={colors.danger} size={17} />
-            )}
-          </View>
-        ) : showCheckingIndicator ? (
-          <ActivityIndicator
-            accessibilityElementsHidden
-            color={colors.primary}
-            importantForAccessibility="no-hide-descendants"
-            size="small"
-            style={[styles.statusIcon, shouldShowPasswordToggle ? styles.statusIconWithToggle : null]}
+        <AuthFieldStatusAccessory
+          checking={showCheckingIndicator}
+          passwordToggleVisible={shouldShowPasswordToggle}
+          tone={resolvedHelperTone}
+        />
+        {shouldShowPasswordToggle ? (
+          <PasswordVisibilityButton
+            visible={passwordVisible}
+            onToggle={() => setPasswordVisible((current) => !current)}
           />
         ) : null}
-        {shouldShowPasswordToggle ? (
-          <IconButton
-            accessibilityLabel={passwordVisible ? tr.common.hidePassword : tr.common.showPassword}
-            accessibilityState={{ checked: passwordVisible }}
-            onPress={() => setPasswordVisible((current) => !current)}
-            style={styles.passwordToggle}
-          >
-            {passwordVisible ? (
-              <EyeOff color={colors.textMuted} size={18} />
-            ) : (
-              <Eye color={colors.textMuted} size={18} />
-            )}
-          </IconButton>
-        ) : null}
       </View>
-      <View style={styles.helperSlot}>
-        {resolvedHelper ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            nativeID={helperId}
-            style={[
-              styles.helper,
-              resolvedHelperTone === 'danger' ? styles.helperDanger : null,
-              resolvedHelperTone === 'success' ? styles.helperSuccess : null,
-            ]}
-          >
-            {resolvedHelper}
-          </Text>
-        ) : null}
-      </View>
+      <AuthFieldHelper id={helperId} message={resolvedHelper} tone={resolvedHelperTone} />
     </View>
   );
 }

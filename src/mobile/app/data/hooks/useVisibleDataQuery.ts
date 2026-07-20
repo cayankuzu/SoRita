@@ -37,6 +37,19 @@ function getViewerId(userId?: string | null) {
   return userId || PUBLIC_VIEWER_ID;
 }
 
+function resolveVisibleQueryOptions(options: UseVisibleDataQueryOptions) {
+  return {
+    filterToViewerNetwork: options.filterToViewerNetwork ?? false,
+    includeLists: options.includeLists !== false,
+    includePlaceComments: options.includePlaceComments ?? false,
+    listId: options.listId,
+    listPageSize: options.listPageSize || DEFAULT_VISIBLE_LISTS_PAGE_SIZE,
+    ownerId: options.ownerId,
+    publicOnly: options.publicOnly ?? false,
+    queryEnabled: options.enabled ?? true,
+  };
+}
+
 function toVisibleDataContext(snapshot?: VisibleDataSnapshot): VisibleDataContext | undefined {
   if (!snapshot) {
     return undefined;
@@ -98,6 +111,75 @@ function mergeSnapshotLists(existingLists: VisibleDataSnapshot['lists'], nextLis
   );
 }
 
+function getInitialListsData(
+  includeLists: boolean,
+  hasListSnapshot: boolean,
+  snapshotLists: VisibleDataSnapshot['lists'],
+) {
+  if (!includeLists || !hasListSnapshot) {
+    return undefined;
+  }
+
+  return {
+    pages: [snapshotLists],
+    pageParams: [0],
+  };
+}
+
+function getVisibleQueryState(params: {
+  contextLoading: boolean;
+  includeLists: boolean;
+  initialListsData?: InfiniteData<VisibleDataSnapshot['lists'], number>;
+  listsData?: InfiniteData<VisibleDataSnapshot['lists'], number>;
+  listsError: unknown;
+  listsFetchingNextPage: boolean;
+  listsHasNextPage?: boolean;
+  listsLoading: boolean;
+  resolvedContext?: VisibleDataContext;
+}) {
+  const isWaitingForInitialLists = Boolean(
+    params.includeLists &&
+    params.resolvedContext &&
+    !params.listsData &&
+    !params.initialListsData &&
+    params.listsLoading,
+  );
+
+  return {
+    hasNextPage: Boolean(params.includeLists && params.listsHasNextPage),
+    hasPartialDataError: Boolean(
+      params.resolvedContext && params.listsError && params.includeLists,
+    ),
+    isFetchingNextPage: params.includeLists && params.listsFetchingNextPage,
+    isLoading: Boolean(
+      (!params.resolvedContext && params.contextLoading) || isWaitingForInitialLists,
+    ),
+    isWaitingForInitialLists,
+  };
+}
+
+function getSnapshotSeedState(params: {
+  hasCachedContext: boolean;
+  hasCachedLists: boolean;
+  hasContextSnapshot: boolean;
+  hasListSnapshot: boolean;
+  includeLists: boolean;
+}) {
+  const seedContext = !params.hasCachedContext && params.hasContextSnapshot;
+  const seedLists = Boolean(
+    params.includeLists && !params.hasCachedLists && params.hasListSnapshot,
+  );
+
+  return {
+    refetchContextOnMount: !params.hasCachedContext && !seedContext,
+    refetchListsOnMount: Boolean(
+      params.includeLists && !params.hasCachedLists && !seedLists,
+    ),
+    seedContext,
+    seedLists,
+  };
+}
+
 function buildSnapshotForCache(
   existingSnapshot: VisibleDataSnapshot | undefined,
   nextData: VisibleDataSnapshot,
@@ -135,20 +217,31 @@ function buildSnapshotForCache(
   };
 }
 
+export const visibleDataQueryInternals = {
+  buildSnapshotForCache,
+  getSnapshotLists,
+  getViewerId,
+  isFullSnapshotRequest,
+  mergeSnapshotLists,
+  toVisibleDataContext,
+};
+
 export function useVisibleDataQuery(
   userId?: string | null,
   options: UseVisibleDataQueryOptions = {},
 ) {
   const queryClient = useQueryClient();
-  const queryEnabled = options.enabled ?? true;
-  const filterToViewerNetwork = options.filterToViewerNetwork ?? false;
+  const {
+    filterToViewerNetwork,
+    includeLists,
+    includePlaceComments,
+    listId,
+    listPageSize,
+    ownerId,
+    publicOnly,
+    queryEnabled,
+  } = resolveVisibleQueryOptions(options);
   const viewerId = getViewerId(userId);
-  const includeLists = options.includeLists !== false;
-  const includePlaceComments = options.includePlaceComments ?? false;
-  const listId = options.listId;
-  const listPageSize = options.listPageSize || DEFAULT_VISIBLE_LISTS_PAGE_SIZE;
-  const ownerId = options.ownerId;
-  const publicOnly = options.publicOnly ?? false;
   const contextQueryKey = queryKeys.visibleData.context(viewerId);
   const listsQueryKey = queryKeys.visibleData.lists(viewerId, {
     includePlaceComments,
@@ -168,35 +261,43 @@ export function useVisibleDataQuery(
     queryKeys.visibleData.snapshot(viewerId),
   );
   const snapshotContext = toVisibleDataContext(cachedSnapshot);
-  const snapshotLists = getSnapshotLists(cachedSnapshot, {
-    includeLists,
-    includePlaceComments,
-    listId,
-    listPageSize,
-    ownerId,
-    publicOnly,
-  }, listPageSize);
+  const snapshotLists = useMemo(
+    () =>
+      getSnapshotLists(
+        cachedSnapshot,
+        {
+          includeLists,
+          includePlaceComments,
+          listId,
+          listPageSize,
+          ownerId,
+          publicOnly,
+        },
+        listPageSize,
+      ),
+    [cachedSnapshot, includeLists, includePlaceComments, listId, listPageSize, ownerId, publicOnly],
+  );
   const hasContextSnapshot = Boolean(snapshotContext);
   const hasListSnapshot = Boolean(cachedSnapshot);
-  const initialListsData = includeLists && hasListSnapshot
-    ? {
-        pages: [snapshotLists],
-        pageParams: [0],
-      }
-    : undefined;
-  const shouldSeedContextFromSnapshot = !hasCachedContextQuery && hasContextSnapshot;
-  const shouldSeedListsFromSnapshot = includeLists && !hasCachedListsQuery && hasListSnapshot;
-  const shouldRefetchContextOnMount = !hasCachedContextQuery && !shouldSeedContextFromSnapshot;
-  const shouldRefetchListsOnMount =
-    includeLists && !hasCachedListsQuery && !shouldSeedListsFromSnapshot;
+  const initialListsData = useMemo(
+    () => getInitialListsData(includeLists, hasListSnapshot, snapshotLists),
+    [hasListSnapshot, includeLists, snapshotLists],
+  );
+  const seedState = getSnapshotSeedState({
+    hasCachedContext: hasCachedContextQuery,
+    hasCachedLists: hasCachedListsQuery,
+    hasContextSnapshot,
+    hasListSnapshot,
+    includeLists,
+  });
 
   const contextQuery = useQuery({
     enabled: queryEnabled,
     queryKey: contextQueryKey,
     queryFn: () => fetchVisibleDataContext(userId),
-    initialData: shouldSeedContextFromSnapshot ? snapshotContext : undefined,
-    initialDataUpdatedAt: shouldSeedContextFromSnapshot ? 0 : undefined,
-    refetchOnMount: shouldRefetchContextOnMount,
+    initialData: seedState.seedContext ? snapshotContext : undefined,
+    initialDataUpdatedAt: seedState.seedContext ? 0 : undefined,
+    refetchOnMount: seedState.refetchContextOnMount,
     refetchOnReconnect: 'always',
     staleTime: VISIBLE_DATA_STALE_TIME_MS,
   });
@@ -210,8 +311,8 @@ export function useVisibleDataQuery(
   >({
     enabled: queryEnabled && includeLists && (Boolean(contextQuery.data) || hasContextSnapshot),
     initialPageParam: 0,
-    initialData: shouldSeedListsFromSnapshot ? initialListsData : undefined,
-    initialDataUpdatedAt: shouldSeedListsFromSnapshot ? 0 : undefined,
+    initialData: seedState.seedLists ? initialListsData : undefined,
+    initialDataUpdatedAt: seedState.seedLists ? 0 : undefined,
     queryKey: listsQueryKey,
     queryFn: ({ pageParam = 0 }) =>
       fetchVisibleListsPage({
@@ -244,7 +345,7 @@ export function useVisibleDataQuery(
         0,
       );
     },
-    refetchOnMount: shouldRefetchListsOnMount,
+    refetchOnMount: seedState.refetchListsOnMount,
     refetchOnReconnect: 'always',
     staleTime: VISIBLE_DATA_STALE_TIME_MS,
   });
@@ -255,20 +356,21 @@ export function useVisibleDataQuery(
       includeLists ? flattenPages(listsQuery.data || initialListsData) as VisibleDataSnapshot['lists'] : [],
     [includeLists, initialListsData, listsQuery.data],
   );
-  const isWaitingForInitialLists =
-    includeLists &&
-    Boolean(resolvedContext) &&
-    !listsQuery.data &&
-    !initialListsData &&
-    listsQuery.isLoading;
   const error = contextQuery.error || listsQuery.error || null;
-  const hasPartialDataError =
-    Boolean(resolvedContext) &&
-    Boolean(listsQuery.error) &&
-    includeLists;
+  const queryState = getVisibleQueryState({
+    contextLoading: contextQuery.isLoading,
+    includeLists,
+    initialListsData,
+    listsData: listsQuery.data,
+    listsError: listsQuery.error,
+    listsFetchingNextPage: listsQuery.isFetchingNextPage,
+    listsHasNextPage: listsQuery.hasNextPage,
+    listsLoading: listsQuery.isLoading,
+    resolvedContext,
+  });
 
   const data = useMemo<VisibleDataSnapshot | undefined>(() => {
-    if (!resolvedContext || isWaitingForInitialLists) {
+    if (!resolvedContext || queryState.isWaitingForInitialLists) {
       return undefined;
     }
 
@@ -276,7 +378,7 @@ export function useVisibleDataQuery(
       ...resolvedContext,
       lists,
     };
-  }, [isWaitingForInitialLists, lists, resolvedContext]);
+  }, [lists, queryState.isWaitingForInitialLists, resolvedContext]);
 
   useEffect(() => {
     if (!data) {
@@ -367,10 +469,10 @@ export function useVisibleDataQuery(
     data,
     error,
     fetchNextPage: includeLists ? listsQuery.fetchNextPage : undefined,
-    hasPartialDataError,
-    hasNextPage: includeLists ? listsQuery.hasNextPage : false,
-    isFetchingNextPage: includeLists ? listsQuery.isFetchingNextPage : false,
-    isLoading: (!resolvedContext && contextQuery.isLoading) || isWaitingForInitialLists,
+    hasPartialDataError: queryState.hasPartialDataError,
+    hasNextPage: queryState.hasNextPage,
+    isFetchingNextPage: queryState.isFetchingNextPage,
+    isLoading: queryState.isLoading,
     refetch,
   };
 }

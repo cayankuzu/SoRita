@@ -90,19 +90,21 @@ export function PlaceEditorNewListForm({
               </View>
               <View style={styles.coverPickerBody}>
                 <Text style={styles.coverPickerTitle}>
-                  {newListCoverImage ? 'Kapak secildi' : tr.placeEditor.chooseCoverPhoto}
+                  {newListCoverImage
+                    ? tr.placeEditor.newListCoverSelected
+                    : tr.placeEditor.chooseCoverPhoto}
                 </Text>
                 <Text style={styles.coverPickerHint}>
                   {newListCoverImage
-                    ? 'Degistirmek icin dokun.'
-                    : 'Liste kartinda genis alan olarak kullanilir.'}
+                    ? tr.placeEditor.newListCoverChangeHint
+                    : tr.placeEditor.newListCoverUsageHint}
                 </Text>
               </View>
             </View>
 
             {newListCoverImage ? (
               <InstantPressable
-                accessibilityLabel="Liste kapak onizlemesini buyut"
+              accessibilityLabel={tr.listEditor.coverPreviewExpand}
                 accessibilityRole="imagebutton"
                 disabled={isCreatingList || isPickingListCover}
                 onPress={(event) => {
@@ -111,13 +113,13 @@ export function PlaceEditorNewListForm({
                 }}
                 style={styles.selectionBadge}
               >
-                <Text style={styles.selectionBadgeText}>On izleme</Text>
+                <Text style={styles.selectionBadgeText}>{tr.common.previewTitle}</Text>
               </InstantPressable>
             ) : null}
           </View>
 
           <MediaSelectionPreview
-            accessibilityLabel="Yeni liste kapak onizlemesi"
+            accessibilityLabel={tr.listEditor.newCoverPreview}
             uri={newListCoverImage}
             variant="list-cover"
           />

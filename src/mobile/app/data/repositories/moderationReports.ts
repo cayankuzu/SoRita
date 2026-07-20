@@ -1,3 +1,7 @@
+import { onlineManager } from '@tanstack/react-query';
+
+import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
+import type { JsonValue } from '@/mobile/app/data/outbox/outboxStorage';
 import { callJsonEdgeFunction } from '@/mobile/app/platform/api/edgeFunctions';
 import { env } from '@/mobile/app/platform/config/env';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -27,6 +31,19 @@ export type ModerationReportPayload =
       targetUserId: string;
     });
 
+function getReportTargetId(payload: ModerationReportPayload) {
+  switch (payload.targetType) {
+    case 'comment':
+      return payload.commentId;
+    case 'list':
+      return payload.listId;
+    case 'place':
+      return payload.placeId;
+    case 'user':
+      return payload.targetUserId;
+  }
+}
+
 async function getReportAccessToken() {
   const {
     data: { session },
@@ -45,6 +62,20 @@ async function getReportAccessToken() {
 }
 
 export async function submitModerationReport(payload: ModerationReportPayload) {
+  if (!onlineManager.isOnline()) {
+    const { reporterUserId, ...reportPayload } = payload;
+    const payloadRef = Object.fromEntries(
+      Object.entries(reportPayload).filter(([, value]) => typeof value !== 'undefined'),
+    ) as JsonValue;
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `moderation-report:${reporterUserId}:${payload.targetType}:${getReportTargetId(payload)}:${payload.reason}`,
+      kind: 'moderation-report',
+      payloadRef,
+      userId: reporterUserId,
+    });
+    return;
+  }
+
   const accessToken = await getReportAccessToken();
 
   await callJsonEdgeFunction<{ success: true }>(

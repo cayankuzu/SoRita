@@ -1,4 +1,3 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
 import { createQueryClientWrapper, createTestQueryClient } from '@/mobile/app/test/queryTestUtils';
@@ -355,6 +354,7 @@ describe('usePlaceCardState', () => {
       userId: 'user-1',
     });
     expect(createPlaceCommentAsyncMock).toHaveBeenCalledWith({
+      commentId: 'generated-place-id',
       placeId: 'place-1',
       userId: 'user-1',
       content: 'new comment',
@@ -880,5 +880,177 @@ describe('usePlaceCardState', () => {
 
     expect(publicSourceHook.result.current.sourceAttributionUserId).toBe('user-3');
     expect(publicSourceHook.result.current.canOpenSourcePlaceCard).toBe(true);
+  });
+
+  it('enforces privacy and sanitizes recursive comment metadata at the pure boundary', async () => {
+    const { placeCardInternals } = await import(
+      '@/mobile/app/features/places/application/usePlaceCardState'
+    );
+    const viewer = {
+      id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
+      following: ['followed'],
+    };
+    const publicUser = {
+      id: 'public', email: 'public@example.com', name: 'Public', username: 'public',
+      isPublicAccount: true,
+    };
+    const privateUser = {
+      id: 'private', email: 'private@example.com', name: 'Private', username: 'private',
+      isPublicAccount: false, followers: [],
+    };
+    const followedUser = { ...privateUser, id: 'followed', username: 'followed' };
+    const followerUser = { ...privateUser, id: 'follower', username: 'follower', followers: ['viewer'] };
+    const hidden = new Set(['hidden']);
+
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, null, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(null, publicUser, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(null, privateUser, hidden)).toBe(false);
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, viewer, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(
+      viewer, { ...privateUser, id: 'hidden' }, hidden,
+    )).toBe(false);
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, publicUser, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, followedUser, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, followerUser, hidden)).toBe(true);
+    expect(placeCardInternals.canViewPrivateUserContent(viewer, privateUser, hidden)).toBe(false);
+
+    const comment = {
+      id: 'comment', userId: 'author', content: 'hello',
+      createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+      author: { userId: 'author', name: 'Author', username: 'author' },
+      likedBy: ['viewer', 'hidden'],
+      likeDetails: [
+        { userId: 'viewer', createdAt: '2025-01-02T00:00:00.000Z' },
+        { userId: 'hidden', createdAt: '2025-01-03T00:00:00.000Z' },
+      ],
+      replies: [
+        {
+          id: 'reply-visible', userId: 'viewer', content: 'reply',
+          createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+          likedBy: [], likeDetails: [], replies: [],
+        },
+        {
+          id: 'reply-hidden', userId: 'hidden', content: 'hidden',
+          createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    const sanitized = placeCardInternals.sanitizeCommentTree(comment, hidden);
+    expect(sanitized).toMatchObject({
+      likes: 1, likedBy: ['viewer'],
+      likeDetails: [{ userId: 'viewer' }],
+      replies: [{ id: 'reply-visible' }],
+    });
+    expect(placeCardInternals.sanitizeCommentTree(comment, new Set(['author']))).toBeNull();
+
+    const users = new Map([
+      ['viewer', viewer],
+      ['author', { id: 'author', email: '', name: 'Author', username: 'author', following: [] }],
+    ]);
+    const mapped = placeCardInternals.mapCommentToFeedAction(
+      sanitized!, (userId) => users.get(userId), 'viewer', 'viewer',
+    );
+    expect(mapped).toMatchObject({
+      userName: 'Author', liked: true, canReport: true, canDelete: true,
+      likers: [{ id: 'viewer', likedAt: '2025-01-02T00:00:00.000Z' }],
+      replies: [{ canEdit: true, canDelete: true, canReport: false }],
+    });
+    const anonymous = placeCardInternals.mapCommentToFeedAction(
+      {
+        id: 'anonymous', userId: 'unknown', content: 'anonymous',
+        createdAt: '2026-07-18T00:00:00.000Z', updatedAt: '2026-07-18T00:00:00.000Z',
+      },
+      () => undefined,
+    );
+    expect(anonymous).toMatchObject({
+      userName: 'SoRita', likes: 0, liked: false, likers: [], replies: [],
+      canEdit: false, canDelete: false, canReport: false,
+    });
+
+    expect(placeCardInternals.getErrorMessage(new Error('specific'), 'fallback')).toBe('specific');
+    expect(placeCardInternals.getErrorMessage(new Error('  '), 'fallback')).toBe('fallback');
+    expect(placeCardInternals.getErrorMessage('failure', 'fallback')).toBe('fallback');
+    const cause = { code: 'failure' };
+    expect(placeCardInternals.createErrorWithCause('message', cause)).toMatchObject({
+      message: 'message', cause,
+    });
+  });
+
+  it('resolves source attribution list, place, and owner context when navigation is enabled', async () => {
+    const sourcePlace = {
+      id: 'source-place', name: 'Source cafe', lat: 41, lng: 29,
+      addedAt: '2026-04-16T10:00:00.000Z',
+    };
+    visibleDataQueryResult = {
+      data: {
+        allUsers: [
+          { id: 'user-1', email: '', name: 'Ada', username: 'ada' },
+          { id: 'source-owner', email: '', name: 'Source Owner', username: 'source' },
+        ],
+        blockRows: [],
+        lists: [{
+          id: 'source-list', userId: 'source-owner', name: 'Source list', places: [sourcePlace],
+          isPublic: true, createdAt: '2026-04-16T10:00:00.000Z',
+          updatedAt: '2026-04-16T10:00:00.000Z',
+        }],
+        users: [{ id: 'user-1', email: '', name: 'Ada', username: 'ada' }],
+      },
+    };
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() => usePlaceCardState({
+      sourceAttributionEnabled: true,
+      place: {
+        id: 'quoted-place', name: 'Quoted', lat: 40, lng: 30,
+        addedAt: '2026-04-16T10:00:00.000Z',
+        sourceAttribution: {
+          listId: 'source-list', placeId: 'source-place', userId: 'source-owner',
+          userName: 'Source Owner',
+        },
+      },
+      user: { id: 'user-1', email: '', name: 'Ada', username: 'ada' },
+    }), { wrapper });
+
+    expect(hook.result.current.sourceAttributionList?.id).toBe('source-list');
+    expect(hook.result.current.sourceAttributionPlace?.id).toBe('source-place');
+    expect(hook.result.current.sourceAttributionOwner?.id).toBe('source-owner');
+    expect(hook.result.current.sourceAttributionUser?.id).toBe('source-owner');
+    expect(hook.result.current.canOpenSourcePlaceCard).toBe(true);
+  });
+
+  it('enforces selection caps and coordinate duplicate detection before list writes', async () => {
+    visibleDataQueryResult = {
+      data: {
+        allUsers: [], blockRows: [], users: [],
+        lists: [{
+          id: 'list-1', userId: 'user-1', name: 'My list',
+          places: [{
+            id: 'different-id', name: 'Cafe', lat: 41, lng: 29,
+            addedAt: '2026-04-16T10:00:00.000Z',
+          }],
+        }],
+      },
+    };
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() => usePlaceCardState({
+      place: {
+        id: 'place-1', name: 'Cafe', lat: 41, lng: 29,
+        addedAt: '2026-04-16T10:00:00.000Z',
+      },
+      user: { id: 'user-1', email: '', name: 'Ada', username: 'ada' },
+    }), { wrapper });
+    const placeData = { name: 'Cafe', lat: 41, lng: 29 };
+
+    await expect(hook.result.current.savePlaceToLists(
+      placeData, ['one', 'two', 'three', 'four'],
+    )).resolves.toBe(false);
+    await expect(hook.result.current.savePlaceToLists(placeData, ['list-1'])).resolves.toBe(false);
+    expect(updateListsAsyncMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith('already in list', 'error');
+
+    await expect(hook.result.current.createList({
+      id: 'list-2', userId: '', name: 'New', places: [], isPublic: true,
+      createdAt: '2026-04-16T10:00:00.000Z', updatedAt: '2026-04-16T10:00:00.000Z',
+    })).resolves.toBeUndefined();
+    expect(createListAsyncMock).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1' }));
   });
 });

@@ -2,41 +2,44 @@ import { useCallback, useMemo } from 'react';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { useHomeFeedQuery } from '@/mobile/app/data/hooks/useHomeFeedQuery';
-import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
-import { isMissingReadModelError } from '@/mobile/app/data/query/readModelErrors';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
-import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type UseHomeFeedScreenStateParams = {
   user: User | null;
 };
 
+function getHomeFeedStatus(params: {
+  error: unknown;
+  feedItemCount: number;
+  hasNextPage?: boolean;
+  isFetchedAfterMount: boolean;
+  isFetchingNextPage: boolean;
+  isLoading: boolean;
+  userId?: string;
+}) {
+  return {
+    hasNextPage: Boolean(params.userId && params.hasNextPage),
+    hasPartialDataError: Boolean(params.error && params.feedItemCount > 0),
+    isFetchingNextPage: Boolean(params.userId && params.isFetchingNextPage),
+    isInitialLoading: Boolean(
+      params.userId &&
+      params.isLoading &&
+      params.feedItemCount === 0 &&
+      !params.error,
+    ),
+    isShowingStartupCache:
+      params.feedItemCount > 0 && !params.isFetchedAfterMount,
+  };
+}
+
 export function useHomeFeedScreenState({ user }: UseHomeFeedScreenStateParams) {
   const userId = user?.id;
   const homeFeedQuery = useHomeFeedQuery(userId);
-  const shouldUseLegacyFeed =
-    Boolean(userId) && isMissingReadModelError(homeFeedQuery.error);
-  const visibleDataQuery = useVisibleDataQuery(userId, {
-    enabled: shouldUseLegacyFeed,
-    filterToViewerNetwork: true,
-    includePlaceComments: false,
-  });
-  const activeFeedQuery = shouldUseLegacyFeed ? visibleDataQuery : homeFeedQuery;
-  const visibleUsers = visibleDataQuery.data?.users || [];
-  const visibleLists = visibleDataQuery.data?.lists || [];
-  const usersById = useMemo(
-    () => new Map(visibleUsers.map((item) => [item.id, item])),
-    [visibleUsers],
-  );
-  const activeError =
-    !shouldUseLegacyFeed && homeFeedQuery.error
-      ? homeFeedQuery.error
-      : visibleDataQuery.error;
-  const errorMessage = activeError
+  const errorMessage = homeFeedQuery.error
     ? getUserFacingErrorMessage(
-        activeError,
+        homeFeedQuery.error,
         tr.home.errorDescription,
       )
     : null;
@@ -46,74 +49,47 @@ export function useHomeFeedScreenState({ user }: UseHomeFeedScreenStateParams) {
       return;
     }
 
-    await activeFeedQuery.refetch();
-  }, [activeFeedQuery, userId]);
+    await homeFeedQuery.refetch();
+  }, [homeFeedQuery, userId]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadFeed, {
     refreshOnFocus: false,
     skipInitialFocus: true,
   });
 
-  const freshUser = useMemo(() => {
-    if (!userId) {
-      return null;
-    }
-
-    return usersById.get(userId) || user;
-  }, [user, userId, usersById]);
-
-  const visibleFeedLists = useMemo(() => {
-    if (!userId || !freshUser) {
-      return [];
-    }
-
-    const followingIds = new Set(freshUser.following || []);
-
-    return visibleLists.filter(
-      (list) =>
-        (list.userId === userId || followingIds.has(list.userId)) &&
-        (list.isPublic || list.userId === userId),
-    );
-  }, [freshUser, userId, visibleLists]);
-
   const feedItems = useMemo(
     () => {
-      if (!shouldUseLegacyFeed) {
-        const seenKeys = new Set<string>();
-        return (homeFeedQuery.data?.pages || [])
-          .flatMap((page) => page.items)
-          .filter((item) => {
-            if (seenKeys.has(item.key)) {
-              return false;
-            }
+      const seenKeys = new Set<string>();
+      return (homeFeedQuery.data?.pages || [])
+        .flatMap((page) => page.items)
+        .filter((item) => {
+          if (seenKeys.has(item.key)) {
+            return false;
+          }
 
-            seenKeys.add(item.key);
-            return true;
-          });
-      }
-
-      return buildPlaceFeedCardItems(visibleFeedLists, (ownerId) => usersById.get(ownerId));
+          seenKeys.add(item.key);
+          return true;
+        });
     },
-    [homeFeedQuery.data?.pages, shouldUseLegacyFeed, usersById, visibleFeedLists],
+    [homeFeedQuery.data?.pages],
   );
+  const status = getHomeFeedStatus({
+    error: homeFeedQuery.error,
+    feedItemCount: feedItems.length,
+    hasNextPage: homeFeedQuery.hasNextPage,
+    isFetchedAfterMount: homeFeedQuery.isFetchedAfterMount,
+    isFetchingNextPage: homeFeedQuery.isFetchingNextPage,
+    isLoading: homeFeedQuery.isLoading,
+    userId,
+  });
 
   return {
     errorMessage,
-    fetchNextPage: userId ? activeFeedQuery.fetchNextPage : undefined,
+    fetchNextPage: userId ? homeFeedQuery.fetchNextPage : undefined,
     feedItems,
-    freshUser,
-    followingCount: freshUser?.following?.length || 0,
-    hasNextPage: Boolean(userId && activeFeedQuery.hasNextPage),
-    hasPartialDataError:
-      shouldUseLegacyFeed
-        ? visibleDataQuery.hasPartialDataError
-        : Boolean(homeFeedQuery.error && feedItems.length > 0),
-    isInitialLoading:
-      Boolean(userId) &&
-      activeFeedQuery.isLoading &&
-      feedItems.length === 0 &&
-      !activeFeedQuery.error,
-    isFetchingNextPage: Boolean(userId && activeFeedQuery.isFetchingNextPage),
+    freshUser: user,
+    followingCount: user?.following?.length || 0,
+    ...status,
     refreshing,
     retry: loadFeed,
     onRefresh,

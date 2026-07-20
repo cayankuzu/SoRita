@@ -46,12 +46,15 @@ class MainApplication : Application(), ReactApplication {
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }
 
-  private fun resolveDebugMetroHost(): String =
-    if (isRunningOnAndroidEmulator()) {
-      "10.0.2.2:8081"
+  private fun resolveDebugMetroHost(): String {
+    val metroPort = resources.getInteger(R.integer.react_native_dev_server_port)
+
+    return if (isRunningOnAndroidEmulator()) {
+      "10.0.2.2:$metroPort"
     } else {
-      "localhost:8081"
+      "localhost:$metroPort"
     }
+  }
 
   private fun isRunningOnAndroidEmulator(): Boolean {
     val fingerprint = Build.FINGERPRINT.lowercase()

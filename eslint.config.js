@@ -81,4 +81,53 @@ export default [
       'react-hooks/rules-of-hooks': 'error',
     },
   },
+  {
+    files: ['src/mobile/app/**/*.{ts,tsx}'],
+    ignores: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      complexity: ['error', 35],
+      'max-depth': ['error', 5],
+      'max-lines-per-function': [
+        'error',
+        { max: 800, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    files: [
+      'src/mobile/app/app-shell/startup/*.ts',
+      'src/mobile/app/data/hooks/useMapMarkersQuery.ts',
+      'src/mobile/app/data/repositories/mapMarkersRepository.ts',
+      'src/mobile/app/features/home/application/useHomeFeedScreenState.ts',
+      'src/mobile/app/features/lists/application/useListDetailScreenState.ts',
+      'src/mobile/app/features/profile/application/useUserProfileScreenState.ts',
+      'src/mobile/app/platform/network/*.ts',
+      'src/mobile/app/shared/performance/*.ts',
+    ],
+    ignores: ['**/__tests__/**'],
+    rules: {
+      complexity: ['error', 15],
+      'max-depth': ['error', 4],
+      'max-lines': [
+        'error',
+        { max: 380, skipBlankLines: true, skipComments: true },
+      ],
+      'max-lines-per-function': [
+        'error',
+        { max: 220, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    files: ['supabase/functions/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      complexity: ['error', 80],
+      'max-depth': ['error', 5],
+      'max-lines-per-function': [
+        'error',
+        { max: 800, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
 ];

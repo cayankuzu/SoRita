@@ -15,10 +15,8 @@ import {
 import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { OwnerHeader } from '@/mobile/app/features/discovery/ui/components/OwnerHeader';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
-import {
-  ActionMenuSheet,
-  type ActionMenuSheetItem,
-} from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
+import type { ActionMenuSheetItem } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
+import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import {
@@ -58,6 +56,33 @@ export type PlaceGridTileProps = {
   menuActions?: ActionMenuSheetItem[];
 };
 
+function getPlaceGridTileModel(
+  place: Place,
+  mode: 'place' | 'photo',
+  listIsPublic?: boolean,
+  listName?: string,
+) {
+  const media = getPlaceMedia(place);
+  const primaryMedia = media[0];
+  const hasMiniMap = !(mode === 'photo' && primaryMedia);
+
+  return {
+    hasListContext: Boolean(listName),
+    hasMiniMap,
+    interactionKey: `${place.id}:${mode}:${hasMiniMap ? 'map' : (primaryMedia?.url ?? 'media')}`,
+    listContextLabel: `${
+      listIsPublic === false ? tr.listDetail.private : tr.listDetail.public
+    } · ${tr.cards.placeAddedToList}`,
+    media,
+    mediaCounts: getPlaceMediaCounts(media),
+    primaryMedia,
+    timestampText: formatCreatedUpdatedInline(
+      place.addedAt,
+      place.updatedAt || place.addedAt,
+    ),
+  };
+}
+
 function PlaceGridTileComponent({
   place,
   owner,
@@ -75,33 +100,31 @@ function PlaceGridTileComponent({
   menuActions,
 }: PlaceGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
-  const media = getPlaceMedia(place);
-  const primaryMedia = media[0];
-  const mediaCounts = getPlaceMediaCounts(media);
-  const mediaCount = media.length;
-  const timestampText = formatCreatedUpdatedInline(
-    place.addedAt,
-    place.updatedAt || place.addedAt,
+  const {
+    hasListContext,
+    hasMiniMap,
+    interactionKey,
+    listContextLabel,
+    media,
+    mediaCounts,
+    primaryMedia,
+    timestampText,
+  } = React.useMemo(
+    () => getPlaceGridTileModel(place, mode, listIsPublic, listName),
+    [listIsPublic, listName, mode, place],
   );
+  const mediaCount = media.length;
   const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
   const lastMapGestureAtRef = React.useRef(0);
   const handledLongPressRef = React.useRef(false);
   const [menuVisible, setMenuVisible] = React.useState(false);
-  const hasMiniMap = !(mode === 'photo' && primaryMedia);
-  const hasListContext = Boolean(listName);
-  const listContextLabel =
-    listIsPublic === false
-      ? 'Ozel listeye eklendi'
-      : 'Herkese acik listeye eklendi';
   const {
     activateMap,
     deactivateMap,
     isMapInteractive,
     mapFocusKey,
     showInteractionHint,
-  } = useMiniMapInteraction(
-    `${place.id}:${mode}:${hasMiniMap ? 'map' : (primaryMedia?.url ?? 'media')}`,
-  );
+  } = useMiniMapInteraction(interactionKey);
 
   const handleTilePress = () => {
     if (
@@ -157,8 +180,9 @@ function PlaceGridTileComponent({
             <>
               <MediaThumbnailView
                 item={primaryMedia}
+                priority="high"
                 style={styles.mediaSquare}
-                accessibilityLabel={`${place.name} fotografi`}
+                accessibilityLabel={tr.placeEditor.placePhotoLabel(place.name)}
                 fallbackToVideoPreview={false}
               />
               {mediaCount > 0 ? (
@@ -315,7 +339,7 @@ function PlaceGridTileComponent({
       </Pressable>
 
       {menuVisible && menuActions?.length ? (
-        <ActionMenuSheet
+        <DeferredActionMenuSheet
           visible
           title={place.name}
           items={menuActions.map((item) => ({

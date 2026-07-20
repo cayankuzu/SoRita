@@ -35,10 +35,11 @@ export function useHomeFeedQuery(
     queryKey: userId
       ? queryKeys.feed.page(userId, HOME_FEED_ALGORITHM_VERSION)
       : queryKeys.feed.all,
-    queryFn: ({ pageParam }) =>
+    queryFn: ({ pageParam, signal }) =>
       userId
         ? fetchHomeFeedPage({
             cursor: pageParam,
+            signal,
             viewerId: userId,
           })
         : Promise.resolve({ items: [] }),

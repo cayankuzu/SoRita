@@ -1,55 +1,44 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
-import { Compass } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
   openStackScreen,
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
-import type { User } from '@/mobile/app/data/contracts/entities';
-import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
-import {
-  ListGridTile,
-  PlaceGridTile,
-  UserGridTile,
-} from '@/mobile/app/features/discovery/public/components';
 import { useExploreScreenState } from '@/mobile/app/features/explore/application/useExploreScreenState';
 import { ExploreFeedView } from '@/mobile/app/features/explore/ui/components/ExploreFeedView';
 import { ExploreHeaderControls } from '@/mobile/app/features/explore/ui/components/ExploreHeaderControls';
+import {
+  ExploreResultsPage,
+  type ExploreGridItem,
+} from '@/mobile/app/features/explore/ui/components/ExploreResultsPage';
 import type {
   ExploreFeedMode,
   ExploreTabType,
 } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { SwipeableCategoryPager } from '@/mobile/app/shared/components/navigation/SwipeableCategoryPager';
-import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { SwipeableTabPager } from '@/mobile/app/shared/components/navigation/SwipeableTabPager';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import {
   ListGridTileSkeleton,
   SkeletonGroup,
 } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
-import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
-import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
-type ExploreListItem = {
-  list: import('@/mobile/app/data/contracts/entities').PlaceList;
-  owner: User | null;
+const EXPLORE_PAGER_TABS = ['lists', 'places', 'photos', 'people'] as const;
+const EXPLORE_TAB_LABELS: Record<ExploreTabType, string> = {
+  lists: tr.explore.tabs.lists,
+  people: tr.explore.tabs.people,
+  photos: tr.explore.tabs.photos,
+  places: tr.explore.tabs.places,
 };
-type ExploreGridItem = ExploreListItem | PlaceFeedCardItem | User;
-
-const EXPLORE_PAGER_TABS: Array<{ key: ExploreTabType; label: string }> = [
-  { key: 'lists', label: tr.explore.tabs.lists },
-  { key: 'places', label: tr.explore.tabs.places },
-  { key: 'photos', label: tr.explore.tabs.photos },
-  { key: 'people', label: tr.explore.tabs.people },
-];
 
 export function ExploreScreen() {
   const navigation = useAppNavigation();
@@ -60,6 +49,13 @@ export function ExploreScreen() {
   const [visibleTab, setVisibleTab] = useState<ExploreTabType>('lists');
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<ExploreFeedMode | null>(null);
+  const {
+    getTabScrollRef,
+    getTabScrollRefCallback,
+    notifyTabContentReady,
+    recordTabScrollOffset,
+    restoreTabScrollOffset,
+  } = useTabScrollMemory<ExploreTabType>();
   const {
     errorMessage,
     filteredListItems,
@@ -85,10 +81,29 @@ export function ExploreScreen() {
     filteredPlaces.length > 0 ||
     filteredPhotos.length > 0 ||
     filteredUsers.length > 0;
+  useScreenPerformanceMetric({
+    hasContent: hasAnyBrowseData,
+    hasError: Boolean(errorMessage),
+    isLoading: isInitialLoading,
+    screen: 'explore',
+  });
   useScrollToTop(activeListRef as React.RefObject<FlatList>);
+  useEffect(() => {
+    activeListRef.current = getTabScrollRef(activeTab) as FlatList<ExploreGridItem> | null;
+    restoreTabScrollOffset(activeTab);
+  }, [activeTab, getTabScrollRef, restoreTabScrollOffset]);
   const listMarkerLists = useMemo(
     () => filteredListItems.map(({ list }) => list),
     [filteredListItems],
+  );
+  const dataByTab = useMemo(
+    () => ({
+      lists: filteredListItems,
+      people: filteredUsers,
+      photos: filteredPhotos,
+      places: filteredPlaces,
+    }) satisfies Record<ExploreTabType, ExploreGridItem[]>,
+    [filteredListItems, filteredPhotos, filteredPlaces, filteredUsers],
   );
 
   const scrollActiveListToTop = useCallback(() => {
@@ -102,15 +117,20 @@ export function ExploreScreen() {
         return;
       }
 
+      restoreTabScrollOffset(nextTab);
       setVisibleTab(nextTab);
       setActiveTab(nextTab);
     },
-    [activeTab, scrollActiveListToTop],
+    [activeTab, restoreTabScrollOffset, scrollActiveListToTop],
   );
 
-  const handleTabPreviewChange = useCallback((nextTab: ExploreTabType) => {
-    setVisibleTab(nextTab);
-  }, []);
+  const handleTabPreviewChange = useCallback(
+    (nextTab: ExploreTabType) => {
+      restoreTabScrollOffset(nextTab);
+      setVisibleTab(nextTab);
+    },
+    [restoreTabScrollOffset],
+  );
 
   const handleFollowUser = useCallback(
     async (targetUserId: string) => {
@@ -131,6 +151,24 @@ export function ExploreScreen() {
       openStackScreen(navigation, 'UserProfile', { userId });
     },
     [navigation],
+  );
+  const openListDetail = useCallback(
+    (listId: string) => {
+      openStackScreen(navigation, 'ListDetail', { listId });
+    },
+    [navigation],
+  );
+  const handleEndReached = useCallback(
+    (tab: ExploreTabType) => {
+      const tabQuery = queryStateByTab[tab];
+
+      if (!tabQuery.hasNextPage || tabQuery.isFetchingNextPage || errorMessage) {
+        return;
+      }
+
+      void tabQuery.fetchNextPage?.();
+    },
+    [errorMessage, queryStateByTab],
   );
 
   if (!user) {
@@ -175,134 +213,6 @@ export function ExploreScreen() {
     );
   }
 
-  const dataByTab = {
-    lists: filteredListItems,
-    people: filteredUsers,
-    photos: filteredPhotos,
-    places: filteredPlaces,
-  } satisfies Record<ExploreTabType, ExploreGridItem[]>;
-
-  const renderEmptyState = (tab: ExploreTabType) => {
-    if (errorMessage && !hasAnyBrowseData) {
-      return (
-        <View style={loadMoreStyles.errorWrap}>
-          <EmptyState
-            icon={<Compass color={colors.danger} size={32} />}
-            title={tr.explore.errorTitle}
-            description={errorMessage}
-            actionLabel={tr.common.retry}
-            onAction={retry}
-            tone="danger"
-          />
-        </View>
-      );
-    }
-
-    if (tab === 'lists') {
-      return (
-        <EmptyState
-          icon={<Compass color={colors.textSoft} size={32} />}
-          title={
-            searchQuery.trim()
-              ? tr.explore.empty.noResult
-              : tr.explore.empty.noList
-          }
-          description={
-            searchQuery.trim()
-              ? tr.explore.empty.tryDifferentSearch
-              : tr.explore.empty.noListDescription
-          }
-        />
-      );
-    }
-
-    if (tab === 'places') {
-      return (
-        <EmptyState
-          icon={<Compass color={colors.textSoft} size={32} />}
-          title={
-            searchQuery.trim()
-              ? tr.explore.empty.noResult
-              : tr.explore.empty.noPlace
-          }
-          description={
-            searchQuery.trim()
-              ? tr.explore.empty.tryDifferentSearch
-              : tr.explore.empty.noPlaceDescription
-          }
-        />
-      );
-    }
-
-    if (tab === 'photos') {
-      return (
-        <EmptyState
-          icon={<Compass color={colors.textSoft} size={32} />}
-          title={
-            searchQuery.trim()
-              ? tr.explore.empty.noResult
-              : tr.explore.empty.noPhoto
-          }
-          description={
-            searchQuery.trim()
-              ? tr.explore.empty.tryDifferentSearch
-              : tr.explore.empty.noPhotoDescription
-          }
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon={<Compass color={colors.textSoft} size={32} />}
-        title={
-          searchQuery.trim()
-            ? tr.explore.empty.noUserResult
-            : tr.explore.empty.noUser
-        }
-        description={
-          searchQuery.trim()
-            ? tr.explore.empty.tryDifferentSearch
-            : tr.explore.empty.noUserDescription
-        }
-      />
-    );
-  };
-
-  const renderFooter = (tab: ExploreTabType) => {
-    const tabQuery = queryStateByTab[tab];
-
-    if (!tabQuery.hasNextPage || errorMessage) {
-      return null;
-    }
-
-    return (
-      <View
-        style={loadMoreStyles.loadMoreStatus}
-        accessibilityRole="progressbar"
-      >
-        {tabQuery.isFetchingNextPage ? (
-          <ActivityIndicator color={colors.primary} size="small" />
-        ) : null}
-        <Text style={loadMoreStyles.loadMoreLabel}>
-          {tabQuery.isFetchingNextPage
-            ? tr.common.loadingMore
-            : tr.explore.loadMoreHint}
-        </Text>
-      </View>
-    );
-  };
-
-  const handleEndReached = (tab: ExploreTabType) => {
-    const tabQuery = queryStateByTab[tab];
-
-    if (!tabQuery.hasNextPage || tabQuery.isFetchingNextPage || errorMessage) {
-      return;
-    }
-
-    void tabQuery.fetchNextPage?.();
-  };
-
   return (
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={loadMoreStyles.screen}>
@@ -330,114 +240,56 @@ export function ExploreScreen() {
             />
           </View>
         ) : null}
-        <SwipeableCategoryPager
+        <SwipeableTabPager
           activeTab={activeTab}
-          keepAlive={false}
-          lazy
+          enabled={!refreshing && !feedMode}
+          getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
+          keepAlive
           tabs={EXPLORE_PAGER_TABS}
-          onTabChange={handleTabChange}
-          onTabPreviewChange={handleTabPreviewChange}
-          renderPage={(tab) => (
-            <VirtualizedDiscoveryGrid<ExploreGridItem>
-              listRef={tab === activeTab ? activeListRef : undefined}
-              listKey={`explore:${tab}`}
-              data={errorMessage && !hasAnyBrowseData ? [] : dataByTab[tab]}
-              extraData={{
-                activeTab,
-                following,
-                pendingFollowRequests,
-                searchQuery,
-                tab,
-              }}
-              containsNativeMaps={tab !== 'people'}
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              onEndReached={() => handleEndReached(tab)}
-              ListEmptyComponent={renderEmptyState(tab)}
-              ListFooterComponent={renderFooter(tab)}
-              keyExtractor={(item, index) => {
-                if (tab === 'lists') {
-                  return (item as unknown as ExploreListItem).list.id;
+          onChange={handleTabChange}
+          onPreviewTabChange={handleTabPreviewChange}
+          renderPage={(tab, _preview, active) => {
+            const tabQuery = queryStateByTab[tab];
+
+            return (
+              <ExploreResultsPage
+                active={active}
+                data={dataByTab[tab]}
+                errorMessage={
+                  active && errorMessage && !hasAnyBrowseData
+                    ? errorMessage
+                    : null
                 }
-
-                if (tab === 'people') {
-                  return (item as User).id;
+                following={following}
+                hasNextPage={tabQuery.hasNextPage}
+                isFetchingNextPage={tabQuery.isFetchingNextPage}
+                listMarkerLists={listMarkerLists}
+                listRef={getTabScrollRefCallback(tab)}
+                onContentReady={() => notifyTabContentReady(tab)}
+                onEndReached={() => handleEndReached(tab)}
+                onFollowUser={(targetUserId) => {
+                  void handleFollowUser(targetUserId);
+                }}
+                onListPress={openListDetail}
+                onOwnerPress={openUserProfile}
+                onPlacePress={(pageTab, index) =>
+                  setFeedMode({
+                    kind: pageTab === 'photos' ? 'photos' : 'places',
+                    startIndex: index,
+                  })
                 }
-
-                return (
-                  (item as unknown as PlaceFeedCardItem).key ||
-                  `${tab}:${index}`
-                );
-              }}
-              renderItem={({ item, index }) => {
-                if (tab === 'lists') {
-                  const listItem = item as unknown as ExploreListItem;
-
-                  return (
-                    <ListGridTile
-                      list={listItem.list}
-                      owner={listItem.owner}
-                      fillWidth
-                      showOwner={Boolean(listItem.owner)}
-                      allListsForMarkerColor={listMarkerLists}
-                      onOwnerPress={() =>
-                        listItem.owner && openUserProfile(listItem.owner.id)
-                      }
-                      onPress={() =>
-                        openStackScreen(navigation, 'ListDetail', {
-                          listId: listItem.list.id,
-                        })
-                      }
-                    />
-                  );
+                onRefresh={onRefresh}
+                onRetry={retry}
+                onScrollOffsetChange={(offset) =>
+                  recordTabScrollOffset(tab, offset)
                 }
-
-                if (tab === 'people') {
-                  const targetUser = item as User;
-
-                  return (
-                    <UserGridTile
-                      user={targetUser}
-                      fillWidth
-                      isFollowing={following.includes(targetUser.id)}
-                      isPending={pendingFollowRequests.includes(targetUser.id)}
-                      onPress={() => openUserProfile(targetUser.id)}
-                      onFollowPress={() => handleFollowUser(targetUser.id)}
-                    />
-                  );
-                }
-
-                const placeItem = item as unknown as PlaceFeedCardItem;
-
-                return (
-                  <PlaceGridTile
-                    place={placeItem.place}
-                    fillWidth
-                    owner={placeItem.owner}
-                    showOwner={Boolean(placeItem.owner)}
-                    mode={tab === 'photos' ? 'photo' : 'place'}
-                    listCoverImage={placeItem.listCoverImage}
-                    listEmoji={placeItem.listEmoji}
-                    listIsPublic={placeItem.listIsPublic}
-                    listName={placeItem.listName}
-                    markerColor={getMarkerColorForMemberships(
-                      placeItem.memberships,
-                      placeItem.listIsPublic,
-                    )}
-                    onOwnerPress={() =>
-                      placeItem.owner && openUserProfile(placeItem.owner.id)
-                    }
-                    onPress={() =>
-                      setFeedMode({
-                        kind: tab === 'photos' ? 'photos' : 'places',
-                        startIndex: index,
-                      })
-                    }
-                  />
-                );
-              }}
-            />
-          )}
+                pendingFollowRequests={pendingFollowRequests}
+                refreshing={refreshing}
+                searchQuery={searchQuery}
+                tab={tab}
+              />
+            );
+          }}
         />
       </View>
     </Screen>
@@ -451,23 +303,8 @@ const loadMoreStyles = StyleSheet.create({
   noticeWrap: {
     paddingBottom: 12,
   },
-  errorWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
   content: {
     paddingBottom: 20,
-  },
-  loadMoreStatus: {
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-  },
-  loadMoreLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
   },
   skeletonGrid: {
     gap: 14,

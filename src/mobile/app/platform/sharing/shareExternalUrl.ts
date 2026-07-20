@@ -1,5 +1,7 @@
 import { Platform, Share } from 'react-native';
 
+import { tr } from '@/mobile/app/shared/i18n/tr';
+
 export type ShareExternalUrlResult =
   | { ok: true }
   | {
@@ -13,7 +15,7 @@ export async function shareExternalUrl(url: string): Promise<ShareExternalUrlRes
   if (!normalizedUrl) {
     return {
       ok: false,
-      message: 'Paylasim baglantisi hazir degil.',
+      message: tr.common.shareLinkUnavailable,
     };
   }
 
@@ -28,7 +30,7 @@ export async function shareExternalUrl(url: string): Promise<ShareExternalUrlRes
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : 'Paylasim acilamadi.',
+      message: error instanceof Error ? error.message : tr.common.shareOpenFailed,
     };
   }
 }

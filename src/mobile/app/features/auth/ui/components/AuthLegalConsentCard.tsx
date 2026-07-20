@@ -63,7 +63,7 @@ export function AuthLegalConsentCard({
           >
             <Text style={styles.inlineLink}>{tr.auth.legalConsent.privacy}</Text>
           </InstantPressable>
-          <Text style={styles.linksText}> ve </Text>
+          <Text style={styles.linksText}>{tr.common.andConnector}</Text>
           <InstantPressable
             accessibilityLabel={tr.auth.legalConsent.kvkk}
             accessibilityRole="link"

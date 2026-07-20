@@ -36,7 +36,23 @@ type StorageBucketLike = {
     data?: { signedUrl?: string | null } | null;
     error?: ErrorLike | null;
   }>;
+  createSignedUrls: (paths: string[], expiresIn: number) => Promise<{
+    data?: Array<{
+      error?: string | null;
+      path?: string | null;
+      signedUrl?: string | null;
+    }> | null;
+    error?: ErrorLike | null;
+  }>;
   getPublicUrl: (path: string) => { data: { publicUrl: string } };
+  info: (path: string) => Promise<{
+    data?: {
+      contentType?: string | null;
+      metadata?: { mimetype?: string | null; size?: number | null } | null;
+      size?: number | null;
+    } | null;
+    error?: ErrorLike | null;
+  }>;
   remove: (paths: string[]) => Promise<{ error?: ErrorLike | null }>;
   upload: (
     path: string,
@@ -77,6 +93,7 @@ export type MediaAssetsHandlerDeps = {
   createAdminClient: () => AdminClientLike;
   createAuthClient: (token: string) => AuthClientLike;
   createRequestId?: () => string;
+  fetchObjectPrefix?: (signedUrl: string, maxBytes: number, totalBytes?: number) => Promise<Uint8Array>;
 };
 
 const allowedBucketValues = ['profile-media', 'place-media', 'place-media-private'] as const;
@@ -127,7 +144,10 @@ const maxPlaceMediaCreateUploadRequestsPerMinute = 72;
 const maxProfileMediaRequestsPerMinute = 120;
 const maxPrivateReadUrlRequestsPerMinute = 600;
 const maxDeletePathsPerRequest = 64;
+const maxReadPathsPerRequest = 64;
+const immutableMediaCacheSeconds = '31536000';
 const privateReadUrlExpiresInSeconds = 5 * 60;
+const mediaSignatureProbeBytes = 512 * 1024;
 
 const uploadPayloadSchema = z.object({
   action: z.literal('upload'),
@@ -153,6 +173,24 @@ const createReadUrlPayloadSchema = z.object({
   path: z.string().trim().min(1).max(512),
 });
 
+const createReadUrlsPayloadSchema = z.object({
+  action: z.literal('create-read-urls'),
+  bucket: z.literal('place-media-private'),
+  paths: z.array(z.string().trim().min(1).max(512)).min(1).max(maxReadPathsPerRequest),
+});
+
+const completeUploadPayloadSchema = z.object({
+  action: z.literal('complete-upload'),
+  bucket: z.literal('place-media-private'),
+  contentType: z.enum(signedUploadContentTypeValues),
+  durationSeconds: z.number().nonnegative().max(placeMediaMaxVideoDurationSeconds).optional(),
+  fileSizeBytes: z.number().int().positive(),
+  height: z.number().int().positive().max(8192).optional(),
+  mediaType: z.enum(['photo', 'video']),
+  objectPath: z.string().trim().min(1).max(512),
+  width: z.number().int().positive().max(8192).optional(),
+});
+
 const deletePayloadSchema = z.object({
   action: z.literal('delete'),
   bucket: z.enum(allowedBucketValues),
@@ -163,6 +201,8 @@ type MediaPayload =
   | z.infer<typeof uploadPayloadSchema>
   | z.infer<typeof createUploadUrlPayloadSchema>
   | z.infer<typeof createReadUrlPayloadSchema>
+  | z.infer<typeof createReadUrlsPayloadSchema>
+  | z.infer<typeof completeUploadPayloadSchema>
   | z.infer<typeof deletePayloadSchema>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -232,6 +272,38 @@ function parseMediaPayload(bodyText: string): MediaPayload {
     }
 
     const parsedPayload = createReadUrlPayloadSchema.safeParse(rawPayload);
+
+    if (!parsedPayload.success) {
+      throw new HttpRequestError(400, 'invalid_input', parsedPayload.error.issues[0]?.message ?? 'Invalid media request body');
+    }
+
+    return parsedPayload.data;
+  }
+
+  if (action === 'create-read-urls') {
+    if (rawPayload.bucket !== 'place-media-private') {
+      throw new HttpRequestError(400, 'invalid_input', 'Invalid media bucket');
+    }
+
+    const parsedPayload = createReadUrlsPayloadSchema.safeParse(rawPayload);
+
+    if (!parsedPayload.success) {
+      throw new HttpRequestError(400, 'invalid_input', parsedPayload.error.issues[0]?.message ?? 'Invalid media request body');
+    }
+
+    return parsedPayload.data;
+  }
+
+  if (action === 'complete-upload') {
+    if (rawPayload.bucket !== 'place-media-private') {
+      throw new HttpRequestError(400, 'invalid_input', 'Invalid media bucket');
+    }
+
+    if (typeof rawPayload.contentType !== 'string' || !signedUploadContentTypes.has(rawPayload.contentType)) {
+      throw new HttpRequestError(415, 'unsupported_media_type', 'Unsupported media type');
+    }
+
+    const parsedPayload = completeUploadPayloadSchema.safeParse(rawPayload);
 
     if (!parsedPayload.success) {
       throw new HttpRequestError(400, 'invalid_input', parsedPayload.error.issues[0]?.message ?? 'Invalid media request body');
@@ -311,7 +383,7 @@ function normalizeExtension(value: string | undefined, contentType: string) {
   return normalizedExtension === 'jpeg' ? 'jpg' : normalizedExtension;
 }
 
-function getMaxUploadBytes(bucket: AllowedBucket, contentType: string) {
+function getMaxUploadBytes(bucket: AllowedBucket, _contentType: string) {
   if (bucket === 'profile-media') {
     return profileImageUploadBytes;
   }
@@ -324,11 +396,11 @@ function getMediaRequestRateLimit(action: MediaPayload['action']) {
     return maxDeleteRequestsPerMinute;
   }
 
-  if (action === 'create-upload-url') {
+  if (action === 'create-upload-url' || action === 'complete-upload') {
     return maxPlaceMediaCreateUploadRequestsPerMinute;
   }
 
-  if (action === 'create-read-url') {
+  if (action === 'create-read-url' || action === 'create-read-urls') {
     return maxPrivateReadUrlRequestsPerMinute;
   }
 
@@ -406,7 +478,343 @@ function assertMediaSignature(contentType: string, bytes: Uint8Array) {
     return;
   }
 
+  if (
+    ['video/3gpp', 'video/mp4', 'video/quicktime', 'video/x-m4v'].includes(contentType) &&
+    matchesBytes(bytes, [0x66, 0x74, 0x79, 0x70], 4)
+  ) {
+    const brand = String.fromCharCode(...bytes.slice(8, 12));
+    const isExpectedBrand =
+      (contentType === 'video/3gpp' && brand.startsWith('3g')) ||
+      (contentType === 'video/quicktime' && brand === 'qt  ') ||
+      (contentType === 'video/x-m4v' && ['M4V ', 'M4VH', 'M4VP'].includes(brand)) ||
+      (contentType === 'video/mp4' && [
+        'avc1',
+        'dash',
+        'iso2',
+        'iso5',
+        'iso6',
+        'isom',
+        'mp41',
+        'mp42',
+        'MSNV',
+      ].includes(brand));
+
+    if (isExpectedBrand) {
+      return;
+    }
+  }
+
+  if (contentType === 'video/webm' && matchesBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3])) {
+    return;
+  }
+
   throw new HttpRequestError(400, 'invalid_input', 'Media payload does not match content type');
+}
+
+type ActualMediaMetadata = {
+  durationSeconds?: number;
+  height?: number;
+  width?: number;
+};
+
+function readUint16(bytes: Uint8Array, offset: number) {
+  return (bytes[offset] << 8) | bytes[offset + 1];
+}
+
+function readUint32(bytes: Uint8Array, offset: number) {
+  return (
+    bytes[offset] * 0x1000000 +
+    (bytes[offset + 1] << 16) +
+    (bytes[offset + 2] << 8) +
+    bytes[offset + 3]
+  );
+}
+
+function findBytes(bytes: Uint8Array, needle: number[], start = 0) {
+  for (let offset = start; offset <= bytes.length - needle.length; offset += 1) {
+    if (needle.every((value, index) => bytes[offset + index] === value)) {
+      return offset;
+    }
+  }
+
+  return -1;
+}
+
+function readJpegDimensions(bytes: Uint8Array): ActualMediaMetadata {
+  let offset = 2;
+
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = bytes[offset + 1];
+    const segmentLength = readUint16(bytes, offset + 2);
+
+    if (segmentLength < 2 || offset + segmentLength + 2 > bytes.length) {
+      break;
+    }
+
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      return {
+        height: readUint16(bytes, offset + 5),
+        width: readUint16(bytes, offset + 7),
+      };
+    }
+
+    offset += segmentLength + 2;
+  }
+
+  return {};
+}
+
+function readWebpDimensions(bytes: Uint8Array): ActualMediaMetadata {
+  const chunkType = String.fromCharCode(...bytes.slice(12, 16));
+
+  if (chunkType === 'VP8X' && bytes.length >= 30) {
+    return {
+      width: 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16),
+      height: 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16),
+    };
+  }
+
+  if (chunkType === 'VP8L' && bytes.length >= 25 && bytes[20] === 0x2f) {
+    const bits = bytes[21] | (bytes[22] << 8) | (bytes[23] << 16) | (bytes[24] << 24);
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    };
+  }
+
+  const frameHeader = findBytes(bytes, [0x9d, 0x01, 0x2a], 16);
+
+  if (frameHeader >= 0 && frameHeader + 7 <= bytes.length) {
+    return {
+      width: (bytes[frameHeader + 3] | (bytes[frameHeader + 4] << 8)) & 0x3fff,
+      height: (bytes[frameHeader + 5] | (bytes[frameHeader + 6] << 8)) & 0x3fff,
+    };
+  }
+
+  return {};
+}
+
+function readIsoMediaMetadata(bytes: Uint8Array): ActualMediaMetadata {
+  const mvhdOffset = findBytes(bytes, [0x6d, 0x76, 0x68, 0x64]);
+  let durationSeconds: number | undefined;
+
+  if (mvhdOffset >= 4 && mvhdOffset + 32 <= bytes.length) {
+    const version = bytes[mvhdOffset + 4];
+    const timescaleOffset = mvhdOffset + (version === 1 ? 24 : 16);
+    const durationOffset = mvhdOffset + (version === 1 ? 28 : 20);
+    const timescale = readUint32(bytes, timescaleOffset);
+
+    if (timescale > 0) {
+      const duration = version === 1
+        ? readUint32(bytes, durationOffset + 4) + readUint32(bytes, durationOffset) * 0x100000000
+        : readUint32(bytes, durationOffset);
+      durationSeconds = duration / timescale;
+    }
+  }
+
+  let tkhdOffset = findBytes(bytes, [0x74, 0x6b, 0x68, 0x64]);
+  let width: number | undefined;
+  let height: number | undefined;
+
+  while (tkhdOffset >= 4) {
+    const atomStart = tkhdOffset - 4;
+    const atomSize = readUint32(bytes, atomStart);
+    const atomEnd = atomStart + atomSize;
+
+    if (atomSize >= 16 && atomEnd <= bytes.length) {
+      const candidateWidth = readUint32(bytes, atomEnd - 8) / 65_536;
+      const candidateHeight = readUint32(bytes, atomEnd - 4) / 65_536;
+
+      if (candidateWidth > 0 && candidateHeight > 0) {
+        width = Math.round(candidateWidth);
+        height = Math.round(candidateHeight);
+        break;
+      }
+    }
+
+    tkhdOffset = findBytes(bytes, [0x74, 0x6b, 0x68, 0x64], tkhdOffset + 4);
+  }
+
+  return { durationSeconds, height, width };
+}
+
+function readEbmlElement(bytes: Uint8Array, id: number[]) {
+  const idOffset = findBytes(bytes, id);
+
+  if (idOffset < 0) {
+    return null;
+  }
+
+  const sizeOffset = idOffset + id.length;
+  const firstSizeByte = bytes[sizeOffset];
+  let sizeLength = 1;
+  let marker = 0x80;
+
+  while (sizeLength <= 8 && (firstSizeByte & marker) === 0) {
+    sizeLength += 1;
+    marker >>= 1;
+  }
+
+  if (sizeLength > 8 || sizeOffset + sizeLength > bytes.length) {
+    return null;
+  }
+
+  let size = firstSizeByte & (marker - 1);
+
+  for (let index = 1; index < sizeLength; index += 1) {
+    size = size * 256 + bytes[sizeOffset + index];
+  }
+
+  const dataOffset = sizeOffset + sizeLength;
+  return dataOffset + size <= bytes.length
+    ? bytes.slice(dataOffset, dataOffset + size)
+    : null;
+}
+
+function readUnsignedBytes(bytes: Uint8Array | null) {
+  if (!bytes || bytes.length === 0 || bytes.length > 8) {
+    return undefined;
+  }
+
+  return bytes.reduce((value, byte) => value * 256 + byte, 0);
+}
+
+function readWebmMetadata(bytes: Uint8Array): ActualMediaMetadata {
+  const width = readUnsignedBytes(readEbmlElement(bytes, [0xb0]));
+  const height = readUnsignedBytes(readEbmlElement(bytes, [0xba]));
+  const timecodeScale = readUnsignedBytes(readEbmlElement(bytes, [0x2a, 0xd7, 0xb1])) ?? 1_000_000;
+  const durationBytes = readEbmlElement(bytes, [0x44, 0x89]);
+  let durationSeconds: number | undefined;
+
+  if (durationBytes?.length === 4 || durationBytes?.length === 8) {
+    const view = new DataView(
+      durationBytes.buffer,
+      durationBytes.byteOffset,
+      durationBytes.byteLength,
+    );
+    const duration = durationBytes.length === 4 ? view.getFloat32(0) : view.getFloat64(0);
+
+    if (Number.isFinite(duration) && duration > 0) {
+      durationSeconds = (duration * timecodeScale) / 1_000_000_000;
+    }
+  }
+
+  return { durationSeconds, height, width };
+}
+
+function readActualMediaMetadata(contentType: string, bytes: Uint8Array): ActualMediaMetadata {
+  if (contentType === 'image/png' && bytes.length >= 24) {
+    return { width: readUint32(bytes, 16), height: readUint32(bytes, 20) };
+  }
+
+  if (contentType === 'image/jpeg') {
+    return readJpegDimensions(bytes);
+  }
+
+  if (contentType === 'image/webp') {
+    return readWebpDimensions(bytes);
+  }
+
+  if (contentType === 'image/heic') {
+    const ispeOffset = findBytes(bytes, [0x69, 0x73, 0x70, 0x65]);
+    return ispeOffset >= 0 && ispeOffset + 16 <= bytes.length
+      ? { width: readUint32(bytes, ispeOffset + 8), height: readUint32(bytes, ispeOffset + 12) }
+      : {};
+  }
+
+  return contentType === 'video/webm'
+    ? readWebmMetadata(bytes)
+    : readIsoMediaMetadata(bytes);
+}
+
+function assertActualMediaMetadata(
+  payload: z.infer<typeof completeUploadPayloadSchema>,
+  actual: ActualMediaMetadata,
+) {
+  if (!actual.width || !actual.height || actual.width > 8192 || actual.height > 8192) {
+    throw new HttpRequestError(422, 'upload_verification_failed', 'Media dimensions could not be verified');
+  }
+
+  if (
+    (payload.width != null && payload.width !== actual.width) ||
+    (payload.height != null && payload.height !== actual.height)
+  ) {
+    throw new HttpRequestError(422, 'upload_verification_failed', 'Media dimensions do not match the uploaded file');
+  }
+
+  if (payload.mediaType === 'video') {
+    if (!actual.durationSeconds || actual.durationSeconds > placeMediaMaxVideoDurationSeconds) {
+      throw new HttpRequestError(422, 'upload_verification_failed', 'Video duration could not be verified');
+    }
+
+    if (
+      payload.durationSeconds == null ||
+      Math.abs(payload.durationSeconds - actual.durationSeconds) > 1
+    ) {
+      throw new HttpRequestError(422, 'upload_verification_failed', 'Video duration does not match the uploaded file');
+    }
+  }
+}
+
+function assertMediaMetadata(payload: z.infer<typeof completeUploadPayloadSchema>) {
+  const expectsVideo = payload.mediaType === 'video';
+
+  if (expectsVideo !== payload.contentType.startsWith('video/')) {
+    throw new HttpRequestError(400, 'invalid_input', 'Media type does not match content type');
+  }
+
+  if (expectsVideo && payload.durationSeconds == null) {
+    throw new HttpRequestError(400, 'invalid_input', 'Video duration is required');
+  }
+
+  if ((payload.width == null) !== (payload.height == null)) {
+    throw new HttpRequestError(400, 'invalid_input', 'Media dimensions must be provided together');
+  }
+}
+
+async function fetchObjectPrefixWithRange(signedUrl: string, maxBytes: number, totalBytes?: number) {
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), 8_000);
+
+  try {
+    const fetchRange = async (range: string) => {
+      const response = await fetch(signedUrl, {
+        headers: { Range: range },
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new HttpRequestError(422, 'upload_verification_failed', 'Uploaded media could not be verified');
+      }
+
+      return new Uint8Array(await response.arrayBuffer());
+    };
+    const prefix = await fetchRange(`bytes=0-${maxBytes - 1}`);
+
+    if (!totalBytes || totalBytes <= maxBytes) {
+      return prefix;
+    }
+
+    const suffixStart = Math.max(maxBytes, totalBytes - maxBytes);
+    const suffix = await fetchRange(`bytes=${suffixStart}-${totalBytes - 1}`);
+    const combined = new Uint8Array(prefix.length + suffix.length);
+    combined.set(prefix, 0);
+    combined.set(suffix, prefix.length);
+    return combined;
+  } catch (error) {
+    if (isHttpRequestError(error)) {
+      throw error;
+    }
+
+    throw new HttpRequestError(422, 'upload_verification_failed', 'Uploaded media could not be verified');
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function getOwnedPath(userId: string, value: string) {
@@ -528,11 +936,78 @@ async function getAuthorizedPrivatePlaceMediaPath(
   throw new HttpRequestError(403, 'forbidden', 'Media asset is not visible to this user.');
 }
 
+async function getAuthorizedPrivatePlaceMediaPaths(
+  adminClient: AdminClientLike,
+  userId: string,
+  paths: string[],
+) {
+  const normalizedPaths = paths.map(sanitizeStoragePath);
+
+  if (adminClient.rpc) {
+    const { data, error } = await adminClient.rpc('can_read_private_place_media_batch', {
+      p_bucket: 'place-media-private',
+      p_paths: normalizedPaths,
+      p_viewer_id: userId,
+    });
+
+    if (!error && Array.isArray(data)) {
+      const authorizationByPath = new Map<string, boolean>();
+
+      data.forEach((row) => {
+        if (isRecord(row) && typeof row.path === 'string') {
+          authorizationByPath.set(row.path, row.allowed === true);
+        }
+      });
+
+      if (
+        normalizedPaths.every((path) => authorizationByPath.get(path) === true)
+      ) {
+        return normalizedPaths;
+      }
+
+      throw new HttpRequestError(403, 'forbidden', 'One or more media assets are not visible to this user.');
+    }
+
+    if (error && error.code !== '42883' && !error.message.includes('can_read_private_place_media_batch')) {
+      throw new HttpRequestError(500, 'authorization_failed', 'Media authorization failed.');
+    }
+  }
+
+  return Promise.all(
+    normalizedPaths.map((path) =>
+      getAuthorizedPrivatePlaceMediaPath(adminClient, userId, path)
+    ),
+  );
+}
+
+// Pure validation/parsing helpers are exported as one narrow surface so their
+// security boundaries can be regression-tested without exercising storage.
+export const mediaAssetsInternals = {
+  assertActualMediaMetadata,
+  assertMediaMetadata,
+  assertMediaSignature,
+  decodeBase64Payload,
+  fetchObjectPrefixWithRange,
+  formatRetryAfterMessage,
+  getAuthorizedPrivatePlaceMediaPath,
+  getAuthorizedPrivatePlaceMediaPaths,
+  getMaxUploadBytes,
+  getMediaRequestRateLimit,
+  getOwnedPath,
+  normalizeExtension,
+  parseMediaPayload,
+  parsePrivateMediaAuthorizationResult,
+  readActualMediaMetadata,
+  sanitizePrefix,
+  sanitizeStoragePath,
+};
+
 export function createMediaAssetsHandler({
   config,
   createAdminClient,
   createAuthClient,
   createRequestId = () => crypto.randomUUID(),
+  fetchObjectPrefix = fetchObjectPrefixWithRange,
 }: MediaAssetsHandlerDeps) {
   return async function handleMediaAssetsRequest(request: Request) {
     const requestContext = createEdgeRequestContext(request, 'media-assets');
@@ -660,6 +1135,7 @@ export function createMediaAssetsHandler({
         const { error: uploadError } = await adminClient.storage
           .from(payload.bucket)
           .upload(fileName, bytes, {
+            cacheControl: immutableMediaCacheSeconds,
             contentType: payload.contentType,
             upsert: false,
           });
@@ -748,6 +1224,139 @@ export function createMediaAssetsHandler({
             objectPath: fileName,
             storageUri: `sorita-storage://${payload.bucket}/${fileName.split('/').map(encodeURIComponent).join('/')}`,
             signedUrl: signedUploadData.signedUrl,
+          },
+          {
+            extraHeaders: rateLimitHeaders(
+              rateLimitResult,
+              getMediaRequestRateLimit(payload.action),
+            ),
+            requestId: requestContext.requestId,
+          },
+        );
+      }
+
+      if (payload.action === 'complete-upload') {
+        assertMediaMetadata(payload);
+        const objectPath = getOwnedPath(userId, payload.objectPath);
+        const maxUploadBytes = getMaxUploadBytes(payload.bucket, payload.contentType);
+        const bucket = adminClient.storage.from(payload.bucket);
+
+        if (payload.fileSizeBytes > maxUploadBytes) {
+          await bucket.remove([objectPath]).catch(() => undefined);
+          throw new HttpRequestError(413, 'file_too_large', 'Media payload exceeds size limit');
+        }
+
+        const { data: objectInfo, error: objectInfoError } = await bucket.info(objectPath);
+
+        if (objectInfoError || !objectInfo) {
+          throw new HttpRequestError(404, 'not_found', 'Uploaded media was not found');
+        }
+
+        const actualSize = objectInfo.size ?? objectInfo.metadata?.size ?? null;
+        const actualContentType = (
+          objectInfo.contentType ?? objectInfo.metadata?.mimetype ?? ''
+        ).split(';')[0]?.trim().toLowerCase();
+        const rejectInvalidUpload = async (message: string) => {
+          await bucket.remove([objectPath]).catch(() => undefined);
+          throw new HttpRequestError(422, 'upload_verification_failed', message);
+        };
+
+        if (
+          actualSize == null ||
+          actualSize !== payload.fileSizeBytes ||
+          actualSize > maxUploadBytes
+        ) {
+          await rejectInvalidUpload('Uploaded media size could not be verified');
+        }
+
+        if (actualContentType !== payload.contentType) {
+          await rejectInvalidUpload('Uploaded media content type could not be verified');
+        }
+
+        const { data: probeUrlData, error: probeUrlError } = await bucket.createSignedUrl(
+          objectPath,
+          60,
+        );
+
+        if (probeUrlError || !probeUrlData?.signedUrl) {
+          throw new HttpRequestError(500, 'upload_verification_failed', 'Uploaded media could not be verified');
+        }
+
+        const signatureBytes = await fetchObjectPrefix(
+          probeUrlData.signedUrl,
+          mediaSignatureProbeBytes,
+          actualSize,
+        );
+
+        try {
+          assertMediaSignature(payload.contentType, signatureBytes);
+          assertActualMediaMetadata(
+            payload,
+            readActualMediaMetadata(payload.contentType, signatureBytes),
+          );
+        } catch {
+          await rejectInvalidUpload('Uploaded media content could not be verified');
+        }
+
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          200,
+          {
+            objectPath,
+            storageUri: `sorita-storage://${payload.bucket}/${objectPath.split('/').map(encodeURIComponent).join('/')}`,
+            verified: true,
+          },
+          {
+            extraHeaders: rateLimitHeaders(
+              rateLimitResult,
+              getMediaRequestRateLimit(payload.action),
+            ),
+            requestId: requestContext.requestId,
+          },
+        );
+      }
+
+      if (payload.action === 'create-read-urls') {
+        const uniquePaths = Array.from(new Set(payload.paths));
+        const authorizedPaths = await getAuthorizedPrivatePlaceMediaPaths(
+          adminClient,
+          userId,
+          uniquePaths,
+        );
+        const { data: signedReadData, error: signedReadError } = await adminClient.storage
+          .from(payload.bucket)
+          .createSignedUrls(authorizedPaths, privateReadUrlExpiresInSeconds);
+
+        if (
+          signedReadError ||
+          !signedReadData ||
+          signedReadData.length !== authorizedPaths.length ||
+          signedReadData.some((item) => item.error || !item.path || !item.signedUrl)
+        ) {
+          logEdgeEvent('error', 'Batch signed read URL creation failed', requestContext, {
+            bucket: payload.bucket,
+            message: signedReadError?.message,
+          });
+          return jsonResponse(
+            request,
+            allowedOrigins,
+            500,
+            { code: 'read_url_failed', error: 'Medya erisimi baslatilamadi.' },
+            { requestId: requestContext.requestId },
+          );
+        }
+
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          200,
+          {
+            expiresInSeconds: privateReadUrlExpiresInSeconds,
+            items: signedReadData.map((item) => ({
+              path: item.path,
+              signedUrl: item.signedUrl,
+            })),
           },
           {
             extraHeaders: rateLimitHeaders(

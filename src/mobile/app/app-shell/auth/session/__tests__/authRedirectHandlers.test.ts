@@ -151,6 +151,10 @@ describe('authRedirectHandlers', () => {
     expect(signOutMock).toHaveBeenCalled();
     expect(clearCurrentUserStateMock).toHaveBeenCalled();
 
+    await expect(
+      completeSignupRedirect({ error: 'plain_provider_error', target: 'auth/callback' }),
+    ).rejects.toThrow('plain_provider_error');
+
     persistAuthSessionMock.mockClear();
     clearPendingAuthRedirectStatesMock.mockClear();
     signOutMock.mockClear();
@@ -171,6 +175,16 @@ describe('authRedirectHandlers', () => {
     expect(clearPendingAuthRedirectStatesMock).toHaveBeenCalled();
     expect(signOutMock).toHaveBeenCalled();
     expect(clearCurrentUserStateMock).toHaveBeenCalled();
+
+    consumePendingAuthRedirectStateMock.mockResolvedValue({
+      success: true,
+      entry: { flow: 'password-reset', state: 'state-2', target: 'auth/callback' },
+    });
+    await expect(
+      completeSignupRedirect({
+        code: 'code-2', flow: 'password-reset', state: 'state-2', target: 'auth/callback',
+      }),
+    ).rejects.toThrow();
   });
 
   it('rejects missing or invalid session payloads and logs sign-out cleanup failures', async () => {
@@ -208,6 +222,33 @@ describe('authRedirectHandlers', () => {
         target: 'auth/callback',
       }),
     ).rejects.toThrow('exchange failed');
+
+    exchangeCodeForSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+    await expect(
+      completeSignupRedirect({
+        code: 'code-2', flow: 'signup', state: 'state-1', target: 'auth/callback',
+      }),
+    ).rejects.toThrow();
+
+    consumePendingAuthRedirectStateMock.mockResolvedValue({
+      success: true,
+      entry: { flow: 'password-reset', state: 'state-reset', target: 'reset-password' },
+    });
+    setSessionMock
+      .mockResolvedValueOnce({ data: { session: null }, error: new Error('set session failed') })
+      .mockResolvedValueOnce({ data: { session: null }, error: null });
+    await expect(
+      preparePasswordResetRedirect({
+        accessToken: 'access', refreshToken: 'refresh', flow: 'password-reset',
+        state: 'state-reset', target: 'reset-password',
+      }),
+    ).rejects.toThrow('set session failed');
+    await expect(
+      preparePasswordResetRedirect({
+        accessToken: 'access', refreshToken: 'refresh', flow: 'password-reset',
+        state: 'state-reset', target: 'reset-password',
+      }),
+    ).rejects.toThrow();
   });
 
   it('updates recovered passwords and clears temporary reset sessions', async () => {
@@ -222,5 +263,14 @@ describe('authRedirectHandlers', () => {
 
     updateUserMock.mockResolvedValue({ error: new Error('weak password') });
     await expect(updateRecoveredPassword('weak')).rejects.toThrow('weak password');
+
+    updateUserMock.mockResolvedValue({ error: null });
+    signOutMock.mockRejectedValue(new Error('sign-out network failure'));
+    await updateRecoveredPassword('another-valid-password');
+    expect(loggerDebugMock).toHaveBeenCalledWith(
+      'auth',
+      'Failed to sign out after updating recovered password',
+      expect.any(Error),
+    );
   });
 });

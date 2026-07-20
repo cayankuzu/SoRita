@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, AppState, type AppStateStatus } from 'react-native';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
+import { AUTH_BOOTSTRAP_SHELL_FALLBACK_MS } from '@/mobile/app/shared/performance/budgets';
 
 const clearCurrentUserStateMock = vi.fn();
 const getActiveOrPersistedSessionMock = vi.fn();
@@ -332,7 +333,7 @@ describe('useAuthSessionLifecycle', () => {
       );
 
       await act(async () => {
-        vi.advanceTimersByTime(3_000);
+        vi.advanceTimersByTime(AUTH_BOOTSTRAP_SHELL_FALLBACK_MS);
       });
 
       expect(loggerWarnMock).toHaveBeenCalledWith(

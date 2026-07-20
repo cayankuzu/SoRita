@@ -19,15 +19,15 @@ describe('outboxStorage', () => {
     const first = await enqueueOutboxEntry({
       id: 'entry-1',
       idempotencyKey: 'intent-1',
-      kind: 'place-like-toggle',
-      payloadRef: { placeId: 'place-1' },
+      kind: 'user-block-state',
+      payloadRef: { blocked: true, targetUserId: 'target-1' },
       userId: 'user-1',
     });
     await enqueueOutboxEntry({
       id: 'entry-2',
       idempotencyKey: 'intent-1',
-      kind: 'place-like-toggle',
-      payloadRef: { placeId: 'place-1', nextLiked: false },
+      kind: 'user-block-state',
+      payloadRef: { blocked: false, targetUserId: 'target-1' },
       userId: 'user-1',
     });
 
@@ -36,20 +36,20 @@ describe('outboxStorage', () => {
     expect(first.id).toBe('entry-1');
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('entry-2');
-    expect(entries[0].payloadRef).toEqual({ placeId: 'place-1', nextLiked: false });
+    expect(entries[0].payloadRef).toEqual({ blocked: false, targetUserId: 'target-1' });
     await expect(readOutboxEntries('user-2')).resolves.toEqual([]);
   });
 
   it('returns only due entries whose dependencies are done', async () => {
     await enqueueOutboxEntry({
-      id: 'upload-1',
-      kind: 'upload',
-      payloadRef: { uri: 'file://one.jpg' },
+      id: 'report-1',
+      kind: 'moderation-report',
+      payloadRef: { reason: 'spam', targetType: 'place', placeId: 'place-1' },
       state: 'done',
       userId: 'user-1',
     });
     await enqueueOutboxEntry({
-      dependencies: ['upload-1'],
+      dependencies: ['report-1'],
       id: 'comment-1',
       kind: 'comment-create',
       nextAttemptAt: '2026-01-01T00:00:00.000Z',
@@ -75,8 +75,8 @@ describe('outboxStorage', () => {
   it('updates, removes, and clears entries', async () => {
     await enqueueOutboxEntry({
       id: 'entry-1',
-      kind: 'follow-toggle',
-      payloadRef: { targetUserId: 'target' },
+      kind: 'user-block-state',
+      payloadRef: { blocked: true, targetUserId: 'target' },
       userId: 'user-1',
     });
 

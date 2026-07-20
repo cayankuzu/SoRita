@@ -8,6 +8,7 @@ import { Check, X } from 'lucide-react-native';
 
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 type AuthImagePickerProps = {
@@ -54,8 +55,8 @@ export function AuthImagePicker({
               <Text style={styles.title}>{placeholderText}</Text>
               <Text style={styles.subtitle}>
                 {hasSelection
-                  ? 'Secildi. Degistirmek icin karta dokun.'
-                  : 'Sectiginde telefonunun kirpma araci acilir.'}
+                  ? tr.mediaPicker.selectedHint
+                  : tr.mediaPicker.cropHint}
               </Text>
             </View>
           </View>
@@ -64,12 +65,13 @@ export function AuthImagePicker({
             <View style={styles.headerActions}>
               <View style={styles.selectionBadge}>
                 <Check color={colors.secondary} size={14} />
-                <Text style={styles.selectionBadgeText}>Hazir</Text>
+                <Text style={styles.selectionBadgeText}>{tr.common.ready}</Text>
               </View>
 
               <InstantPressable
-                accessibilityLabel={`${placeholderText} temizle`}
+                accessibilityLabel={tr.mediaPicker.clearSelection(placeholderText)}
                 accessibilityRole="button"
+                hitSlop={10}
                 onPress={(event) => {
                   event.stopPropagation();
                   onClear();

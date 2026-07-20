@@ -37,6 +37,7 @@ type CompactPlaceCardProps = {
   placeTimestampLabels: string[];
   onPlaceNamePress?: () => void;
   onPress?: () => void;
+  onPressIn?: () => void;
 };
 
 export function CompactPlaceCard({
@@ -47,6 +48,7 @@ export function CompactPlaceCard({
   placeTimestampLabels,
   onPlaceNamePress,
   onPress,
+  onPressIn,
 }: CompactPlaceCardProps) {
   const [isPlaceNameExpanded, setIsPlaceNameExpanded] = React.useState(false);
   const [isPlaceNameTruncated, setIsPlaceNameTruncated] = React.useState(false);
@@ -84,6 +86,7 @@ export function CompactPlaceCard({
   return (
     <Pressable
       style={styles.compactCard}
+      onPressIn={onPressIn}
       onPress={() => {
         if (Date.now() - lastCompactMapGestureAtRef.current < MAP_PRESS_SUPPRESSION_WINDOW_MS) {
           return;
@@ -96,8 +99,9 @@ export function CompactPlaceCard({
         {primaryMedia ? (
           <MediaThumbnailView
             item={primaryMedia}
+            priority="high"
             style={styles.compactImageWrap}
-            accessibilityLabel={`${place.name} fotografi`}
+            accessibilityLabel={tr.placeEditor.placePhotoLabel(place.name)}
             fallbackToVideoPreview={false}
           />
         ) : (

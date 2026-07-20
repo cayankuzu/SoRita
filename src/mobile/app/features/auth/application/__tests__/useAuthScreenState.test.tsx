@@ -725,4 +725,98 @@ describe('useAuthScreenState', () => {
     expect(savePersistedLegalConsentVersionMock).toHaveBeenCalledWith('2026-04-16');
     expect(hook.result.current.hasAcceptedLegal).toBe(true);
   });
+
+  it('reacts to initial route updates and validates availability adapters at their boundary', async () => {
+    const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
+    let initialEmail: string | undefined;
+    let initialView: 'landing' | 'forgotPassword' | undefined;
+    const hook = renderHook(() => hooks.useAuthScreenState({
+      initialEmail,
+      initialView,
+      login: vi.fn(),
+      register: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+    }));
+    const usernameOptions = useUsernameAvailabilityQueryMock.mock.calls.at(-1)?.[0] as {
+      invalidMessage: (value: string) => string | null;
+    };
+    const emailOptions = useEmailAvailabilityQueryMock.mock.calls.at(-1)?.[0] as {
+      invalidMessage: (value: string) => string | null;
+    };
+    expect(usernameOptions.invalidMessage('ab')).toBe(tr.auth.toast.usernameTooShort);
+    expect(usernameOptions.invalidMessage('valid')).toBeNull();
+    expect(emailOptions.invalidMessage('invalid')).toBe(tr.auth.register.emailInvalid);
+    expect(emailOptions.invalidMessage('valid@example.com')).toBeNull();
+
+    initialEmail = '  User@Example.COM  ';
+    initialView = 'forgotPassword';
+    hook.rerender();
+    expect(hook.result.current.view).toBe('forgotPassword');
+    expect(hook.result.current.loginEmail).toBe('  User@Example.COM  ');
+    expect(hook.result.current.forgotPasswordEmail).toBe('  User@Example.COM  ');
+
+    act(() => {
+      hook.result.current.toggleLegalConsent();
+      hook.result.current.setForgotPasswordEmail('');
+    });
+    await act(async () => {
+      await hook.result.current.handleForgotPassword();
+    });
+    expect(showToastMock).toHaveBeenCalledWith(tr.auth.forgotPassword.missingEmail, 'error');
+
+    act(() => {
+      hook.result.current.setForgotPasswordEmail('reset@example.com');
+    });
+    await act(async () => {
+      await hook.result.current.handleForgotPassword();
+    });
+    expect(showToastMock).toHaveBeenCalledWith(tr.settings.password.resetHint, 'error');
+  });
+
+  it('covers forgot-password result variants and thrown weak-password registration', async () => {
+    const requestPasswordResetEmail = vi.fn()
+      .mockResolvedValueOnce({ success: false, message: 'custom reset failure' })
+      .mockResolvedValueOnce({ success: true })
+      .mockRejectedValueOnce('reset unavailable');
+    const register = vi.fn().mockRejectedValue(new Error('Weak password'));
+    const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
+    const hook = renderHook(() => hooks.useAuthScreenState({
+      login: vi.fn(), register, requestPasswordResetEmail, resendConfirmationEmail: vi.fn(),
+    }));
+    act(() => {
+      hook.result.current.toggleLegalConsent();
+      hook.result.current.setForgotPasswordEmail('reset@example.com');
+    });
+    await act(async () => {
+      await hook.result.current.handleForgotPassword();
+      await hook.result.current.handleForgotPassword();
+    });
+    expect(hook.result.current.view).toBe('login');
+    await act(async () => {
+      await hook.result.current.handleForgotPassword();
+    });
+    expect(showToastMock).toHaveBeenCalledWith(tr.settings.password.resetHint, 'error');
+
+    act(() => {
+      hook.result.current.openRegister();
+      hook.result.current.setRegName('Ada');
+      hook.result.current.updateRegisterUsername('ada');
+      hook.result.current.setRegEmail('ada@example.com');
+      hook.result.current.setRegPassword('Str0ng#2026');
+      hook.result.current.toggleInterest('coffee');
+    });
+    await act(async () => {
+      await hook.result.current.handleRegister();
+    });
+    expect(register).toHaveBeenCalledOnce();
+    expect(hook.result.current.regStep).toBe(1);
+    expect(hook.result.current.passwordHintTone).toBe('danger');
+
+    act(() => {
+      hook.result.current.setRegPassword('Qz7!Lm2@');
+      hook.result.current.goToPreviousRegisterStep();
+      hook.result.current.handleRegisterBack();
+    });
+    expect(hook.result.current.passwordHint).toBe(tr.auth.passwordHint.good);
+  });
 });

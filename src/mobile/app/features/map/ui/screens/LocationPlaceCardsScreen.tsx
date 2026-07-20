@@ -49,7 +49,10 @@ export function LocationPlaceCardsScreen() {
   const visibleDataQuery = useVisibleDataQuery(user?.id, {
     listPageSize: 100,
   });
-  const lists = visibleDataQuery.data?.lists || [];
+  const lists = useMemo(
+    () => visibleDataQuery.data?.lists || [],
+    [visibleDataQuery.data?.lists],
+  );
   const ownerById = useMemo(() => {
     const users = [...(visibleDataQuery.data?.allUsers || []), ...(visibleDataQuery.data?.users || [])];
     return new Map(users.map((item) => [item.id, item]));
@@ -99,7 +102,7 @@ export function LocationPlaceCardsScreen() {
     placeName ||
     locationStats.get(locationKey)?.originalPlaceName ||
     entries[0]?.place.name ||
-    'Bu konumdaki kartlar';
+    tr.map.locationCardsTitle;
   const listProps = useMemo(
     () =>
       buildAdaptiveFlatListProps<(typeof entries)[number]>({
@@ -124,7 +127,12 @@ export function LocationPlaceCardsScreen() {
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={styles.screenShell}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.topBarButton}>
+          <Pressable
+            accessibilityLabel={tr.common.back}
+            accessibilityRole="button"
+            onPress={() => navigation.goBack()}
+            style={styles.topBarButton}
+          >
             <ArrowLeft color={colors.text} size={18} />
           </Pressable>
 
@@ -157,8 +165,8 @@ export function LocationPlaceCardsScreen() {
           ListEmptyComponent={
             <EmptyState
               icon={<MapPin color={colors.textSoft} size={34} />}
-              title="Bu konumda kart bulunamadi"
-              description="Bu koordinasyona bagli gorunur bir mekan karti su an yok."
+              title={tr.map.locationCardsEmptyTitle}
+              description={tr.map.locationCardsEmptyDescription}
             />
           }
           renderItem={({ item }) => {
@@ -174,7 +182,7 @@ export function LocationPlaceCardsScreen() {
               >
                 {isHighlighted ? (
                   <View style={styles.highlightPill}>
-                    <Text style={styles.highlightPillText}>Secili mekan karti</Text>
+                    <Text style={styles.highlightPillText}>{tr.map.selectedPlaceCard}</Text>
                   </View>
                 ) : null}
 
@@ -232,8 +240,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   topBarButton: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -242,8 +250,8 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   topBarButtonSpacer: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
   },
   topBarCopy: {
     flex: 1,

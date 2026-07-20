@@ -44,7 +44,7 @@ export function ListDetailPlacesSection({
             <AvatarView uri={owner.profilePhoto} name={owner.name} size={42} />
           </View>
           <View style={styles.ownerBody}>
-            <Text style={styles.ownerEyebrow}>Liste sahibi</Text>
+            <Text style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</Text>
             <ExpandableText
               text={owner.name}
               collapsedLines={1}
@@ -56,14 +56,16 @@ export function ListDetailPlacesSection({
             </Text>
           </View>
           <View style={styles.ownerBadge}>
-            <Text style={styles.ownerBadgeText}>{isOwner ? 'Senin listen' : 'Profili ac'}</Text>
+            <Text style={styles.ownerBadgeText}>
+              {isOwner ? tr.listDetail.ownedByViewer : tr.listDetail.openOwnerProfile}
+            </Text>
           </View>
         </Pressable>
       ) : null}
 
       {list.description ? (
         <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionCardLabel}>Liste aciklamasi</Text>
+          <Text style={styles.descriptionCardLabel}>{tr.listDetail.descriptionLabel}</Text>
           <ExpandableText
             text={list.description}
             collapsedLines={4}
@@ -76,8 +78,8 @@ export function ListDetailPlacesSection({
         <View style={styles.mapSection}>
           <View style={styles.mapCardHeader}>
             <View>
-              <Text style={styles.mapCardEyebrow}>Harita</Text>
-              <Text style={styles.mapCardTitle}>Mekan konumlari</Text>
+              <Text style={styles.mapCardEyebrow}>{tr.cards.map}</Text>
+              <Text style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</Text>
             </View>
           </View>
 
@@ -103,10 +105,8 @@ export function ListDetailPlacesSection({
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
             <Text style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</Text>
-            <Text style={styles.sectionTitle}>Mekanlar</Text>
-            <Text style={styles.sectionSubtitle}>
-              Haritadaki secili pinin karti burada vurgulanir.
-            </Text>
+            <Text style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</Text>
+            <Text style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</Text>
           </View>
         </View>
       ) : null}

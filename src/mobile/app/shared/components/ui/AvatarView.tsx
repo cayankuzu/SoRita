@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { getUserAvatarText } from '@/mobile/app/shared/utils/format';
 
@@ -25,7 +26,7 @@ export function AvatarView({ uri, name, size = 40 }: AvatarViewProps) {
       uri={uri}
       style={avatarStyle}
       fallback={fallback}
-      accessibilityLabel={name ? `${name} profil fotoğrafı` : 'Profil fotoğrafı'}
+      accessibilityLabel={tr.common.profilePhotoLabel(name)}
     />
   );
 }

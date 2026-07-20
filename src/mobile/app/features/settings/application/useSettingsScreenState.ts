@@ -35,6 +35,12 @@ function hasPendingLocalMedia(uri?: string) {
   return Boolean(uri && !/^https?:\/\//i.test(uri));
 }
 
+// Narrow pure-function surface for exhaustive settings feedback tests.
+export const settingsScreenInternals = {
+  getErrorMessage,
+  hasPendingLocalMedia,
+};
+
 export function useSettingsScreenState({
   deleteCurrentUser,
   freshUser,

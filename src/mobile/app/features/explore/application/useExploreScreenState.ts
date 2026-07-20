@@ -6,16 +6,11 @@ import {
   type FollowStateResult,
 } from '@/mobile/app/data/hooks/useUserMutations';
 import { useExploreQuery } from '@/mobile/app/data/hooks/useExploreQuery';
-import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
-import { isMissingReadModelError } from '@/mobile/app/data/query/readModelErrors';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
-import {
-  buildPlaceFeedCardItems,
-  type PlaceFeedCardItem,
-} from '@/mobile/app/data/selectors/placeAggregation';
+import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 export type ExploreTabKey = 'lists' | 'places' | 'photos' | 'people';
 
@@ -115,23 +110,10 @@ export function useExploreScreenState({
     places: placeExploreQuery,
   } as const;
   const activeExploreQuery = exploreQueryByTab[selectedTab];
-  const shouldUseLegacyVisibleData = isMissingReadModelError(activeExploreQuery.error);
-  const visibleDataQuery = useVisibleDataQuery(userId, {
-    enabled: Boolean(userId) && shouldUseLegacyVisibleData,
-    includePlaceComments: false,
-    publicOnly: true,
-  });
   const { mutateAsync: followUserAsync } = useFollowUserMutation();
-  const activeQuery = shouldUseLegacyVisibleData ? visibleDataQuery : activeExploreQuery;
-  const visibleUsers = visibleDataQuery.data?.users || [];
-  const visibleLists = visibleDataQuery.data?.lists || [];
-  const usersById = useMemo(
-    () => new Map(visibleUsers.map((item) => [item.id, item])),
-    [visibleUsers],
-  );
-  const errorMessage = activeQuery.error
+  const errorMessage = activeExploreQuery.error
     ? getUserFacingErrorMessage(
-        activeQuery.error,
+        activeExploreQuery.error,
         tr.explore.errorDescription,
       )
     : null;
@@ -141,59 +123,23 @@ export function useExploreScreenState({
       return;
     }
 
-    await activeQuery.refetch();
-  }, [activeQuery, userId]);
+    await activeExploreQuery.refetch();
+  }, [activeExploreQuery, userId]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadData, {
     refreshOnFocus: false,
     skipInitialFocus: true,
   });
 
-  const currentUser = useMemo(() => {
-    if (!userId) {
-      return null;
-    }
+  const currentUser = userId ? user : null;
 
-    return shouldUseLegacyVisibleData ? usersById.get(userId) || user : user;
-  }, [shouldUseLegacyVisibleData, user, userId, usersById]);
-
-  const following = currentUser?.following || [];
+  const following = useMemo(() => currentUser?.following || [], [currentUser?.following]);
   const pendingFollowRequests = currentUser?.pendingFollowRequestsSent || [];
   const followingSet = useMemo(() => new Set(following), [following]);
   const canAppearInExplore = useCallback(
     (ownerId?: string | null) =>
       Boolean(ownerId && ownerId !== userId && !followingSet.has(ownerId)),
     [followingSet, userId],
-  );
-
-  const allUsers = useMemo(() => {
-    if (!userId) {
-      return [];
-    }
-
-    return visibleUsers.filter(
-      (item) => item.isPublicAccount !== false && canAppearInExplore(item.id),
-    );
-  }, [canAppearInExplore, userId, visibleUsers]);
-
-  const publicLists = useMemo(() => {
-    const discoverableContentUserIds = new Set(allUsers.map((item) => item.id));
-
-    return visibleLists
-      .filter((list) => list.isPublic)
-      .filter((list) => discoverableContentUserIds.has(list.userId))
-      .sort((a, b) => getEntitySortTime(b.updatedAt, b.createdAt) - getEntitySortTime(a.updatedAt, a.createdAt));
-  }, [allUsers, visibleLists]);
-
-  const filteredLists = useMemo(
-    () =>
-      publicLists.filter(
-        (list) =>
-          !q ||
-          list.name.toLowerCase().includes(q) ||
-          list.description?.toLowerCase().includes(q),
-      ),
-    [publicLists, q],
   );
 
   const readModelListItems = useMemo<ExploreListItem[]>(() => {
@@ -218,21 +164,7 @@ export function useExploreScreenState({
     );
   }, [canAppearInExplore, listExploreQuery.data?.pages, q]);
 
-  const filteredListItems = useMemo<ExploreListItem[]>(
-    () =>
-      shouldUseLegacyVisibleData
-        ? filteredLists.map((list) => ({
-            list,
-            owner: usersById.get(list.userId) || null,
-          }))
-        : readModelListItems,
-    [filteredLists, readModelListItems, shouldUseLegacyVisibleData, usersById],
-  );
-
-  const placeFeedItems = useMemo<PlaceFeedCardItem[]>(
-    () => buildPlaceFeedCardItems(publicLists, (ownerId) => usersById.get(ownerId)),
-    [publicLists, usersById],
-  );
+  const filteredListItems = readModelListItems;
 
   const readModelPlaces = useMemo<PlaceFeedCardItem[]>(() => {
     const itemsByKey = new Map<string, PlaceFeedCardItem>();
@@ -270,23 +202,8 @@ export function useExploreScreenState({
     return Array.from(itemsByKey.values()).sort((left, right) => right.sortTime - left.sortTime);
   }, [canAppearInExplore, photoExploreQuery.data?.pages, q]);
 
-  const filteredPlaces = useMemo(
-    () =>
-      shouldUseLegacyVisibleData
-        ? placeFeedItems.filter((item) => !q || matchesFeedItem(item, q))
-        : readModelPlaces,
-    [placeFeedItems, q, readModelPlaces, shouldUseLegacyVisibleData],
-  );
-
-  const filteredPhotos = useMemo(
-    () =>
-      shouldUseLegacyVisibleData
-        ? placeFeedItems.filter(
-            (item) => getPlaceMedia(item.place).length > 0 && (!q || matchesFeedItem(item, q)),
-          )
-        : readModelPhotos,
-    [placeFeedItems, q, readModelPhotos, shouldUseLegacyVisibleData],
-  );
+  const filteredPlaces = readModelPlaces;
+  const filteredPhotos = readModelPhotos;
 
   const readModelUsers = useMemo<User[]>(() => {
     const usersByResultId = new Map<string, User>();
@@ -302,30 +219,9 @@ export function useExploreScreenState({
     return Array.from(usersByResultId.values());
   }, [canAppearInExplore, q, userExploreQuery.data?.pages]);
 
-  const filteredUsers = useMemo(
-    () =>
-      shouldUseLegacyVisibleData
-        ? allUsers.filter((item) => !q || matchesUser(item, q))
-        : readModelUsers,
-    [allUsers, q, readModelUsers, shouldUseLegacyVisibleData],
-  );
+  const filteredUsers = readModelUsers;
 
   const queryStateByTab = useMemo<Record<ExploreTabKey, ExploreTabQueryState>>(() => {
-    if (shouldUseLegacyVisibleData) {
-      const legacyState = {
-        fetchNextPage: visibleDataQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
-        hasNextPage: Boolean(visibleDataQuery.hasNextPage),
-        isFetchingNextPage: visibleDataQuery.isFetchingNextPage,
-      };
-
-      return {
-        lists: legacyState,
-        people: legacyState,
-        photos: legacyState,
-        places: legacyState,
-      };
-    }
-
     return {
       lists: {
         fetchNextPage: listExploreQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
@@ -358,13 +254,9 @@ export function useExploreScreenState({
     placeExploreQuery.fetchNextPage,
     placeExploreQuery.hasNextPage,
     placeExploreQuery.isFetchingNextPage,
-    shouldUseLegacyVisibleData,
     userExploreQuery.fetchNextPage,
     userExploreQuery.hasNextPage,
     userExploreQuery.isFetchingNextPage,
-    visibleDataQuery.fetchNextPage,
-    visibleDataQuery.hasNextPage,
-    visibleDataQuery.isFetchingNextPage,
   ]);
 
   const followUser = useCallback(
@@ -390,13 +282,15 @@ export function useExploreScreenState({
     followUser,
     following,
     hasNextPage: queryStateByTab[selectedTab].hasNextPage,
-    hasPartialDataError: shouldUseLegacyVisibleData
-      ? visibleDataQuery.hasPartialDataError
-      : false,
+    hasPartialDataError: Boolean(
+      activeExploreQuery.error &&
+      (filteredListItems.length ||
+        filteredPhotos.length ||
+        filteredPlaces.length ||
+        filteredUsers.length),
+    ),
     isFetchingNextPage: queryStateByTab[selectedTab].isFetchingNextPage,
-    isInitialLoading: shouldUseLegacyVisibleData
-      ? visibleDataQuery.isLoading && !visibleDataQuery.data
-      : activeExploreQuery.isLoading && !activeExploreQuery.data,
+    isInitialLoading: activeExploreQuery.isLoading && !activeExploreQuery.data,
     pendingFollowRequests,
     queryStateByTab,
     refreshing,

@@ -20,11 +20,11 @@ import {
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
-import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -47,8 +47,8 @@ type VisibleMediaEntry = {
 const LIGHTBOX_HORIZONTAL_PADDING = 16;
 const LIGHTBOX_TOP_BAR_HEIGHT = 84;
 const DELETE_MEDIA_CONFIRMATION = {
-  description: 'Secili medya bu karttan kaldirilacak.',
-  title: 'Medya silinsin mi?',
+  description: tr.common.mediaRemoveDescription,
+  title: tr.common.mediaRemoveTitle,
 } as const;
 
 function MediaLightboxPage({
@@ -56,21 +56,24 @@ function MediaLightboxPage({
   item,
   pageHeight,
   pageWidth,
+  shouldPrepareVideo,
 }: {
   isActive: boolean;
   item: PlaceMedia;
   pageHeight: number;
   pageWidth: number;
+  shouldPrepareVideo: boolean;
 }) {
   return (
     <View style={[styles.mediaPage, { height: pageHeight, width: pageWidth }]}>
       <View style={styles.mediaFrame}>
-        {item.type === 'video' && isActive ? (
+        {item.type === 'video' && shouldPrepareVideo ? (
           <VideoPreview
             uri={item.url}
+            posterUri={item.thumbnailUrl}
             durationLabel={formatPlaceMediaDuration(item.durationMs)}
-            nativeControls
-            showPlayOverlay={false}
+            nativeControls={isActive}
+            showPlayOverlay={!isActive}
             style={styles.video}
             contentFit="contain"
           />
@@ -79,8 +82,9 @@ function MediaLightboxPage({
             uri={item.thumbnailUrl}
             style={styles.image}
             resizeMode="contain"
-            accessibilityLabel="Video onizleme"
+            accessibilityLabel={tr.common.videoPreview}
             backgroundColor="transparent"
+            priority={isActive ? 'high' : 'normal'}
             fallback={
               <View style={styles.videoPosterFallback}>
                 <Play color={colors.onPrimary} fill={colors.onPrimary} size={24} />
@@ -92,8 +96,9 @@ function MediaLightboxPage({
             uri={item.url}
             style={styles.image}
             resizeMode="contain"
-            accessibilityLabel="Buyutulmus medya"
+            accessibilityLabel={tr.common.enlargedMedia}
             backgroundColor="transparent"
+            priority={isActive ? 'high' : 'normal'}
           />
         )}
       </View>
@@ -156,7 +161,8 @@ export function MediaLightbox({
   );
   const currentEntry = visibleItems[currentIndex] ?? visibleItems[startIndex] ?? null;
   const currentItem = currentEntry?.item ?? null;
-  const currentItemTypeLabel = currentItem?.type === 'video' ? 'Video' : 'Fotograf';
+  const currentItemTypeLabel =
+    currentItem?.type === 'video' ? tr.common.mediaVideo : tr.common.mediaPhoto;
 
   const handleClose = React.useCallback(() => {
     triggerHaptic('light');
@@ -216,6 +222,14 @@ export function MediaLightbox({
   React.useEffect(() => {
     setCurrentIndex(startIndex);
   }, [startIndex]);
+
+  React.useEffect(() => {
+    const nearbyMediaUris = visibleItems
+      .slice(Math.max(0, currentIndex - 1), currentIndex + 3)
+      .map(({ item }) => item.type === 'video' ? item.thumbnailUrl : item.url);
+
+    void prefetchAppImages(nearbyMediaUris);
+  }, [currentIndex, visibleItems]);
 
   React.useEffect(() => {
     if (menuItems.length === 0) {
@@ -290,6 +304,9 @@ export function MediaLightbox({
               nestedScrollEnabled
               decelerationRate="fast"
               initialScrollIndex={startIndex}
+              initialNumToRender={Math.min(3, visibleItems.length)}
+              maxToRenderPerBatch={2}
+              windowSize={3}
               getItemLayout={(_, index) => ({
                 index,
                 length: pageWidth,
@@ -314,6 +331,9 @@ export function MediaLightbox({
                   item={item.item}
                   pageHeight={pageHeight}
                   pageWidth={pageWidth}
+                  shouldPrepareVideo={
+                    item.item.type === 'video' && Math.abs(index - currentIndex) <= 1
+                  }
                 />
               )}
               showsHorizontalScrollIndicator={false}

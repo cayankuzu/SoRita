@@ -1,4 +1,3 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
@@ -61,6 +60,7 @@ describe('usePlaceMutations', () => {
       await deleteHook.result.current.mutateAsync('place-1');
       await likePlaceHook.result.current.mutateAsync({ placeId: 'place-1', userId: 'viewer-1' });
       await createCommentHook.result.current.mutateAsync({
+        commentId: 'comment-created-1',
         placeId: 'place-1',
         userId: 'viewer-1',
         content: 'hello',

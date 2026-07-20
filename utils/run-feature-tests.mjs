@@ -11,17 +11,16 @@ const nodeOptions = [
 ].filter(Boolean).join(' ');
 const childEnv = { ...process.env, NODE_OPTIONS: nodeOptions };
 const featureSuites = [
-  ['--passWithNoTests', 'src/mobile/app/features/auth'],
-  ['--passWithNoTests', 'src/mobile/app/features/discovery'],
-  ['--passWithNoTests', 'src/mobile/app/features/explore'],
-  ['--passWithNoTests', 'src/mobile/app/features/home'],
-  ['--passWithNoTests', 'src/mobile/app/features/lists'],
-  ['--passWithNoTests', 'src/mobile/app/features/map'],
-  ['--passWithNoTests', 'src/mobile/app/features/notifications'],
-  ['--passWithNoTests', 'src/mobile/app/features/places'],
-  ['--passWithNoTests', 'src/mobile/app/features/profile'],
-  ['--passWithNoTests', 'src/mobile/app/features/settings'],
-  ['--passWithNoTests', 'src/mobile/app/features/social'],
+  ['src/mobile/app/features/auth'],
+  ['src/mobile/app/features/explore'],
+  ['src/mobile/app/features/home'],
+  ['src/mobile/app/features/lists'],
+  ['src/mobile/app/features/map'],
+  ['src/mobile/app/features/notifications'],
+  ['src/mobile/app/features/places'],
+  ['src/mobile/app/features/profile'],
+  ['src/mobile/app/features/settings'],
+  ['src/mobile/app/features/social'],
 ];
 
 for (const suiteArgs of featureSuites) {

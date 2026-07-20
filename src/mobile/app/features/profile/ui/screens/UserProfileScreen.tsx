@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
 import {
   Image as ImageIcon,
@@ -16,49 +16,143 @@ import {
   useAppNavigation,
   useRootStackRoute,
 } from '@/mobile/app/app-shell/navigation/navigation';
-import type { PlaceList } from '@/mobile/app/data/contracts/entities';
-import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { useReportListMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useReportPlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
-import {
-  ListGridTile,
-  PlaceGridTile,
-} from '@/mobile/app/features/discovery/public/components';
 import { useUserProfileScreenState } from '@/mobile/app/features/profile/application/useUserProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { ProfileConnectionsSummary } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsSummary';
+import {
+  ProfileContentPager,
+  type ProfileContentTab,
+  type ProfileGridItem,
+} from '@/mobile/app/features/profile/ui/components/ProfileContentPager';
 import { ProfilePagedScrollContainer } from '@/mobile/app/features/profile/ui/components/ProfilePagedScrollContainer';
 import { PublicProfileActionBar } from '@/mobile/app/features/profile/ui/components/PublicProfileActionBar';
-import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
-import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
-import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
-import { SwipeableCategoryPager } from '@/mobile/app/shared/components/navigation/SwipeableCategoryPager';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
-import { StaticDiscoveryGrid } from '@/mobile/app/shared/components/ui/StaticDiscoveryGrid';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { UserProfileActionsSheet } from '@/mobile/app/features/profile/ui/components/UserProfileActionsSheet';
-import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
-import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
 import {
   ProfileTabs,
   type ProfileTabOption,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 import { estimateProfilePagerHeights } from '@/mobile/app/features/profile/ui/profilePagerLayout';
-import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
-type ProfileTab = 'lists' | 'places' | 'gallery';
-type ProfileGridItem = PlaceList | PlaceFeedCardItem;
+type ProfileTab = ProfileContentTab;
 const UNBLOCK_CONFIRMATION = {
-  description:
-    'Bu kullaniciyi yeniden gorebilir ve etkilesime gecebilirsin. Devam etmek istiyor musun?',
-  title: 'Engel kaldirilsin mi?',
+  description: tr.profile.userActions.unblockConfirmDescription,
+  title: tr.profile.userActions.unblockConfirmTitle,
 } as const;
+
+type ConfirmActionModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
+>;
+type ImageLightboxProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/ImageLightbox')['ImageLightbox']
+>;
+type ProfileConnectionsModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal')['ProfileConnectionsModal']
+>;
+type ProfileFeedScreenProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/profile/ui/components/ProfileFeedScreen')['ProfileFeedScreen']
+>;
+type ReportActionSheetProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
+>;
+type UserProfileActionsSheetProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet')['UserProfileActionsSheet']
+>;
+
+function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
+  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
+    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
+  return <ConfirmActionModal {...props} />;
+}
+
+function DeferredImageLightbox(props: ImageLightboxProps) {
+  const { ImageLightbox } = require('@/mobile/app/shared/components/feedback/ImageLightbox') as
+    typeof import('@/mobile/app/shared/components/feedback/ImageLightbox');
+  return <ImageLightbox {...props} />;
+}
+
+function DeferredProfileConnectionsModal(props: ProfileConnectionsModalProps) {
+  const { ProfileConnectionsModal } = require('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal') as
+    typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal');
+  return <ProfileConnectionsModal {...props} />;
+}
+
+function DeferredProfileFeedScreen(props: ProfileFeedScreenProps) {
+  const { ProfileFeedScreen } = require('@/mobile/app/features/profile/ui/components/ProfileFeedScreen') as
+    typeof import('@/mobile/app/features/profile/ui/components/ProfileFeedScreen');
+  return <ProfileFeedScreen {...props} />;
+}
+
+function DeferredReportActionSheet(props: ReportActionSheetProps) {
+  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
+    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
+  return <ReportActionSheet {...props} />;
+}
+
+function DeferredUserProfileActionsSheet(props: UserProfileActionsSheetProps) {
+  const { UserProfileActionsSheet } = require('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet') as
+    typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet');
+  return <UserProfileActionsSheet {...props} />;
+}
+
+function PublicUserAction({
+  canShow,
+  followUser,
+  hasPendingFollowRequest,
+  isBlockedByCurrent,
+  isFollowing,
+  onMorePress,
+  onUnblockPress,
+}: {
+  canShow: boolean;
+  followUser: () => Promise<'following' | 'requested' | 'unfollowed'>;
+  hasPendingFollowRequest: boolean;
+  isBlockedByCurrent: boolean;
+  isFollowing: boolean;
+  onMorePress: () => void;
+  onUnblockPress: () => void;
+}) {
+  if (!canShow) {
+    return null;
+  }
+
+  const handleFollowPress = async () => {
+    try {
+      const result = await followUser();
+      const message = result === 'requested'
+        ? tr.explore.toast.followRequestSent
+        : result === 'following'
+          ? tr.profile.toast.userFollowed
+          : tr.profile.toast.followUpdated;
+      showToast(message, 'success');
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : tr.profile.toast.followFailed,
+        'error',
+      );
+    }
+  };
+
+  return (
+    <PublicProfileActionBar
+      hasPendingFollowRequest={hasPendingFollowRequest}
+      isBlockedByCurrent={isBlockedByCurrent}
+      isFollowing={isFollowing}
+      onFollowPress={() => void handleFollowPress()}
+      onMorePress={onMorePress}
+      onUnblockPress={onUnblockPress}
+    />
+  );
+}
 
 export function UserProfileScreen() {
   const navigation = useAppNavigation();
@@ -124,6 +218,7 @@ export function UserProfileScreen() {
     retry,
     unblockUser,
   } = useUserProfileScreenState({
+    activeTab,
     allowBlockedView,
     user,
     userId,
@@ -133,8 +228,24 @@ export function UserProfileScreen() {
   const filteredPhotos = allPhotos;
   const hasAnyContent =
     publicLists.length > 0 || allPlaces.length > 0 || allPhotos.length > 0;
+  useScreenPerformanceMetric({
+    hasContent: hasAnyContent,
+    hasError: Boolean(errorMessage),
+    isLoading: isInitialLoading,
+    screen: 'user-profile',
+  });
+  const canShowPublicAction = Boolean(currentUser && !isOwnProfile);
   const shouldShowErrorState =
     canViewProfileContent && Boolean(errorMessage && !hasAnyContent);
+  const pagerSwipeEnabled = ![
+    refreshing,
+    lightboxUri,
+    actionMenuVisible,
+    reportTarget,
+    connectionMode,
+    blockConfirmVisible,
+    unblockConfirmVisible,
+  ].some(Boolean);
   const dataByTab = {
     gallery: filteredPhotos,
     lists: filteredLists,
@@ -278,6 +389,13 @@ export function UserProfileScreen() {
   const handleTabPreviewChange = useCallback((key: ProfileTab) => {
     setVisibleTab(key);
   }, []);
+  const handleProfileEndReached = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) {
+      return;
+    }
+
+    void fetchNextPage?.();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (isInitialLoading) {
     return (
@@ -376,7 +494,7 @@ export function UserProfileScreen() {
         : tr.profile.feedTitle.gallery;
 
     return (
-      <ProfileFeedScreen
+      <DeferredProfileFeedScreen
         title={feedTitle}
         items={feedItems}
         startIndex={feedMode.startIndex}
@@ -467,42 +585,17 @@ export function UserProfileScreen() {
         onCoverPhotoPress={() =>
           profileUser.coverPhoto && setLightboxUri(profileUser.coverPhoto)
         }
-        action={
-          currentUser && !isOwnProfile ? (
-            <PublicProfileActionBar
-              hasPendingFollowRequest={hasPendingFollowRequest}
-              isBlockedByCurrent={isBlockedByCurrent}
-              isFollowing={isFollowing}
-              onFollowPress={() => {
-                void (async () => {
-                  try {
-                    const result = await followUser();
-                    showToast(
-                      result === 'requested'
-                        ? tr.explore.toast.followRequestSent
-                        : result === 'following'
-                          ? tr.profile.toast.userFollowed
-                          : tr.profile.toast.followUpdated,
-                      'success',
-                    );
-                  } catch (error) {
-                    const message =
-                      error instanceof Error
-                        ? error.message
-                        : tr.profile.toast.followFailed;
-                    showToast(message, 'error');
-                  }
-                })();
-              }}
-              onMorePress={() => {
-                setActionMenuVisible(true);
-              }}
-              onUnblockPress={() => {
-                setUnblockConfirmVisible(true);
-              }}
-            />
-          ) : null
-        }
+        action={(
+          <PublicUserAction
+            canShow={canShowPublicAction}
+            followUser={followUser}
+            hasPendingFollowRequest={hasPendingFollowRequest}
+            isBlockedByCurrent={isBlockedByCurrent}
+            isFollowing={isFollowing}
+            onMorePress={() => setActionMenuVisible(true)}
+            onUnblockPress={() => setUnblockConfirmVisible(true)}
+          />
+        )}
       />
 
       <ProfileTabs
@@ -537,98 +630,35 @@ export function UserProfileScreen() {
           <ProfilePagedScrollContainer
             header={renderProfileHeader()}
             listRef={profileListRef}
+            onEndReached={handleProfileEndReached}
             onRefresh={onRefresh}
+            pagerHeight={pagerHeight}
             pager={
-              <View style={[styles.pagerShell, { height: pagerHeight }]}>
-                <SwipeableCategoryPager
-                  activeTab={activeTab}
-                  keepAlive={false}
-                  layoutMode="fill"
-                  lazy
-                  tabs={pagerTabs}
-                  onPageProgressChange={handlePageProgressChange}
-                  onTabChange={(tab) => handleTabChange(tab)}
-                  onTabPreviewChange={handleTabPreviewChange}
-                  renderPage={(tab) => (
-                    <StaticDiscoveryGrid<ProfileGridItem>
-                      data={shouldShowErrorState ? [] : dataByTab[tab]}
-                      contentContainerStyle={styles.gridContent}
-                      onContentHeightChange={(height) =>
-                        handlePagerContentHeightChange(tab, height)
-                      }
-                      ListEmptyComponent={renderEmptyState(tab)}
-                      ListFooterComponent={
-                        !shouldShowErrorState && hasNextPage ? (
-                          <Pressable
-                            style={styles.loadMoreButton}
-                            onPress={() => {
-                              if (isFetchingNextPage || tab !== activeTab) {
-                                return;
-                              }
-
-                              void fetchNextPage?.();
-                            }}
-                          >
-                            <Text style={styles.loadMoreLabel}>
-                              {isFetchingNextPage && tab === activeTab
-                                ? tr.common.loadingMore
-                                : tr.profile.loadMore}
-                            </Text>
-                          </Pressable>
-                        ) : null
-                      }
-                      keyExtractor={(item, index) =>
-                        tab === 'lists'
-                          ? (item as PlaceList).id
-                          : (item as unknown as PlaceFeedCardItem).key ||
-                            `${tab}:${index}`
-                      }
-                      renderItem={({ item, index }) => {
-                        if (tab === 'lists') {
-                          const list = item as PlaceList;
-
-                          return (
-                            <ListGridTile
-                              list={list}
-                              fillWidth
-                              allListsForMarkerColor={filteredLists}
-                              onPress={() =>
-                                openStackScreen(navigation, 'ListDetail', {
-                                  listId: list.id,
-                                })
-                              }
-                            />
-                          );
-                        }
-
-                        const placeItem = item as unknown as PlaceFeedCardItem;
-
-                        return (
-                          <PlaceGridTile
-                            place={placeItem.place}
-                            fillWidth
-                            mode={tab === 'gallery' ? 'photo' : 'place'}
-                            listCoverImage={placeItem.listCoverImage}
-                            listEmoji={placeItem.listEmoji}
-                            listIsPublic={placeItem.listIsPublic}
-                            listName={placeItem.listName}
-                            markerColor={getMarkerColorForMemberships(
-                              placeItem.memberships,
-                              placeItem.listIsPublic,
-                            )}
-                            onPress={() =>
-                              setFeedMode({
-                                startIndex: index,
-                                kind: tab === 'gallery' ? 'gallery' : 'places',
-                              })
-                            }
-                          />
-                        );
-                      }}
-                    />
-                  )}
-                />
-              </View>
+              <ProfileContentPager
+                activeTab={activeTab}
+                dataByTab={dataByTab}
+                emptyStateForTab={renderEmptyState}
+                enabled={pagerSwipeEnabled}
+                filteredLists={filteredLists}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                onContentHeightChange={handlePagerContentHeightChange}
+                onListPress={(list) =>
+                  openStackScreen(navigation, 'ListDetail', { listId: list.id })
+                }
+                onPageProgressChange={handlePageProgressChange}
+                onPlacePress={(tab, index) =>
+                  setFeedMode({
+                    startIndex: index,
+                    kind: tab === 'gallery' ? 'gallery' : 'places',
+                  })
+                }
+                onTabChange={handleTabChange}
+                onTabPreviewChange={handleTabPreviewChange}
+                pagerHeight={pagerHeight}
+                shouldShowErrorState={shouldShowErrorState}
+                tabs={pagerTabs}
+              />
             }
             refreshing={refreshing}
           />
@@ -651,42 +681,17 @@ export function UserProfileScreen() {
             onCoverPhotoPress={() =>
               profileUser.coverPhoto && setLightboxUri(profileUser.coverPhoto)
             }
-            action={
-              currentUser && !isOwnProfile ? (
-                <PublicProfileActionBar
-                  hasPendingFollowRequest={hasPendingFollowRequest}
-                  isBlockedByCurrent={isBlockedByCurrent}
-                  isFollowing={isFollowing}
-                  onFollowPress={() => {
-                    void (async () => {
-                      try {
-                        const result = await followUser();
-                        showToast(
-                          result === 'requested'
-                            ? tr.explore.toast.followRequestSent
-                            : result === 'following'
-                              ? tr.profile.toast.userFollowed
-                              : tr.profile.toast.followUpdated,
-                          'success',
-                        );
-                      } catch (error) {
-                        const message =
-                          error instanceof Error
-                            ? error.message
-                            : tr.profile.toast.followFailed;
-                        showToast(message, 'error');
-                      }
-                    })();
-                  }}
-                  onMorePress={() => {
-                    setActionMenuVisible(true);
-                  }}
-                  onUnblockPress={() => {
-                    setUnblockConfirmVisible(true);
-                  }}
-                />
-              ) : null
-            }
+            action={(
+              <PublicUserAction
+                canShow={canShowPublicAction}
+                followUser={followUser}
+                hasPendingFollowRequest={hasPendingFollowRequest}
+                isBlockedByCurrent={isBlockedByCurrent}
+                isFollowing={isFollowing}
+                onMorePress={() => setActionMenuVisible(true)}
+                onUnblockPress={() => setUnblockConfirmVisible(true)}
+              />
+            )}
           />
 
           <View style={styles.privateStateContent}>
@@ -714,7 +719,7 @@ export function UserProfileScreen() {
       )}
 
       {lightboxUri ? (
-        <ImageLightbox
+        <DeferredImageLightbox
           allowDownload={isOwnProfile}
           uri={lightboxUri}
           onClose={() => setLightboxUri(null)}
@@ -722,7 +727,7 @@ export function UserProfileScreen() {
       ) : null}
 
       {actionMenuVisible ? (
-        <UserProfileActionsSheet
+        <DeferredUserProfileActionsSheet
           visible
           isBlockedByCurrent={isBlockedByCurrent}
           onClose={() => setActionMenuVisible(false)}
@@ -745,7 +750,7 @@ export function UserProfileScreen() {
       ) : null}
 
       {reportTarget ? (
-        <ReportActionSheet
+        <DeferredReportActionSheet
           visible
           title={reportTarget.title}
           description={
@@ -771,7 +776,7 @@ export function UserProfileScreen() {
       ) : null}
 
       {connectionMode ? (
-        <ProfileConnectionsModal
+        <DeferredProfileConnectionsModal
           visible
           title={
             connectionMode === 'followers'
@@ -801,7 +806,7 @@ export function UserProfileScreen() {
       ) : null}
 
       {blockConfirmVisible ? (
-        <ConfirmActionModal
+        <DeferredConfirmActionModal
           visible
           title={tr.profile.userActions.blockConfirmTitle}
           description={tr.profile.userActions.blockConfirmDescription}
@@ -812,7 +817,7 @@ export function UserProfileScreen() {
         />
       ) : null}
       {unblockConfirmVisible ? (
-        <ConfirmActionModal
+        <DeferredConfirmActionModal
           visible
           title={UNBLOCK_CONFIRMATION.title}
           description={UNBLOCK_CONFIRMATION.description}
@@ -829,26 +834,11 @@ const styles = StyleSheet.create({
   headerContent: {
     paddingTop: 14,
   },
-  gridContent: {
-    paddingTop: 0,
-  },
-  pagerShell: {
-    width: '100%',
-  },
   privateStateContent: {
     paddingTop: 14,
   },
   noticeWrap: {
     paddingHorizontal: 16,
     paddingBottom: 14,
-  },
-  loadMoreButton: {
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  loadMoreLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
   },
 });

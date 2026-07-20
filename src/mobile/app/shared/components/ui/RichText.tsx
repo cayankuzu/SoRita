@@ -14,6 +14,7 @@ import {
   type RichTextVariant,
 } from '@/mobile/app/shared/utils/richText';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type RichTextProps = Omit<TextProps, 'children' | 'style'> & {
   onExpandedLinksChange?: (hasExpandedLinks: boolean) => void;
@@ -86,6 +87,7 @@ export function RichText({
                 {isExpanded ? segment.url : formatCollapsedRichLinkText(segment.url)}
               </Text>
               <Text
+                accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
                 accessibilityRole="button"
                 onPress={(event) => {
                   event.stopPropagation?.();
@@ -94,7 +96,7 @@ export function RichText({
                 style={styles.linkToggle}
                 suppressHighlighting
               >
-                {isExpanded ? ' v' : ' >'}
+                {isExpanded ? ' ⌄' : ' ›'}
               </Text>
             </Text>
           );
@@ -114,6 +116,7 @@ export function RichText({
               {isExpanded ? segment.url : formatCollapsedRichLinkText(segment.url)}
             </Text>
             <Text
+              accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
               accessibilityRole="button"
               onPress={(event) => {
                 event.stopPropagation?.();
@@ -122,7 +125,7 @@ export function RichText({
               style={styles.linkToggle}
               suppressHighlighting
             >
-              {isExpanded ? ' v' : ' >'}
+              {isExpanded ? ' ⌄' : ' ›'}
             </Text>
           </Text>
         );

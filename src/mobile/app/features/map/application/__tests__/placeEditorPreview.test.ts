@@ -152,4 +152,154 @@ describe('placeEditorPreview', () => {
       notes: 'A\nV\nB',
     });
   });
+
+  it('uses deterministic fallbacks for sparse previews and optional save fields', () => {
+    const base = {
+      lat: 1,
+      lng: 2,
+      name: '',
+      title: '',
+      address: '',
+      notes: '',
+      rating: 0,
+      selectedCategories: [] as string[],
+      studentFriendly: false,
+      priceMin: '',
+      priceMax: '',
+      bestTimes: [] as string[],
+      atmosphere: [] as string[],
+      features: [] as string[],
+    };
+
+    expect(buildPreviewPlace({ ...base, placeName: ' Known place ' }).name).toBe('Known place');
+    expect(buildPreviewPlace({ ...base, address: ' Draft address ' }).name).toBe('Draft address');
+    expect(buildPreviewPlace({ ...base, placeAddress: ' Existing address ' }).name).toBe(
+      'Existing address',
+    );
+
+    const sparsePreview = buildPreviewPlace(base);
+    expect(sparsePreview.name).toBeTruthy();
+    expect(sparsePreview).toMatchObject({
+      title: undefined,
+      menuUrl: undefined,
+      address: undefined,
+      notes: undefined,
+      category: undefined,
+      priceRange: undefined,
+      priceMin: undefined,
+      priceMax: undefined,
+    });
+    expect(buildPreviewCategories(sparsePreview)).toEqual([]);
+    expect(buildPreviewBestTimes(sparsePreview)).toEqual([]);
+    expect(buildPreviewDietaryOptions(sparsePreview)).toEqual([]);
+    expect(buildPreviewGeneralFeatures(sparsePreview)).toEqual([]);
+
+    expect(buildPreviewCategories({ ...sparsePreview, category: 'cafe' })).toEqual(['cafe']);
+    expect(buildPreviewBestTimes({ ...sparsePreview, bestTime: 'evening' })).toEqual(['evening']);
+
+    const dietaryOption = PLACE_DIETARY_OPTIONS[0] ?? 'Vegan secenek';
+    const duplicateFeatures = {
+      ...sparsePreview,
+      specialFeatures: [dietaryOption, dietaryOption, 'WiFi', 'WiFi'],
+    };
+    expect(buildPreviewDietaryOptions(duplicateFeatures)).toEqual([dietaryOption]);
+    expect(buildPreviewGeneralFeatures(duplicateFeatures)).toEqual(['WiFi']);
+
+    expect(buildPreviewPlace({ ...base, priceMax: '250' })).toMatchObject({
+      priceRange: 2,
+      priceMin: undefined,
+      priceMax: 250,
+    });
+    expect(buildPreviewPlace({ ...base, priceMin: '100' })).toMatchObject({
+      priceRange: 2,
+      priceMin: 100,
+      priceMax: undefined,
+    });
+
+    expect(buildPlaceSavePayload(base)).toMatchObject({
+      title: undefined,
+      menuUrl: undefined,
+      address: undefined,
+      notes: undefined,
+      category: undefined,
+      priceRange: undefined,
+      priceMin: undefined,
+      priceMax: undefined,
+      addedBy: undefined,
+      sourceAttribution: undefined,
+    });
+  });
+
+  it('preserves existing metadata and legacy photos while editing', () => {
+    const existingPlace = buildPreviewPlace({
+      lat: 1,
+      lng: 2,
+      name: 'Existing',
+      title: '',
+      address: '',
+      notes: '',
+      rating: 4,
+      selectedCategories: [],
+      studentFriendly: false,
+      priceMin: '',
+      priceMax: '',
+      bestTimes: [],
+      atmosphere: [],
+      features: [],
+      photos: ['https://example.com/existing.jpg'],
+    });
+    existingPlace.id = 'place-1';
+    existingPlace.addedAt = '2026-01-01T00:00:00.000Z';
+    existingPlace.addedBy = { userId: 'user-1', userName: 'Test User' };
+
+    const edited = buildPreviewPlace({
+      lat: 3,
+      lng: 4,
+      name: 'Edited',
+      title: '',
+      address: '',
+      placeAddress: 'Stored address',
+      notes: '',
+      rating: 5,
+      selectedCategories: [],
+      studentFriendly: false,
+      priceMin: '',
+      priceMax: '',
+      bestTimes: [],
+      atmosphere: [],
+      features: [],
+      existingPlace,
+    });
+
+    expect(edited).toMatchObject({
+      id: 'place-1',
+      addedAt: '2026-01-01T00:00:00.000Z',
+      addedBy: { userId: 'user-1', userName: 'Test User' },
+      address: 'Stored address',
+      photos: ['https://example.com/existing.jpg'],
+    });
+
+    expect(
+      buildPlaceSavePayload({
+        lat: 3,
+        lng: 4,
+        name: 'Edited',
+        title: '',
+        address: '',
+        notes: '',
+        rating: 5,
+        selectedCategories: [],
+        studentFriendly: false,
+        priceMin: '',
+        priceMax: '',
+        bestTimes: [],
+        atmosphere: [],
+        features: [],
+        existingPlace,
+      }),
+    ).toMatchObject({
+      addedBy: { userId: 'user-1', userName: 'Test User' },
+      photos: ['https://example.com/existing.jpg'],
+    });
+  });
 });

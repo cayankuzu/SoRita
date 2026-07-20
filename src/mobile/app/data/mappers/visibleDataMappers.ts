@@ -1,6 +1,5 @@
 import type { Place, PlaceComment, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import {
-  isLocalMediaUri,
   normalizeListCoverUrl,
   normalizeStoredMediaUrl,
 } from '@/mobile/app/data/mappers/mediaUrlMappers';
@@ -42,7 +41,9 @@ type ListRecord = ListRow & {
 
 type ListPlaceCommentRecord = ListPlaceCommentRow & {
   is_pending?: boolean;
+  like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
+  viewer_has_liked?: boolean;
 };
 
 function appendGroupedValue(map: Map<string, string[]>, key: string, value: string) {
@@ -152,7 +153,7 @@ export function mapPlaceComments(
       createdAt: comment.created_at,
       updatedAt: comment.updated_at,
       isPending: Boolean(comment.is_pending),
-      likes: commentLikedBy.length,
+      likes: comment.like_count ?? commentLikedBy.length,
       likedBy: commentLikedBy.length ? commentLikedBy : undefined,
       likeDetails: commentLikeDetails.length ? commentLikeDetails : undefined,
       replies: [],
@@ -170,18 +171,11 @@ export function mapPlaceComments(
   const topLevelComments: PlaceComment[] = [];
 
   for (const comment of orderedCommentRecords) {
-    const mappedComment = commentsById.get(comment.id);
-
-    if (!mappedComment) {
-      continue;
-    }
+    const mappedComment = commentsById.get(comment.id)!;
 
     if (comment.parent_comment_id && commentsById.has(comment.parent_comment_id)) {
-      const parentComment = commentsById.get(comment.parent_comment_id);
-
-      if (parentComment) {
-        parentComment.replies = [...(parentComment.replies || []), mappedComment];
-      }
+      const parentComment = commentsById.get(comment.parent_comment_id)!;
+      parentComment.replies!.push(mappedComment);
 
       continue;
     }
@@ -230,7 +224,7 @@ function mapPlace(
   const likedBy = likeDetails.map((item) => item.userId);
   const comments = mapPlaceComments((place.list_place_comments || []) as ListPlaceCommentRecord[], usersById);
   const countCommentTree = (items: PlaceComment[]): number =>
-    items.reduce((total, comment) => total + 1 + countCommentTree(comment.replies || []), 0);
+    items.reduce((total, comment) => total + 1 + countCommentTree(comment.replies!), 0);
 
   return {
     id: place.id,

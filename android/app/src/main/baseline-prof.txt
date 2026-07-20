@@ -1,0 +1,9 @@
+Lcom/cayan/sorita/socialmap/MainApplication;
+HSPLcom/cayan/sorita/socialmap/MainApplication;->onCreate()V
+Lcom/cayan/sorita/socialmap/MainActivity;
+HSPLcom/cayan/sorita/socialmap/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/cayan/sorita/socialmap/MainActivity;->getMainComponentName()Ljava/lang/String;
+Lcom/facebook/react/ReactActivity;
+Lcom/facebook/react/ReactActivityDelegate;
+Lcom/facebook/react/runtime/ReactHostImpl;
+Lcom/facebook/hermes/reactexecutor/HermesExecutor;

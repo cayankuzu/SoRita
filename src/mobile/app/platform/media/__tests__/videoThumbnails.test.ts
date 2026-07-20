@@ -9,7 +9,7 @@ vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   },
 }));
 
-vi.mock('expo-modules-core', () => ({
+vi.mock('expo', () => ({
   requireOptionalNativeModule: requireOptionalNativeModuleMock,
 }));
 

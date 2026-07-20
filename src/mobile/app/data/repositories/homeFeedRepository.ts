@@ -156,13 +156,20 @@ function mapFeedRow(row: HomeFeedRow, viewerId: string): PlaceFeedCardItem {
 export async function fetchHomeFeedPage(params: {
   cursor?: HomeFeedCursor | null;
   limit?: number;
+  signal?: AbortSignal;
   viewerId: string;
 }): Promise<HomeFeedPage> {
-  const { data, error } = await supabase.rpc('feed_page', {
+  let request = supabase.rpc('feed_page', {
     p_cursor_id: params.cursor?.id ?? null,
     p_cursor_published_at: params.cursor?.publishedAt ?? null,
     p_limit: params.limit ?? HOME_FEED_PAGE_SIZE,
   });
+
+  if (params.signal) {
+    request = request.abortSignal(params.signal);
+  }
+
+  const { data, error } = await request;
 
   if (error) {
     throw error;

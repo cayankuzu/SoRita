@@ -72,7 +72,7 @@ export function ListDetailHeader({
             ) : (
               <View style={styles.heroPlaceholder}>
                 <View style={styles.heroPlaceholderBadge}>
-                  <Text style={styles.heroPlaceholderLabel}>Liste</Text>
+                  <Text style={styles.heroPlaceholderLabel}>{tr.common.list}</Text>
                 </View>
                 <View style={styles.heroPlaceholderEmojiWrap}>
                   <Text style={styles.heroPlaceholderEmoji}>{list.emoji || '📍'}</Text>
@@ -84,7 +84,7 @@ export function ListDetailHeader({
           {list.coverImage ? (
             <View style={styles.coverHintChip}>
               <ImageIcon color={colors.onPrimary} size={12} />
-              <Text style={styles.coverHintText}>Kapağı aç</Text>
+              <Text style={styles.coverHintText}>{tr.listDetail.openCover}</Text>
             </View>
           ) : null}
         </View>

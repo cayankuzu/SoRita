@@ -4,9 +4,9 @@ import type { InfiniteData } from '@tanstack/react-query';
  * Type guard that checks if data is a TanStack Query InfiniteData structure.
  * Works for any paginated query result (lists, notifications, comments, etc.)
  */
-export function isInfiniteData<TItem>(
+export function isInfiniteData<TItem, TPageParam = unknown>(
   data: unknown,
-): data is InfiniteData<TItem[], number> {
+): data is InfiniteData<TItem[], TPageParam> {
   return Boolean(
     data &&
       typeof data === 'object' &&
@@ -20,7 +20,7 @@ export function isInfiniteData<TItem>(
  * Handles both raw arrays and InfiniteData structures gracefully.
  */
 export function flattenPages<TItem extends { id: string }>(
-  data: InfiniteData<TItem[], number> | TItem[] | unknown,
+  data: InfiniteData<TItem[], unknown> | TItem[] | unknown,
 ): TItem[] {
   if (Array.isArray(data)) {
     return data;
@@ -43,10 +43,10 @@ export function flattenPages<TItem extends { id: string }>(
 /**
  * Maps over all items in paginated InfiniteData, preserving page structure.
  */
-export function mapInfinitePages<TItem>(
-  data: InfiniteData<TItem[], number> | undefined,
+export function mapInfinitePages<TItem, TPageParam = unknown>(
+  data: InfiniteData<TItem[], TPageParam> | undefined,
   mapper: (item: TItem) => TItem,
-): InfiniteData<TItem[], number> | undefined {
+): InfiniteData<TItem[], TPageParam> | undefined {
   if (!data) return data;
   return { ...data, pages: data.pages.map((page) => page.map(mapper)) };
 }

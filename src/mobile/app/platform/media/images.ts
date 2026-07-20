@@ -39,6 +39,8 @@ const PLACE_MEDIA_MAX_LANDSCAPE_HEIGHT = 720;
 const PLACE_MEDIA_MAX_PORTRAIT_WIDTH = 720;
 const PLACE_MEDIA_MAX_PORTRAIT_HEIGHT = 1280;
 const PLACE_MEDIA_IMAGE_COMPRESSION = 0.86;
+const PLACE_MEDIA_THUMBNAIL_LONG_EDGE_PX = 640;
+const PLACE_MEDIA_THUMBNAIL_COMPRESSION = 0.76;
 const IOS_MEDIA_PROMPT_DISMISS_DELAY_MS = 320;
 
 type PickImagesOptions = {
@@ -163,6 +165,54 @@ async function optimizePickedImageAsset(params: {
       uri: params.uri,
       width: dimensions?.width || undefined,
     };
+  }
+}
+
+async function generatePlacePhotoThumbnailUri(params: {
+  height?: number;
+  uri: string;
+  width?: number;
+}) {
+  const dimensions = await readImageDimensions(params.uri, params.width, params.height);
+
+  if (!dimensions) {
+    return undefined;
+  }
+
+  const longestEdge = Math.max(dimensions.width, dimensions.height);
+  if (longestEdge <= PLACE_MEDIA_THUMBNAIL_LONG_EDGE_PX) {
+    return undefined;
+  }
+
+  const scale = PLACE_MEDIA_THUMBNAIL_LONG_EDGE_PX / longestEdge;
+  const targetSize = {
+    height: Math.max(1, Math.round(dimensions.height * scale)),
+    width: Math.max(1, Math.round(dimensions.width * scale)),
+  };
+
+  try {
+    const thumbnail = await manipulateAsync(
+      params.uri,
+      [{ resize: targetSize }],
+      {
+        compress: PLACE_MEDIA_THUMBNAIL_COMPRESSION,
+        format: SaveFormat.JPEG,
+      },
+    );
+    const finalUri =
+      (await persistLocalUriToFile({
+        targetPath: buildPickedMediaPathWithExtension('jpg'),
+        uri: thumbnail.uri,
+      })) || thumbnail.uri;
+
+    if (thumbnail.uri !== finalUri) {
+      await FileSystem.deleteAsync(thumbnail.uri, { idempotent: true }).catch(() => undefined);
+    }
+
+    return finalUri;
+  } catch (error) {
+    logger.debug('media', 'Photo thumbnail generation failed; full image will be used.', error);
+    return undefined;
   }
 }
 
@@ -622,8 +672,13 @@ export async function pickPlaceMedia(
           await saveMediaToGallery(normalizedMedia.uri);
         }
 
-        const thumbnailUrl =
-          type === 'video' ? await generateVideoThumbnailUri(normalizedMedia.uri, 0) : undefined;
+        const thumbnailUrl = type === 'video'
+          ? await generateVideoThumbnailUri(normalizedMedia.uri, 0)
+          : await generatePlacePhotoThumbnailUri({
+              height: normalizedMedia.height,
+              uri: normalizedMedia.uri,
+              width: normalizedMedia.width,
+            });
 
         return {
           durationMs,
@@ -710,8 +765,13 @@ export async function pickPlaceMediaFromPrompt(options: MediaPickerPromptOptions
             return null;
           }
 
-          const thumbnailUrl =
-            type === 'video' ? await generateVideoThumbnailUri(normalizedMedia.uri, 0) : undefined;
+          const thumbnailUrl = type === 'video'
+            ? await generateVideoThumbnailUri(normalizedMedia.uri, 0)
+            : await generatePlacePhotoThumbnailUri({
+                height: normalizedMedia.height,
+                uri: normalizedMedia.uri,
+                width: normalizedMedia.width,
+              });
 
           return {
             durationMs,

@@ -71,11 +71,10 @@ type PlaceEditorModalProps = {
 
 const wizardSteps = tr.placeEditor.steps;
 const DISCARD_PLACE_EDITOR_CONFIRMATION = {
-  description:
-    'Kaydedilmemis mekan karti degisiklikleri silinecek. Editor kapatilacak.',
-  cancelLabel: 'Düzenlemeye Dön',
-  confirmLabel: 'İptal Et',
-  title: 'Degisiklikler iptal edilsin mi?',
+  description: tr.placeEditor.discardDescription,
+  cancelLabel: tr.common.returnToEditing,
+  confirmLabel: tr.common.cancelAction,
+  title: tr.placeEditor.discardTitle,
 } as const;
 
 function createInitialPlaceEditorDraft(params: {

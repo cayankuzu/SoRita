@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
+import { useProfileReadModelQuery } from '@/mobile/app/data/hooks/useProfileReadModelQuery';
 import {
   useBlockUserMutation,
   useFollowUserMutation,
@@ -8,200 +9,234 @@ import {
   useUnblockUserMutation,
   type FollowStateResult,
 } from '@/mobile/app/data/hooks/useUserMutations';
-import { useProfileReadModelQuery } from '@/mobile/app/data/hooks/useProfileReadModelQuery';
 import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
-import { isMissingReadModelError } from '@/mobile/app/data/query/readModelErrors';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
-import { getBlockStateForUsers } from '@/mobile/app/data/selectors/visibility';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 
 type UseUserProfileScreenStateParams = {
+  activeTab?: 'gallery' | 'lists' | 'places';
   allowBlockedView: boolean;
   user: User | null;
   userId: string;
 };
 
+function mergeProfileUser(
+  summaryUser: User | null | undefined,
+  contextUser: User | undefined,
+) {
+  if (!summaryUser) {
+    return undefined;
+  }
+
+  return {
+    ...summaryUser,
+    followers: contextUser?.followers ?? summaryUser.followers,
+    following: contextUser?.following ?? summaryUser.following,
+    pendingFollowRequestsReceived:
+      contextUser?.pendingFollowRequestsReceived ??
+      summaryUser.pendingFollowRequestsReceived,
+    pendingFollowRequestsSent:
+      contextUser?.pendingFollowRequestsSent ?? summaryUser.pendingFollowRequestsSent,
+  };
+}
+
+function resolveUsers(ids: string[] | undefined, usersById: Map<string, User>) {
+  return (ids || [])
+    .map((id) => usersById.get(id))
+    .filter((item): item is User => Boolean(item));
+}
+
+function resolveCurrentUser(
+  currentUserId: string | undefined,
+  usersById: Map<string, User>,
+  contextUser: User | null | undefined,
+  sessionUser: User | null,
+) {
+  return currentUserId
+    ? usersById.get(currentUserId) || contextUser || sessionUser
+    : null;
+}
+
+function getProfileViewState(
+  profileUser: User | undefined,
+  summary: ReturnType<typeof useProfileReadModelQuery>['summary'],
+) {
+  const isBlockedByCurrent = Boolean(summary?.isBlockedByViewer);
+  const isBlockedByTarget = Boolean(summary?.isBlockingViewer);
+
+  return {
+    canViewProfileContent: Boolean(
+      profileUser &&
+        summary?.canViewContent &&
+        !isBlockedByCurrent &&
+        !isBlockedByTarget,
+    ),
+    hasPendingFollowRequest: Boolean(summary?.viewerHasPendingFollowRequest),
+    isBlockedByCurrent,
+    isBlockedByTarget,
+    isFollowing: Boolean(summary?.viewerHasFollowed),
+  };
+}
+
+function selectProfileContent(
+  canView: boolean,
+  lists: PlaceList[],
+  places: ReturnType<typeof useProfileReadModelQuery>['places'],
+) {
+  if (!canView) {
+    return { places: [], publicLists: [] };
+  }
+
+  return {
+    places: places.filter((item) => item.listIsPublic),
+    publicLists: lists.filter((list) => list.isPublic),
+  };
+}
+
+function resolveSessionProfileUser(
+  currentUserId: string | undefined,
+  summaryUser: User | null | undefined,
+  contextUser: User | undefined,
+) {
+  return currentUserId
+    ? mergeProfileUser(summaryUser, contextUser)
+    : undefined;
+}
+
+function getProfileResultStatus(params: {
+  currentUser: User | null;
+  followerCount?: number;
+  followerUsersCount: number;
+  followingCount?: number;
+  followingUsersCount: number;
+  hasPendingFollowRequest: boolean;
+  isLoading: boolean;
+  profileUser?: User;
+  summaryExists: boolean;
+}) {
+  return {
+    followerCount: params.followerCount ?? params.followerUsersCount,
+    followingCount: params.followingCount ?? params.followingUsersCount,
+    hasPendingFollowRequest:
+      Boolean(params.currentUser) && params.hasPendingFollowRequest,
+    isInitialLoading: params.isLoading && !params.summaryExists,
+    isOwnProfile: Boolean(
+      params.currentUser?.id &&
+        params.profileUser?.id &&
+        params.currentUser.id === params.profileUser.id,
+    ),
+  };
+}
+
+function getProfileErrorMessage(error: unknown) {
+  return error
+    ? getUserFacingErrorMessage(error, tr.profile.error.userRetryDescription)
+    : null;
+}
+
 export function useUserProfileScreenState({
-  allowBlockedView,
+  activeTab = 'lists',
+  allowBlockedView: _allowBlockedView,
   user,
   userId,
 }: UseUserProfileScreenStateParams) {
-  const currentUserId = user?.id;
+  const currentUserId = user ? user.id : undefined;
   const profileQuery = useProfileReadModelQuery(userId, currentUserId, {
-    enabled: Boolean(currentUserId && userId),
+    activeTab,
+    enabled: Boolean(currentUserId) && userId.length > 0,
   });
-  const shouldUseLegacyVisibleData = isMissingReadModelError(profileQuery.error);
-  const visibleDataQuery = useVisibleDataQuery(currentUserId, {
+  const contextQuery = useVisibleDataQuery(currentUserId, {
     enabled: Boolean(currentUserId),
-    includeLists: shouldUseLegacyVisibleData,
+    includeLists: false,
     includePlaceComments: false,
-    listPageSize: 12,
-    ownerId: shouldUseLegacyVisibleData ? userId : undefined,
-    publicOnly: true,
   });
   const { mutateAsync: followUserAsync } = useFollowUserMutation();
   const { mutateAsync: reportUserAsync } = useReportUserMutation();
   const { mutateAsync: blockUserAsync } = useBlockUserMutation();
   const { mutateAsync: unblockUserAsync } = useUnblockUserMutation();
-  const activeQuery = shouldUseLegacyVisibleData ? visibleDataQuery : profileQuery;
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
-  const visibleUsers = visibleDataQuery.data?.users || [];
-  const allUsers = visibleDataQuery.data?.allUsers || [];
-  const blockRows = visibleDataQuery.data?.blockRows || [];
-  const visibleLists = visibleDataQuery.data?.lists || [];
+  const users = useMemo(
+    () => [
+      ...new Map(
+        [
+          ...(contextQuery.data?.allUsers || []),
+          ...(contextQuery.data?.users || []),
+        ].map((item) => [item.id, item]),
+      ).values(),
+    ],
+    [contextQuery.data?.allUsers, contextQuery.data?.users],
+  );
   const usersById = useMemo(
-    () => new Map(visibleUsers.map((item) => [item.id, item])),
-    [visibleUsers],
+    () => new Map(users.map((item) => [item.id, item])),
+    [users],
   );
-  const errorMessage = activeQuery.error
-    ? getUserFacingErrorMessage(
-        activeQuery.error,
-        tr.profile.error.userRetryDescription,
-      )
-    : null;
-
-  const loadData = useCallback(async () => {
-    await Promise.allSettled([
-      activeQuery.refetch(),
-      shouldUseLegacyVisibleData ? Promise.resolve() : visibleDataQuery.refetch(),
-    ]);
-  }, [activeQuery, shouldUseLegacyVisibleData, visibleDataQuery]);
-
-  const { refreshing, onRefresh } = useFocusRefresh(loadData, {
-    refreshOnFocus: false,
-    skipInitialFocus: true,
-  });
-
-  const currentUser = useMemo(() => {
-    if (!currentUserId) {
-      return null;
-    }
-
-    return usersById.get(currentUserId) || visibleDataQuery.data?.currentUser || user;
-  }, [currentUserId, user, usersById, visibleDataQuery.data?.currentUser]);
-
-  const blockState = useMemo(
-    () => {
-      if (!shouldUseLegacyVisibleData && profileQuery.summary) {
-        return {
-          blockedByCurrent: profileQuery.summary.isBlockedByViewer,
-          blockedByTarget: profileQuery.summary.isBlockingViewer,
-        };
-      }
-
-      return currentUser
-        ? getBlockStateForUsers(blockRows, currentUser.id, userId)
-        : { blockedByCurrent: false, blockedByTarget: false };
-    },
-    [blockRows, currentUser, profileQuery.summary, shouldUseLegacyVisibleData, userId],
+  const currentUser = resolveCurrentUser(
+    currentUserId,
+    usersById,
+    contextQuery.data?.currentUser,
+    user,
   );
-
-  const profileUser = useMemo(
-    () => {
-      if (!shouldUseLegacyVisibleData && profileQuery.summary?.user) {
-        const contextUser = allUsers.find((item) => item.id === userId) || usersById.get(userId);
-
-        return {
-          ...profileQuery.summary.user,
-          followers: contextUser?.followers,
-          following: contextUser?.following,
-          pendingFollowRequestsReceived: contextUser?.pendingFollowRequestsReceived,
-          pendingFollowRequestsSent: contextUser?.pendingFollowRequestsSent,
-        };
-      }
-
-      return allowBlockedView || blockState.blockedByCurrent
-        ? allUsers.find((item) => item.id === userId)
-        : usersById.get(userId);
-    },
-    [
-      allUsers,
-      allowBlockedView,
-      blockState.blockedByCurrent,
-      profileQuery.summary,
-      shouldUseLegacyVisibleData,
-      userId,
-      usersById,
-    ],
+  const targetContextUser = usersById.get(userId);
+  const profileUser = resolveSessionProfileUser(
+    currentUserId,
+    profileQuery.summary?.user,
+    targetContextUser,
   );
-
-  const isOwnProfile = currentUser?.id === profileUser?.id;
-  const isFollowing =
-    !shouldUseLegacyVisibleData && profileQuery.summary
-      ? profileQuery.summary.viewerHasFollowed
-      : currentUser
-        ? (currentUser.following || []).includes(userId)
-        : false;
-  const hasPendingFollowRequest = currentUser
-    ? !shouldUseLegacyVisibleData && profileQuery.summary
-      ? profileQuery.summary.viewerHasPendingFollowRequest
-      : (currentUser.pendingFollowRequestsSent || []).includes(userId)
-    : false;
-  const isBlockedByCurrent = blockState.blockedByCurrent;
-  const isBlockedByTarget = blockState.blockedByTarget;
-  const canViewProfileContent =
-    !shouldUseLegacyVisibleData && profileQuery.summary
-      ? profileQuery.summary.canViewContent && !isBlockedByCurrent && !isBlockedByTarget
-      : !isBlockedByCurrent &&
-        !isBlockedByTarget &&
-        (profileUser?.id === currentUser?.id || profileUser?.isPublicAccount !== false || isFollowing);
-
-  const publicLists: PlaceList[] = useMemo(
-    () =>
-      profileUser && canViewProfileContent
-        ? shouldUseLegacyVisibleData
-          ? visibleLists.filter((list) => list.userId === profileUser.id && list.isPublic)
-          : profileQuery.lists.filter((list) => list.isPublic)
-        : [],
-    [
-      canViewProfileContent,
+  const viewState = getProfileViewState(profileUser, profileQuery.summary);
+  const { places: allPlaces, publicLists } = useMemo(
+    () => selectProfileContent(
+      viewState.canViewProfileContent,
       profileQuery.lists,
-      profileUser,
-      shouldUseLegacyVisibleData,
-      visibleLists,
-    ],
+      profileQuery.places,
+    ),
+    [profileQuery.lists, profileQuery.places, viewState.canViewProfileContent],
   );
-
-  const allPlaces = useMemo(
-    () =>
-      shouldUseLegacyVisibleData
-        ? buildPlaceFeedCardItems(publicLists, (ownerId) => usersById.get(ownerId))
-        : profileQuery.places.filter((item) => item.listIsPublic),
-    [profileQuery.places, publicLists, shouldUseLegacyVisibleData, usersById],
-  );
-
   const allPhotos = useMemo(
     () => allPlaces.filter(({ place }) => getPlaceMedia(place).length > 0),
     [allPlaces],
   );
-
-  const followerUsers = useMemo<User[]>(
-    () =>
-      (profileUser?.followers || [])
-        .map((followerId) => usersById.get(followerId))
-        .filter((item): item is User => Boolean(item)),
-    [profileUser, usersById],
+  const followerUsers = useMemo(
+    () => resolveUsers(profileUser?.followers, usersById),
+    [profileUser?.followers, usersById],
   );
-
-  const followingUsers = useMemo<User[]>(
-    () =>
-      (profileUser?.following || [])
-        .map((followingId) => usersById.get(followingId))
-        .filter((item): item is User => Boolean(item)),
-    [profileUser, usersById],
+  const followingUsers = useMemo(
+    () => resolveUsers(profileUser?.following, usersById),
+    [profileUser?.following, usersById],
   );
-  const followerCount = profileQuery.summary?.followerCount ?? followerUsers.length;
-  const followingCount = profileQuery.summary?.followingCount ?? followingUsers.length;
+  const errorMessage = getProfileErrorMessage(profileQuery.error);
+
+  const loadData = useCallback(async () => {
+    await Promise.allSettled([
+      profileQuery.refetch(),
+      contextQuery.refetch(),
+    ]);
+  }, [contextQuery, profileQuery]);
+  const { refreshing, onRefresh } = useFocusRefresh(loadData, {
+    refreshOnFocus: false,
+    skipInitialFocus: true,
+  });
+  const resultStatus = getProfileResultStatus({
+    currentUser,
+    followerCount: profileQuery.summary?.followerCount,
+    followerUsersCount: followerUsers.length,
+    followingCount: profileQuery.summary?.followingCount,
+    followingUsersCount: followingUsers.length,
+    hasPendingFollowRequest: viewState.hasPendingFollowRequest,
+    isLoading: profileQuery.isLoading,
+    profileUser,
+    summaryExists: Boolean(profileQuery.summary),
+  });
 
   const followUser = useCallback(async (): Promise<FollowStateResult> => {
     if (!currentUser || !profileUser) {
       throw new Error(tr.profile.userActions.followUserMissing);
     }
 
-    return followUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+    return followUserAsync({
+      currentUserId: currentUser.id,
+      targetUserId: profileUser.id,
+    });
   }, [currentUser, followUserAsync, profileUser]);
 
   const reportUser = useCallback(
@@ -211,10 +246,10 @@ export function useUserProfileScreenState({
       }
 
       await reportUserAsync({
+        details,
+        reason,
         reporterUserId: currentUser.id,
         targetUserId: profileUser.id,
-        reason,
-        details,
       });
     },
     [currentUser, profileUser, reportUserAsync],
@@ -225,7 +260,10 @@ export function useUserProfileScreenState({
       throw new Error(tr.profile.userActions.userMissing);
     }
 
-    await blockUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+    await blockUserAsync({
+      currentUserId: currentUser.id,
+      targetUserId: profileUser.id,
+    });
   }, [blockUserAsync, currentUser, profileUser]);
 
   const unblockUser = useCallback(async () => {
@@ -233,35 +271,34 @@ export function useUserProfileScreenState({
       throw new Error(tr.profile.userActions.userMissing);
     }
 
-    await unblockUserAsync({ currentUserId: currentUser.id, targetUserId: profileUser.id });
+    await unblockUserAsync({
+      currentUserId: currentUser.id,
+      targetUserId: profileUser.id,
+    });
   }, [currentUser, profileUser, unblockUserAsync]);
 
   return {
     allPhotos,
     allPlaces,
     blockUser,
-    canViewProfileContent,
+    canViewProfileContent: viewState.canViewProfileContent,
     currentUser,
     errorMessage,
-    fetchNextPage,
-    followerCount,
+    fetchNextPage: profileQuery.fetchNextPage,
+    followerCount: resultStatus.followerCount,
     followerUsers,
     followUser,
-    followingCount,
+    followingCount: resultStatus.followingCount,
     followingUsers,
-    hasPendingFollowRequest,
-    hasNextPage,
-    hasPartialDataError: shouldUseLegacyVisibleData
-      ? visibleDataQuery.hasPartialDataError
-      : profileQuery.hasPartialDataError,
-    isFetchingNextPage,
-    isBlockedByCurrent,
-    isBlockedByTarget,
-    isFollowing,
-    isInitialLoading: shouldUseLegacyVisibleData
-      ? visibleDataQuery.isLoading && !visibleDataQuery.data
-      : profileQuery.isLoading && !profileQuery.summary,
-    isOwnProfile,
+    hasNextPage: profileQuery.hasNextPage,
+    hasPartialDataError: profileQuery.hasPartialDataError,
+    hasPendingFollowRequest: resultStatus.hasPendingFollowRequest,
+    isBlockedByCurrent: viewState.isBlockedByCurrent,
+    isBlockedByTarget: viewState.isBlockedByTarget,
+    isFetchingNextPage: profileQuery.isFetchingNextPage,
+    isFollowing: viewState.isFollowing,
+    isInitialLoading: resultStatus.isInitialLoading,
+    isOwnProfile: resultStatus.isOwnProfile,
     onRefresh,
     profileUser,
     publicLists,

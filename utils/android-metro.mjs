@@ -3,8 +3,13 @@ import { spawn, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import net from 'node:net';
 
-const METRO_PORT = 8081;
-const METRO_STATUS_PATH = '/status';
+import {
+  EXPECTED_EXPO_PROJECT_SLUG,
+  isSoRitaMetro,
+  METRO_PORT,
+  readExpoProjectSlug,
+} from './android-dev-config.mjs';
+
 const STATUS_TIMEOUT_MS = 2000;
 const STATUS_POLL_INTERVAL_MS = 2000;
 
@@ -62,27 +67,8 @@ function isPortOpen(port) {
   });
 }
 
-async function readMetroStatus() {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), STATUS_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`http://127.0.0.1:${METRO_PORT}${METRO_STATUS_PATH}`, {
-      signal: controller.signal,
-    });
-    const content = await response.text();
-
-    return content.trim();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 async function isMetroRunning() {
-  const status = await readMetroStatus();
-  return status === 'packager-status:running';
+  return isSoRitaMetro(METRO_PORT);
 }
 
 function readPortOwnerSummary(port) {
@@ -99,7 +85,7 @@ function readPortOwnerSummary(port) {
 
   const result = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command], {
     encoding: 'utf8',
-    shell: true,
+    shell: false,
   });
 
   return result.stdout?.trim() ?? '';
@@ -118,12 +104,13 @@ async function monitorExistingMetro() {
 }
 
 function startMetro() {
+  const expoCliPath = join(process.cwd(), 'node_modules', 'expo', 'bin', 'cli');
   const child = spawn(
-    'npx',
-    ['expo', 'start', '--dev-client', '--host', 'lan', '--port', String(METRO_PORT)],
+    process.execPath,
+    [expoCliPath, 'start', '--dev-client', '--host', 'lan', '--port', String(METRO_PORT)],
     {
       stdio: 'inherit',
-      shell: true,
+      shell: false,
       env: createChildEnv(),
     },
   );
@@ -154,10 +141,14 @@ async function main() {
 
   if (await isPortOpen(METRO_PORT)) {
     const ownerSummary = readPortOwnerSummary(METRO_PORT);
+    const projectSlug = await readExpoProjectSlug(METRO_PORT);
+    const projectSummary = projectSlug
+      ? ` Expo projesi=${projectSlug}, beklenen=${EXPECTED_EXPO_PROJECT_SLUG}.`
+      : '';
     throw new Error(
       ownerSummary
-        ? `127.0.0.1:${METRO_PORT} baska bir surec tarafindan kullaniliyor (${ownerSummary}). Once onu kapatin.`
-        : `127.0.0.1:${METRO_PORT} baska bir surec tarafindan kullaniliyor. Once onu kapatin.`,
+        ? `127.0.0.1:${METRO_PORT} baska bir surec tarafindan kullaniliyor (${ownerSummary}).${projectSummary} SORITA_METRO_PORT ile bos bir port secin.`
+        : `127.0.0.1:${METRO_PORT} baska bir surec tarafindan kullaniliyor.${projectSummary} SORITA_METRO_PORT ile bos bir port secin.`,
     );
   }
 

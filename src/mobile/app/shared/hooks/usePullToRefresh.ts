@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 
-const MIN_REFRESH_DURATION_MS = 250;
-
 export function usePullToRefresh(action: () => void | Promise<void>) {
   const [refreshing, setRefreshing] = useState(false);
 
@@ -9,10 +7,7 @@ export function usePullToRefresh(action: () => void | Promise<void>) {
     setRefreshing(true);
 
     try {
-      await Promise.all([
-        Promise.resolve(action()),
-        new Promise((resolve) => setTimeout(resolve, MIN_REFRESH_DURATION_MS)),
-      ]);
+      await action();
     } finally {
       setRefreshing(false);
     }

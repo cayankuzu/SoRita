@@ -2,14 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export function AuthBrandFooter() {
   return (
     <View style={styles.footer}>
-      <Text style={styles.metaText}>Copyright (c) 2026 SoRita. Tum haklari saklidir.</Text>
+      <Text style={styles.metaText}>{tr.brand.copyright(2026)}</Text>
       <View style={styles.poweredRow}>
-        <Text style={styles.metaText}>Powered by</Text>
-        <Text style={styles.brandText}> MeMoDe</Text>
+        <Text style={styles.metaText}>{tr.brand.poweredBy}</Text>
+        <Text style={styles.brandText}> {tr.brand.developer}</Text>
       </View>
     </View>
   );

@@ -1,7 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
 
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
 type PasswordToggleProps = {
@@ -11,19 +13,21 @@ type PasswordToggleProps = {
 
 export function PasswordToggle({ visible, onPress }: PasswordToggleProps) {
   return (
-    <Pressable style={styles.passwordToggle} onPress={onPress}>
+    <IconButton
+      accessibilityLabel={visible ? tr.common.hidePassword : tr.common.showPassword}
+      onPress={onPress}
+      style={styles.passwordToggle}
+    >
       {visible ? <EyeOff color={colors.textSoft} size={18} /> : <Eye color={colors.textSoft} size={18} />}
-    </Pressable>
+    </IconButton>
   );
 }
 
 const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
-    right: 12,
-    bottom: 13,
-    width: 28,
-    height: 28,
+    right: 4,
+    bottom: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },

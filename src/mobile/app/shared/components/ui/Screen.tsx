@@ -31,124 +31,177 @@ type ScreenProps = {
   variant?: 'default' | 'feed' | 'form' | 'fullBleed' | 'settings';
 };
 
-export function Screen({
-  children,
-  scroll = true,
-  padded = true,
-  style,
-  contentContainerStyle,
-  scrollViewRef,
-  safeTop = true,
-  safeBottom = true,
-  refreshing = false,
-  onRefresh,
-  maxWidth,
-  keyboardMode,
-  variant = 'default',
-}: ScreenProps) {
-  const insets = useSafeAreaInsets();
-  const bottomTabBarHeight = React.useContext(BottomTabBarHeightContext);
-  const resolvedMaxWidth =
-    maxWidth ??
-    (variant === 'form'
-      ? contentWidth.form
-      : variant === 'feed'
-        ? contentWidth.feed
-        : variant === 'settings'
-          ? contentWidth.settings
-          : undefined);
-  const appLayout = useAppLayout({ maxContentWidth: resolvedMaxWidth });
-  const shouldApplyBottomSafeArea = safeBottom && typeof bottomTabBarHeight !== 'number';
-  const shouldUseScrollView = scroll || Boolean(onRefresh);
-  const resolvedKeyboardMode = keyboardMode ?? (variant === 'form' ? 'form' : 'default');
-  const shouldUseAutomaticKeyboardInsets =
-    Platform.OS === 'ios' && resolvedKeyboardMode === 'form';
-  const keyboardAvoidingBehavior =
-    Platform.OS === 'ios' && resolvedKeyboardMode !== 'form' ? 'padding' : undefined;
-  const horizontalPadding = variant === 'fullBleed' ? 0 : appLayout.screenPadding;
-  const shouldConstrainContent = Boolean(resolvedMaxWidth && variant !== 'fullBleed');
-  const sharedBottomPadding = !safeBottom
-    ? 0
-    : typeof bottomTabBarHeight === 'number'
-      ? spacing.card
-      : insets.bottom + spacing.card;
-  const scrollBottomPadding = sharedBottomPadding;
-  const staticBottomPadding = sharedBottomPadding;
+function getVariantMaxWidth(variant: ScreenProps['variant']) {
+  switch (variant) {
+    case 'form':
+      return contentWidth.form;
+    case 'feed':
+      return contentWidth.feed;
+    case 'settings':
+      return contentWidth.settings;
+    default:
+      return undefined;
+  }
+}
+
+function getSafeAreaEdges(
+  safeTop: boolean,
+  safeBottom: boolean,
+  bottomTabBarHeight: number | null | undefined,
+) {
   const edges: Edge[] = [];
 
   if (safeTop) {
     edges.push('top');
   }
 
-  if (shouldApplyBottomSafeArea) {
+  if (safeBottom && typeof bottomTabBarHeight !== 'number') {
     edges.push('bottom');
   }
 
-  const contentRailStyle = shouldConstrainContent
-    ? [
-        styles.contentRail,
-        {
-          maxWidth: resolvedMaxWidth,
-          width: '100%' as const,
-        },
-      ]
-    : styles.fullWidthRail;
-  const contentChildren = shouldConstrainContent ? (
-    <View style={contentRailStyle}>{children}</View>
-  ) : (
-    children
-  );
+  return edges;
+}
 
-  const content = shouldUseScrollView ? (
+function getBottomPadding(
+  safeBottom: boolean,
+  bottomTabBarHeight: number | null | undefined,
+  bottomInset: number,
+) {
+  if (!safeBottom) {
+    return 0;
+  }
+
+  return typeof bottomTabBarHeight === 'number'
+    ? spacing.card
+    : bottomInset + spacing.card;
+}
+
+function ContentRail({
+  children,
+  maxWidth,
+}: {
+  children: React.ReactNode;
+  maxWidth?: number;
+}) {
+  if (!maxWidth) {
+    return <>{children}</>;
+  }
+
+  return (
+    <View style={[styles.contentRail, { maxWidth, width: '100%' }]}>
+      {children}
+    </View>
+  );
+}
+
+type ScreenContentProps = {
+  children: React.ReactNode;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  horizontalPadding: number;
+  maxWidth?: number;
+  onRefresh?: () => void;
+  padded: boolean;
+  refreshing: boolean;
+  scroll: boolean;
+  scrollBottomPadding: number;
+  scrollViewRef?: React.RefObject<ScrollView | null>;
+  shouldUseAutomaticKeyboardInsets: boolean;
+};
+
+function ScreenContent(props: ScreenContentProps) {
+  const centeredStyle = props.maxWidth ? styles.centeredContent : null;
+  const horizontalStyle = props.padded ? { paddingHorizontal: props.horizontalPadding } : null;
+  const content = <ContentRail maxWidth={props.maxWidth}>{props.children}</ContentRail>;
+
+  if (!props.scroll && !props.onRefresh) {
+    return (
+      <View
+        style={[
+          styles.staticContent,
+          horizontalStyle,
+          centeredStyle,
+          props.contentContainerStyle,
+          { paddingBottom: props.scrollBottomPadding },
+        ]}
+      >
+        {content}
+      </View>
+    );
+  }
+
+  return (
     <ScrollView
-      automaticallyAdjustKeyboardInsets={shouldUseAutomaticKeyboardInsets}
+      automaticallyAdjustKeyboardInsets={props.shouldUseAutomaticKeyboardInsets}
       contentInsetAdjustmentBehavior="automatic"
-      ref={scrollViewRef}
+      ref={props.scrollViewRef}
       style={styles.scrollView}
       contentContainerStyle={[
-        scroll ? styles.scrollContent : styles.staticScrollContent,
-        padded ? { paddingHorizontal: horizontalPadding } : null,
-        shouldConstrainContent ? styles.centeredContent : null,
-        contentContainerStyle,
-        { paddingBottom: scrollBottomPadding },
+        props.scroll ? styles.scrollContent : styles.staticScrollContent,
+        horizontalStyle,
+        centeredStyle,
+        props.contentContainerStyle,
+        { paddingBottom: props.scrollBottomPadding },
       ]}
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       refreshControl={
-        onRefresh ? (
+        props.onRefresh ? (
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={props.refreshing}
+            onRefresh={props.onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
         ) : undefined
       }
     >
-      {contentChildren}
+      {content}
     </ScrollView>
-  ) : (
-    <View
-      style={[
-        styles.staticContent,
-        padded ? { paddingHorizontal: horizontalPadding } : null,
-        shouldConstrainContent ? styles.centeredContent : null,
-        contentContainerStyle,
-        { paddingBottom: staticBottomPadding },
-      ]}
-    >
-      {contentChildren}
-    </View>
   );
+}
+
+export function Screen(props: ScreenProps) {
+  const scroll = props.scroll ?? true;
+  const padded = props.padded ?? true;
+  const safeTop = props.safeTop ?? true;
+  const safeBottom = props.safeBottom ?? true;
+  const refreshing = props.refreshing ?? false;
+  const variant = props.variant ?? 'default';
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = React.useContext(BottomTabBarHeightContext);
+  const resolvedMaxWidth = props.maxWidth ?? getVariantMaxWidth(variant);
+  const appLayout = useAppLayout({ maxContentWidth: resolvedMaxWidth });
+  const resolvedKeyboardMode = props.keyboardMode ?? (variant === 'form' ? 'form' : 'default');
+  const shouldUseAutomaticKeyboardInsets =
+    Platform.OS === 'ios' && resolvedKeyboardMode === 'form';
+  const keyboardAvoidingBehavior =
+    Platform.OS === 'ios' && resolvedKeyboardMode !== 'form' ? 'padding' : undefined;
+  const horizontalPadding = variant === 'fullBleed' ? 0 : appLayout.screenPadding;
+  const contentMaxWidth = variant === 'fullBleed' ? undefined : resolvedMaxWidth;
+  const sharedBottomPadding = getBottomPadding(safeBottom, bottomTabBarHeight, insets.bottom);
+  const edges = getSafeAreaEdges(safeTop, safeBottom, bottomTabBarHeight);
 
   return (
-    <SafeAreaView style={[styles.safeArea, style]} edges={edges}>
+    <SafeAreaView style={[styles.safeArea, props.style]} edges={edges}>
       <KeyboardAvoidingView
         behavior={keyboardAvoidingBehavior}
         style={styles.keyboardAvoider}
       >
-        {content}
+        <ScreenContent
+          contentContainerStyle={props.contentContainerStyle}
+          horizontalPadding={horizontalPadding}
+          maxWidth={contentMaxWidth}
+          onRefresh={props.onRefresh}
+          padded={padded}
+          refreshing={refreshing}
+          scroll={scroll}
+          scrollBottomPadding={sharedBottomPadding}
+          scrollViewRef={props.scrollViewRef}
+          shouldUseAutomaticKeyboardInsets={shouldUseAutomaticKeyboardInsets}
+        >
+          {props.children}
+        </ScreenContent>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -180,8 +233,5 @@ const styles = StyleSheet.create({
   contentRail: {
     flexGrow: 1,
     alignSelf: 'center',
-  },
-  fullWidthRail: {
-    width: '100%',
   },
 });

@@ -19,6 +19,7 @@ Sentry.init({
   enabled: sentryEnabled,
   debug: false,
   enableLogs: false,
+  enableMetrics: sentryTracingEnabled,
   sendDefaultPii: false,
   tracesSampleRate: sentryTracingEnabled ? 0.1 : 0,
   integrations: sentryReactNavigationIntegration ? [sentryReactNavigationIntegration] : [],

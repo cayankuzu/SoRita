@@ -6,15 +6,15 @@ import {
   createTestQueryClient,
 } from '@/mobile/app/test/queryTestUtils';
 
-const getPlaceCommentsPageMock = vi.fn();
+const getPlaceCommentThreadsPageMock = vi.fn();
 
 vi.mock('@/mobile/app/data/repositories/placesRepository', () => ({
-  getPlaceCommentsPage: getPlaceCommentsPageMock,
+  getPlaceCommentThreadsPage: getPlaceCommentThreadsPageMock,
 }));
 
 describe('usePlaceCommentsQuery', () => {
   beforeEach(() => {
-    getPlaceCommentsPageMock.mockReset();
+    getPlaceCommentThreadsPageMock.mockReset();
   });
 
   it('loads paginated comment pages and advances the offset by top-level comments', async () => {
@@ -29,8 +29,12 @@ describe('usePlaceCommentsQuery', () => {
       list_place_comment_likes: [],
     }));
 
-    getPlaceCommentsPageMock
-      .mockResolvedValueOnce(fullPage)
+    const nextCursor = {
+      createdAt: '2026-04-16T10:00:00.000Z',
+      id: 'comment-19',
+    };
+    getPlaceCommentThreadsPageMock
+      .mockResolvedValueOnce(Object.assign(fullPage, { nextCursor }))
       .mockResolvedValueOnce([]);
 
     const wrapper = createQueryClientWrapper(createTestQueryClient());
@@ -45,8 +49,24 @@ describe('usePlaceCommentsQuery', () => {
     await hook.result.current.fetchNextPage();
 
     await waitFor(() => {
-      expect(getPlaceCommentsPageMock).toHaveBeenNthCalledWith(1, 'place-1', 0, 20);
-      expect(getPlaceCommentsPageMock).toHaveBeenNthCalledWith(2, 'place-1', 20, 20);
+      expect(getPlaceCommentThreadsPageMock).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          cursor: null,
+          pageSize: 20,
+          placeId: 'place-1',
+          viewerId: 'viewer-1',
+        }),
+      );
+      expect(getPlaceCommentThreadsPageMock).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          cursor: nextCursor,
+          pageSize: 20,
+          placeId: 'place-1',
+          viewerId: 'viewer-1',
+        }),
+      );
       expect(hook.result.current.hasNextPage).toBe(false);
     });
   });
@@ -58,6 +78,6 @@ describe('usePlaceCommentsQuery', () => {
 
     expect(hook.result.current.data).toBeUndefined();
     expect(hook.result.current.isFetching).toBe(false);
-    expect(getPlaceCommentsPageMock).not.toHaveBeenCalled();
+    expect(getPlaceCommentThreadsPageMock).not.toHaveBeenCalled();
   });
 });

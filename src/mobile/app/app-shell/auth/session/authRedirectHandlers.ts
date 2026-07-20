@@ -11,6 +11,7 @@ import {
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 async function clearRejectedAuthPayload() {
   await persistAuthSession(null);
@@ -29,7 +30,7 @@ async function resolveSessionFromPayload(payload: AuthRedirectParams): Promise<S
     const { data, error } = await supabase.auth.exchangeCodeForSession(payload.code);
 
     if (error || !data.session) {
-      return failAuthRedirect(error?.message || 'Oturum doğrulanamadı.');
+      return failAuthRedirect(error?.message || tr.auth.callback.sessionValidationFailed);
     }
 
     return data.session;
@@ -42,13 +43,13 @@ async function resolveSessionFromPayload(payload: AuthRedirectParams): Promise<S
     });
 
     if (error || !data.session) {
-      return failAuthRedirect(error?.message || 'Oturum doğrulanamadı.');
+      return failAuthRedirect(error?.message || tr.auth.callback.sessionValidationFailed);
     }
 
     return data.session;
   }
 
-  return failAuthRedirect('Doğrulama kodu bulunamadı.');
+  return failAuthRedirect(tr.auth.callback.missingCode);
 }
 
 function getProviderErrorMessage(payload: AuthRedirectParams) {
@@ -69,7 +70,7 @@ export async function completeSignupRedirect(payload: AuthRedirectParams) {
   });
 
   if (!validation.success || payload.flow !== 'signup') {
-    await failAuthRedirect('Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.');
+    await failAuthRedirect(tr.auth.callback.signupLinkInvalid);
   }
 
   const session = await resolveSessionFromPayload(payload);
@@ -90,7 +91,7 @@ export async function preparePasswordResetRedirect(payload: AuthRedirectParams) 
   });
 
   if (!validation.success || payload.flow !== 'password-reset') {
-    await failAuthRedirect('Bu sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
+    await failAuthRedirect(tr.auth.callback.passwordResetLinkInvalid);
   }
 
   const session = await resolveSessionFromPayload(payload);

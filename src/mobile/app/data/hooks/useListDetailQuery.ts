@@ -13,7 +13,7 @@ import {
   type ListPlacesPage,
 } from '@/mobile/app/data/repositories/listDetailRepository';
 
-const LIST_DETAIL_STALE_TIME_MS = 1000 * 60 * 5;
+export const LIST_DETAIL_STALE_TIME_MS = 1000 * 60 * 5;
 
 type UseListDetailQueryOptions = {
   enabled?: boolean;

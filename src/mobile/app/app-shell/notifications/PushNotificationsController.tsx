@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import type { InfiniteData } from '@tanstack/react-query';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
-import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/RootNavigator';
+import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { isInfiniteData } from '@/mobile/app/data/query/queryDataHelpers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
@@ -244,7 +244,7 @@ export function PushNotificationsController() {
 
       rootNavigationRef.navigate('Notifications');
     },
-    [user?.id],
+    [user],
   );
 
   useEffect(() => {
@@ -435,14 +435,6 @@ export function PushNotificationsController() {
   }, [booted, hydrateLatestNotifications, syncPushRegistration, user?.id]);
 
   useEffect(() => {
-    if (!booted || !user?.id) {
-      return;
-    }
-
-    void hydrateLatestNotifications(user.id, { force: true, reason: 'initial' });
-  }, [booted, hydrateLatestNotifications, user?.id]);
-
-  useEffect(() => {
     if (!booted || !user || !notificationRuntime.supportsRemotePushRegistration) {
       return;
     }
@@ -477,7 +469,7 @@ export function PushNotificationsController() {
       cancelled = true;
       subscription?.remove();
     };
-  }, [booted, user?.id]);
+  }, [booted, user]);
 
   return null;
 }

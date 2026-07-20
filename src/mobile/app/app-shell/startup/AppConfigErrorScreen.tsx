@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type AppConfigErrorScreenProps = {
@@ -14,11 +15,8 @@ export function AppConfigErrorScreen({ missingEnvVars }: AppConfigErrorScreenPro
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.card}>
         <SoRitaLogo size="lg" showIcon />
-        <Text style={styles.title}>Uygulama baslatilamadi</Text>
-        <Text style={styles.body}>
-          Bu build gerekli ortam degiskenleri olmadan uretilmis. En olasi neden iOS EAS build
-          ortaminda `EXPO_PUBLIC_*` degerlerinin tanimli olmamasi.
-        </Text>
+        <Text style={styles.title}>{tr.system.configErrorTitle}</Text>
+        <Text style={styles.body}>{tr.system.configErrorDescription}</Text>
         <View style={styles.list}>
           {missingEnvVars.map((item) => (
             <Text key={item} style={styles.listItem}>
@@ -26,10 +24,7 @@ export function AppConfigErrorScreen({ missingEnvVars }: AppConfigErrorScreenPro
             </Text>
           ))}
         </View>
-        <Text style={styles.hint}>
-          EAS Environment Variables veya Secrets alanina bu degerleri ekleyip uygulamayi yeniden
-          build almalisin.
-        </Text>
+        <Text style={styles.hint}>{tr.system.configErrorHint}</Text>
       </View>
     </SafeAreaView>
   );

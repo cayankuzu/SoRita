@@ -114,6 +114,9 @@ react {
     // works correctly with Expo projects.
     cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
     bundleCommand = "export:embed"
+    // Only the interactive development build depends on Metro. The standalone
+    // build embeds JavaScript and assets so it can run without USB or a server.
+    debuggableVariants = ["debug"]
 
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
@@ -241,8 +244,8 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 92
-        versionName "1.0.87"
+        versionCode 95
+        versionName "1.0.90"
         manifestPlaceholders = [
             googleMapsApiKey: resolveGoogleMapsApiKey()
         ]
@@ -268,6 +271,12 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+        }
+        standalone {
+            initWith debug
+            debuggable false
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release', 'debug']
         }
         release {
             if (resolveReleaseStoreFile() == null || !resolveReleaseStoreFile().exists()) {
@@ -360,6 +369,7 @@ tasks.matching { task ->
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
@@ -403,6 +413,7 @@ afterEvaluate {
     ]
     def codegenJniPaths = [
         "../node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni",
+        "../node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni",
         "../node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni",
         "../node_modules/react-native-webview/android/build/generated/source/codegen/jni",
         "../node_modules/@sentry/react-native/android/build/generated/source/codegen/jni",
@@ -443,6 +454,7 @@ add_library(${stub.target} SHARED stub.cpp)
         "externalNativeBuildCleanDebug",
         "externalNativeBuildCleanDebugOptimized",
         "externalNativeBuildCleanRelease",
+        "externalNativeBuildCleanStandalone",
     ].each { cleanTaskName ->
         def externalNativeBuildCleanTask = tasks.findByName(cleanTaskName)
 

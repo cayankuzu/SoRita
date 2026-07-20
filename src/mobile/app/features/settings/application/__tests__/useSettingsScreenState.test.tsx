@@ -497,4 +497,85 @@ describe('useSettingsScreenState', () => {
     expect(showToastMock).not.toHaveBeenCalled();
     hook.unmount();
   });
+
+  it('covers sparse refresh, private-to-public updates, concurrent saves, and feedback fallbacks', async () => {
+    const hooks = await import('@/mobile/app/features/settings/application/useSettingsScreenState');
+    expect(hooks.settingsScreenInternals.hasPendingLocalMedia(undefined)).toBe(false);
+    expect(hooks.settingsScreenInternals.hasPendingLocalMedia('https://cdn.example.com/photo.jpg')).toBe(false);
+    expect(hooks.settingsScreenInternals.hasPendingLocalMedia('file://photo.jpg')).toBe(true);
+    expect(hooks.settingsScreenInternals.getErrorMessage(new Error('specific'), 'fallback')).toBe('specific');
+    expect(hooks.settingsScreenInternals.getErrorMessage(new Error(' '), 'fallback')).toBe('fallback');
+    expect(hooks.settingsScreenInternals.getErrorMessage('failure', 'fallback')).toBe('fallback');
+
+    const refreshedUser = createFreshUser({
+      name: '', username: '', bio: undefined, interests: undefined,
+      isPublicAccount: undefined, profilePhoto: undefined, coverPhoto: undefined,
+    });
+    const deferredSave = createDeferred<User>();
+    const saveUserProfile = vi.fn().mockReturnValue(deferredSave.promise);
+    const persistAccountPrivacy = vi.fn().mockResolvedValue(undefined);
+    useUsernameAvailabilityQueryMock.mockImplementation((options) => {
+      expect(options.invalidMessage('ab')).toContain('3');
+      expect(options.invalidMessage('valid')).toBeNull();
+      return { availability: { status: 'available', message: '' } };
+    });
+    const freshUser = createFreshUser({ isPublicAccount: false, bio: undefined, interests: [] });
+    const hook = renderHook(() => hooks.useSettingsScreenState({
+      deleteCurrentUser: vi.fn().mockRejectedValue('delete failed'),
+      freshUser,
+      logout: vi.fn().mockResolvedValue(undefined),
+      persistAccountPrivacy,
+      refreshCurrentUserState: vi.fn().mockResolvedValue(refreshedUser),
+      requestPasswordReset: vi.fn().mockRejectedValue('reset failed'),
+      saveUserProfile,
+    }));
+
+    await act(async () => {
+      hook.result.current.openEditProfile();
+      await Promise.resolve();
+    });
+    expect(hook.result.current.editName).toBe('');
+    expect(hook.result.current.editUsername).toBe('');
+    expect(hook.result.current.isPublicAccount).toBe(true);
+
+    act(() => {
+      hook.result.current.setEditName('Ada');
+      hook.result.current.updateEditUsername('ada');
+      hook.result.current.setEditBio('');
+    });
+    let savePromise: Promise<boolean> | undefined;
+    await act(async () => {
+      savePromise = hook.result.current.saveProfile();
+      await Promise.resolve();
+    });
+    await expect(hook.result.current.saveProfile()).resolves.toBe(false);
+    expect(hook.result.current.saveProfileMessage).not.toBe('');
+    deferredSave.resolve(freshUser);
+    await act(async () => {
+      await savePromise;
+    });
+
+    await act(async () => {
+      await hook.result.current.saveAccountPrivacy(true);
+    });
+    expect(persistAccountPrivacy).toHaveBeenCalledWith(true);
+    expect(hook.result.current.isPublicAccount).toBe(true);
+
+    act(() => {
+      hook.result.current.goToMain();
+      hook.result.current.setEditName('');
+    });
+    act(() => {
+      hook.result.current.goToNextEditStep();
+    });
+    expect(hook.result.current.editStep).toBe(0);
+
+    act(() => {
+      hook.result.current.setCurrentPassword('password');
+    });
+    await act(async () => {
+      await hook.result.current.sendPasswordResetMail();
+    });
+    expect(showToastMock).toHaveBeenCalled();
+  });
 });

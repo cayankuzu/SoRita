@@ -14,25 +14,29 @@ import {
 } from '@/mobile/app/shared/validation/contentLimits';
 
 type PlaceCommentRecord = ListPlaceCommentRow & {
+  like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
+  viewer_has_liked?: boolean;
+};
+
+export type PlaceCommentCursor = {
+  createdAt: string;
+  id: string;
+};
+
+export type PlaceCommentPage = PlaceCommentRecord[] & {
+  nextCursor?: PlaceCommentCursor;
+};
+
+type PlaceCommentThreadRow = Omit<PlaceCommentRecord, 'list_place_comment_likes'> & {
+  like_count?: number | string | null;
+  thread_created_at: string;
+  thread_id: string;
+  viewer_has_liked?: boolean | null;
 };
 
 function buildCommentEditCutoffIso(now = Date.now()) {
   return new Date(now - COMMENT_EDIT_WINDOW_MS).toISOString();
-}
-
-function isCommentEditable(createdAt?: string | null, now = Date.now()) {
-  if (!createdAt) {
-    return false;
-  }
-
-  const createdAtMs = new Date(createdAt).getTime();
-
-  if (Number.isNaN(createdAtMs)) {
-    return false;
-  }
-
-  return now - createdAtMs <= COMMENT_EDIT_WINDOW_MS;
 }
 
 export async function getPlaceCommentsPage(
@@ -101,6 +105,67 @@ export async function getPlaceCommentsPage(
   ];
 }
 
+export async function getPlaceCommentThreadsPage(params: {
+  cursor?: PlaceCommentCursor | null;
+  pageSize: number;
+  placeId: string;
+  signal?: AbortSignal;
+  viewerId?: string | null;
+}): Promise<PlaceCommentPage> {
+  let request = supabase.rpc('place_comment_threads_page', {
+    p_cursor_created_at: params.cursor?.createdAt ?? null,
+    p_cursor_id: params.cursor?.id ?? null,
+    p_limit: params.pageSize,
+    p_list_place_id: params.placeId,
+  });
+
+  if (params.signal) {
+    request = request.abortSignal(params.signal);
+  }
+
+  const { data, error } = await request;
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = ((data || []) as unknown) as PlaceCommentThreadRow[];
+  const items = rows.map<PlaceCommentRecord>((row) => ({
+    content: row.content,
+    created_at: row.created_at,
+    id: row.id,
+    like_count:
+      typeof row.like_count === 'string'
+        ? Number(row.like_count) || 0
+        : row.like_count ?? 0,
+    list_place_comment_likes:
+      row.viewer_has_liked && params.viewerId
+        ? [{
+            comment_id: row.id,
+            created_at: row.updated_at,
+            user_id: params.viewerId,
+          }]
+        : [],
+    list_place_id: row.list_place_id,
+    parent_comment_id: row.parent_comment_id,
+    updated_at: row.updated_at,
+    user_id: row.user_id,
+    viewer_has_liked: Boolean(row.viewer_has_liked),
+  }));
+  const distinctThreads = new Map<string, string>();
+
+  rows.forEach((row) => distinctThreads.set(row.thread_id, row.thread_created_at));
+  const threadEntries = Array.from(distinctThreads.entries());
+  const lastThread = threadEntries[threadEntries.length - 1];
+
+  return Object.assign(items, {
+    nextCursor:
+      threadEntries.length >= params.pageSize && lastThread
+        ? { createdAt: lastThread[1], id: lastThread[0] }
+        : undefined,
+  });
+}
+
 export async function deletePlace(placeId: string) {
   const { data: placeRows, error: placeSelectError } = await supabase
     .from('list_places')
@@ -142,6 +207,7 @@ export async function createPlaceComment(
   userId: string,
   content: string,
   parentCommentId?: string | null,
+  commentId?: string,
 ) {
   const normalizedContent = clampTextLength(content, COMMENT_MAX_LENGTH);
   assertNoObjectionableContent([{ label: tr.moderation.commentField, value: normalizedContent }]);
@@ -156,6 +222,10 @@ export async function createPlaceComment(
     payload.parent_comment_id = parentCommentId;
   }
 
+  if (commentId) {
+    payload.id = commentId;
+  }
+
   const { error } = await supabase.from('list_place_comments').insert(payload);
 
   if (error) {
@@ -167,26 +237,7 @@ export async function createPlaceComment(
 export async function updatePlaceComment(commentId: string, userId: string, content: string) {
   const normalizedContent = clampTextLength(content, COMMENT_MAX_LENGTH);
   assertNoObjectionableContent([{ label: tr.moderation.commentField, value: normalizedContent }]);
-  const now = Date.now();
-  const editCutoffIso = buildCommentEditCutoffIso(now);
-  const { data: existingComment, error: existingCommentError } = await supabase
-    .from('list_place_comments')
-    .select('id, created_at')
-    .eq('id', commentId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (existingCommentError) {
-    throw existingCommentError;
-  }
-
-  if (!existingComment) {
-    throw new Error(tr.cards.commentUpdateFailed);
-  }
-
-  if (!isCommentEditable(existingComment.created_at, now)) {
-    throw new Error(tr.cards.commentEditExpired);
-  }
+  const editCutoffIso = buildCommentEditCutoffIso();
 
   const { data: updatedComment, error } = await supabase
     .from('list_place_comments')

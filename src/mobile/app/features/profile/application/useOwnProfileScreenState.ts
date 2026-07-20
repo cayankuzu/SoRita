@@ -10,46 +10,44 @@ import {
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import { useProfileReadModelQuery } from '@/mobile/app/data/hooks/useProfileReadModelQuery';
 import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
-import { isMissingReadModelError } from '@/mobile/app/data/query/readModelErrors';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 
 type UseOwnProfileScreenStateParams = {
+  activeTab?: 'gallery' | 'lists' | 'places';
   user: User | null;
 };
 
-export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParams) {
+export function useOwnProfileScreenState({ activeTab = 'lists', user }: UseOwnProfileScreenStateParams) {
   const userId = user?.id;
   const profileQuery = useProfileReadModelQuery(userId, userId, {
+    activeTab,
     enabled: Boolean(userId),
   });
-  const shouldUseLegacyVisibleData = isMissingReadModelError(profileQuery.error);
   const visibleDataQuery = useVisibleDataQuery(userId, {
     enabled: Boolean(userId),
-    includeLists: shouldUseLegacyVisibleData,
+    includeLists: false,
     includePlaceComments: false,
-    ownerId: shouldUseLegacyVisibleData ? userId || undefined : undefined,
-    listPageSize: 12,
   });
   const { mutateAsync: createListAsync } = useCreateListMutation();
   const { mutateAsync: deleteListAsync } = useDeleteListMutation();
   const { mutateAsync: updateListAsync } = useUpdateListMutation();
   const { mutateAsync: updateListsAsync } = useUpdateListsMutation();
   const { mutateAsync: deletePlaceAsync } = useDeletePlaceMutation();
-  const activeQuery = shouldUseLegacyVisibleData ? visibleDataQuery : profileQuery;
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
-  const visibleUsers = visibleDataQuery.data?.users || [];
-  const visibleLists = visibleDataQuery.data?.lists || [];
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = profileQuery;
+  const visibleUsers = useMemo(
+    () => visibleDataQuery.data?.users || [],
+    [visibleDataQuery.data?.users],
+  );
   const usersById = useMemo(
     () => new Map(visibleUsers.map((item) => [item.id, item])),
     [visibleUsers],
   );
-  const errorMessage = activeQuery.error
+  const errorMessage = profileQuery.error
     ? getUserFacingErrorMessage(
-        activeQuery.error,
+        profileQuery.error,
         tr.profile.error.ownRetryDescription,
       )
     : null;
@@ -60,10 +58,10 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
     }
 
     await Promise.allSettled([
-      activeQuery.refetch(),
-      shouldUseLegacyVisibleData ? Promise.resolve() : visibleDataQuery.refetch(),
+      profileQuery.refetch(),
+      visibleDataQuery.refetch(),
     ]);
-  }, [activeQuery, shouldUseLegacyVisibleData, userId, visibleDataQuery]);
+  }, [profileQuery, userId, visibleDataQuery]);
 
   const { refreshing, onRefresh } = useFocusRefresh(loadLists, {
     refreshOnFocus: false,
@@ -77,7 +75,7 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
 
     const contextUser = usersById.get(userId) || visibleDataQuery.data?.currentUser || user;
 
-    if (!shouldUseLegacyVisibleData && profileQuery.summary?.user) {
+    if (profileQuery.summary?.user) {
       return {
         ...profileQuery.summary.user,
         followers: contextUser?.followers,
@@ -90,7 +88,6 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
     return contextUser;
   }, [
     profileQuery.summary,
-    shouldUseLegacyVisibleData,
     user,
     userId,
     usersById,
@@ -101,10 +98,6 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
     () => {
       if (!userId) {
         return [];
-      }
-
-      if (shouldUseLegacyVisibleData) {
-        return visibleLists.filter((list) => list.userId === userId);
       }
 
       const placesByListId = new Map<string, PlaceList['places']>();
@@ -120,16 +113,10 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
         places: placesByListId.get(list.id) || [],
       }));
     },
-    [profileQuery.lists, profileQuery.places, shouldUseLegacyVisibleData, userId, visibleLists],
+    [profileQuery.lists, profileQuery.places, userId],
   );
 
-  const allPlaces = useMemo(
-    () =>
-      shouldUseLegacyVisibleData
-        ? buildPlaceFeedCardItems(lists, (ownerId) => usersById.get(ownerId))
-        : profileQuery.places,
-    [lists, profileQuery.places, shouldUseLegacyVisibleData, usersById],
-  );
+  const allPlaces = profileQuery.places;
 
   const allPhotos = useMemo(
     () => allPlaces.filter(({ place }) => getPlaceMedia(place).length > 0),
@@ -167,8 +154,9 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
   }, [deleteListAsync]);
 
   const updateList = useCallback(async (list: PlaceList) => {
-    await updateListAsync(list);
-  }, [updateListAsync]);
+    const previousList = profileQuery.lists.find((item) => item.id === list.id);
+    await updateListAsync({ list, previousList });
+  }, [profileQuery.lists, updateListAsync]);
 
   const updateLists = useCallback(async (listsToUpdate: PlaceList[]) => {
     await updateListsAsync(listsToUpdate);
@@ -192,13 +180,9 @@ export function useOwnProfileScreenState({ user }: UseOwnProfileScreenStateParam
     followingUsers,
     freshUser,
     hasNextPage,
-    hasPartialDataError: shouldUseLegacyVisibleData
-      ? visibleDataQuery.hasPartialDataError
-      : profileQuery.hasPartialDataError,
+    hasPartialDataError: profileQuery.hasPartialDataError,
     isFetchingNextPage,
-    isInitialLoading: shouldUseLegacyVisibleData
-      ? visibleDataQuery.isLoading && !visibleDataQuery.data
-      : profileQuery.isLoading && !profileQuery.summary,
+    isInitialLoading: profileQuery.isLoading && !profileQuery.summary,
     lists,
     onRefresh,
     refreshing,

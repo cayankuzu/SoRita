@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "App.tsx",
+    "src/mobile/app/App.tsx",
+    "src/**/*.test.{ts,tsx}",
+    "supabase/functions/*/index.ts",
+    "supabase/functions/**/*.test.ts",
+    "utils/*.{cjs,mjs}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "supabase/functions/**/*.ts",
+    "utils/*.{cjs,mjs}"
+  ],
+  "ignoreBinaries": [
+    "k6"
+  ],
+  "ignoreDependencies": [
+    "@react-native-community/datetimepicker",
+    "babel-plugin-module-resolver",
+    "expo-video-thumbnails",
+    "npm"
+  ]
+}

@@ -17,6 +17,41 @@ env:
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
 jobs:
+  database-security:
+    name: Database Migration & RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start isolated Supabase stack
+        run: supabase start
+
+      - name: Reset and replay every migration
+        run: supabase db reset --local
+
+      - name: Lint database schema
+        run: supabase db lint --local --level error
+
+      - name: Run pgTAP RLS and IDOR matrix
+        run: supabase test db
+
+      - name: Install PostgreSQL client for isolated restore drill
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Backup and restore the local database into an isolated database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          pg_dump --host 127.0.0.1 --port 54322 --username postgres --format custom --no-owner --no-privileges --file /tmp/sorita.backup postgres
+          createdb --host 127.0.0.1 --port 54322 --username postgres sorita_restore_drill
+          pg_restore --host 127.0.0.1 --port 54322 --username postgres --dbname sorita_restore_drill --exit-on-error --no-owner --no-privileges /tmp/sorita.backup
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname sorita_restore_drill --set ON_ERROR_STOP=1 --command "select count(*) from pg_catalog.pg_tables where schemaname = 'public';"
+          dropdb --host 127.0.0.1 --port 54322 --username postgres sorita_restore_drill
+
   security-supply-chain:
     name: Security & Supply Chain
     runs-on: ubuntu-latest
@@ -33,10 +68,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Production dependency audit
         run: npm run security:audit:prod
+
+      - name: Registry signature and provenance verification
+        run: npm run security:provenance
+
+      - name: Production license policy
+        run: npm run security:licenses
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@v2
@@ -67,10 +108,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
-      - name: Expo dependency compatibility check
-        run: npx expo install --check
+      - name: Expo dependency and project health check
+        run: npm run expo:check
 
       - name: ESLint and architecture boundary check
         run: npm run lint
@@ -78,10 +119,19 @@ jobs:
       - name: TypeScript type check
         run: npm run typecheck
 
+      - name: Dead code and dependency boundary check
+        run: npm run dead-code:check
+
+      - name: Critical user-flow evidence manifest
+        run: npm run e2e:evidence
+
+      - name: Startup and perceived-performance budgets
+        run: npm run performance:test
+
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, security-supply-chain]
+    needs: [database-security, lint-and-typecheck, security-supply-chain]
     steps:
       - uses: actions/checkout@v4
 
@@ -90,25 +140,25 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Run app-shell and data tests
         run: npx vitest run src/mobile/app/app-shell src/mobile/app/data --reporter=verbose
 
       - name: Run feature tests (auth/discovery/explore/home/lists)
-        run: npx vitest run --passWithNoTests src/mobile/app/features/auth src/mobile/app/features/discovery src/mobile/app/features/explore src/mobile/app/features/home src/mobile/app/features/lists --reporter=verbose
+        run: npx vitest run src/mobile/app/features/auth src/mobile/app/features/explore src/mobile/app/features/home src/mobile/app/features/lists --reporter=verbose
 
       - name: Run feature tests (map)
-        run: npx vitest run --passWithNoTests src/mobile/app/features/map --reporter=verbose
+        run: npx vitest run src/mobile/app/features/map --reporter=verbose
 
       - name: Run feature tests (notifications/places)
-        run: npx vitest run --passWithNoTests src/mobile/app/features/notifications src/mobile/app/features/places --reporter=verbose
+        run: npx vitest run src/mobile/app/features/notifications src/mobile/app/features/places --reporter=verbose
 
       - name: Run feature tests (profile/settings)
-        run: npx vitest run --passWithNoTests src/mobile/app/features/profile src/mobile/app/features/settings --reporter=verbose
+        run: npx vitest run src/mobile/app/features/profile src/mobile/app/features/settings --reporter=verbose
 
       - name: Run feature tests (social)
-        run: npx vitest run --passWithNoTests src/mobile/app/features/social --reporter=verbose
+        run: npx vitest run src/mobile/app/features/social --reporter=verbose
 
       - name: Run platform and shared tests
         run: npx vitest run src/mobile/app/platform src/mobile/app/shared src/shared --reporter=verbose
@@ -126,7 +176,7 @@ jobs:
     name: EAS Build (Android Preview)
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.EXPO_TOKEN != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_EAS_PREVIEW_BUILDS == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -149,7 +199,7 @@ jobs:
     name: EAS Build (iOS Preview)
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.EXPO_TOKEN != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_EAS_PREVIEW_BUILDS == 'true'
     steps:
       - uses: actions/checkout@v4
 

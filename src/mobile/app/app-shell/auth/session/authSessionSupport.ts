@@ -8,6 +8,7 @@ import {
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { getPersistedVisibleDataSnapshot } from '@/mobile/app/data/cache/visibleDataSnapshotCache';
+import { restoreStartupQueryCache } from '@/mobile/app/data/cache/startupQueryCache';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import type {
@@ -111,7 +112,13 @@ export async function getPersistedAuthUserSnapshot() {
 }
 
 export async function restorePersistedVisibleDataSnapshot(authUserId: string) {
-  const snapshot = await getPersistedVisibleDataSnapshot(authUserId);
+  const [snapshot] = await Promise.all([
+    getPersistedVisibleDataSnapshot(authUserId),
+    restoreStartupQueryCache(queryClient, authUserId).catch((error) => {
+      logger.debug('auth', 'Failed to restore startup query cache', error);
+      return 0;
+    }),
+  ]);
 
   if (!snapshot) {
     return null;

@@ -142,6 +142,62 @@ describe('placesRepository', () => {
     expect(replyCommentsQuery.in).toHaveBeenCalledWith('parent_comment_id', ['comment-1']);
   });
 
+  it('loads a keyset comment thread page through one RPC call', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'comment-1',
+          list_place_id: 'place-1',
+          user_id: 'user-1',
+          parent_comment_id: null,
+          content: 'hello',
+          created_at: '2026-04-16T10:00:00.000Z',
+          updated_at: '2026-04-16T10:00:00.000Z',
+          like_count: '4',
+          viewer_has_liked: true,
+          thread_id: 'comment-1',
+          thread_created_at: '2026-04-16T10:00:00.000Z',
+        },
+        {
+          id: 'reply-1',
+          list_place_id: 'place-1',
+          user_id: 'user-2',
+          parent_comment_id: 'comment-1',
+          content: 'reply',
+          created_at: '2026-04-16T10:01:00.000Z',
+          updated_at: '2026-04-16T10:01:00.000Z',
+          like_count: 0,
+          viewer_has_liked: false,
+          thread_id: 'comment-1',
+          thread_created_at: '2026-04-16T10:00:00.000Z',
+        },
+      ],
+      error: null,
+    });
+    const { getPlaceCommentThreadsPage } = await import('@/mobile/app/data/repositories/placesRepository');
+    const page = await getPlaceCommentThreadsPage({
+      pageSize: 1,
+      placeId: 'place-1',
+      viewerId: 'viewer-1',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('place_comment_threads_page', {
+      p_cursor_created_at: null,
+      p_cursor_id: null,
+      p_limit: 1,
+      p_list_place_id: 'place-1',
+    });
+    expect(page).toHaveLength(2);
+    expect(page[0]).toMatchObject({
+      like_count: 4,
+      list_place_comment_likes: [{ user_id: 'viewer-1' }],
+    });
+    expect(page.nextCursor).toEqual({
+      createdAt: '2026-04-16T10:00:00.000Z',
+      id: 'comment-1',
+    });
+  });
+
   it('returns an empty page when there are no top-level comments', async () => {
     const topLevelCommentsQuery = createSelectChain({
       data: [],
@@ -276,20 +332,12 @@ describe('placesRepository', () => {
   it('creates, updates, and deletes comments with trimmed payloads', async () => {
     const createInsertMock = vi.fn().mockResolvedValue({ error: null });
     const replyInsertMock = vi.fn().mockResolvedValue({ error: null });
-    const updateLookupQuery = createSelectChain({
-      data: {
-        id: 'comment-1',
-        created_at: new Date().toISOString(),
-      },
-      error: null,
-    });
     const updateChain = createUpdateChain({ data: { id: 'comment-1' }, error: null });
     const deleteChain = createDeleteChain({ error: null });
 
     fromMock
       .mockReturnValueOnce({ insert: createInsertMock })
       .mockReturnValueOnce({ insert: replyInsertMock })
-      .mockReturnValueOnce(updateLookupQuery)
       .mockReturnValueOnce(updateChain)
       .mockReturnValueOnce(deleteChain);
 
@@ -329,15 +377,9 @@ describe('placesRepository', () => {
       repository.createPlaceComment('place-1', 'user-1', 'comment'),
     ).rejects.toThrow('create failed');
 
-    fromMock
-      .mockReturnValueOnce(createSelectChain({
-        data: {
-          id: 'comment-1',
-          created_at: new Date().toISOString(),
-        },
-        error: null,
-      }))
-      .mockReturnValueOnce(createUpdateChain({ data: null, error: new Error('update failed') }));
+    fromMock.mockReturnValueOnce(
+      createUpdateChain({ data: null, error: new Error('update failed') }),
+    );
     await expect(
       repository.updatePlaceComment('comment-1', 'user-1', 'comment'),
     ).rejects.toThrow('update failed');
@@ -349,13 +391,7 @@ describe('placesRepository', () => {
   it('rejects comment edits after the 3-minute window expires', async () => {
     const repository = await import('@/mobile/app/data/repositories/placesRepository');
 
-    fromMock.mockReturnValueOnce(createSelectChain({
-      data: {
-        id: 'comment-1',
-        created_at: '2026-04-16T10:00:00.000Z',
-      },
-      error: null,
-    }));
+    fromMock.mockReturnValueOnce(createUpdateChain({ data: null, error: null }));
 
     await expect(
       repository.updatePlaceComment('comment-1', 'user-1', 'comment'),

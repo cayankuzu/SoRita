@@ -49,6 +49,7 @@ import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/Repor
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import {
@@ -105,6 +106,12 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   } = useListDetailScreenState({
     listId,
     user,
+  });
+  useScreenPerformanceMetric({
+    hasContent: Boolean(list),
+    hasError: Boolean(errorMessage),
+    isLoading: isInitialLoading,
+    screen: 'list-detail',
   });
 
   useEffect(() => {
@@ -258,11 +265,13 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       addedBy: editingPlace.addedBy || placeData.addedBy,
     };
 
-    await updateListAsync({
+    const nextList = {
       ...list,
       places: list.places.map((item) => (item.id === editingPlace.id ? nextPlace : item)),
       updatedAt: list.updatedAt,
-    });
+    };
+
+    await updateListAsync({ list: nextList, previousList: list });
     setEditingPlace(null);
     showToast(tr.profile.toast.placeUpdated, 'success');
   };
@@ -387,7 +396,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
               >
                 {isHighlighted ? (
                   <View style={styles.highlightPill}>
-                    <Text style={styles.highlightPillText}>Haritada secili mekan</Text>
+                    <Text style={styles.highlightPillText}>{tr.listDetail.mapSelectedPlace}</Text>
                   </View>
                 ) : null}
 
@@ -561,7 +570,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           resumeDraft={listEditorResumeDraft}
           onClose={handleCloseListEditor}
           onSave={async (nextList) => {
-            await updateListAsync(nextList);
+            await updateListAsync({ list: nextList, previousList: list });
             await clearPersistedListEditorDraft(nextList.id);
             setEditingListVisible(false);
             setListEditorResumeDraft(null);

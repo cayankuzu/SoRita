@@ -23,8 +23,10 @@ type PersistedAuthPayload = RestorableAuthSession & {
 };
 
 const AUTH_SESSION_STORAGE_KEY = 'sorita.auth.session';
+let cachedPayload: PersistedAuthPayload | null | undefined;
+let payloadReadInFlight: Promise<PersistedAuthPayload | null> | null = null;
 
-async function readPersistedAuthPayload(): Promise<PersistedAuthPayload | null> {
+async function loadPersistedAuthPayload(): Promise<PersistedAuthPayload | null> {
   const rawValue = await getSecureStorageItem(AUTH_SESSION_STORAGE_KEY);
 
   if (!rawValue) {
@@ -58,6 +60,27 @@ async function readPersistedAuthPayload(): Promise<PersistedAuthPayload | null> 
   }
 }
 
+async function readPersistedAuthPayload(): Promise<PersistedAuthPayload | null> {
+  if (cachedPayload !== undefined) {
+    return cachedPayload;
+  }
+
+  if (payloadReadInFlight) {
+    return payloadReadInFlight;
+  }
+
+  payloadReadInFlight = loadPersistedAuthPayload()
+    .then((payload) => {
+      cachedPayload = payload;
+      return payload;
+    })
+    .finally(() => {
+      payloadReadInFlight = null;
+    });
+
+  return payloadReadInFlight;
+}
+
 export async function savePersistedAuthSession(session: Session | null) {
   if (!session?.access_token || !session.refresh_token) {
     await clearPersistedAuthSession();
@@ -72,6 +95,7 @@ export async function savePersistedAuthSession(session: Session | null) {
   };
 
   await setSecureStorageItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(payload));
+  cachedPayload = payload;
 }
 
 export async function getPersistedAuthSession(): Promise<RestorableAuthSession | null> {
@@ -94,13 +118,16 @@ export async function savePersistedAuthUser(user: PersistedAuthUserSnapshot | nu
     return;
   }
 
+  const nextPayload = {
+    ...payload,
+    user,
+  } satisfies PersistedAuthPayload;
+
   await setSecureStorageItem(
     AUTH_SESSION_STORAGE_KEY,
-    JSON.stringify({
-      ...payload,
-      user,
-    } satisfies PersistedAuthPayload),
+    JSON.stringify(nextPayload),
   );
+  cachedPayload = nextPayload;
 }
 
 export async function getPersistedAuthUser<
@@ -111,5 +138,14 @@ export async function getPersistedAuthUser<
 }
 
 export async function clearPersistedAuthSession() {
+  cachedPayload = null;
+  payloadReadInFlight = null;
   await deleteSecureStorageItem(AUTH_SESSION_STORAGE_KEY);
 }
+
+export const authSessionStorageInternals = {
+  resetMemoryCache() {
+    cachedPayload = undefined;
+    payloadReadInFlight = null;
+  },
+};

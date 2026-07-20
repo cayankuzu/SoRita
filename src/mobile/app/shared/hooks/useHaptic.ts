@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 
 type HapticStyle = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let Haptics: any = null;
 
 try {

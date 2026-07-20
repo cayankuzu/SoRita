@@ -24,8 +24,14 @@ export function useSettingsAccountState({
   const { mutateAsync: updateUserAsync } = useUpdateUserMutation();
   const { mutateAsync: deleteCurrentUserAsync } = useDeleteCurrentUserMutation();
   const { refetch } = visibleDataQuery;
-  const visibleUsers = visibleDataQuery.data?.users || [];
-  const allUsers = visibleDataQuery.data?.allUsers || [];
+  const visibleUsers = useMemo(
+    () => visibleDataQuery.data?.users || [],
+    [visibleDataQuery.data?.users],
+  );
+  const allUsers = useMemo(
+    () => visibleDataQuery.data?.allUsers || [],
+    [visibleDataQuery.data?.allUsers],
+  );
 
   const syncSessionUser = useCallback(() => {
     return refreshUser().catch((error) => {

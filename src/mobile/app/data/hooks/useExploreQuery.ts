@@ -11,7 +11,7 @@ import {
   type ExplorePage,
 } from '@/mobile/app/data/repositories/exploreRepository';
 
-const EXPLORE_STALE_TIME_MS = 1000 * 60 * 5;
+export const EXPLORE_STALE_TIME_MS = 1000 * 60 * 5;
 
 type UseExploreQueryOptions = {
   enabled?: boolean;

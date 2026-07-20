@@ -1,10 +1,33 @@
 import { InteractionManager, Keyboard } from 'react-native';
 
 export function runAfterNextPaint(task: () => void | Promise<void>) {
-  requestAnimationFrame(() => {
-    setTimeout(() => {
+  if (typeof requestAnimationFrame !== 'function') {
+    const timeoutId = setTimeout(() => {
       void task();
     }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const frameId = requestAnimationFrame(() => {
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      void task();
+    }, 0);
+  });
+
+  return () => {
+    cancelAnimationFrame(frameId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  };
+}
+
+export function waitForNextPaint() {
+  return new Promise<void>((resolve) => {
+    runAfterNextPaint(resolve);
   });
 }
 

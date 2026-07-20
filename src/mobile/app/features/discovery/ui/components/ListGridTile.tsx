@@ -5,10 +5,8 @@ import { Crosshair, Ellipsis, Globe, Heart, Lock } from 'lucide-react-native';
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { OwnerHeader } from '@/mobile/app/features/discovery/ui/components/OwnerHeader';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
-import {
-  ActionMenuSheet,
-  type ActionMenuSheetItem,
-} from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
+import type { ActionMenuSheetItem } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
+import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import {
@@ -64,6 +62,17 @@ function ListGridTileComponent({
   const handledLongPressRef = React.useRef(false);
   const [menuVisible, setMenuVisible] = React.useState(false);
   const hasMiniMap = (!coverPhoto || coverLoadFailed) && list.places.length > 0;
+  const miniMapMarkers = React.useMemo(
+    () => hasMiniMap
+      ? getMapMarkers(list.places, list.isPublic, (place) =>
+          getMarkerColorForPlaceAcrossLists(
+            place,
+            allListsForMarkerColor ?? [list],
+            list.isPublic,
+          ))
+      : [],
+    [allListsForMarkerColor, hasMiniMap, list],
+  );
   const {
     activateMap,
     deactivateMap,
@@ -110,13 +119,7 @@ function ListGridTileComponent({
             />
           ) : list.places.length > 0 ? (
             <MiniMapPreview
-              places={getMapMarkers(list.places, list.isPublic, (place) =>
-                getMarkerColorForPlaceAcrossLists(
-                  place,
-                  allListsForMarkerColor ?? [list],
-                  list.isPublic,
-                ),
-              )}
+              places={miniMapMarkers}
               height={layout.discoveryTileHeight}
               interactive={isMapInteractive}
               instanceId={mapFocusKey}
@@ -144,7 +147,7 @@ function ListGridTileComponent({
                 <Lock color={colors.onPrimary} size={12} />
               )}
               <Text style={styles.visibilityBadgeText}>
-                {list.isPublic ? 'Açık' : 'Gizli'}
+                {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
               </Text>
             </View>
           ) : null}
@@ -238,7 +241,7 @@ function ListGridTileComponent({
       </Pressable>
 
       {menuVisible && menuActions?.length ? (
-        <ActionMenuSheet
+        <DeferredActionMenuSheet
           visible
           title={list.name}
           items={menuActions.map((item) => ({
@@ -255,22 +258,4 @@ function ListGridTileComponent({
   );
 }
 
-function areListGridTilePropsEqual(
-  previous: ListGridTileProps,
-  next: ListGridTileProps,
-) {
-  return (
-    previous.list === next.list &&
-    previous.owner === next.owner &&
-    previous.fillWidth === next.fillWidth &&
-    previous.showOwner === next.showOwner &&
-    previous.showPrivacyBadge === next.showPrivacyBadge &&
-    previous.allListsForMarkerColor === next.allListsForMarkerColor &&
-    previous.menuActions === next.menuActions
-  );
-}
-
-export const ListGridTile = React.memo(
-  ListGridTileComponent,
-  areListGridTilePropsEqual,
-);
+export const ListGridTile = React.memo(ListGridTileComponent);

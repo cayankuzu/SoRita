@@ -5,8 +5,10 @@ import { logger } from '@/mobile/app/platform/feedback/logger';
 const QUERY_GC_TIME_MS = 1000 * 60 * 60 * 2;
 const QUERY_STALE_TIME_MS = 1000 * 60 * 5;
 const MAX_QUERY_RETRIES = 1;
+const MAX_SERVER_QUERY_RETRIES = 2;
 const RETRY_DELAY_BASE_MS = 500;
 const RETRY_DELAY_CAP_MS = 2000;
+const RETRY_AFTER_CAP_MS = 30_000;
 const NON_RETRYABLE_STATUS_CODES = new Set([400, 401, 403, 404, 409, 422]);
 type MutationMeta = {
   suppressGlobalErrorLog?: boolean;
@@ -40,12 +42,68 @@ function shouldRetryQuery(failureCount: number, error: unknown) {
     return false;
   }
 
-  return failureCount < MAX_QUERY_RETRIES;
+  const retryLimit = status === 429 || (status != null && status >= 500)
+    ? MAX_SERVER_QUERY_RETRIES
+    : MAX_QUERY_RETRIES;
+  return failureCount < retryLimit;
 }
 
-function getRetryDelay(attemptIndex: number) {
-  return Math.min(RETRY_DELAY_BASE_MS * 2 ** attemptIndex, RETRY_DELAY_CAP_MS);
+function readRetryAfterMs(error: unknown, now = Date.now()) {
+  if (!error || typeof error !== 'object' || !('response' in error)) {
+    return undefined;
+  }
+
+  const response = error.response;
+  if (!response || typeof response !== 'object' || !('headers' in response)) {
+    return undefined;
+  }
+
+  const headers = response.headers;
+  const rawValue =
+    headers && typeof headers === 'object' && 'get' in headers && typeof headers.get === 'function'
+      ? headers.get('retry-after')
+      : headers && typeof headers === 'object' && 'retry-after' in headers
+        ? headers['retry-after']
+        : undefined;
+
+  if (typeof rawValue !== 'string') {
+    return undefined;
+  }
+
+  const seconds = Number(rawValue);
+  const parsedMs = Number.isFinite(seconds)
+    ? seconds * 1000
+    : Date.parse(rawValue) - now;
+
+  return Number.isFinite(parsedMs)
+    ? Math.max(0, Math.min(parsedMs, RETRY_AFTER_CAP_MS))
+    : undefined;
 }
+
+function getRetryDelay(
+  attemptIndex: number,
+  error?: unknown,
+  random = Math.random,
+) {
+  const retryAfterMs = readRetryAfterMs(error);
+
+  if (retryAfterMs != null) {
+    return retryAfterMs;
+  }
+
+  const ceiling = Math.min(
+    RETRY_DELAY_BASE_MS * 2 ** attemptIndex,
+    RETRY_DELAY_CAP_MS,
+  );
+  return Math.round(ceiling * (0.5 + random() * 0.5));
+}
+
+export const queryClientInternals = {
+  getRetryDelay,
+  readRetryAfterMs,
+  readErrorStatus,
+  shouldRetryQuery,
+};
 
 export const queryClient = new QueryClient({
   mutationCache: new MutationCache({

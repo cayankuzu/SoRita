@@ -8,6 +8,7 @@ import type {
   MainTabParamList,
   RootStackParamList,
 } from '@/mobile/app/app-shell/navigation/types';
+import { markNavigationStarted } from '@/mobile/app/shared/performance/navigationPerformance';
 
 type RootStackRouteName = keyof RootStackParamList;
 type AppRouteName = keyof RootStackParamList | keyof MainTabParamList;
@@ -55,6 +56,8 @@ export function openStackScreen<RouteName extends RootStackRouteName>(
   if (!navigation) {
     return;
   }
+
+  markNavigationStarted(String(args[0]), 'stack');
 
   let current: Pick<AppNavigation, 'getParent' | 'navigate' | 'push'> | undefined | null = navigation;
   const visited = new Set<Pick<AppNavigation, 'getParent' | 'navigate' | 'push'>>();

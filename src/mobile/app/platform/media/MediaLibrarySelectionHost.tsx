@@ -24,7 +24,11 @@ import type {
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS } from '@/mobile/app/platform/media/mediaConstants';
-import { generateVideoThumbnailUri } from '@/mobile/app/platform/media/videoThumbnails';
+import {
+  buildMediaTypeFilter,
+  buildPickerAssetsPage,
+  buildSelectionCounts,
+} from '@/mobile/app/platform/media/mediaLibraryAssetPreparation';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
@@ -36,7 +40,6 @@ import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 const PAGE_SIZE = 33;
 const GRID_GAP = 10;
-const PREVIEW_BUILD_CONCURRENCY = 4;
 
 type MediaAssetTileProps = {
   asset: MediaLibraryPickerAsset;
@@ -85,130 +88,11 @@ function MediaAssetTile({ asset, disabled = false, onPress, orderIndex, size }: 
 
       {disabled ? (
         <View style={styles.disabledOverlay}>
-          <Text style={styles.disabledLabel}>3 dk+</Text>
+          <Text style={styles.disabledLabel}>{tr.mediaPicker.videoTooLongBadge}</Text>
         </View>
       ) : null}
     </Pressable>
   );
-}
-
-function buildMediaTypeFilter(
-  filter: MediaLibrarySelectionFilter,
-  allowVideos: boolean,
-): MediaLibrary.MediaTypeValue[] {
-  if (!allowVideos && filter === 'video') {
-    return [MediaLibrary.MediaType.photo];
-  }
-
-  if (filter === 'photo') {
-    return [MediaLibrary.MediaType.photo];
-  }
-
-  if (filter === 'video') {
-    return [MediaLibrary.MediaType.video];
-  }
-
-  return allowVideos
-    ? [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video]
-    : [MediaLibrary.MediaType.photo];
-}
-
-function buildSelectionCounts(selectedAssets: MediaLibraryPickerAsset[]) {
-  return selectedAssets.reduce(
-    (totals, asset) => {
-      if (asset.mediaType === 'video') {
-        totals.videos += 1;
-      } else {
-        totals.photos += 1;
-      }
-
-      totals.total += 1;
-      return totals;
-    },
-    { photos: 0, total: 0, videos: 0 },
-  );
-}
-
-function buildAndroidMediaStorePreviewUri(asset: Pick<MediaLibrary.Asset, 'id' | 'mediaType'>) {
-  if (Platform.OS !== 'android') {
-    return null;
-  }
-
-  if (asset.mediaType === 'video') {
-    return `content://media/external/video/media/${asset.id}`;
-  }
-
-  if (asset.mediaType === 'photo') {
-    return `content://media/external/images/media/${asset.id}`;
-  }
-
-  return null;
-}
-
-async function buildPickerAssetPreview(
-  asset: MediaLibrary.Asset,
-): Promise<MediaLibraryPickerAsset | null> {
-  if (asset.mediaType !== 'photo' && asset.mediaType !== 'video') {
-    return null;
-  }
-
-  const androidPreviewUri = buildAndroidMediaStorePreviewUri(asset);
-  let assetInfo: Awaited<ReturnType<typeof MediaLibrary.getAssetInfoAsync>> | null = null;
-
-  if (Platform.OS !== 'android') {
-    try {
-      assetInfo = await MediaLibrary.getAssetInfoAsync(asset, {
-        shouldDownloadFromNetwork: false,
-      });
-    } catch {
-      assetInfo = null;
-    }
-  }
-
-  const localUri = assetInfo?.localUri || undefined;
-  const resolvedAssetUri = localUri || asset.uri;
-  let previewUri = resolvedAssetUri;
-
-  if (asset.mediaType === 'video') {
-    previewUri =
-      (await generateVideoThumbnailUri(resolvedAssetUri, 0)) ||
-      androidPreviewUri ||
-      resolvedAssetUri;
-  }
-
-  return {
-    creationTime: asset.creationTime,
-    duration: asset.duration,
-    filename: asset.filename,
-    height: asset.height,
-    id: asset.id,
-    localUri,
-    mediaType: asset.mediaType,
-    previewUri,
-    uri: resolvedAssetUri,
-    width: asset.width,
-  } satisfies MediaLibraryPickerAsset;
-}
-
-async function buildPickerAssetsPage(assets: MediaLibrary.Asset[]) {
-  const preparedAssets: MediaLibraryPickerAsset[] = [];
-
-  for (let index = 0; index < assets.length; index += PREVIEW_BUILD_CONCURRENCY) {
-    const chunk = assets.slice(index, index + PREVIEW_BUILD_CONCURRENCY);
-    const nextChunk = (
-      await Promise.all(chunk.map((asset) => buildPickerAssetPreview(asset)))
-    ).filter((asset): asset is MediaLibraryPickerAsset => Boolean(asset));
-
-    preparedAssets.push(...nextChunk);
-
-    if (index + PREVIEW_BUILD_CONCURRENCY < assets.length) {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-    }
-  }
-
-  return preparedAssets;
 }
 
 export function MediaLibrarySelectionHost() {
@@ -460,7 +344,12 @@ export function MediaLibrarySelectionHost() {
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.description}>{description}</Text>
             </View>
-            <Pressable style={styles.closeButton} onPress={() => resolveMediaLibrarySelection(null)}>
+            <Pressable
+              accessibilityLabel={tr.common.close}
+              accessibilityRole="button"
+              style={styles.closeButton}
+              onPress={() => resolveMediaLibrarySelection(null)}
+            >
               <X color={colors.textSoft} size={18} />
             </Pressable>
           </View>
@@ -494,7 +383,7 @@ export function MediaLibrarySelectionHost() {
                     ? tr.notifications.categories.all
                     : key === 'photo'
                       ? tr.placeEditor.photos
-                      : 'Videolar',
+                      : tr.mediaPicker.videos,
               };
               const active = filter === item.key;
               const disabled = disabledFilters.has(item.key) || isLoading || isLoadingMore;
@@ -653,8 +542,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   closeButton: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

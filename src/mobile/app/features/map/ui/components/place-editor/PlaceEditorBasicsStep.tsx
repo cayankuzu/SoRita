@@ -70,13 +70,13 @@ export function PlaceEditorBasicsStep({
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.rating}</Text>
-        <Text style={styles.sectionHelper}>Yarım yıldız için bir kez, tam yıldız için iki kez dokun</Text>
+        <Text style={styles.sectionHelper}>{tr.placeEditor.ratingHelper}</Text>
         <RatingSelector value={rating} onChange={onRatingChange} />
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.category}</Text>
-        <Text style={styles.sectionHelper}>Birden fazla kategori seç</Text>
+        <Text style={styles.sectionHelper}>{tr.placeEditor.categoryHelper}</Text>
         <OptionRail
           options={PLACE_CATEGORY_OPTIONS.map((item) => item.label)}
           selectedValues={selectedCategories.map(
@@ -87,7 +87,9 @@ export function PlaceEditorBasicsStep({
             onToggleCategory(selectedCategory?.value || 'other');
           }}
         />
-        <Text style={styles.selectionMeta}>{selectedCategories.length} kategori seçildi</Text>
+        <Text style={styles.selectionMeta}>
+          {tr.placeEditor.categorySelectionCount(selectedCategories.length)}
+        </Text>
       </View>
     </View>
   );

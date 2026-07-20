@@ -33,10 +33,6 @@ type CommentLikeTarget = {
   userId: string;
 };
 
-const SOCIAL_SCOPE_ID = 'social-actions';
-
-export const socialMutationScope = { id: SOCIAL_SCOPE_ID } as const;
-
 export function snapshotQueries(queryClient: QueryClient, queryKey: QueryKey): QuerySnapshot {
   return queryClient.getQueriesData({ queryKey });
 }

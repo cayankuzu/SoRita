@@ -176,4 +176,43 @@ describe('requestSecurity', () => {
       status: 409,
     });
   });
+
+  it('rejects malformed timestamps, short signatures, and nonce persistence failures', async () => {
+    const baseHeaders = {
+      'x-device-id': 'device-1234',
+      'x-nonce': 'nonce-1234-5678-90ab',
+      'x-signature': 'short',
+      'x-timestamp': 'not-a-number',
+    };
+    await expect(verifySignedRequest({
+      adminClient: createAdminClient().adminClient,
+      functionName: 'media-assets',
+      request: new Request('https://example.com', { method: 'POST', headers: baseHeaders, body: '{}' }),
+      token: 'token-1',
+      userId: 'user-1',
+    })).resolves.toMatchObject({ error: 'Invalid request timestamp', ok: false, status: 401 });
+
+    const validRequest = await createSignedRequest('{}');
+    const shortSignatureHeaders = new Headers(validRequest.headers);
+    shortSignatureHeaders.set('x-signature', 'short');
+    await expect(verifySignedRequest({
+      adminClient: createAdminClient().adminClient,
+      functionName: 'media-assets',
+      request: new Request('https://example.com', {
+        method: 'POST', headers: shortSignatureHeaders, body: '{}',
+      }),
+      token: 'token-1',
+      userId: 'user-1',
+    })).resolves.toMatchObject({ error: 'Request signature verification failed', ok: false, status: 401 });
+
+    await expect(verifySignedRequest({
+      adminClient: createAdminClient({
+        insertError: { message: 'nonce store unavailable' },
+      }).adminClient,
+      functionName: 'media-assets',
+      request: await createSignedRequest('{}'),
+      token: 'token-1',
+      userId: 'user-1',
+    })).resolves.toMatchObject({ error: 'nonce store unavailable', ok: false, status: 500 });
+  });
 });

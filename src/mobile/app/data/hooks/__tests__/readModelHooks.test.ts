@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExploreQuery } from '@/mobile/app/data/hooks/useExploreQuery';
 import { useHomeFeedQuery } from '@/mobile/app/data/hooks/useHomeFeedQuery';
 import { useListDetailQuery } from '@/mobile/app/data/hooks/useListDetailQuery';
+import { MAP_MARKERS_STALE_TIME_MS, useMapMarkersQuery } from '@/mobile/app/data/hooks/useMapMarkersQuery';
 import { useProfileReadModelQuery } from '@/mobile/app/data/hooks/useProfileReadModelQuery';
 
 const {
@@ -10,6 +11,7 @@ const {
   fetchHomeFeedPageMock,
   fetchListDetailHeaderMock,
   fetchListPlacesPageMock,
+  fetchOwnedMapMarkersMock,
   fetchProfileContentPageMock,
   fetchProfileSummaryMock,
   useInfiniteQueryMock,
@@ -19,6 +21,7 @@ const {
   fetchHomeFeedPageMock: vi.fn(),
   fetchListDetailHeaderMock: vi.fn(),
   fetchListPlacesPageMock: vi.fn(),
+  fetchOwnedMapMarkersMock: vi.fn(),
   fetchProfileContentPageMock: vi.fn(),
   fetchProfileSummaryMock: vi.fn(),
   useInfiniteQueryMock: vi.fn(),
@@ -48,6 +51,10 @@ vi.mock('@/mobile/app/data/repositories/homeFeedRepository', () => ({
 vi.mock('@/mobile/app/data/repositories/listDetailRepository', () => ({
   fetchListDetailHeader: fetchListDetailHeaderMock,
   fetchListPlacesPage: fetchListPlacesPageMock,
+}));
+
+vi.mock('@/mobile/app/data/repositories/mapMarkersRepository', () => ({
+  fetchOwnedMapMarkers: fetchOwnedMapMarkersMock,
 }));
 
 vi.mock('@/mobile/app/data/repositories/profileRepository', () => ({
@@ -93,10 +100,38 @@ describe('read model query hooks', () => {
     fetchHomeFeedPageMock.mockReset();
     fetchListDetailHeaderMock.mockReset();
     fetchListPlacesPageMock.mockReset();
+    fetchOwnedMapMarkersMock.mockReset();
     fetchProfileContentPageMock.mockReset();
     fetchProfileSummaryMock.mockReset();
     useInfiniteQueryMock.mockReset();
     useQueryMock.mockReset();
+  });
+
+  it('builds the lightweight map marker query with an empty-user fallback', async () => {
+    const options: Array<{
+      enabled: boolean;
+      queryFn: () => Promise<unknown>;
+      queryKey: readonly unknown[];
+      staleTime: number;
+    }> = [];
+    useQueryMock.mockImplementation((input) => {
+      options.push(input);
+      return createQueryResult();
+    });
+    fetchOwnedMapMarkersMock.mockResolvedValue([{ targetLocationKey: '41:29' }]);
+
+    useMapMarkersQuery('viewer-1');
+    expect(options[0]).toMatchObject({
+      enabled: true,
+      queryKey: ['map', 'markers', 'viewer-1'],
+      staleTime: MAP_MARKERS_STALE_TIME_MS,
+    });
+    await expect(options[0]?.queryFn()).resolves.toEqual([{ targetLocationKey: '41:29' }]);
+    expect(fetchOwnedMapMarkersMock).toHaveBeenCalledWith('viewer-1');
+
+    useMapMarkersQuery(null);
+    expect(options[1]).toMatchObject({ enabled: false, queryKey: ['map'] });
+    await expect(options[1]?.queryFn()).resolves.toEqual([]);
   });
 
   it('normalizes explore query input and falls back without a user', async () => {
@@ -295,6 +330,120 @@ describe('read model query hooks', () => {
         canViewContent: true,
         user: { id: 'user-1' },
       },
+    });
+  });
+
+  it('keeps profile queries disabled without both identities and returns empty query functions', async () => {
+    const queryOptions: Array<Record<string, unknown> & { queryFn: (input?: { signal?: AbortSignal }) => Promise<unknown> }> = [];
+    const infiniteOptions: QueryOptions[] = [];
+    useQueryMock.mockImplementation((options) => {
+      queryOptions.push(options);
+      return createQueryResult();
+    });
+    useInfiniteQueryMock.mockImplementation((options: QueryOptions) => {
+      infiniteOptions.push(options);
+      return createInfiniteResult();
+    });
+
+    const missingTarget = useProfileReadModelQuery(null, 'viewer-1');
+    expect(queryOptions[0]?.enabled).toBe(false);
+    await expect(queryOptions[0]?.queryFn()).resolves.toBeNull();
+    await expect(infiniteOptions[0]?.queryFn({ pageParam: null })).resolves.toEqual({ lists: [], places: [] });
+    await expect(infiniteOptions[1]?.queryFn({ pageParam: null })).resolves.toEqual({ lists: [], places: [] });
+    expect(missingTarget).toMatchObject({ hasNextPage: false, hasPartialDataError: false, isLoading: false });
+
+    useProfileReadModelQuery('user-1', null, { enabled: false });
+    expect(queryOptions[1]?.enabled).toBe(false);
+    expect(infiniteOptions[2]?.enabled).toBe(false);
+    expect(infiniteOptions[3]?.enabled).toBe(false);
+  });
+
+  it('loads only the active profile tab and forwards AbortSignal through every query', async () => {
+    const queryOptions: Array<{ queryFn: (input?: { signal?: AbortSignal }) => Promise<unknown> }> = [];
+    const infiniteOptions: QueryOptions[] = [];
+    useQueryMock.mockImplementation((options) => {
+      queryOptions.push(options);
+      return createQueryResult({
+        data: { canViewContent: true, user: { id: 'user-1' } },
+        isFetching: true,
+      });
+    });
+    useInfiniteQueryMock
+      .mockImplementationOnce((options: QueryOptions) => {
+        infiniteOptions.push(options);
+        return createInfiniteResult({
+          data: { pages: [{ lists: [{ id: 'list-1' }], places: [] }] },
+          error: new Error('lists partial'),
+          hasNextPage: true,
+          isFetching: true,
+          isFetchingNextPage: true,
+          isLoading: true,
+        });
+      })
+      .mockImplementationOnce((options: QueryOptions) => {
+        infiniteOptions.push(options);
+        return createInfiniteResult({
+          data: { pages: [{ lists: [], places: [{ key: 'place-1' }] }] },
+          error: new Error('places ignored'),
+          hasNextPage: true,
+          isFetching: true,
+          isFetchingNextPage: true,
+          isLoading: true,
+        });
+      });
+    fetchProfileSummaryMock.mockResolvedValue({ canViewContent: true });
+    fetchProfileContentPageMock.mockResolvedValue({ lists: [], places: [] });
+
+    const signal = new AbortController().signal;
+    const state = useProfileReadModelQuery('user-1', 'viewer-1', { activeTab: 'lists' });
+    await queryOptions[0]?.queryFn({ signal });
+    await queryOptions[0]?.queryFn();
+    await infiniteOptions[0]?.queryFn({ pageParam: null, signal });
+    await infiniteOptions[1]?.queryFn({ pageParam: null, signal });
+    expect(fetchProfileSummaryMock).toHaveBeenNthCalledWith(1, 'user-1', signal);
+    expect(fetchProfileSummaryMock).toHaveBeenNthCalledWith(2, 'user-1');
+    expect(fetchProfileContentPageMock).toHaveBeenCalledWith(expect.objectContaining({ signal, tab: 'lists' }));
+    expect(fetchProfileContentPageMock).toHaveBeenCalledWith(expect.objectContaining({ signal, tab: 'places' }));
+    expect(infiniteOptions[0]?.enabled).toBe(true);
+    expect(infiniteOptions[1]?.enabled).toBe(false);
+    expect(state).toMatchObject({
+      error: expect.any(Error), hasNextPage: true, hasPartialDataError: true,
+      isFetching: true, isFetchingNextPage: true, isLoading: true,
+    });
+    await state.fetchNextPage();
+
+    expect((state as unknown as { lists: unknown[] }).lists).toEqual([{ id: 'list-1' }]);
+  });
+
+  it('uses existing profile data when refetch cannot view content and preserves pages on rejected refetches', async () => {
+    const existingSummary = { canViewContent: true, user: { id: 'user-1' } };
+    useQueryMock.mockReturnValue(createQueryResult({
+      data: existingSummary,
+      error: new Error('summary stale'),
+      refetch: vi.fn()
+        .mockResolvedValueOnce({ data: { canViewContent: false, user: { id: 'user-1' } } })
+        .mockResolvedValueOnce({ data: undefined }),
+    }));
+    useInfiniteQueryMock
+      .mockReturnValueOnce(createInfiniteResult({
+        data: { pages: [{ lists: [{ id: 'list-old' }], places: [] }] },
+        refetch: vi.fn().mockRejectedValue(new Error('lists failed')),
+      }))
+      .mockReturnValueOnce(createInfiniteResult({
+        data: { pages: [{ lists: [], places: [{ key: 'place-old' }] }] },
+        refetch: vi.fn().mockRejectedValue(new Error('places failed')),
+      }));
+
+    const state = useProfileReadModelQuery('user-1', 'viewer-1', { activeTab: 'gallery' });
+    await expect(state.refetch()).resolves.toEqual({
+      lists: [{ id: 'list-old' }],
+      places: [{ key: 'place-old' }],
+      summary: { canViewContent: false, user: { id: 'user-1' } },
+    });
+    await expect(state.refetch()).resolves.toEqual({
+      lists: [{ id: 'list-old' }],
+      places: [{ key: 'place-old' }],
+      summary: existingSummary,
     });
   });
 });

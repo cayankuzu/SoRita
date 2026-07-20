@@ -42,7 +42,7 @@ export function PlaceEditorListCards({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{tr.placeEditor.targetLists}</Text>
       <Text style={styles.sectionHelper}>
-        {`En fazla ${MAX_SELECTED_LISTS_PER_PLACE_SAVE} liste seçebilirsin. ${tr.placeEditor.targetListsHelper}`}
+        {`${tr.placeEditor.notices.selectionLimit(MAX_SELECTED_LISTS_PER_PLACE_SAVE)} ${tr.placeEditor.targetListsHelper}`}
       </Text>
       {listSelectionNotice ? (
         <View style={styles.listSelectionNotice}>

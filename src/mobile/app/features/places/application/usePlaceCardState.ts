@@ -17,8 +17,10 @@ import {
 } from '@/mobile/app/data/hooks/usePlaceMutations';
 import { usePlaceCommentsQuery } from '@/mobile/app/data/hooks/usePlaceCommentsQuery';
 import { mapPlaceComments } from '@/mobile/app/data/mappers/visibleDataMappers';
-import { getHiddenUserIdsFor } from '@/mobile/app/data/selectors/visibility';
-import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
+import {
+  canViewPrivateUserContent,
+  usePlaceCardContext,
+} from '@/mobile/app/features/places/application/usePlaceCardContext';
 import type {
   FeedActionComment,
   FeedActionLiker,
@@ -47,12 +49,96 @@ function createErrorWithCause(message: string, cause: unknown) {
   return nextError;
 }
 
+function getCommentPermissions(
+  comment: PlaceComment,
+  currentUserId?: string | null,
+  ownerId?: string | null,
+) {
+  const isOwnComment = Boolean(currentUserId && comment.userId === currentUserId);
+  const isPending = Boolean(comment.isPending);
+
+  return {
+    canDelete: Boolean(currentUserId && !isPending && (isOwnComment || ownerId === currentUserId)),
+    canEdit: isOwnComment && !isPending,
+    canReport: Boolean(currentUserId && !isOwnComment),
+    editWindowExpired: Boolean(
+      isOwnComment && !isPending && isCommentEditWindowExpired(comment.createdAt),
+    ),
+  };
+}
+
+type TargetListResolution =
+  | { ok: true; lists: PlaceList[] }
+  | { ok: false; reason: 'duplicate' | 'not-found' | 'selection-limit' };
+
+function resolveTargetLists(
+  targetListIds: string[],
+  listsById: Map<string, PlaceList>,
+  place: Pick<Place, 'id' | 'lat' | 'lng' | 'name'>,
+): TargetListResolution {
+  const selectedListIds = Array.from(new Set(targetListIds));
+
+  if (selectedListIds.length > MAX_SELECTED_LISTS_PER_PLACE_SAVE) {
+    return { ok: false, reason: 'selection-limit' };
+  }
+
+  const lists = selectedListIds
+    .map((listId) => listsById.get(listId))
+    .filter((list): list is PlaceList => Boolean(list));
+
+  if (lists.length !== selectedListIds.length) {
+    return { ok: false, reason: 'not-found' };
+  }
+
+  const hasDuplicate = lists.some((list) =>
+    list.places.some(
+      (item) =>
+        item.id === place.id ||
+        (item.name === place.name && item.lat === place.lat && item.lng === place.lng),
+    ),
+  );
+
+  return hasDuplicate
+    ? { ok: false, reason: 'duplicate' }
+    : { ok: true, lists };
+}
+
+function showTargetListResolutionError(reason: Exclude<TargetListResolution, { ok: true }>['reason']) {
+  const message = reason === 'selection-limit'
+    ? tr.placeEditor.notices.selectionLimit(MAX_SELECTED_LISTS_PER_PLACE_SAVE)
+    : reason === 'not-found'
+      ? tr.cards.listNotFound
+      : tr.cards.alreadyInList;
+  showToast(message, 'error');
+}
+
+function getPlaceQuoteNotificationTarget(
+  recipientUserId: string | null,
+  actorUserId: string,
+  hiddenUserIds: Set<string>,
+  list: PlaceList | undefined,
+  createdPlace: Place | undefined,
+) {
+  if (
+    !recipientUserId ||
+    recipientUserId === actorUserId ||
+    hiddenUserIds.has(recipientUserId) ||
+    !list ||
+    !createdPlace
+  ) {
+    return null;
+  }
+
+  return { createdPlace, list, recipientUserId };
+}
+
 function mapCommentToFeedAction(
   comment: PlaceComment,
   resolveUserById: (userId: string) => User | undefined,
   currentUserId?: string | null,
   ownerId?: string | null,
 ): FeedActionComment {
+  const permissions = getCommentPermissions(comment, currentUserId, ownerId);
   const likeDetailsByUserId = new Map(
     (comment.likeDetails || []).map((detail) => [detail.userId, detail.createdAt]),
   );
@@ -84,19 +170,7 @@ function mapCommentToFeedAction(
     replies: (comment.replies || []).map((reply) =>
       mapCommentToFeedAction(reply, resolveUserById, currentUserId, ownerId),
     ),
-    canEdit: Boolean(currentUserId && comment.userId === currentUserId && !comment.isPending),
-    editWindowExpired: Boolean(
-      currentUserId &&
-        comment.userId === currentUserId &&
-        !comment.isPending &&
-        isCommentEditWindowExpired(comment.createdAt),
-    ),
-    canDelete: Boolean(
-      currentUserId &&
-        !comment.isPending &&
-        (comment.userId === currentUserId || ownerId === currentUserId),
-    ),
-    canReport: Boolean(currentUserId && comment.userId !== currentUserId),
+    ...permissions,
   };
 }
 
@@ -120,32 +194,14 @@ function sanitizeCommentTree(comment: PlaceComment, hiddenUserIds: Set<string>):
   };
 }
 
-function canViewPrivateUserContent(viewer: User | null, targetUser: User | null, hiddenUserIds: Set<string>) {
-  if (!targetUser) {
-    return true;
-  }
-
-  if (!viewer) {
-    return targetUser.isPublicAccount !== false;
-  }
-
-  if (viewer.id === targetUser.id) {
-    return true;
-  }
-
-  if (hiddenUserIds.has(targetUser.id)) {
-    return false;
-  }
-
-  if (targetUser.isPublicAccount !== false) {
-    return true;
-  }
-
-  return (
-    (viewer.following || []).includes(targetUser.id) ||
-    (targetUser.followers || []).includes(viewer.id)
-  );
-}
+// Narrow pure-function surface for exhaustive privacy and comment-tree contract tests.
+export const placeCardInternals = {
+  canViewPrivateUserContent,
+  createErrorWithCause,
+  getErrorMessage,
+  mapCommentToFeedAction,
+  sanitizeCommentTree,
+};
 
 type UsePlaceCardStateParams = {
   commentsEnabled?: boolean;
@@ -170,20 +226,6 @@ export function usePlaceCardState({
   sourceAttributionEnabled = false,
   user,
 }: UsePlaceCardStateParams) {
-  const sourceAttributionUserId = place.sourceAttribution?.userId || null;
-  const shouldHydrateContext =
-    commentsEnabled ||
-    likersEnabled ||
-    listsEnabled ||
-    sourceAttributionEnabled ||
-    Boolean(sourceAttributionUserId);
-  const visibleDataQuery = useVisibleDataQuery(user?.id, {
-    enabled: shouldHydrateContext,
-    includeLists: listsEnabled,
-    includePlaceComments: false,
-    listPageSize: 100,
-    ownerId: user?.id || undefined,
-  });
   const { mutateAsync: createListAsync } = useCreateListMutation();
   const { mutateAsync: createPlaceQuoteNotificationAsync } = useCreatePlaceQuoteNotificationMutation();
   const { mutateAsync: updateListsAsync } = useUpdateListsMutation();
@@ -194,71 +236,29 @@ export function usePlaceCardState({
   const { mutateAsync: toggleLikePlaceCommentAsync } = useToggleLikePlaceCommentMutation();
   const { mutateAsync: reportPlaceAsync } = useReportPlaceMutation();
   const { mutateAsync: reportPlaceCommentAsync } = useReportPlaceCommentMutation();
-  const visibleUsers = shouldHydrateContext ? visibleDataQuery.data?.users || [] : [];
-  const allUsers = shouldHydrateContext ? visibleDataQuery.data?.allUsers || [] : [];
-  const blockRows = shouldHydrateContext ? visibleDataQuery.data?.blockRows || [] : [];
-  const visibleLists = listsEnabled ? visibleDataQuery.data?.lists || [] : [];
-  const resolvedOwnerId = ownerId || owner?.id || null;
-  const usersById = useMemo(
-    () => new Map(visibleUsers.map((item) => [item.id, item])),
-    [visibleUsers],
-  );
-  const allUsersById = useMemo(
-    () => new Map(allUsers.map((item) => [item.id, item])),
-    [allUsers],
-  );
-  const hiddenUserIds = useMemo(
-    () => getHiddenUserIdsFor(blockRows, user?.id),
-    [blockRows, user?.id],
-  );
-  const myLists = useMemo<PlaceList[]>(
-    () => (listsEnabled && user ? visibleLists.filter((list) => list.userId === user.id) : []),
-    [listsEnabled, user, visibleLists],
-  );
-  const myListsById = useMemo(
-    () => new Map(myLists.map((list) => [list.id, list])),
-    [myLists],
-  );
-  const sourceAttributionUser = useMemo(
-    () =>
-      (sourceAttributionUserId
-        ? allUsersById.get(sourceAttributionUserId) || usersById.get(sourceAttributionUserId)
-        : null) || null,
-    [allUsersById, sourceAttributionUserId, usersById],
-  );
-  const canOpenSourcePlaceCard = useMemo(
-    () => canViewPrivateUserContent(user, sourceAttributionUser, hiddenUserIds),
-    [hiddenUserIds, sourceAttributionUser, user],
-  );
-  const sourceAttributionListId = place.sourceAttribution?.listId || null;
-  const sourceAttributionPlaceId = place.sourceAttribution?.placeId || null;
-  const sourceAttributionListQuery = useVisibleDataQuery(user?.id, {
-    enabled: sourceAttributionEnabled && Boolean(sourceAttributionListId && canOpenSourcePlaceCard),
-    includeLists: Boolean(sourceAttributionListId && canOpenSourcePlaceCard),
-    includePlaceComments: false,
-    listId: sourceAttributionListId || undefined,
-    listPageSize: 1,
+  const {
+    allUsersById,
+    canOpenSourcePlaceCard,
+    hiddenUserIds,
+    myLists,
+    myListsById,
+    resolvedOwnerId,
+    sourceAttributionList,
+    sourceAttributionOwner,
+    sourceAttributionPlace,
+    sourceAttributionUser,
+    sourceAttributionUserId,
+    usersById,
+  } = usePlaceCardContext({
+    commentsEnabled,
+    likersEnabled,
+    listsEnabled,
+    owner,
+    ownerId,
+    place,
+    sourceAttributionEnabled,
+    user,
   });
-  const sourceAttributionLists =
-    sourceAttributionEnabled ? sourceAttributionListQuery.data?.lists || [] : [];
-  const sourceAttributionList = useMemo(
-    () => sourceAttributionLists[0] || null,
-    [sourceAttributionLists],
-  );
-  const sourceAttributionPlace = useMemo(
-    () =>
-      (sourceAttributionList && sourceAttributionPlaceId
-        ? sourceAttributionList.places.find((item) => item.id === sourceAttributionPlaceId) || null
-        : null),
-    [sourceAttributionList, sourceAttributionPlaceId],
-  );
-  const sourceAttributionOwner = useMemo(
-    () =>
-      (sourceAttributionList
-        ? allUsersById.get(sourceAttributionList.userId) || usersById.get(sourceAttributionList.userId)
-        : sourceAttributionUser) || null,
-    [allUsersById, sourceAttributionList, sourceAttributionUser, usersById],
-  );
 
   const isLiked = Boolean(user && (place.likedBy || []).includes(user.id));
   const canReportPlace = Boolean(user && resolvedOwnerId && user.id !== resolvedOwnerId);
@@ -321,6 +321,7 @@ export function usePlaceCardState({
 
       try {
         await createPlaceCommentAsync({
+          commentId: createUuid(),
           placeId: place.id,
           userId: user.id,
           content,
@@ -429,31 +430,15 @@ export function usePlaceCardState({
         return false;
       }
 
-      const selectedListIds = Array.from(new Set(targetListIds));
+      const targetListResolution = resolveTargetLists(targetListIds, myListsById, {
+        id: place.id,
+        lat: place.lat,
+        lng: place.lng,
+        name: place.name,
+      });
 
-      if (selectedListIds.length > MAX_SELECTED_LISTS_PER_PLACE_SAVE) {
-        showToast(tr.placeEditor.notices.selectionLimit(MAX_SELECTED_LISTS_PER_PLACE_SAVE), 'error');
-        return false;
-      }
-      const targetLists = selectedListIds
-        .map((listId) => myListsById.get(listId))
-        .filter((list): list is PlaceList => Boolean(list));
-
-      if (targetLists.length !== selectedListIds.length) {
-        showToast(tr.cards.listNotFound, 'error');
-        return false;
-      }
-
-      const duplicateTarget = targetLists.find((targetList) =>
-        targetList.places.some(
-          (item) =>
-            item.id === place.id ||
-            (item.name === place.name && item.lat === place.lat && item.lng === place.lng),
-        ),
-      );
-
-      if (duplicateTarget) {
-        showToast(tr.cards.alreadyInList, 'error');
+      if (!targetListResolution.ok) {
+        showTargetListResolutionError(targetListResolution.reason);
         return false;
       }
 
@@ -464,7 +449,7 @@ export function usePlaceCardState({
         title: normalizeOptionalMultilineText(placeData.title),
       };
       const nextUpdatedAt = new Date().toISOString();
-      const updatedLists = targetLists.map((targetList) => {
+      const updatedLists = targetListResolution.lists.map((targetList) => {
         const newPlace: Place = {
           ...normalizedPlaceData,
           id: createUuid(),
@@ -495,21 +480,22 @@ export function usePlaceCardState({
       const quoteRecipientUserId =
         place.sourceAttribution?.userId || resolvedOwnerId || place.addedBy?.userId || null;
       const quotedPlaceName = place.sourceAttribution?.placeName || place.name;
+      const notificationTarget = getPlaceQuoteNotificationTarget(
+        quoteRecipientUserId,
+        user.id,
+        hiddenUserIds,
+        firstUpdatedList,
+        firstCreatedPlace,
+      );
 
-      if (
-        quoteRecipientUserId &&
-        quoteRecipientUserId !== user.id &&
-        !hiddenUserIds.has(quoteRecipientUserId) &&
-        firstUpdatedList &&
-        firstCreatedPlace
-      ) {
+      if (notificationTarget) {
         try {
           await createPlaceQuoteNotificationAsync({
             actorUserId: user.id,
-            listId: firstUpdatedList.id,
+            listId: notificationTarget.list.id,
             message: `"${quotedPlaceName}" mekânını kendi listesine alıntıladı`,
-            placeId: firstCreatedPlace.id,
-            recipientUserId: quoteRecipientUserId,
+            placeId: notificationTarget.createdPlace.id,
+            recipientUserId: notificationTarget.recipientUserId,
           });
         } catch (error) {
           logger.warn('notifications', 'Place quote notification could not be created.', error);

@@ -19,13 +19,16 @@ import {
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { t } from '@/mobile/app/shared/i18n';
+import {
+  AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
+  STARTUP_CACHE_RESTORE_BUDGET_MS,
+} from '@/mobile/app/shared/performance/budgets';
 
 type UseAuthSessionLifecycleParams = {
   setBooted: Dispatch<SetStateAction<boolean>>;
   setUser: Dispatch<SetStateAction<User | null>>;
 };
 
-const AUTH_BOOTSTRAP_FALLBACK_MS = 3_000;
 const AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS = 5 * 60_000;
 const AUTH_SESSION_REVALIDATION_MIN_DELAY_MS = 30_000;
 const AUTH_SESSION_REVALIDATION_RETRY_DELAY_MS = 60_000;
@@ -251,7 +254,7 @@ export function useAuthSessionLifecycle({
 
         logger.warn('auth', 'Auth bootstrap is taking longer than expected; showing app shell fallback.');
         setBootedIfMounted();
-      }, AUTH_BOOTSTRAP_FALLBACK_MS);
+      }, AUTH_BOOTSTRAP_SHELL_FALLBACK_MS);
     };
 
     const bootstrapAuth = async () => {
@@ -261,11 +264,25 @@ export function useAuthSessionLifecycle({
         const persistedUser = await getPersistedAuthUserSnapshot();
 
         if (persistedUser) {
-          await restorePersistedVisibleDataSnapshot(persistedUser.id).catch((error) => {
-            logger.warn('auth', 'Failed to restore cached visible data snapshot', error);
-          });
           setUserIfMounted(persistedUser);
+          let cacheRestoreBudgetTimeout: ReturnType<typeof setTimeout> | null = null;
+          const cacheRestore = restorePersistedVisibleDataSnapshot(persistedUser.id).catch((error) => {
+            logger.warn('auth', 'Failed to restore cached startup data', error);
+            return null;
+          });
+          const cacheRestoreBudget = new Promise<void>((resolve) => {
+            cacheRestoreBudgetTimeout = setTimeout(resolve, STARTUP_CACHE_RESTORE_BUDGET_MS);
+          });
+
+          // Give local data a tiny head start so the first rendered shell can
+          // already contain content, without ever turning disk I/O into a long
+          // splash-screen dependency.
+          await Promise.race([cacheRestore, cacheRestoreBudget]);
+          if (cacheRestoreBudgetTimeout) {
+            clearTimeout(cacheRestoreBudgetTimeout);
+          }
           setBootedIfMounted();
+          void cacheRestore;
         }
 
         const session = await getActiveOrPersistedSession();

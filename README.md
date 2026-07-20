@@ -171,7 +171,15 @@ npm run test:feature:social
 
 # Coverage raporu
 npm run test:coverage
+
+# Tum production release kapilari
+npm run check:release
 ```
+
+`check:release`; Expo uyumu/Doctor, sifir-warning lint, mimari ve UI metin guard'lari,
+TypeScript, dead-code, 30 kritik akis kaniti, dependency/license/provenance, test, guvenlik ve
+tum coverage metriklerinde en az `%90` esigini birlikte uygular. Supabase migration/RLS/restore
+kontrolleri izole GitHub Actions veritabani job'inda calisir.
 
 ## Build & Deploy
 

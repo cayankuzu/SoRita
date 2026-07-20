@@ -39,9 +39,9 @@ export function scheduleDeferredTask(
     };
   }
 
-  callback();
+  const handle = setTimeout(callback, 0);
 
   return {
-    cancel: () => undefined,
+    cancel: () => clearTimeout(handle),
   };
 }

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   deleteSecureStorageItem,
   getSecureStorageItem,
+  SecureStorageUnavailableError,
   setSecureStorageItem,
 } from '@/mobile/app/platform/storage/secureKeyValueStore';
 
@@ -21,14 +22,23 @@ describe('secureKeyValueStore', () => {
     await expect(AsyncStorage.getItem(fallbackKey)).resolves.toBeNull();
   });
 
-  it('falls back to AsyncStorage when SecureStore rejects release calls', async () => {
+  it('fails closed without persisting secrets when SecureStore rejects writes', async () => {
     vi.mocked(SecureStore.setItemAsync).mockRejectedValueOnce(new Error('native options cast'));
+
+    await expect(setSecureStorageItem(key, 'secret-value')).rejects.toBeInstanceOf(
+      SecureStorageUnavailableError,
+    );
+
+    await expect(AsyncStorage.getItem(fallbackKey)).resolves.toBeNull();
+    await expect(getSecureStorageItem(key)).resolves.toBeNull();
+  });
+
+  it('never restores a legacy fallback when SecureStore reads fail', async () => {
+    await AsyncStorage.setItem(fallbackKey, 'legacy-secret-value');
     vi.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error('native options cast'));
 
-    await setSecureStorageItem(key, 'fallback-value');
-
-    await expect(AsyncStorage.getItem(fallbackKey)).resolves.toBe('fallback-value');
-    await expect(getSecureStorageItem(key)).resolves.toBe('fallback-value');
+    await expect(getSecureStorageItem(key)).resolves.toBeNull();
+    await expect(AsyncStorage.getItem(fallbackKey)).resolves.toBeNull();
   });
 
   it('keeps a delete tombstone when SecureStore cannot delete a stale native value', async () => {

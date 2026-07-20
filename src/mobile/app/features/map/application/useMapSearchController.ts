@@ -131,7 +131,7 @@ export function useMapSearchController({
         setSelectedSearchResult(null);
       }
     },
-    [selectedSearchResult],
+    [selectedSearchResult, setSelectedSearchResult],
   );
 
   const clearSearch = useCallback(() => {
@@ -176,7 +176,7 @@ export function useMapSearchController({
         address: item.address,
       });
     },
-    [allPlaces, openEditorPanel, openExistingPlacePanel, setManualViewport],
+    [allPlaces, openEditorPanel, openExistingPlacePanel, setManualViewport, setSelectedSearchResult],
   );
 
   return {

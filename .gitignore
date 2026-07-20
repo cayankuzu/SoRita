@@ -32,6 +32,12 @@ SoRita_web/
 SoRita_web_repo/
 !docs/
 docs/*
+!docs/baseline.md
+!docs/data-retention.md
+!docs/release-readiness.md
+!docs/release-rollback-checklist.md
+!docs/slo.md
+!docs/threat-model.md
 !docs/release/
 !docs/release/**
 expo-export/

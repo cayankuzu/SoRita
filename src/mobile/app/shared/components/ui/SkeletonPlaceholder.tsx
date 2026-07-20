@@ -9,6 +9,7 @@ import {
 
 import { colors } from "@/mobile/app/shared/theme/tokens";
 import { useReduceMotion } from "@/mobile/app/shared/hooks/useReduceMotion";
+import { tr } from "@/mobile/app/shared/i18n/tr";
 
 type SkeletonProps = {
   width: DimensionValue;
@@ -70,7 +71,7 @@ type SkeletonGroupProps = {
 
 export function SkeletonGroup({ children, style }: SkeletonGroupProps) {
   return (
-    <View accessibilityLabel="Yukleniyor" style={[styles.group, style]}>
+    <View accessibilityLabel={tr.common.loading} style={[styles.group, style]}>
       {children}
     </View>
   );

@@ -17,11 +17,6 @@ vi.mock('@/mobile/app/data/hooks/useVisibleDataQuery', () => ({
   useVisibleDataQuery: useVisibleDataQueryMock,
 }));
 
-vi.mock('@/mobile/app/data/query/readModelErrors', () => ({
-  isMissingReadModelError: (error: { missingReadModel?: boolean } | null | undefined) =>
-    Boolean(error?.missingReadModel),
-}));
-
 vi.mock('@/mobile/app/data/hooks/useListMutations', () => ({
   useReportListMutation: useReportListMutationMock,
 }));
@@ -74,13 +69,19 @@ describe('useListDetailScreenState', () => {
     };
 
     useListDetailQueryMock.mockReturnValue({
-      error: { missingReadModel: true },
+      error: null,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
-      header: null,
+      header: {
+        list: {
+          ...list,
+          places: undefined,
+        },
+        owner: { id: 'owner-1', email: 'owner@example.com', name: 'Owner', username: 'owner' },
+      },
       isFetchingNextPage: false,
       isLoading: false,
-      places: [],
+      places: list.places,
       refetch: readModelRefetchMock,
     });
     useVisibleDataQueryMock.mockReturnValue({
@@ -105,8 +106,8 @@ describe('useListDetailScreenState', () => {
     expect(hook.result.current.isOwner).toBe(false);
     expect(hook.result.current.canReportList).toBe(true);
     expect(hook.result.current.mapPlaces).toHaveLength(1);
-    expect(hook.result.current.mapPlaces[0]?.markerColor).toBe(colors.primary);
-    expect(hook.result.current.placeMarkerColorsById.get('place-1')).toBe(colors.primary);
+    expect(hook.result.current.mapPlaces[0]?.markerColor).toBe(colors.secondary);
+    expect(hook.result.current.placeMarkerColorsById.get('place-1')).toBe(colors.secondary);
 
     await hook.result.current.deletePlace('place-1');
     await hook.result.current.reportList('spam');
@@ -120,6 +121,109 @@ describe('useListDetailScreenState', () => {
     });
 
     await hook.result.current.onRefresh();
-    expect(refetchMock).toHaveBeenCalled();
+    expect(readModelRefetchMock).toHaveBeenCalled();
+  });
+
+  it('uses paginated read-model details and preserves partial content on errors', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    const fetchNextPage = vi.fn().mockResolvedValue(undefined);
+    const reportListAsync = vi.fn().mockResolvedValue(undefined);
+    const user = {
+      id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
+    };
+    const list = {
+      id: 'list-1', userId: user.id, name: 'Mine', isPublic: false,
+      createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-02T00:00:00.000Z',
+    };
+    const place = {
+      id: 'place-1', name: 'Cafe', lat: 1, lng: 2,
+      addedAt: '2025-01-01T00:00:00.000Z',
+    };
+
+    useListDetailQueryMock.mockReturnValue({
+      error: new Error('Network request failed'), fetchNextPage, hasNextPage: true,
+      header: { list, owner: user }, isFetchingNextPage: true, isLoading: false,
+      places: [place], refetch,
+    });
+    useVisibleDataQueryMock.mockReturnValue({
+      data: undefined, error: null, fetchNextPage: undefined, hasNextPage: false,
+      hasPartialDataError: false, isFetchingNextPage: false, isLoading: false,
+      refetch: vi.fn(),
+    });
+    useReportListMutationMock.mockReturnValue({ mutateAsync: reportListAsync });
+    useDeletePlaceMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: true,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/lists/application/useListDetailScreenState');
+    const hook = renderHook(() => hooks.useListDetailScreenState({ listId: list.id, user }));
+
+    expect(hook.result.current.list).toMatchObject({ id: list.id, places: [place] });
+    expect(hook.result.current.owner?.id).toBe(user.id);
+    expect(hook.result.current.isOwner).toBe(true);
+    expect(hook.result.current.canReportList).toBe(false);
+    expect(hook.result.current.displayPlaces).toEqual([place]);
+    expect(hook.result.current.mapPlaces).toHaveLength(1);
+    expect(hook.result.current.fetchNextPage).toBe(fetchNextPage);
+    expect(hook.result.current.hasNextPage).toBe(true);
+    expect(hook.result.current.isFetchingNextPage).toBe(true);
+    expect(hook.result.current.hasPartialDataError).toBe(true);
+    expect(hook.result.current.isInitialLoading).toBe(false);
+    expect(hook.result.current.errorMessage).not.toBeNull();
+    expect(hook.result.current.refreshing).toBe(true);
+
+    await hook.result.current.retry();
+    await hook.result.current.reportList('other', 'details');
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(reportListAsync).toHaveBeenCalledWith({
+      reporterUserId: user.id, listId: list.id, reason: 'other', details: 'details',
+    });
+  });
+
+  it('handles missing canonical lists and initial loading safely', async () => {
+    useListDetailQueryMock.mockReturnValue({
+      error: { missingReadModel: true }, fetchNextPage: undefined, hasNextPage: false,
+      header: null, isFetchingNextPage: false, isLoading: false, places: [],
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useVisibleDataQueryMock.mockReturnValue({
+      data: { users: [], lists: [] }, error: null, fetchNextPage: vi.fn(),
+      hasNextPage: true, hasPartialDataError: true, isFetchingNextPage: true,
+      isLoading: true, refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useReportListMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useDeletePlaceMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: false,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/lists/application/useListDetailScreenState');
+    const missingHook = renderHook(() =>
+      hooks.useListDetailScreenState({ listId: 'missing', user: null }),
+    );
+
+    expect(missingHook.result.current.list).toBeNull();
+    expect(missingHook.result.current.owner).toBeNull();
+    expect(missingHook.result.current.displayPlaces).toEqual([]);
+    expect(missingHook.result.current.mapPlaces).toEqual([]);
+    expect(missingHook.result.current.placeMarkerColorsById.size).toBe(0);
+    expect(missingHook.result.current.isOwner).toBe(false);
+    expect(missingHook.result.current.canReportList).toBe(false);
+    expect(missingHook.result.current.hasPartialDataError).toBe(false);
+    await expect(missingHook.result.current.reportList('spam')).rejects.toThrow();
+
+    useListDetailQueryMock.mockReturnValue({
+      error: null, fetchNextPage: undefined, hasNextPage: false, header: null,
+      isFetchingNextPage: false, isLoading: true, places: [],
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    const loadingHook = renderHook(() =>
+      hooks.useListDetailScreenState({ listId: 'loading', user: null }),
+    );
+    expect(loadingHook.result.current.isInitialLoading).toBe(true);
+    expect(loadingHook.result.current.hasPartialDataError).toBe(false);
   });
 });

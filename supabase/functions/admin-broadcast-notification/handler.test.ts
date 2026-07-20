@@ -125,4 +125,91 @@ describe('admin-broadcast-notification handler', () => {
       recipientUserIds: ['user-1', 'user-2'],
     });
   });
+
+  it('handles CORS, methods, configuration, invalid payloads, empty recipients, and failures', async () => {
+    const endpoint = 'https://example.supabase.co/functions/v1/admin-broadcast-notification';
+    const repository = {
+      fetchRecipientUserIds: vi.fn().mockResolvedValue([]),
+      insertNotifications: vi.fn(),
+    };
+    const createHandler = (configOverrides: Partial<{
+      adminToken: string;
+      allowedOrigins: string[];
+      supabaseServiceRoleKey: string;
+      supabaseUrl: string;
+    }> = {}) => createAdminBroadcastNotificationHandler({
+      config: {
+        adminToken: 'secret-token', allowedOrigins: [], supabaseServiceRoleKey: 'service-role',
+        supabaseUrl: 'https://example.supabase.co', ...configOverrides,
+      },
+      createRequestId: () => 'request-id',
+      repository,
+    });
+
+    const handler = createHandler();
+    const preflight = await handler(new Request(endpoint, {
+      method: 'OPTIONS', headers: { origin: 'http://127.0.0.1:3000' },
+    }));
+    expect(preflight.status).toBe(200);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:3000');
+
+    const methodResponse = await handler(new Request(endpoint, { method: 'GET' }));
+    expect(methodResponse.status).toBe(405);
+
+    for (const configOverrides of [
+      { adminToken: ' ' },
+      { supabaseServiceRoleKey: ' ' },
+      { supabaseUrl: ' ' },
+    ]) {
+      const response = await createHandler(configOverrides)(new Request(endpoint, {
+        method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+        body: JSON.stringify({ message: 'Body', title: 'Title' }),
+      }));
+      expect(response.status).toBe(500);
+    }
+
+    const invalidJsonResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' }, body: '{broken',
+    }));
+    expect(invalidJsonResponse.status).toBe(400);
+    const invalidInputResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+      body: JSON.stringify({ message: '', title: '' }),
+    }));
+    expect(invalidInputResponse.status).toBe(400);
+
+    const emptyResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+      body: JSON.stringify({
+        message: '  Body  ', title: '  Title  ',
+        userIds: [
+          '550e8400-e29b-41d4-a716-446655440000',
+          '550e8400-e29b-41d4-a716-446655440000',
+        ],
+      }),
+    }));
+    await expect(emptyResponse.json()).resolves.toMatchObject({
+      dryRun: false, insertedCount: 0, recipientCount: 0, success: true,
+    });
+    expect(repository.fetchRecipientUserIds).toHaveBeenLastCalledWith([
+      '550e8400-e29b-41d4-a716-446655440000',
+    ]);
+
+    repository.fetchRecipientUserIds.mockRejectedValueOnce(new Error('repository failed'));
+    const errorResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+      body: JSON.stringify({ message: 'Body', title: 'Title' }),
+    }));
+    expect(errorResponse.status).toBe(500);
+    await expect(errorResponse.json()).resolves.toMatchObject({ error: 'repository failed' });
+
+    repository.fetchRecipientUserIds.mockRejectedValueOnce('failure');
+    const unknownErrorResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+      body: JSON.stringify({ message: 'Body', title: 'Title' }),
+    }));
+    await expect(unknownErrorResponse.json()).resolves.toMatchObject({
+      error: 'Internal server error',
+    });
+  });
 });

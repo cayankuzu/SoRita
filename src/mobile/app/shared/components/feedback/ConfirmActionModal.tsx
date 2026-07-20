@@ -7,7 +7,7 @@ import { logger } from '@/mobile/app/platform/feedback/logger';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 
 type ConfirmActionModalProps = {
   visible: boolean;

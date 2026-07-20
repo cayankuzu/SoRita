@@ -35,8 +35,7 @@ export const placeCardStyles = StyleSheet.create({
     flexShrink: 1,
   },
   compactTitleLink: {
-    textDecorationLine: 'underline',
-    textDecorationColor: colors.primary,
+    color: colors.text,
   },
   compactTitleMeta: {
     fontSize: 10,
@@ -261,7 +260,7 @@ export const placeCardStyles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    gap: 4,
+    gap: 6,
   },
   contentTitleRow: {
     flexDirection: 'row',
@@ -311,7 +310,7 @@ export const placeCardStyles = StyleSheet.create({
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.secondary,
   },
   title: {
     fontSize: 17,
@@ -320,8 +319,7 @@ export const placeCardStyles = StyleSheet.create({
     flexShrink: 1,
   },
   titleLink: {
-    textDecorationLine: 'underline',
-    textDecorationColor: colors.primary,
+    color: colors.text,
   },
   titleMeta: {
     fontSize: 12,
@@ -333,64 +331,78 @@ export const placeCardStyles = StyleSheet.create({
   },
   description: {
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
     color: colors.textMuted,
   },
-  menuLinkCard: {
+  menuAction: {
     alignSelf: 'flex-start',
-    marginTop: 5,
-    gap: 3,
+    minHeight: 36,
     maxWidth: '100%',
-    borderRadius: 8,
-    paddingHorizontal: 1,
-    paddingVertical: 3,
+    marginTop: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
-  menuLinkCardPressed: {
-    opacity: 0.72,
-  },
-  menuLinkHeader: {
+  menuActionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 5,
-    paddingBottom: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
+    gap: 7,
   },
-  menuLinkHeaderIcon: {
-    marginLeft: 2,
+  menuActionPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.98 }],
   },
-  menuLinkLabel: {
+  menuActionIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  menuActionLabel: {
     fontSize: 12,
     fontWeight: '800',
     color: colors.primary,
   },
-  menuLinkBody: {
-    maxWidth: '100%',
+  menuUrlPreview: {
+    maxWidth: 300,
+    marginTop: 7,
+    paddingTop: 7,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderStrong,
+    gap: 5,
   },
-  menuLinkText: {
-    fontSize: 12,
-    lineHeight: 17,
+  menuUrlText: {
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.textMuted,
   },
-  menuLinkHelper: {
-    marginTop: 2,
-    fontSize: 11,
-    lineHeight: 15,
+  menuHoldHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuHoldHintText: {
+    fontSize: 10,
+    lineHeight: 14,
     color: colors.textSoft,
   },
   timestampBlock: {
-    gap: 2,
-    paddingTop: 2,
+    paddingTop: 1,
   },
   timestampText: {
-    fontSize: 11,
-    color: colors.textSoft,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.textDisabled,
   },
   tagSection: {
     gap: 6,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 10,
   },
   badgeRow: {
     gap: 8,

@@ -1,18 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import * as Clipboard from 'expo-clipboard';
-import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { Copy, Flag, Pencil, Share2, Trash2, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Copy, Flag, Pencil, Share2, Trash2 } from 'lucide-react-native';
 
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
@@ -20,33 +7,20 @@ import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/naviga
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { useUpdateListsMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
-import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/public/types';
+import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
 import { CompactPlaceCard } from '@/mobile/app/features/places/ui/components/place-card/CompactPlaceCard';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { shareExternalUrl } from '@/mobile/app/platform/sharing/shareExternalUrl';
-import { ActionMenuSheet } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
-import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
-import { MediaLightbox } from '@/mobile/app/shared/components/feedback/MediaLightbox';
-import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
+import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
 import { buildListContentUrl } from '@/mobile/app/shared/utils/contentLinks';
 import { formatPrice } from '@/mobile/app/shared/utils/format';
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
-import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
-import {
-  getAndroidModalWindowProps,
-  getModalContentMaxHeight,
-  getModalSafeAreaPadding,
-} from '@/mobile/app/shared/utils/modalLayout';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
-import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
-import { createUuid } from '@/shared/utils/id';
 
 type PlaceCardProps = {
   place: Place;
@@ -64,6 +38,7 @@ type PlaceCardProps = {
   locationPlaceCardsCount?: number;
   locationOriginalPlaceName?: string;
   onPress?: () => void;
+  onPressIn?: () => void;
   onOwnerPress?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -71,118 +46,161 @@ type PlaceCardProps = {
   onPlaceNamePress?: (() => void) | null;
 };
 
-type SourcePlaceCardModalProps = {
-  allowAddToList: boolean;
-  list: PlaceList | null;
-  onClose: () => void;
-  onOpenListDetail?: () => void;
-  onOwnerPress?: () => void;
-  owner: User | null;
-  place: Place | null;
-  visible: boolean;
-};
+type ConfirmActionModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
+>;
+type MediaLightboxProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/MediaLightbox')['MediaLightbox']
+>;
+type PlaceEditorModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/map/public/components')['PlaceEditorModal']
+>;
+type ReportActionSheetProps = React.ComponentProps<
+  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
+>;
+type SourcePlaceCardModalProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal')['SourcePlaceCardModal']
+>;
+type ActionMenuItem = React.ComponentProps<typeof DeferredActionMenuSheet>['items'][number];
 
-function normalizePlaceIdentityValue(value: string) {
-  return normalizeSearchText(value);
+function renderWhen(
+  visible: boolean,
+  render: () => React.ReactNode,
+) {
+  return visible ? render() : null;
 }
 
-function isMatchingPlace(
-  left: Pick<Place, 'id' | 'name' | 'lat' | 'lng'>,
-  right: Pick<Place, 'id' | 'name' | 'lat' | 'lng'>,
-) {
-  if (left.id && right.id) {
-    return left.id === right.id;
+function uniqueValues(values?: string[], fallback?: string) {
+  if (values?.length) {
+    return Array.from(new Set(values));
   }
 
-  return (
-    Math.abs(left.lat - right.lat) < 0.00001 &&
-    Math.abs(left.lng - right.lng) < 0.00001 &&
-    normalizePlaceIdentityValue(left.name) === normalizePlaceIdentityValue(right.name)
-  );
+  return fallback ? [fallback] : [];
 }
 
-function SourcePlaceCardModal({
-  allowAddToList,
-  list,
-  onClose,
-  onOpenListDetail,
-  onOwnerPress,
-  owner,
-  place,
-  visible,
-}: SourcePlaceCardModalProps) {
-  const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
-  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
-    topInset: insets.top,
-    bottomInset: insets.bottom,
-    topSpacing: Platform.OS === 'android' ? 16 : 12,
-    bottomSpacing: Platform.OS === 'android' ? 20 : 16,
-    minTopPadding: Platform.OS === 'android' ? 20 : 16,
-    minBottomPadding: Platform.OS === 'android' ? 38 : 16,
-  });
-  const sheetMaxHeight = getModalContentMaxHeight({
-    viewportHeight: windowHeight,
-    paddingTop,
-    paddingBottom,
-    maxHeightRatio: 0.88,
-    minHeight: 320,
-  });
+function getPlaceCardMetadata(place: Place) {
+  const features = uniqueValues(place.specialFeatures);
 
-  return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
-      animationType="slide"
-      hardwareAccelerated
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-    >
-      <View style={[styles.sourceModalOverlay, { paddingTop, paddingBottom }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+  return {
+    bestTimes: uniqueValues(place.bestTimes, place.bestTime),
+    categories: uniqueValues(place.categories, place.category),
+    dietaryOptions: features.filter((item) => PLACE_DIETARY_OPTIONS.includes(item)),
+    specialFeatures: features.filter((item) => !PLACE_DIETARY_OPTIONS.includes(item)),
+  };
+}
 
-        <View style={[styles.sourceModalSheet, { maxHeight: sheetMaxHeight }]}>
-          <View style={styles.sourceModalHeader}>
-            <Text style={styles.sourceModalTitle}>Alıntılanan mekân</Text>
-            <Pressable style={styles.sourceModalCloseButton} onPress={onClose}>
-              <X color={colors.textMuted} size={18} />
-            </Pressable>
-          </View>
+function createFallbackOwnedList(params: {
+  canManage: boolean;
+  listCoverImage?: string;
+  listEmoji?: string;
+  listId?: string;
+  listIsPublic?: boolean;
+  listName?: string;
+  place: Place;
+  user: User | null;
+}): PlaceList | null {
+  if (!params.canManage || !params.user || !params.listId) {
+    return null;
+  }
 
-          <ScrollView
-            contentContainerStyle={styles.sourceModalContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {place && list ? (
-              <PlaceCard
-                allowAddToList={allowAddToList}
-                listCoverImage={list.coverImage}
-                listEmoji={list.emoji}
-                listId={list.id}
-                listIsPublic={list.isPublic}
-                listName={list.name}
-                markerColor={getListMarkerColor(list.isPublic)}
-                onPress={onOpenListDetail}
-                onOwnerPress={onOwnerPress}
-                owner={owner}
-                ownerId={list.userId}
-                place={place}
-              />
-            ) : (
-              <View style={styles.sourceModalLoadingWrap}>
-                <ActivityIndicator color={colors.primary} size="small" />
-                <Text style={styles.sourceModalLoadingText}>{tr.common.loading}</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
+  return {
+    id: params.listId,
+    userId: params.user.id,
+    name: params.listName || tr.cards.savedPlaceFallback,
+    description: undefined,
+    emoji: params.listEmoji,
+    coverImage: params.listCoverImage,
+    places: [params.place],
+    isPublic: params.listIsPublic !== false,
+    createdAt: params.place.addedAt,
+    updatedAt: params.place.updatedAt || params.place.addedAt,
+  };
+}
+
+function includeFallbackList(lists: PlaceList[], fallback: PlaceList | null) {
+  if (!fallback || lists.some((item) => item.id === fallback.id)) {
+    return lists;
+  }
+
+  return [fallback, ...lists];
+}
+
+function buildPlaceActionItems(params: {
+  canManageOwnedPlace: boolean;
+  canReportPlace: boolean;
+  onDelete?: () => void;
+  onDeletePress: () => void;
+  onEdit?: () => void;
+  onEditPress: () => void;
+  onReportPress: () => void;
+  onSharePress: () => void;
+}) {
+  const items: Array<ActionMenuItem | null> = [
+    {
+      key: 'share',
+      label: tr.cards.share,
+      renderIcon: (color) => <Share2 color={color} size={16} />,
+      onPress: params.onSharePress,
+    },
+    params.onEdit || params.canManageOwnedPlace
+      ? {
+          key: 'edit',
+          label: tr.common.edit,
+          renderIcon: (color) => <Pencil color={color} size={16} />,
+          onPress: params.onEditPress,
+        }
+      : null,
+    params.onDelete || params.canManageOwnedPlace
+      ? {
+          key: 'delete',
+          label: tr.common.delete,
+          renderIcon: (color) => <Trash2 color={color} size={16} />,
+          tone: 'danger',
+          onPress: params.onDeletePress,
+        }
+      : null,
+    params.canReportPlace
+      ? {
+          key: 'report',
+          label: tr.profile.actions.report,
+          renderIcon: (color) => <Flag color={color} size={16} />,
+          tone: 'danger',
+          onPress: params.onReportPress,
+        }
+      : null,
+  ];
+
+  return items.filter((item): item is ActionMenuItem => Boolean(item));
+}
+
+function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
+  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
+    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
+  return <ConfirmActionModal {...props} />;
+}
+
+function DeferredMediaLightbox(props: MediaLightboxProps) {
+  const { MediaLightbox } = require('@/mobile/app/shared/components/feedback/MediaLightbox') as
+    typeof import('@/mobile/app/shared/components/feedback/MediaLightbox');
+  return <MediaLightbox {...props} />;
+}
+
+function DeferredPlaceEditorModal(props: PlaceEditorModalProps) {
+  const { PlaceEditorModal } = require('@/mobile/app/features/map/public/components') as
+    typeof import('@/mobile/app/features/map/public/components');
+  return <PlaceEditorModal {...props} />;
+}
+
+function DeferredReportActionSheet(props: ReportActionSheetProps) {
+  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
+    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
+  return <ReportActionSheet {...props} />;
+}
+
+function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {
+  const { SourcePlaceCardModal } = require('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal') as
+    typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal');
+  return <SourcePlaceCardModal {...props} />;
 }
 
 function PlaceCardComponent({
@@ -201,6 +219,7 @@ function PlaceCardComponent({
   locationPlaceCardsCount,
   locationOriginalPlaceName,
   onPress,
+  onPressIn,
   onOwnerPress,
   onEdit,
   onDelete,
@@ -225,7 +244,11 @@ function PlaceCardComponent({
   const [likersActivated, setLikersActivated] = useState(false);
   const [reportDetails, setReportDetails] = useState('');
   const [reportReason, setReportReason] = useState('');
-  const media = getPlaceMedia(place);
+  const media = useMemo(() => getPlaceMedia(place), [place]);
+  const { bestTimes, categories, dietaryOptions, specialFeatures } = useMemo(
+    () => getPlaceCardMetadata(place),
+    [place],
+  );
   const baseMarkerColor = markerColor ?? getListMarkerColor(listIsPublic);
   const initialResolvedOwnerId = ownerId || owner?.id || place.addedBy?.userId || null;
   const {
@@ -236,18 +259,6 @@ function PlaceCardComponent({
     showInteractionHint,
   } = useMiniMapInteraction(place.id);
 
-  const categories = Array.from(
-    new Set(place.categories?.length ? place.categories : place.category ? [place.category] : []),
-  );
-  const bestTimes = Array.from(
-    new Set(place.bestTimes?.length ? place.bestTimes : place.bestTime ? [place.bestTime] : []),
-  );
-  const dietaryOptions = Array.from(
-    new Set((place.specialFeatures || []).filter((item) => PLACE_DIETARY_OPTIONS.includes(item))),
-  );
-  const specialFeatures = Array.from(
-    new Set((place.specialFeatures || []).filter((item) => !PLACE_DIETARY_OPTIONS.includes(item))),
-  );
   const priceLabel = formatPrice(place) ?? undefined;
   const shareUrl = useMemo(() => buildListContentUrl(listId, place.id), [listId, place.id]);
 
@@ -351,24 +362,16 @@ function PlaceCardComponent({
   const canManageOwnedPlace = Boolean(
     user && listId && (resolvedOwnerId || initialResolvedOwnerId) === user.id,
   );
-  const fallbackOwnedList = useMemo<PlaceList | null>(() => {
-    if (!canManageOwnedPlace || !user || !listId) {
-      return null;
-    }
-
-    return {
-      id: listId,
-      userId: user.id,
-      name: listName || tr.cards.savedPlaceFallback,
-      description: undefined,
-      emoji: listEmoji,
-      coverImage: listCoverImage,
-      places: [place],
-      isPublic: listIsPublic !== false,
-      createdAt: place.addedAt,
-      updatedAt: place.updatedAt || place.addedAt,
-    };
-  }, [
+  const fallbackOwnedList = useMemo(() => createFallbackOwnedList({
+    canManage: canManageOwnedPlace,
+    listCoverImage,
+    listEmoji,
+    listId,
+    listIsPublic,
+    listName,
+    place,
+    user,
+  }), [
     canManageOwnedPlace,
     listCoverImage,
     listEmoji,
@@ -378,15 +381,10 @@ function PlaceCardComponent({
     place,
     user,
   ]);
-  const ownedEditableLists = useMemo(() => {
-    if (!fallbackOwnedList) {
-      return myLists;
-    }
-
-    return myLists.some((item) => item.id === fallbackOwnedList.id)
-      ? myLists
-      : [fallbackOwnedList, ...myLists];
-  }, [fallbackOwnedList, myLists]);
+  const ownedEditableLists = useMemo(
+    () => includeFallbackList(myLists, fallbackOwnedList),
+    [fallbackOwnedList, myLists],
+  );
   const ownedCurrentList =
     ownedEditableLists.find((item) => item.id === listId) || fallbackOwnedList;
 
@@ -400,6 +398,7 @@ function PlaceCardComponent({
         placeTimestampLabels={placeTimestampLabels}
         onPlaceNamePress={resolvedPlaceNamePress}
         onPress={onPress}
+        onPressIn={onPressIn}
       />
     );
   }
@@ -465,49 +464,14 @@ function PlaceCardComponent({
       return;
     }
 
-    const selectedListIds = Array.from(new Set(targetListIds));
     const nextUpdatedAt = new Date().toISOString();
-    const normalizedPlaceData: Omit<Place, 'id' | 'addedAt'> = {
-      ...placeData,
-      address: placeData.address?.trim() || undefined,
-      notes: normalizeOptionalMultilineText(placeData.notes),
-      title: normalizeOptionalMultilineText(placeData.title),
-    };
-    const changedLists = ownedEditableLists
-      .map((list) => {
-        const matchedPlaceIndex = list.places.findIndex((item) => isMatchingPlace(item, place));
-        const hasPlace = matchedPlaceIndex >= 0;
-        const shouldContainPlace = selectedListIds.includes(list.id);
-        const listMembershipChanged =
-          (hasPlace && !shouldContainPlace) ||
-          (!hasPlace && shouldContainPlace);
-
-        if (!hasPlace && !shouldContainPlace) {
-          return null;
-        }
-
-        const matchedPlace = matchedPlaceIndex >= 0 ? list.places[matchedPlaceIndex] : null;
-        const nextPlace: Place = {
-          ...normalizedPlaceData,
-          id: matchedPlace?.id || createUuid(),
-          addedAt: matchedPlace?.addedAt || place.addedAt,
-          updatedAt: nextUpdatedAt,
-          addedBy: matchedPlace?.addedBy || placeData.addedBy || place.addedBy,
-        };
-
-        const nextPlaces = shouldContainPlace
-          ? hasPlace
-            ? list.places.map((item, index) => (index === matchedPlaceIndex ? nextPlace : item))
-            : [...list.places, nextPlace]
-          : list.places.filter((_, index) => index !== matchedPlaceIndex);
-
-        return {
-          ...list,
-          places: nextPlaces,
-          updatedAt: listMembershipChanged ? nextUpdatedAt : list.updatedAt,
-        };
-      })
-      .filter((item): item is PlaceList => Boolean(item));
+    const changedLists = buildOwnedPlaceListUpdates({
+      editableLists: ownedEditableLists,
+      place,
+      placeData,
+      targetListIds,
+      updatedAt: nextUpdatedAt,
+    });
 
     try {
       await updateListsAsync(changedLists);
@@ -538,11 +502,12 @@ function PlaceCardComponent({
     setShowShareMenu(false);
 
     try {
-      await Clipboard.setStringAsync(shareUrl);
-      showToast("Bağlantı URL'si kopyalandı", 'success');
+      const { setStringAsync } = await import('expo-clipboard');
+      await setStringAsync(shareUrl);
+      showToast(tr.cards.copyLinkSuccess, 'success');
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Bağlantı URL'si kopyalanamadı",
+        error instanceof Error ? error.message : tr.cards.copyLinkFailed,
         'error',
       );
     }
@@ -557,6 +522,7 @@ function PlaceCardComponent({
     setIsSharingLink(true);
 
     try {
+      const { shareExternalUrl } = await import('@/mobile/app/platform/sharing/shareExternalUrl');
       const result = await shareExternalUrl(shareUrl);
 
       if (!result.ok) {
@@ -567,65 +533,39 @@ function PlaceCardComponent({
     }
   };
 
-  const actionItems = [
-    {
-      key: 'share',
-      label: tr.cards.share,
-      renderIcon: (color: string) => <Share2 color={color} size={16} />,
-      onPress: () => {
-        openShareMenu();
-      },
+  const actionItems = buildPlaceActionItems({
+    canManageOwnedPlace,
+    canReportPlace,
+    onDelete,
+    onDeletePress: () => {
+      setShowActionMenu(false);
+      if (onDelete) {
+        onDelete();
+        return;
+      }
+
+      setShowOwnedPlaceDeleteConfirm(true);
     },
-    onEdit || canManageOwnedPlace
-      ? {
-          key: 'edit',
-          label: tr.common.edit,
-          renderIcon: (color: string) => <Pencil color={color} size={16} />,
-          onPress: () => {
-            setShowActionMenu(false);
-            if (onEdit) {
-              onEdit();
-              return;
-            }
+    onEdit,
+    onEditPress: () => {
+      setShowActionMenu(false);
+      if (onEdit) {
+        onEdit();
+        return;
+      }
 
-            setShowOwnedPlaceEditor(true);
-          },
-        }
-      : null,
-    onDelete || canManageOwnedPlace
-      ? {
-          key: 'delete',
-          label: tr.common.delete,
-          renderIcon: (color: string) => <Trash2 color={color} size={16} />,
-          tone: 'danger' as const,
-          onPress: () => {
-            setShowActionMenu(false);
-            if (onDelete) {
-              onDelete();
-              return;
-            }
-
-            setShowOwnedPlaceDeleteConfirm(true);
-          },
-        }
-      : null,
-    canReportPlace
-      ? {
-          key: 'report',
-          label: tr.profile.actions.report,
-          renderIcon: (color: string) => <Flag color={color} size={16} />,
-          tone: 'danger' as const,
-          onPress: () => {
-            setShowActionMenu(false);
-            setShowReportSheet(true);
-          },
-        }
-      : null,
-  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+      setShowOwnedPlaceEditor(true);
+    },
+    onReportPress: () => {
+      setShowActionMenu(false);
+      setShowReportSheet(true);
+    },
+    onSharePress: openShareMenu,
+  });
   const shareActionItems = [
     {
       key: 'copy-address',
-      label: "Bağlantı URL'sini kopyala",
+      label: tr.cards.copyLink,
       renderIcon: (color: string) => <Copy color={color} size={16} />,
       onPress: () => {
         void handleCopyAddressPress();
@@ -682,6 +622,7 @@ function PlaceCardComponent({
     onMediaPress: setLightboxIndex,
     onPlaceNamePress: resolvedPlaceNamePress,
     onPress,
+    onPressIn,
     onRefresh,
     onReportPlace: handleReportPlace,
     onUserPress: openUserProfile,
@@ -712,26 +653,26 @@ function PlaceCardComponent({
     <>
       <PlaceCardFull {...placeCardFullProps} />
 
-      {showActionMenu && actionItems.length > 0 ? (
-        <ActionMenuSheet
+      {renderWhen(showActionMenu && actionItems.length > 0, () => (
+        <DeferredActionMenuSheet
           visible
           title={place.name}
           items={actionItems}
           onClose={() => setShowActionMenu(false)}
         />
-      ) : null}
+      ))}
 
-      {showShareMenu ? (
-        <ActionMenuSheet
+      {renderWhen(showShareMenu, () => (
+        <DeferredActionMenuSheet
           visible
           title={tr.cards.share}
           items={shareActionItems}
           onClose={() => setShowShareMenu(false)}
         />
-      ) : null}
+      ))}
 
-      {showOwnedPlaceDeleteConfirm ? (
-        <ConfirmActionModal
+      {renderWhen(showOwnedPlaceDeleteConfirm, () => (
+        <DeferredConfirmActionModal
           visible
           title={tr.listDetail.deletePlaceTitle}
           description={tr.listDetail.deletePlaceDescription}
@@ -740,10 +681,10 @@ function PlaceCardComponent({
           onClose={() => setShowOwnedPlaceDeleteConfirm(false)}
           onConfirm={handleOwnedPlaceDelete}
         />
-      ) : null}
+      ))}
 
-      {allowAddToList && user && showAddToList ? (
-        <PlaceEditorModal
+      {renderWhen(Boolean(allowAddToList && user && showAddToList), () => (
+        <DeferredPlaceEditorModal
           visible={showAddToList}
           lat={place.lat}
           lng={place.lng}
@@ -771,10 +712,10 @@ function PlaceCardComponent({
             await createList(list);
           }}
         />
-      ) : null}
+      ))}
 
-      {showOwnedPlaceEditor && ownedCurrentList ? (
-        <PlaceEditorModal
+      {renderWhen(Boolean(showOwnedPlaceEditor && ownedCurrentList), () => (
+        <DeferredPlaceEditorModal
           visible
           lat={place.lat}
           lng={place.lng}
@@ -782,7 +723,7 @@ function PlaceCardComponent({
           placeAddress={place.address}
           lists={ownedEditableLists}
           existingPlace={place}
-          existingPlaceListName={ownedCurrentList.name}
+          existingPlaceListName={ownedCurrentList?.name || ''}
           onClose={() => setShowOwnedPlaceEditor(false)}
           onDelete={async () => {
             await handleOwnedPlaceDelete();
@@ -794,39 +735,50 @@ function PlaceCardComponent({
             await createList(list);
           }}
         />
-      ) : null}
+      ))}
 
-      {showSourcePlaceCard ? (
-        <SourcePlaceCardModal
-          allowAddToList={allowAddToList && Boolean(user)}
-          list={sourceAttributionList}
+      {renderWhen(showSourcePlaceCard, () => (
+        <DeferredSourcePlaceCardModal
           onClose={() => setShowSourcePlaceCard(false)}
-          onOpenListDetail={handleSourceListDetailOpen}
-          onOwnerPress={
-            sourceAttributionOwner?.id
-              ? () => {
-                  setShowSourcePlaceCard(false);
-                  openUserProfile(sourceAttributionOwner.id);
-                }
-              : undefined
-          }
-          owner={sourceAttributionOwner}
-          place={sourceAttributionPlace}
           visible
-        />
-      ) : null}
+        >
+          {sourceAttributionPlace && sourceAttributionList ? (
+            <PlaceCard
+              allowAddToList={allowAddToList && Boolean(user)}
+              listCoverImage={sourceAttributionList.coverImage}
+              listEmoji={sourceAttributionList.emoji}
+              listId={sourceAttributionList.id}
+              listIsPublic={sourceAttributionList.isPublic}
+              listName={sourceAttributionList.name}
+              markerColor={getListMarkerColor(sourceAttributionList.isPublic)}
+              onPress={handleSourceListDetailOpen}
+              onOwnerPress={
+                sourceAttributionOwner?.id
+                  ? () => {
+                      setShowSourcePlaceCard(false);
+                      openUserProfile(sourceAttributionOwner.id);
+                    }
+                  : undefined
+              }
+              owner={sourceAttributionOwner}
+              ownerId={sourceAttributionList.userId}
+              place={sourceAttributionPlace}
+            />
+          ) : null}
+        </DeferredSourcePlaceCardModal>
+      ))}
 
-      {lightboxIndex != null ? (
-        <MediaLightbox
+      {renderWhen(lightboxIndex != null, () => (
+        <DeferredMediaLightbox
           allowDownload={canDownloadOwnedPlaceMedia}
           items={media}
-          initialIndex={lightboxIndex}
+          initialIndex={lightboxIndex ?? 0}
           onClose={() => setLightboxIndex(null)}
         />
-      ) : null}
+      ))}
 
-      {showReportSheet ? (
-        <ReportActionSheet
+      {renderWhen(showReportSheet, () => (
+        <DeferredReportActionSheet
           visible
           title={tr.cards.reportContentTitle}
           description={tr.cards.reportContentDescription}
@@ -843,86 +795,9 @@ function PlaceCardComponent({
             void handleReportPlaceSubmit();
           }}
         />
-      ) : null}
+      ))}
     </>
   );
 }
 
-function arePlaceCardPropsEqual(previous: PlaceCardProps, next: PlaceCardProps) {
-  return (
-    previous.place === next.place &&
-    previous.owner === next.owner &&
-    previous.ownerId === next.ownerId &&
-    previous.listId === next.listId &&
-    previous.listName === next.listName &&
-    previous.listEmoji === next.listEmoji &&
-    previous.listIsPublic === next.listIsPublic &&
-    previous.listCoverImage === next.listCoverImage &&
-    previous.compact === next.compact &&
-    previous.allowAddToList === next.allowAddToList &&
-    previous.markerColor === next.markerColor &&
-    previous.markerContext === next.markerContext &&
-    previous.locationPlaceCardsCount === next.locationPlaceCardsCount &&
-    previous.locationOriginalPlaceName === next.locationOriginalPlaceName &&
-    previous.onEdit === next.onEdit &&
-    previous.onDelete === next.onDelete &&
-    previous.onPlaceNamePress === next.onPlaceNamePress
-  );
-}
-
-export const PlaceCard = React.memo(PlaceCardComponent, arePlaceCardPropsEqual);
-
-const styles = StyleSheet.create({
-  sourceModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.overlay,
-  },
-  sourceModalSheet: {
-    width: '100%',
-    maxWidth: 760,
-    maxHeight: '88%',
-    alignSelf: 'center',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-  },
-  sourceModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.cardBorder,
-    backgroundColor: colors.surface,
-  },
-  sourceModalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  sourceModalCloseButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
-  sourceModalContent: {
-    paddingBottom: 24,
-  },
-  sourceModalLoadingWrap: {
-    minHeight: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  sourceModalLoadingText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSoft,
-  },
-});
+export const PlaceCard = React.memo(PlaceCardComponent);

@@ -154,6 +154,43 @@ describe('listsRepository', () => {
     });
   });
 
+  it('uploads a video and its thumbnail in parallel', async () => {
+    const { createList } = await import('@/mobile/app/data/repositories/listsRepository');
+    const resolvers: Array<(value: string) => void> = [];
+    uploadImageAssetMock.mockResolvedValue(undefined);
+    uploadPlaceMediaAssetMock.mockImplementation(() => new Promise<string>((resolve) => {
+      resolvers.push(resolve);
+    }));
+    fromMock.mockReturnValueOnce({ insert: vi.fn().mockResolvedValue({ error: null }) });
+
+    const save = createList({
+      id: 'list-video',
+      userId: 'user-1',
+      name: 'Videos',
+      places: [{
+        id: 'place-video',
+        name: 'Cinema',
+        lat: 10,
+        lng: 20,
+        media: [{
+          durationMs: 60_000,
+          thumbnailUrl: 'file:///tmp/video-thumb.jpg',
+          type: 'video',
+          url: 'file:///tmp/video.mp4',
+        }],
+        addedAt: '2026-04-16T10:00:00.000Z',
+      }],
+      isPublic: true,
+      createdAt: '2026-04-16T10:00:00.000Z',
+      updatedAt: '2026-04-16T10:00:00.000Z',
+    });
+
+    await vi.waitFor(() => expect(uploadPlaceMediaAssetMock).toHaveBeenCalledTimes(2));
+    resolvers[0]?.('sorita-storage://place-media-private/user-1/video.mp4');
+    resolvers[1]?.('sorita-storage://place-media-private/user-1/video-thumb.jpg');
+    await expect(save).resolves.toBeUndefined();
+  });
+
   it('encodes multiline list and place text before persistence', async () => {
     const { createList } = await import('@/mobile/app/data/repositories/listsRepository');
     const listsInsertMock = vi.fn().mockResolvedValue({ error: null });
@@ -574,6 +611,26 @@ describe('listsRepository', () => {
     expect(upsertMock).toHaveBeenCalledTimes(2);
   });
 
+  it('uses the caller snapshot instead of refetching the full list context', async () => {
+    const { updateLists } = await import('@/mobile/app/data/repositories/listsRepository');
+    const previousList = {
+      id: 'list-fast',
+      userId: 'user-1',
+      name: 'Fast saves',
+      places: [],
+      isPublic: true,
+      createdAt: '2026-04-16T10:00:00.000Z',
+      updatedAt: '2026-04-16T10:00:00.000Z',
+    };
+    uploadImageAssetMock.mockResolvedValue(undefined);
+
+    await updateLists([previousList], undefined, undefined, [previousList]);
+
+    expect(fetchVisibleDataContextMock).not.toHaveBeenCalled();
+    expect(fetchVisibleListsPageMock).not.toHaveBeenCalled();
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
   it('does not rewrite the list row when only a place card changes', async () => {
     const { updateList } = await import('@/mobile/app/data/repositories/listsRepository');
 
@@ -644,7 +701,7 @@ describe('listsRepository', () => {
     const listSelectChain = {
       select: vi.fn(() => listSelectChain),
       eq: vi.fn().mockResolvedValue({
-        data: [{ cover_image_url: 'https://cdn.example/cover.jpg' }],
+        data: [{ cover_image_url: 'https://cdn.example/cover.jpg', owner_id: 'viewer-1' }],
         error: null,
       }),
     };

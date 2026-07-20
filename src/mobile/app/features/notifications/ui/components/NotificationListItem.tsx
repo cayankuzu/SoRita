@@ -99,7 +99,7 @@ function NotificationListItemComponent({
               }}
               style={[styles.actionButton, styles.rejectButton]}
             >
-              <Text style={[styles.actionLabel, styles.rejectLabel]}>Reddet</Text>
+              <Text style={[styles.actionLabel, styles.rejectLabel]}>{tr.notifications.reject}</Text>
             </InstantPressable>
             <InstantPressable
               onPress={(event) => {
@@ -108,7 +108,7 @@ function NotificationListItemComponent({
               }}
               style={[styles.actionButton, styles.acceptButton]}
             >
-              <Text style={[styles.actionLabel, styles.acceptLabel]}>Onayla</Text>
+              <Text style={[styles.actionLabel, styles.acceptLabel]}>{tr.notifications.accept}</Text>
             </InstantPressable>
           </View>
         ) : null}

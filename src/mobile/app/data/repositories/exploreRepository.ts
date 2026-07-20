@@ -90,7 +90,7 @@ type ExplorePlacePayload = {
   viewerHasLiked?: boolean | null;
 };
 
-const EXPLORE_PAGE_SIZE = 50;
+const EXPLORE_PAGE_SIZE = 20;
 
 function toNumber(value: number | string | null | undefined) {
   if (typeof value === 'number') {

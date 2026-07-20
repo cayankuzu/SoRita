@@ -3,9 +3,15 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import net from 'node:net';
 
-const PACKAGE_NAME = process.env.ANDROID_APP_ID || 'com.cayan.sorita.socialmap';
-const METRO_PORT = 8081;
-const REVERSED_PORTS = [8081, 19000, 19001, 19002];
+import {
+  ANDROID_APP_ID as PACKAGE_NAME,
+  EXPECTED_EXPO_PROJECT_SLUG,
+  METRO_PORT,
+  readExpoProjectSlug,
+} from './android-dev-config.mjs';
+
+const DEVICE_METRO_PORT = METRO_PORT;
+const REVERSED_PORTS = [DEVICE_METRO_PORT];
 const WAIT_TIMEOUT_MS = 120000;
 const POLL_INTERVAL_MS = 1000;
 
@@ -55,19 +61,31 @@ function canConnect(port) {
   });
 }
 
-async function waitForPort(port, label) {
+async function waitForMetroProject() {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < WAIT_TIMEOUT_MS) {
-    if (await canConnect(port)) {
-      console.log(`[SoRita][android] ${label} hazir: ${port}`);
-      return;
+    if (await canConnect(METRO_PORT)) {
+      const actualProject = await readExpoProjectSlug(METRO_PORT);
+
+      if (actualProject === EXPECTED_EXPO_PROJECT_SLUG) {
+        console.log(
+          `[SoRita][android] Metro hazir: ${METRO_PORT} (${actualProject})`,
+        );
+        return;
+      }
+
+      if (actualProject) {
+        throw new Error(
+          `Metro proje kimligi uyusmuyor: ${actualProject}. Beklenen: ${EXPECTED_EXPO_PROJECT_SLUG}.`,
+        );
+      }
     }
 
     await wait(POLL_INTERVAL_MS);
   }
 
-  throw new Error(`${label} zamaninda hazir olmadi (${port}).`);
+  throw new Error(`SoRita Metro zamaninda hazir olmadi (${METRO_PORT}).`);
 }
 
 function runAdb(adbPath, adbArgs, deviceSerial) {
@@ -75,7 +93,7 @@ function runAdb(adbPath, adbArgs, deviceSerial) {
 
   return spawnSync(adbPath, args, {
     encoding: 'utf8',
-    shell: true,
+    shell: false,
   });
 }
 
@@ -107,6 +125,14 @@ function ensureDevice(adbPath) {
   }
 
   if (onlineDevices.length > 1) {
+    const devicesWithSoRita = onlineDevices.filter((deviceSerial) =>
+      isPackageInstalled(adbPath, deviceSerial),
+    );
+
+    if (devicesWithSoRita.length === 1) {
+      return devicesWithSoRita[0];
+    }
+
     throw new Error(
       `Birden fazla Android cihaz bagli. ANDROID_SERIAL ayarlayin. Aktif cihazlar: ${onlineDevices.join(', ')}`,
     );
@@ -115,29 +141,42 @@ function ensureDevice(adbPath) {
   return onlineDevices[0];
 }
 
-function reversePort(adbPath, deviceSerial, port) {
-  const result = runAdb(adbPath, ['reverse', `tcp:${port}`, `tcp:${port}`], deviceSerial);
+function isPackageInstalled(adbPath, deviceSerial) {
+  const result = runAdb(
+    adbPath,
+    ['shell', 'pm', 'list', 'packages', PACKAGE_NAME],
+    deviceSerial,
+  );
+  return (result.stdout ?? '').includes(`package:${PACKAGE_NAME}`);
+}
+
+function reversePort(adbPath, deviceSerial, devicePort, hostPort) {
+  const result = runAdb(
+    adbPath,
+    ['reverse', `tcp:${devicePort}`, `tcp:${hostPort}`],
+    deviceSerial,
+  );
 
   if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || `adb reverse ayarlanamadi (tcp:${port}).`);
+    throw new Error(
+      result.stderr?.trim() ||
+        `adb reverse ayarlanamadi (tcp:${devicePort} -> tcp:${hostPort}).`,
+    );
   }
 }
 
 function configureDevNetworking(adbPath, deviceSerial) {
   for (const port of REVERSED_PORTS) {
-    reversePort(adbPath, deviceSerial, port);
+    reversePort(adbPath, deviceSerial, port, METRO_PORT);
   }
 
   console.log(
-    `[SoRita][android] adb reverse hazir: ${REVERSED_PORTS.map((port) => `tcp:${port}`).join(', ')}`,
+    `[SoRita][android] adb reverse hazir: ${REVERSED_PORTS.map((port) => `tcp:${port}->tcp:${METRO_PORT}`).join(', ')}`,
   );
 }
 
 function ensurePackageInstalled(adbPath, deviceSerial) {
-  const result = runAdb(adbPath, ['shell', 'pm', 'list', 'packages', PACKAGE_NAME], deviceSerial);
-  const stdout = result.stdout ?? '';
-
-  if (!stdout.includes(`package:${PACKAGE_NAME}`)) {
+  if (!isPackageInstalled(adbPath, deviceSerial)) {
     throw new Error(
       `Native SoRita uygulamasi yuklu degil (${PACKAGE_NAME}). Ilk kurulum icin once "npm run android:rebuild" calistir.`,
     );
@@ -147,16 +186,31 @@ function ensurePackageInstalled(adbPath, deviceSerial) {
 function launchApp(adbPath, deviceSerial) {
   const result = runAdb(adbPath, [
     'shell',
-    'monkey',
-    '-p',
-    PACKAGE_NAME,
+    'am',
+    'start',
+    '-W',
+    '-n',
+    `${PACKAGE_NAME}/.MainActivity`,
+    '-a',
+    'android.intent.action.MAIN',
     '-c',
     'android.intent.category.LAUNCHER',
-    '1',
   ], deviceSerial);
 
   if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || 'Android uygulamasi acilamadi.');
+    const fallback = runAdb(adbPath, [
+      'shell',
+      'monkey',
+      '-p',
+      PACKAGE_NAME,
+      '-c',
+      'android.intent.category.LAUNCHER',
+      '1',
+    ], deviceSerial);
+
+    if (fallback.status !== 0) {
+      throw new Error(fallback.stderr?.trim() || 'Android uygulamasi acilamadi.');
+    }
   }
 
   console.log(`[SoRita][android] Native uygulama acildi: ${PACKAGE_NAME}`);
@@ -168,7 +222,7 @@ async function main() {
 
   console.log(`[SoRita][android] Hedef cihaz: ${deviceSerial}`);
   console.log('[SoRita][android] Metro bekleniyor...');
-  await waitForPort(METRO_PORT, 'Metro');
+  await waitForMetroProject();
 
   configureDevNetworking(adbPath, deviceSerial);
   ensurePackageInstalled(adbPath, deviceSerial);

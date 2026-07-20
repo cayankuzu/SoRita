@@ -1,4 +1,3 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
@@ -32,6 +31,8 @@ const signOutMock = vi.fn();
 const signUpMock = vi.fn();
 const resendMock = vi.fn();
 const loggerWarnMock = vi.fn();
+const loggerDebugMock = vi.fn();
+const clearOutboxForUserMock = vi.fn();
 
 class MockEdgeFunctionError extends Error {
   code?: string;
@@ -64,6 +65,10 @@ vi.mock('@/mobile/app/data/repositories/pushNotificationRepository', () => ({
 
 vi.mock('@/mobile/app/data/repositories/systemPushNotificationRepository', () => ({
   unregisterSystemPushNotifications: unregisterSystemPushNotificationsMock,
+}));
+
+vi.mock('@/mobile/app/data/outbox/outboxStorage', () => ({
+  clearOutboxForUser: clearOutboxForUserMock,
 }));
 
 vi.mock('@/mobile/app/platform/storage/pendingSignupMedia', () => ({
@@ -100,6 +105,7 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
 
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: {
+    debug: loggerDebugMock,
     warn: loggerWarnMock,
   },
 }));
@@ -133,6 +139,8 @@ describe('useAuthActions', () => {
     signUpMock.mockReset();
     resendMock.mockReset();
     loggerWarnMock.mockReset();
+    loggerDebugMock.mockReset();
+    clearOutboxForUserMock.mockReset();
 
     createTrackedAuthRedirectMock.mockImplementation((flow: string) => ({
       flow,
@@ -191,6 +199,7 @@ describe('useAuthActions', () => {
     signOutMock.mockResolvedValue(undefined);
     unregisterPushNotificationsMock.mockResolvedValue(undefined);
     unregisterSystemPushNotificationsMock.mockResolvedValue(undefined);
+    clearOutboxForUserMock.mockResolvedValue(undefined);
   });
 
   it('logs in, seeds the immediate user, then syncs the authenticated user', async () => {
@@ -637,5 +646,237 @@ describe('useAuthActions', () => {
     expect(signOutMock).toHaveBeenCalled();
     expect(clearCurrentUserStateMock).toHaveBeenCalled();
     expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('rejects incomplete edge login sessions and maps thrown values without leaking state', async () => {
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+
+    for (const result of [
+      { data: { session: null, user: { id: 'user-1' } }, error: null },
+      { data: { session: { access_token: 'x' }, user: null }, error: null },
+      { data: { session: { access_token: 'x' }, user: { id: 'user-1' } }, error: new Error('set failed') },
+    ]) {
+      callJsonEdgeFunctionMock.mockResolvedValueOnce({ session: { accessToken: 'a', refreshToken: 'r' } });
+      setSessionMock.mockResolvedValueOnce(result);
+      await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toMatchObject({
+        success: false, code: 'unexpected',
+      });
+    }
+
+    for (const [error, expected] of [
+      [new MockEdgeFunctionError('edge failed', 400), { code: 'unexpected', message: 'edge failed' }],
+      [new Error('network failed'), { code: 'unexpected', message: 'network failed' }],
+      ['unknown failure', { code: 'unexpected' }],
+    ] as const) {
+      callJsonEdgeFunctionMock.mockRejectedValueOnce(error);
+      isMissingEdgeFunctionErrorMock.mockReturnValueOnce(false);
+      await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toMatchObject({
+        success: false, ...expected,
+      });
+    }
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('maps every direct-login provider error and missing-session shape', async () => {
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+    const cases = [
+      ['Email not confirmed', 'email_not_confirmed'],
+      ['Invalid login credentials', 'invalid_credentials'],
+      ['Password is known to be weak', 'weak_password'],
+      ['weak and easy to guess', 'weak_password'],
+      ['weak password', 'weak_password'],
+      ['User already registered', 'duplicate_email'],
+      ['already registered', 'duplicate_email'],
+      ['already exists', 'duplicate_email'],
+      ['profiles_email_key', 'duplicate_email'],
+      ['users_email_key', 'duplicate_email'],
+      ['profiles_username_key', 'duplicate_username'],
+      ['username already', 'duplicate_username'],
+      ['username duplicate', 'duplicate_username'],
+      ['other', 'unexpected'],
+    ] as const;
+
+    for (const [message, code] of cases) {
+      callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway missing'));
+      isMissingEdgeFunctionErrorMock.mockReturnValueOnce(true);
+      signInWithPasswordMock.mockResolvedValueOnce({ data: { session: null, user: null }, error: new Error(message) });
+      await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toMatchObject({ code, success: false });
+    }
+
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway missing'));
+    isMissingEdgeFunctionErrorMock.mockReturnValueOnce(true);
+    signInWithPasswordMock.mockResolvedValueOnce({ data: { session: null, user: null }, error: 'unknown' });
+    await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toEqual({
+      success: false, code: 'unexpected',
+    });
+
+    for (const data of [
+      { session: null, user: { id: 'user-1' } },
+      { session: { access_token: 'a', refresh_token: 'r' }, user: null },
+    ]) {
+      callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway missing'));
+      isMissingEdgeFunctionErrorMock.mockReturnValueOnce(true);
+      signInWithPasswordMock.mockResolvedValueOnce({ data, error: null });
+      await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toMatchObject({
+        success: false, code: 'unexpected',
+      });
+    }
+  });
+
+  it('keeps immediate login state when background profile sync returns null or fails', async () => {
+    const setUser = vi.fn();
+    const immediate = { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' };
+    resolveImmediateAuthUserMock.mockReturnValue(immediate);
+    setSessionMock.mockResolvedValue({
+      data: {
+        session: { access_token: 'edge-access', refresh_token: 'edge-refresh' },
+        user: { id: 'user-1', email: 'ada@example.com' },
+      },
+      error: null,
+    });
+    callJsonEdgeFunctionMock.mockResolvedValue({ session: { accessToken: 'edge-access', refreshToken: 'edge-refresh' } });
+    syncAuthenticatedUserMock.mockResolvedValueOnce(null).mockRejectedValueOnce(new Error('sync failed'));
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+
+    await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toEqual({ success: true });
+    await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toEqual({ success: true });
+    await waitFor(() => expect(loggerWarnMock).toHaveBeenCalledWith(
+      'auth', 'Failed to sync authenticated user after login', expect.any(Error),
+    ));
+    expect(setUser).toHaveBeenCalledWith(immediate);
+  });
+
+  it('maps direct registration and resend failures and discards redirect state', async () => {
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+    const registration = {
+      bio: '', coverPhoto: undefined, email: 'ada@example.com', interests: [],
+      legalConsent: {
+        acceptedAt: '2026-04-16T12:00:00.000Z', documentsAccepted: ['terms'], version: '2026-04-16',
+      },
+      name: 'Ada', password: 'P@ssword123', profilePhoto: undefined, username: 'ada',
+    };
+
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('blocked', 400, 'duplicate_username'));
+    await expect(hook.result.current.register(registration)).resolves.toMatchObject({
+      success: false, code: 'duplicate_username',
+    });
+    expect(discardPendingAuthRedirectStateMock).toHaveBeenCalledWith('signup-state');
+
+    for (const [message, code] of [
+      ['profiles_username_key', 'duplicate_username'],
+      ['Password is known to be weak', 'weak_password'],
+      ['User already registered', 'duplicate_email'],
+      ['provider failed', 'unexpected'],
+    ] as const) {
+      callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('misconfigured', 500, 'misconfigured'));
+      signUpMock.mockResolvedValueOnce({ data: { user: null }, error: new Error(message) });
+      await expect(hook.result.current.register(registration)).resolves.toMatchObject({ success: false, code });
+    }
+
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('network'));
+    signUpMock.mockResolvedValueOnce({ data: { user: null }, error: 'unknown' });
+    await expect(hook.result.current.register(registration)).resolves.toEqual({ success: false, code: 'unexpected' });
+
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('blocked', 400, 'rate_limited'));
+    await expect(hook.result.current.resendConfirmationEmail('ada@example.com')).resolves.toMatchObject({
+      success: false, code: 'rate_limited',
+    });
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('misconfigured', 500, 'misconfigured'));
+    resendMock.mockResolvedValueOnce({ error: new Error('Email not confirmed') });
+    await expect(hook.result.current.resendConfirmationEmail('ada@example.com')).resolves.toMatchObject({
+      success: false, code: 'email_not_confirmed',
+    });
+  });
+
+  it('covers every authenticated password reset guard and direct fallback outcome', async () => {
+    const setUser = vi.fn();
+    const activeUser = { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' };
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const anonymous = renderHook(() => useAuthActions({ user: null, setUser }));
+    await expect(anonymous.result.current.requestPasswordReset('secret')).resolves.toEqual({
+      success: false, code: 'unexpected',
+    });
+    anonymous.unmount();
+
+    const hook = renderHook(() => useAuthActions({ user: activeUser, setUser }));
+    for (const sessionResult of [
+      { data: { session: null }, error: new Error('session failed') },
+      { data: { session: null }, error: null },
+    ]) {
+      getSessionMock.mockResolvedValueOnce(sessionResult);
+      await expect(hook.result.current.requestPasswordReset('secret')).resolves.toMatchObject({
+        success: false, code: 'unexpected',
+      });
+    }
+
+    getSessionMock.mockResolvedValueOnce({ data: { session: { access_token: 'token' } }, error: null });
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('invalid', 400, 'invalid_credentials'));
+    await expect(hook.result.current.requestPasswordReset('secret')).resolves.toMatchObject({
+      success: false, code: 'invalid_credentials',
+    });
+
+    for (const userResult of [
+      { data: { user: null }, error: new Error('user failed') },
+      { data: { user: { id: 'user-1', email: null } }, error: null },
+    ]) {
+      getSessionMock.mockResolvedValueOnce({ data: { session: { access_token: 'token' } }, error: null });
+      callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway unavailable'));
+      getUserMock.mockResolvedValueOnce(userResult);
+      await expect(hook.result.current.requestPasswordReset('secret')).resolves.toMatchObject({
+        success: false, code: 'unexpected',
+      });
+    }
+
+    getSessionMock.mockResolvedValueOnce({ data: { session: { access_token: 'token' } }, error: null });
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway unavailable'));
+    getUserMock.mockResolvedValueOnce({ data: { user: { email: 'ada@example.com' } }, error: null });
+    signInWithPasswordMock.mockResolvedValueOnce({ data: { session: null }, error: new Error('Invalid login credentials') });
+    await expect(hook.result.current.requestPasswordReset('wrong')).resolves.toMatchObject({
+      success: false, code: 'invalid_credentials',
+    });
+
+    getSessionMock.mockResolvedValueOnce({ data: { session: { access_token: 'token' } }, error: null });
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('gateway unavailable'));
+    getUserMock.mockResolvedValueOnce({ data: { user: { email: 'ada@example.com' } }, error: null });
+    signInWithPasswordMock.mockResolvedValueOnce({ data: { session: null }, error: null });
+    resetPasswordForEmailMock.mockResolvedValueOnce({ error: new Error('provider failed') });
+    await expect(hook.result.current.requestPasswordReset('secret')).resolves.toMatchObject({
+      success: false, code: 'unexpected',
+    });
+  });
+
+  it('maps password reset email non-fallback errors and contains logout cleanup failures', async () => {
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' }, setUser,
+    }));
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new MockEdgeFunctionError('denied', 400, 'invalid_credentials'));
+    await expect(hook.result.current.requestPasswordResetEmail('ada@example.com')).resolves.toMatchObject({
+      success: false, code: 'invalid_credentials', message: 'denied',
+    });
+    callJsonEdgeFunctionMock.mockRejectedValueOnce(new Error('network'));
+    await expect(hook.result.current.requestPasswordResetEmail('ada@example.com')).resolves.toMatchObject({
+      success: false, code: 'unexpected',
+    });
+
+    clearOutboxForUserMock.mockRejectedValueOnce(new Error('outbox'));
+    unregisterPushNotificationsMock.mockRejectedValueOnce(new Error('push'));
+    unregisterSystemPushNotificationsMock.mockRejectedValueOnce(new Error('system push'));
+    await hook.result.current.logout();
+    expect(loggerDebugMock).toHaveBeenCalledTimes(3);
+
+    const anonymous = renderHook(() => useAuthActions({ user: null, setUser }));
+    await anonymous.result.current.logout();
+    expect(clearOutboxForUserMock).toHaveBeenCalledTimes(1);
+    anonymous.unmount();
+    hook.unmount();
   });
 });

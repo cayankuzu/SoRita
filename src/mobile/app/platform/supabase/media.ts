@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 import { env } from '@/mobile/app/platform/config/env';
 import { getFunctionUrl } from '@/mobile/app/platform/api/edgeFunctions';
 import { createSignedEdgeHeaders } from '@/mobile/app/platform/security/requestSigning';
@@ -49,6 +50,7 @@ function getFileExtension(uri: string) {
 const TEMP_UPLOAD_DIR = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}media-upload-cache/`;
 const PROFILE_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 const PLACE_MEDIA_MAX_BYTES = PLACE_MEDIA_MAX_FILE_SIZE_BYTES;
+const IMMUTABLE_MEDIA_CACHE_CONTROL = 'max-age=31536000, immutable';
 
 async function ensureTempUploadDirectory() {
   if (!TEMP_UPLOAD_DIR) {
@@ -147,7 +149,7 @@ async function readLocalMediaSize(uri: string) {
 
 type PublicMediaBucket = 'profile-media' | 'place-media';
 type PrivateMediaBucket = 'place-media-private';
-type MediaBucket = PublicMediaBucket | PrivateMediaBucket;
+export type MediaBucket = PublicMediaBucket | PrivateMediaBucket;
 type StorageAssetRef = {
   bucket: MediaBucket;
   path: string;
@@ -156,7 +158,47 @@ type StorageAssetRef = {
 const PRIVATE_PLACE_MEDIA_BUCKET: PrivateMediaBucket = 'place-media-private';
 const STORAGE_ASSET_SCHEME = 'sorita-storage://';
 const signedReadUrlCache = new Map<string, { expiresAt: number; signedUrl: string }>();
+const signedReadUrlInFlight = new Map<string, Promise<string>>();
+const pendingSignedReadRequests = new Map<
+  string,
+  {
+    ref: StorageAssetRef;
+    reject: (error: unknown) => void;
+    resolve: (signedUrl: string) => void;
+  }
+>();
+let signedReadBatchScheduled = false;
 const SIGNED_READ_URL_CACHE_TTL_MS = 4 * 60 * 1000;
+const SIGNED_READ_URL_BATCH_SIZE = 64;
+const TRUSTED_MEDIA_HOSTS = new Set([
+  'maps.googleapis.com',
+  (() => {
+    try {
+      return new URL(env.supabaseUrl).hostname;
+    } catch {
+      return '';
+    }
+  })(),
+].filter(Boolean));
+
+export function isAllowedMediaUri(uri: string) {
+  if (/^(asset|content|file|ph):\/\//i.test(uri)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(uri);
+    return parsed.protocol === 'https:' && TRUSTED_MEDIA_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function assertAllowedMediaUri(uri: string) {
+  if (!isAllowedMediaUri(uri)) {
+    throw new Error('Media URL host is not trusted.');
+  }
+}
 
 function buildStorageAssetUri(bucket: MediaBucket, path: string) {
   return `${STORAGE_ASSET_SCHEME}${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`;
@@ -422,6 +464,10 @@ function isRetriableMediaStatus(status: number) {
 const MAX_MEDIA_REQUEST_ATTEMPTS = 3;
 const MAX_AUTO_RATE_LIMIT_RETRY_AFTER_SECONDS = 12;
 
+type MediaRequestSession = {
+  accessToken: string;
+};
+
 async function readRetryAfterSeconds(response: Response) {
   const retryAfterHeaderValue = response.headers.get('Retry-After');
   const retryAfterSecondsFromHeader =
@@ -462,8 +508,9 @@ async function readRetryAfterSeconds(response: Response) {
 async function callMediaFunction<TPayload extends Record<string, unknown>, TResult>(
   payload: TPayload,
   signal?: AbortSignal,
+  requestSession?: MediaRequestSession,
 ): Promise<TResult> {
-  let accessToken = await getAccessToken();
+  let accessToken = requestSession?.accessToken ?? await getAccessToken();
   let refreshedSessionAfterUnauthorized = false;
 
   for (let attempt = 0; attempt < MAX_MEDIA_REQUEST_ATTEMPTS; attempt += 1) {
@@ -476,6 +523,9 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
 
     if (response.status === 401 && !refreshedSessionAfterUnauthorized) {
       accessToken = await refreshAccessToken();
+      if (requestSession) {
+        requestSession.accessToken = accessToken;
+      }
       refreshedSessionAfterUnauthorized = true;
       continue;
     }
@@ -518,6 +568,7 @@ export async function uploadImageAsset(params: {
   }
 
   if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    assertAllowedMediaUri(uri);
     return uri;
   }
 
@@ -554,14 +605,22 @@ export async function uploadImageAsset(params: {
   return result.publicUrl;
 }
 
-export async function uploadPlaceMediaAsset(params: {
+export type UploadPlaceMediaAssetParams = {
+  durationMs?: number;
   extension?: string;
+  height?: number;
+  mediaType?: 'photo' | 'video';
   mimeType?: string;
+  onProgress?: (progress: { sentBytes: number; totalBytes: number }) => void;
+  onOrphanedUpload?: (storageUri: string) => Promise<void> | void;
   prefix: string;
   signal?: AbortSignal;
   uri?: string;
-  userId: string;
-}) {
+  userId?: string;
+  width?: number;
+};
+
+export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams) {
   const { extension, mimeType, prefix, uri } = params;
 
   if (!uri) {
@@ -569,6 +628,7 @@ export async function uploadPlaceMediaAsset(params: {
   }
 
   if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    assertAllowedMediaUri(uri);
     return uri;
   }
 
@@ -581,6 +641,7 @@ export async function uploadPlaceMediaAsset(params: {
   }
 
   throwIfAborted(params.signal);
+  const requestSession = { accessToken: await getAccessToken() };
   const data = await callMediaFunction<
     {
       action: 'create-upload-url';
@@ -598,30 +659,68 @@ export async function uploadPlaceMediaAsset(params: {
     bucket: PRIVATE_PLACE_MEDIA_BUCKET,
     fileSizeBytes,
     prefix,
-  }, params.signal);
+  }, params.signal, requestSession);
+  const mediaType = params.mediaType ?? (contentType.startsWith('video/') ? 'video' : 'photo');
+  let lastReportedProgressBucket = -1;
+  let lastReportedProgressPercent = -1;
+  trackEvent({ name: 'upload_started', params: { mediaType } });
 
-  const uploadTask = FileSystem.createUploadTask(data.signedUrl, uri, {
-    headers: {
-      'cache-control': 'max-age=3600',
-      'content-type': contentType,
+  const uploadTask = FileSystem.createUploadTask(
+    data.signedUrl,
+    uri,
+    {
+      headers: {
+        'cache-control': IMMUTABLE_MEDIA_CACHE_CONTROL,
+        'content-type': contentType,
+      },
+      httpMethod: 'PUT',
+      sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     },
-    httpMethod: 'PUT',
-    sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
-    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-  });
+    ({ totalBytesExpectedToSend, totalBytesSent }) => {
+      const totalBytes = Math.max(fileSizeBytes, totalBytesExpectedToSend);
+      const sentBytes = Math.max(0, totalBytesSent);
+      const progressPercent = totalBytes > 0
+        ? Math.min(100, Math.floor((sentBytes / totalBytes) * 100))
+        : 0;
+
+      if (progressPercent > lastReportedProgressPercent) {
+        lastReportedProgressPercent = progressPercent;
+        params.onProgress?.({ sentBytes, totalBytes });
+      }
+      const progressBucket = totalBytes > 0
+        ? Math.min(4, Math.floor((sentBytes / totalBytes) * 4))
+        : 0;
+
+      if (progressBucket > lastReportedProgressBucket) {
+        lastReportedProgressBucket = progressBucket;
+        trackEvent({
+          name: 'upload_progress_bucket',
+          params: { bucket: progressBucket, mediaType },
+        });
+      }
+    },
+  );
   const abortHandler = () => {
     void uploadTask.cancelAsync().catch(() => undefined);
   };
   params.signal?.addEventListener('abort', abortHandler, { once: true });
-  const uploadResult = await uploadTask.uploadAsync().finally(() => {
-    params.signal?.removeEventListener('abort', abortHandler);
-  });
+  const uploadResult = await uploadTask.uploadAsync()
+    .catch((error) => {
+      trackEvent({ name: 'upload_failed', params: { mediaType } });
+      throw error;
+    })
+    .finally(() => {
+      params.signal?.removeEventListener('abort', abortHandler);
+    });
 
   if (!uploadResult) {
+    trackEvent({ name: 'upload_failed', params: { mediaType } });
     throw createAbortError();
   }
 
   if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    trackEvent({ name: 'upload_failed', params: { mediaType } });
     throw new Error(
       readStorageUploadError({
         bodyText: uploadResult.body,
@@ -632,7 +731,56 @@ export async function uploadPlaceMediaAsset(params: {
     );
   }
 
-  return data.storageUri || buildStorageAssetUri(PRIVATE_PLACE_MEDIA_BUCKET, data.objectPath);
+  try {
+    const finalized = await callMediaFunction<
+      {
+        action: 'complete-upload';
+        bucket: PrivateMediaBucket;
+        contentType: string;
+        durationSeconds?: number;
+        fileSizeBytes: number;
+        height?: number;
+        mediaType: 'photo' | 'video';
+        objectPath: string;
+        width?: number;
+      },
+      { objectPath: string; storageUri?: string; verified: true }
+    >({
+      action: 'complete-upload',
+      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      contentType,
+      durationSeconds:
+        params.mediaType === 'video' && typeof params.durationMs === 'number'
+          ? params.durationMs / 1000
+          : undefined,
+      fileSizeBytes,
+      height: params.height,
+      mediaType,
+      objectPath: data.objectPath,
+      width: params.width,
+    }, params.signal, requestSession);
+
+    const storageUri = finalized.storageUri || buildStorageAssetUri(
+      PRIVATE_PLACE_MEDIA_BUCKET,
+      finalized.objectPath,
+    );
+    trackEvent({ name: 'upload_completed', params: { mediaType } });
+    return storageUri;
+  } catch (error) {
+    trackEvent({ name: 'upload_failed', params: { mediaType } });
+    const orphanedStorageUri = buildStorageAssetUri(PRIVATE_PLACE_MEDIA_BUCKET, data.objectPath);
+    await callMediaFunction<
+      { action: 'delete'; bucket: PrivateMediaBucket; paths: string[] },
+      { success: true }
+    >({
+      action: 'delete',
+      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      paths: [data.objectPath],
+    }, undefined, requestSession).catch(async () => {
+      await params.onOrphanedUpload?.(orphanedStorageUri);
+    });
+    throw error;
+  }
 }
 
 export async function deleteStorageAssetsByUrls(params: {
@@ -679,6 +827,89 @@ export async function deleteStorageAssetsByUrls(params: {
   }
 }
 
+function cacheSignedReadUrl(cacheKey: string, signedUrl: string, expiresInSeconds?: number) {
+  const ttlMs = Math.max(60, expiresInSeconds ?? 300) * 1000;
+
+  signedReadUrlCache.set(cacheKey, {
+    expiresAt: Date.now() + Math.min(ttlMs, SIGNED_READ_URL_CACHE_TTL_MS),
+    signedUrl,
+  });
+}
+
+async function flushSignedReadUrlBatch() {
+  signedReadBatchScheduled = false;
+  const pendingEntries = Array.from(pendingSignedReadRequests.entries());
+  pendingSignedReadRequests.clear();
+
+  for (let offset = 0; offset < pendingEntries.length; offset += SIGNED_READ_URL_BATCH_SIZE) {
+    const batch = pendingEntries.slice(offset, offset + SIGNED_READ_URL_BATCH_SIZE);
+
+    try {
+      const result = await callMediaFunction<
+        {
+          action: 'create-read-urls';
+          bucket: PrivateMediaBucket;
+          paths: string[];
+        },
+        {
+          expiresInSeconds?: number;
+          items: Array<{ path: string; signedUrl: string }>;
+        }
+      >({
+        action: 'create-read-urls',
+        bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+        paths: batch.map(([, entry]) => entry.ref.path),
+      });
+      const signedUrlsByPath = new Map(
+        result.items.map((item) => [item.path, item.signedUrl]),
+      );
+
+      batch.forEach(([cacheKey, entry]) => {
+        const signedUrl = signedUrlsByPath.get(entry.ref.path);
+
+        if (!signedUrl) {
+          entry.reject(new Error('Private media URL response was incomplete.'));
+          return;
+        }
+
+        cacheSignedReadUrl(cacheKey, signedUrl, result.expiresInSeconds);
+        entry.resolve(signedUrl);
+      });
+    } catch (error) {
+      batch.forEach(([, entry]) => entry.reject(error));
+    }
+  }
+}
+
+function enqueueSignedReadUrl(ref: StorageAssetRef) {
+  const cacheKey = `${ref.bucket}/${ref.path}`;
+  const cached = signedReadUrlCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now() + 30_000) {
+    return Promise.resolve(cached.signedUrl);
+  }
+
+  const inFlight = signedReadUrlInFlight.get(cacheKey);
+
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = new Promise<string>((resolve, reject) => {
+    pendingSignedReadRequests.set(cacheKey, { ref, reject, resolve });
+
+    if (!signedReadBatchScheduled) {
+      signedReadBatchScheduled = true;
+      void Promise.resolve().then(flushSignedReadUrlBatch);
+    }
+  }).finally(() => {
+    signedReadUrlInFlight.delete(cacheKey);
+  });
+
+  signedReadUrlInFlight.set(cacheKey, request);
+  return request;
+}
+
 export async function resolveStorageAssetUrl(uri?: string | null) {
   if (!uri) {
     return null;
@@ -687,34 +918,17 @@ export async function resolveStorageAssetUrl(uri?: string | null) {
   const ref = parseStorageAssetUri(uri);
 
   if (!ref) {
+    assertAllowedMediaUri(uri);
     return uri;
   }
 
-  const cacheKey = `${ref.bucket}/${ref.path}`;
-  const cached = signedReadUrlCache.get(cacheKey);
-
-  if (cached && cached.expiresAt > Date.now() + 30_000) {
-    return cached.signedUrl;
+  if (ref.bucket !== PRIVATE_PLACE_MEDIA_BUCKET) {
+    return uri;
   }
 
-  const result = await callMediaFunction<
-    {
-      action: 'create-read-url';
-      bucket: MediaBucket;
-      path: string;
-    },
-    { expiresInSeconds?: number; signedUrl: string }
-  >({
-    action: 'create-read-url',
-    bucket: ref.bucket,
-    path: ref.path,
-  });
-  const ttlMs = Math.max(60, result.expiresInSeconds ?? 300) * 1000;
+  return enqueueSignedReadUrl(ref);
+}
 
-  signedReadUrlCache.set(cacheKey, {
-    expiresAt: Date.now() + Math.min(ttlMs, SIGNED_READ_URL_CACHE_TTL_MS),
-    signedUrl: result.signedUrl,
-  });
-
-  return result.signedUrl;
+export function resolveStorageAssetUrls(uris: Array<string | null | undefined>) {
+  return Promise.all(uris.map((uri) => resolveStorageAssetUrl(uri)));
 }

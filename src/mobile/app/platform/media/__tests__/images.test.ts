@@ -296,6 +296,7 @@ describe('platform/media/images', () => {
     expect(result).toEqual({
       items: [
         expect.objectContaining({
+          thumbnailUrl: expect.stringMatching(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/),
           type: 'photo',
           url: expect.stringMatching(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/),
         }),
@@ -303,6 +304,14 @@ describe('platform/media/images', () => {
       rejectedOversizeCount: 0,
       rejectedVideoCount: 0,
     });
+    expect(manipulateAsyncMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^file:\/\/\/documents\/picked-media\/.+\.jpg$/),
+      [{ resize: { height: 360, width: 640 } }],
+      {
+        compress: 0.76,
+        format: 'jpeg',
+      },
+    );
   });
 
   it('returns null when permission is denied or the picker is canceled', async () => {

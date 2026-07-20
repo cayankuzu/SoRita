@@ -11,9 +11,12 @@ const copyAsyncMock = vi.fn();
 const deleteAsyncMock = vi.fn();
 const uploadAsyncMock = vi.fn();
 const cancelUploadAsyncMock = vi.fn();
-const createUploadTaskMock = vi.fn((url: string, fileUri: string, options: unknown) => ({
+const createUploadTaskMock = vi.fn((url: string, fileUri: string, options: unknown, onProgress?: (value: { totalBytesExpectedToSend: number; totalBytesSent: number }) => void) => ({
   cancelAsync: cancelUploadAsyncMock,
-  uploadAsync: () => uploadAsyncMock(url, fileUri, options),
+  uploadAsync: () => {
+    onProgress?.({ totalBytesExpectedToSend: 1024, totalBytesSent: 512 });
+    return uploadAsyncMock(url, fileUri, options);
+  },
 }));
 const createSignedEdgeHeadersMock = vi.fn();
 const storageUploadMock = vi.fn();
@@ -265,10 +268,14 @@ describe('platform/supabase/media', () => {
 
     server.use(
       http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
-        requestBodies.push(await request.json());
+        const body = await request.json() as { paths: string[] };
+        requestBodies.push(body);
         return HttpResponse.json({
           expiresInSeconds: 300,
-          signedUrl: 'https://storage.example/read/user-1/list-1/place.jpg?token=read',
+          items: body.paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.example/read/${path}?token=read`,
+          })),
         });
       }),
     );
@@ -283,11 +290,60 @@ describe('platform/supabase/media', () => {
 
     expect(requestBodies).toEqual([
       {
-        action: 'create-read-url',
+        action: 'create-read-urls',
         bucket: 'place-media-private',
-        path: 'user-1/list-1/place.jpg',
+        paths: ['user-1/list-1/place.jpg'],
       },
     ]);
+  });
+
+  it('coalesces private media URL resolution into one batch request', async () => {
+    const requestBodies: Array<{ paths: string[] }> = [];
+
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { paths: string[] };
+        requestBodies.push(body);
+        return HttpResponse.json({
+          expiresInSeconds: 300,
+          items: body.paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.example/read/${path}?token=batch`,
+          })),
+        });
+      }),
+    );
+
+    const { resolveStorageAssetUrls } = await import('@/mobile/app/platform/supabase/media');
+    await expect(resolveStorageAssetUrls([
+      'sorita-storage://place-media-private/user-1/list-2/one.jpg',
+      'sorita-storage://place-media-private/user-1/list-2/two.jpg',
+      'sorita-storage://place-media-private/user-1/list-2/one.jpg',
+    ])).resolves.toEqual([
+      'https://storage.example/read/user-1/list-2/one.jpg?token=batch',
+      'https://storage.example/read/user-1/list-2/two.jpg?token=batch',
+      'https://storage.example/read/user-1/list-2/one.jpg?token=batch',
+    ]);
+
+    expect(requestBodies).toEqual([{
+      action: 'create-read-urls',
+      bucket: 'place-media-private',
+      paths: [
+        'user-1/list-2/one.jpg',
+        'user-1/list-2/two.jpg',
+      ],
+    }]);
+  });
+
+  it('rejects untrusted and insecure media hosts while allowing managed storage', async () => {
+    const { isAllowedMediaUri, resolveStorageAssetUrl } = await import('@/mobile/app/platform/supabase/media');
+
+    expect(isAllowedMediaUri('https://example.supabase.co/storage/v1/object/public/place-media/a.jpg')).toBe(true);
+    expect(isAllowedMediaUri('file:///documents/photo.jpg')).toBe(true);
+    expect(isAllowedMediaUri('http://example.supabase.co/photo.jpg')).toBe(false);
+    await expect(resolveStorageAssetUrl('https://tracker.example/photo.jpg')).rejects.toThrow(
+      'not trusted',
+    );
   });
 
   it('retries upload requests when the media edge function temporarily returns 503', async () => {
@@ -510,7 +566,7 @@ describe('platform/supabase/media', () => {
     let requestCount = 0;
 
     server.use(
-      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
         requestCount += 1;
 
         if (requestCount === 1) {
@@ -527,6 +583,16 @@ describe('platform/supabase/media', () => {
               status: 429,
             },
           );
+        }
+
+        const body = await request.json() as { action: string; objectPath?: string };
+
+        if (body.action === 'complete-upload') {
+          return HttpResponse.json({
+            objectPath: body.objectPath,
+            storageUri: 'sorita-storage://place-media-private/user-1/places/cover.jpg',
+            verified: true,
+          });
         }
 
         return HttpResponse.json({
@@ -551,7 +617,46 @@ describe('platform/supabase/media', () => {
     await expect(uploadPromise).resolves.toBe(
       'sorita-storage://place-media-private/user-1/places/cover.jpg',
     );
-    expect(requestCount).toBe(2);
+    expect(requestCount).toBe(3);
+    expect(getSessionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands an orphaned object to the durable cleanup callback when finalize and cleanup fail', async () => {
+    const onOrphanedUpload = vi.fn().mockResolvedValue(undefined);
+
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { action: string };
+
+        if (body.action === 'create-upload-url') {
+          return HttpResponse.json({
+            objectPath: 'user-1/places/orphan.jpg',
+            signedUrl: 'https://storage.example/upload',
+          });
+        }
+
+        if (body.action === 'complete-upload') {
+          return HttpResponse.json({ error: 'metadata mismatch' }, { status: 422 });
+        }
+
+        return HttpResponse.json({ error: 'cleanup unavailable' }, { status: 400 });
+      }),
+    );
+
+    const { uploadPlaceMediaAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadPlaceMediaAsset({
+      extension: 'jpg',
+      mediaType: 'photo',
+      mimeType: 'image/jpeg',
+      onOrphanedUpload,
+      prefix: 'places/orphan',
+      uri: 'file:///tmp/orphan.jpg',
+      userId: 'user-1',
+    })).rejects.toThrow('metadata mismatch');
+
+    expect(onOrphanedUpload).toHaveBeenCalledWith(
+      'sorita-storage://place-media-private/user-1/places/orphan.jpg',
+    );
   });
 
   it('surfaces delete rate limits instead of bypassing them with direct storage deletes', async () => {

@@ -8,6 +8,7 @@ const getCurrentPositionAsyncMock = vi.fn();
 const reverseGeocodeAsyncMock = vi.fn();
 const reverseGeocodeLocationMock = vi.fn();
 const useVisibleDataQueryMock = vi.fn();
+const useMapMarkersQueryMock = vi.fn();
 const useCreateListMutationMock = vi.fn();
 const useUpdateListsMutationMock = vi.fn();
 const useDeletePlaceMutationMock = vi.fn();
@@ -20,6 +21,10 @@ const beginProgressMock = vi.fn(() => ({
   fail: vi.fn(),
   end: vi.fn(),
 }));
+const getPersistedMapScreenStateMock = vi.fn();
+const savePersistedMapScreenStateMock = vi.fn();
+const rootIsReadyMock = vi.fn();
+const rootNavigateMock = vi.fn();
 
 vi.mock('expo-location', () => ({
   Accuracy: {
@@ -36,6 +41,10 @@ vi.mock('@/mobile/app/platform/api/geocoding', () => ({
 
 vi.mock('@/mobile/app/data/hooks/useVisibleDataQuery', () => ({
   useVisibleDataQuery: useVisibleDataQueryMock,
+}));
+
+vi.mock('@/mobile/app/data/hooks/useMapMarkersQuery', () => ({
+  useMapMarkersQuery: useMapMarkersQueryMock,
 }));
 
 vi.mock('@/mobile/app/data/hooks/useListMutations', () => ({
@@ -65,11 +74,16 @@ vi.mock('@/mobile/app/app-shell/feedback/AppProgressBanner', () => ({
   }),
 }));
 
-vi.mock('@/mobile/app/app-shell/navigation/RootNavigator', () => ({
+vi.mock('@/mobile/app/app-shell/navigation/navigationRef', () => ({
   rootNavigationRef: {
-    isReady: () => false,
-    navigate: vi.fn(),
+    isReady: rootIsReadyMock,
+    navigate: rootNavigateMock,
   },
+}));
+
+vi.mock('@/mobile/app/platform/storage/mapScreenState', () => ({
+  getPersistedMapScreenState: getPersistedMapScreenStateMock,
+  savePersistedMapScreenState: savePersistedMapScreenStateMock,
 }));
 
 describe('useMapScreenState', () => {
@@ -79,6 +93,7 @@ describe('useMapScreenState', () => {
     reverseGeocodeAsyncMock.mockReset();
     reverseGeocodeLocationMock.mockReset();
     useVisibleDataQueryMock.mockReset();
+    useMapMarkersQueryMock.mockReset();
     useCreateListMutationMock.mockReset();
     useUpdateListsMutationMock.mockReset();
     useDeletePlaceMutationMock.mockReset();
@@ -86,6 +101,21 @@ describe('useMapScreenState', () => {
     useFocusRefreshMock.mockReset();
     showToastMock.mockReset();
     beginProgressMock.mockClear();
+    getPersistedMapScreenStateMock.mockReset();
+    savePersistedMapScreenStateMock.mockReset();
+    rootIsReadyMock.mockReset();
+    rootNavigateMock.mockReset();
+
+    useMapMarkersQueryMock.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    getPersistedMapScreenStateMock.mockResolvedValue(null);
+    savePersistedMapScreenStateMock.mockResolvedValue(undefined);
+    rootIsReadyMock.mockReturnValue(false);
 
     requestForegroundPermissionsAsyncMock.mockResolvedValue({ status: 'granted' });
     getCurrentPositionAsyncMock.mockResolvedValue({
@@ -850,5 +880,156 @@ describe('useMapScreenState', () => {
       hook.result.current.setMarkerFilter('none');
     });
     expect(hook.result.current.mapPlaces).toHaveLength(0);
+  });
+
+  it('restores durable map state and guards search, save, filter, and location edge paths', async () => {
+    const updateListsAsync = vi.fn().mockResolvedValue(undefined);
+    const controller = {
+      clearSearch: vi.fn(), handleSearchQueryChange: vi.fn(), handleSearchResultPress: vi.fn(),
+      hasSearched: true, isSearching: false, runSearch: vi.fn(), searchErrorMessage: null,
+      searchFocusTrigger: 3, searchQuery: 'search', searchResults: [],
+    };
+    let controllerArgs: {
+      setSelectedSearchResult: (value: {
+        address?: string; lat: number; lng: number; name: string; placeId: string;
+      } | null) => void;
+    } | undefined;
+    const place = {
+      id: 'place-1', name: 'Saved cafe', lat: 40, lng: 30,
+      addedAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-02T00:00:00.000Z',
+    };
+    useVisibleDataQueryMock.mockReturnValue({
+      data: {
+        lists: [{
+          id: 'list-1', userId: 'viewer', name: 'Saved', places: [place], isPublic: true,
+          createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-02T00:00:00.000Z',
+        }],
+      },
+      error: new Error('Network request failed'), isFetching: false, isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useCreateListMutationMock.mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue(undefined) });
+    useUpdateListsMutationMock.mockReturnValue({ mutateAsync: updateListsAsync });
+    useDeletePlaceMutationMock.mockReturnValue({
+      mutateAsync: vi.fn().mockRejectedValue(new Error('delete failed')),
+    });
+    useMapSearchControllerMock.mockImplementation((args) => {
+      controllerArgs = args;
+      return controller;
+    });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: true,
+      onRefresh: action,
+    }));
+    getPersistedMapScreenStateMock.mockResolvedValue({
+      editorData: null, editorDraft: null,
+      manualViewport: { latitude: 10, longitude: 20, zoom: 7 },
+      markerFilter: 'none', minimizedEditor: null, minimizedExistingPlace: null,
+      selectedExistingPlace: null, selectedSearchResult: null,
+      userViewport: { latitude: 11, longitude: 21, zoom: 8 },
+    });
+    rootIsReadyMock.mockReturnValue(true);
+
+    const hooks = await import('@/mobile/app/features/map/application/useMapScreenState');
+    const hook = renderHook(() =>
+      hooks.useMapScreenState({ user: { id: 'viewer', name: 'Viewer' } }),
+    );
+
+    await waitFor(() => {
+      expect(hook.result.current.markerFilter).toBe('none');
+      expect(hook.result.current.effectiveViewport).toEqual({ latitude: 10, longitude: 20, zoom: 7 });
+    });
+    expect(hook.result.current.visibleDataErrorMessage).not.toBeNull();
+    expect(hook.result.current.mapPlaces).toEqual([]);
+
+    act(() => {
+      hook.result.current.setMarkerFilter('all');
+      hook.result.current.setMarkerFilter('all');
+    });
+    expect(hook.result.current.mapPlaces).toHaveLength(1);
+
+    act(() => {
+      controllerArgs?.setSelectedSearchResult({
+        address: 'Search address', lat: 41, lng: 29, name: 'Search place', placeId: 'search-1',
+      });
+    });
+    const searchIndex = hook.result.current.selectedSearchMarkerIndex;
+    expect(searchIndex).not.toBeNull();
+    act(() => {
+      hook.result.current.handleMarkerPress(searchIndex!);
+    });
+    expect(hook.result.current.editorData).toMatchObject({ name: 'Search place' });
+
+    act(() => {
+      hook.result.current.closeEditor();
+      hook.result.current.handleMarkerPress(999);
+      hook.result.current.minimizeSelectedExistingPlace();
+      hook.result.current.reopenMinimizedExistingPlace();
+      hook.result.current.reopenMinimizedEditor();
+      hook.result.current.createPlaceCardForSelectedLocation();
+    });
+
+    const draft = {
+      step: 1, name: 'Draft', title: '', menuUrl: '', address: '', notes: '',
+      selectedCategories: [], rating: 0, studentFriendly: false, priceMin: '', priceMax: '',
+      selectedLists: ['list-1'], photos: [], bestTimes: [], atmosphere: [], features: [],
+      newListName: '', newListDescription: '', newListCoverImage: '', newListPublic: true,
+      showNewListForm: false,
+    };
+    let emptySaveSession: ReturnType<typeof hook.result.current.beginEditorSave>;
+    act(() => {
+      emptySaveSession = hook.result.current.beginEditorSave(draft);
+    });
+    act(() => {
+      emptySaveSession.onBannerOpen?.();
+      emptySaveSession.onBannerRetry?.();
+      emptySaveSession.onBannerCancel?.();
+      hook.result.current.unlockEditorAfterSaveFailure();
+      hook.result.current.unlockEditorAfterSaveFailure(draft);
+    });
+    expect(rootNavigateMock).toHaveBeenCalledWith('MainTabs', { screen: 'Map' });
+
+    reverseGeocodeLocationMock.mockRejectedValueOnce(new Error('provider failed'));
+    reverseGeocodeAsyncMock.mockResolvedValueOnce([]);
+    await act(async () => {
+      await hook.result.current.handleMapPress({ lat: 42, lng: 28 });
+    });
+    expect(hook.result.current.editorData).toMatchObject({ lat: 42, lng: 28 });
+
+    act(() => {
+      hook.result.current.minimizeEditor(draft);
+      hook.result.current.reopenMinimizedEditor();
+    });
+    const abortError = new Error('aborted');
+    abortError.name = 'AbortError';
+    updateListsAsync.mockRejectedValueOnce(abortError);
+    let saveSession: ReturnType<typeof hook.result.current.beginEditorSave>;
+    act(() => {
+      saveSession = hook.result.current.beginEditorSave(draft);
+    });
+
+    await act(async () => {
+      await expect(hook.result.current.handleSavePlace(
+        { name: 'Draft', lat: 42, lng: 28 }, ['list-1'],
+        { abortSignal: saveSession.abortSignal },
+      )).rejects.toThrow('aborted');
+    });
+    act(() => {
+      saveSession.onBannerRetry?.();
+    });
+    await waitFor(() => {
+      expect(updateListsAsync).toHaveBeenCalledTimes(2);
+    });
+
+    getCurrentPositionAsyncMock.mockRejectedValueOnce(new Error('gps unavailable'));
+    await act(async () => {
+      await hook.result.current.handleLocateUser();
+      await hook.result.current.handleDeletePlace('place-1');
+    });
+    expect(showToastMock).toHaveBeenCalledWith(expect.any(String), 'error');
+
+    await waitFor(() => {
+      expect(savePersistedMapScreenStateMock).toHaveBeenCalled();
+    });
   });
 });

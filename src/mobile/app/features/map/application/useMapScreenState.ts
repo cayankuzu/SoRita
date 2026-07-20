@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Location from 'expo-location';
 
 import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
-import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/RootNavigator';
+import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import {
   useCreateListMutation,
   useUpdateListsMutation,
 } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
+import { useMapMarkersQuery } from '@/mobile/app/data/hooks/useMapMarkersQuery';
 import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
 import type {
   ExistingPlaceSelection,
@@ -19,13 +19,16 @@ import type {
   PanelData,
 } from '@/mobile/app/features/map/application/mapScreenTypes';
 import {
-  buildActiveEditorMarker,
   buildChangedListsForPlaceSave,
-  buildSelectedSearchMarker,
   defaultViewport,
   findExistingPlaceMatchByCoordinates,
 } from '@/mobile/app/features/map/application/mapScreenUtils';
+import {
+  useMapMarkerModel,
+  useOwnedMapPlaceIndex,
+} from '@/mobile/app/features/map/application/useMapMarkerModel';
 import { useMapSearchController } from '@/mobile/app/features/map/application/useMapSearchController';
+import { useMapLocation } from '@/mobile/app/features/map/application/useMapLocation';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 import type {
   PlaceEditorSaveOptions,
@@ -41,23 +44,12 @@ import {
 } from '@/mobile/app/platform/storage/mapScreenState';
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
-import {
-  getMarkerAggregationKey,
-  getMarkerColorByVisibility,
-  getMarkerColorForPlaceAcrossLists,
-  getMarkerVisibilityForPlaceAcrossLists,
-  type MapMarkerItem,
-} from '@/mobile/app/shared/utils/markerColors';
+import { getMarkerAggregationKey } from '@/mobile/app/shared/utils/markerColors';
 import { isAbortError } from '@/mobile/app/shared/utils/abort';
+import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 
 type UseMapScreenStateParams = {
   user: { id: string; name: string } | null;
-};
-
-type InteractiveMapMarker = MapMarkerItem & {
-  markerKind: 'saved' | 'search' | 'editor';
-  targetLocationKey?: string;
 };
 
 type PendingPlaceSaveRequest = {
@@ -67,31 +59,10 @@ type PendingPlaceSaveRequest = {
   targetListIds: string[];
 };
 
-const LOCATION_REQUEST_TIMEOUT_MS = 10000;
-
 function createErrorWithCause(message: string, cause: unknown) {
   const nextError = new Error(message);
   (nextError as Error & { cause?: unknown }).cause = cause;
   return nextError;
-}
-
-async function getCurrentLocationWithTimeout() {
-  return await Promise.race([
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Location request timed out'));
-      }, LOCATION_REQUEST_TIMEOUT_MS);
-    }),
-  ]);
-}
-
-function sortPlaceEntriesByUpdatedAt(entries: Array<{ place: Place; list: PlaceList }>) {
-  return [...entries].sort(
-    (left, right) =>
-      new Date(right.place.updatedAt || right.place.addedAt).getTime() -
-      new Date(left.place.updatedAt || left.place.addedAt).getTime(),
-  );
 }
 
 export function useMapScreenState({ user }: UseMapScreenStateParams) {
@@ -110,19 +81,32 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   const [selectedExistingPlace, setSelectedExistingPlace] = useState<ExistingPlaceSelection | null>(null);
   const [selectedSearchResult, setSelectedSearchResult] = useState<GeocodingSearchResult | null>(null);
   const [manualViewport, setManualViewport] = useState<MapViewport | null>(null);
-  const [userViewport, setUserViewport] = useState<MapViewport | null>(null);
   const [markerFilter, setMarkerFilter] = useState<MarkerFilterOption>('all');
   const [editorFocusTrigger, setEditorFocusTrigger] = useState(0);
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
-  const [locationErrorMessage, setLocationErrorMessage] = useState<string | null>(null);
+  const [shouldLoadFullMapData, setShouldLoadFullMapData] = useState(false);
+  const {
+    isLocating,
+    locate,
+    locationErrorMessage,
+    locationPermissionDenied,
+    resolveAddress,
+    setUserViewport,
+    userViewport,
+  } = useMapLocation();
 
   useEffect(() => {
     minimizedEditorRef.current = minimizedEditor;
   }, [minimizedEditor]);
 
   const userId = user?.id;
+  const {
+    data: markerSnapshots,
+    error: markerError,
+    isLoading: areMarkersLoading,
+    refetch: refetchMarkers,
+  } = useMapMarkersQuery(userId);
   const visibleDataQuery = useVisibleDataQuery(userId, {
+    enabled: Boolean(userId) && shouldLoadFullMapData,
     listPageSize: 100,
     ownerId: userId || undefined,
   });
@@ -130,21 +114,33 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   const updateListsMutation = useUpdateListsMutation();
   const deletePlaceMutation = useDeletePlaceMutation();
   const { refetch } = visibleDataQuery;
-  const visibleLists = visibleDataQuery.data?.lists || [];
-  const visibleDataErrorMessage = visibleDataQuery.error
+  const visibleLists = useMemo(
+    () => visibleDataQuery.data?.lists || [],
+    [visibleDataQuery.data?.lists],
+  );
+  const mapDataError = visibleDataQuery.error || markerError;
+  const visibleDataErrorMessage = mapDataError
     ? getUserFacingErrorMessage(
-        visibleDataQuery.error,
+        mapDataError,
         tr.map.dataErrorDescription,
       )
     : null;
+
+  useEffect(() => {
+    setShouldLoadFullMapData(false);
+    return runAfterNextPaint(() => {
+      setShouldLoadFullMapData(true);
+    });
+  }, [userId]);
 
   const loadLists = useCallback(async () => {
     if (!userId) {
       return;
     }
 
-    await refetch();
-  }, [refetch, userId]);
+    setShouldLoadFullMapData(true);
+    await Promise.allSettled([refetch(), refetchMarkers()]);
+  }, [refetch, refetchMarkers, userId]);
 
   const refreshVisibleData = useCallback(async () => {
     await loadLists();
@@ -160,48 +156,12 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     [userId, visibleLists],
   );
 
-  const allPlaces = useMemo(
-    () =>
-      lists.flatMap((list) =>
-        list.places.map((place) => ({
-          place,
-          list,
-        })),
-      ),
-    [lists],
-  );
-
-  const placeEntriesByLocationKey = useMemo(() => {
-    const groupedEntries = new Map<string, Array<{ place: Place; list: PlaceList }>>();
-
-    allPlaces.forEach((entry) => {
-      const markerKey = getMarkerAggregationKey(entry.place);
-      const currentEntries = groupedEntries.get(markerKey);
-
-      if (currentEntries) {
-        currentEntries.push(entry);
-        return;
-      }
-
-      groupedEntries.set(markerKey, [entry]);
-    });
-
-    groupedEntries.forEach((entries, markerKey) => {
-      groupedEntries.set(markerKey, sortPlaceEntriesByUpdatedAt(entries));
-    });
-
-    return groupedEntries;
-  }, [allPlaces]);
-
-  const selectedExistingEntries = useMemo(() => {
-    if (!selectedExistingPlace) {
-      return [];
-    }
-
-    return placeEntriesByLocationKey.get(selectedExistingPlace.markerKey) || [];
-  }, [placeEntriesByLocationKey, selectedExistingPlace]);
-
-  const selectedExistingEntry = selectedExistingEntries[0] || null;
+  const {
+    allPlaces,
+    placeEntriesByLocationKey,
+    selectedExistingEntries,
+    selectedExistingEntry,
+  } = useOwnedMapPlaceIndex(lists, selectedExistingPlace);
 
   const openEditorPanel = useCallback((data: PanelData) => {
     if (isEditorInteractionLocked) {
@@ -257,203 +217,35 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     setSelectedSearchResult,
   });
 
-  const savedMapMarkers = useMemo<InteractiveMapMarker[]>(() => {
-    return Array.from(placeEntriesByLocationKey.entries()).reduce<InteractiveMapMarker[]>(
-      (markers, [markerKey, entries]) => {
-        const primaryEntry = entries[0];
-
-        if (!primaryEntry) {
-          return markers;
-        }
-
-        const markerVisibility = getMarkerVisibilityForPlaceAcrossLists(
-          primaryEntry.place,
-          lists,
-          primaryEntry.list.isPublic,
-        );
-
-        markers.push({
-          lat: primaryEntry.place.lat,
-          lng: primaryEntry.place.lng,
-          name: primaryEntry.place.name,
-          markerColor: getMarkerColorByVisibility(markerVisibility),
-          markerVisibility,
-          markerKind: 'saved',
-          targetLocationKey: markerKey,
-        });
-
-        return markers;
-      },
-      [],
-    );
-  }, [lists, placeEntriesByLocationKey]);
-
-  const filteredSavedMapMarkers = useMemo(() => {
-    if (markerFilter === 'none') {
-      return [];
-    }
-
-    if (markerFilter === 'all') {
-      return savedMapMarkers;
-    }
-
-    return savedMapMarkers.filter((marker) => marker.markerVisibility === markerFilter);
-  }, [markerFilter, savedMapMarkers]);
-
-  const selectedSearchMarker = useMemo<InteractiveMapMarker | null>(() => {
-    const marker = buildSelectedSearchMarker(selectedSearchResult, allPlaces, colors.markerDraft);
-
-    if (!marker) {
-      return null;
-    }
-
-    return {
-      ...marker,
-      markerKind: 'search',
-    };
-  }, [allPlaces, selectedSearchResult]);
-
   const activeEditorPanel = editorData ?? minimizedEditor?.panel ?? null;
-  const activeEditorMatchesSearchMarker = useMemo(
-    () =>
-      Boolean(
-        activeEditorPanel &&
-          selectedSearchMarker &&
-          Math.abs(activeEditorPanel.lat - selectedSearchMarker.lat) < 0.00001 &&
-          Math.abs(activeEditorPanel.lng - selectedSearchMarker.lng) < 0.00001,
-      ),
-    [activeEditorPanel, selectedSearchMarker],
-  );
-
-  const activeEditorMarker = useMemo<InteractiveMapMarker | null>(() => {
-    const marker = buildActiveEditorMarker(
-      activeEditorPanel,
-      activeEditorMatchesSearchMarker,
-      colors.markerDraft,
-      tr.placeEditor.minimizedNewTitle,
-    );
-
-    if (!marker) {
-      return null;
-    }
-
-    return {
-      ...marker,
-      markerKind: 'editor',
-    };
-  }, [activeEditorMatchesSearchMarker, activeEditorPanel]);
-
-  const interactiveMapMarkers = useMemo<InteractiveMapMarker[]>(
-    () => [
-      ...filteredSavedMapMarkers,
-      ...(selectedSearchMarker ? [selectedSearchMarker] : []),
-      ...(activeEditorMarker ? [activeEditorMarker] : []),
-    ],
-    [activeEditorMarker, filteredSavedMapMarkers, selectedSearchMarker],
-  );
-
-  const mapPlaces = useMemo<MapMarkerItem[]>(
-    () => interactiveMapMarkers,
-    [interactiveMapMarkers],
-  );
-
-  const selectedExistingMarkerColor = useMemo(
-    () =>
-      selectedExistingEntry
-        ? getMarkerColorForPlaceAcrossLists(
-            selectedExistingEntry.place,
-            lists,
-            selectedExistingEntry.list.isPublic,
-          )
-        : undefined,
-    [lists, selectedExistingEntry],
-  );
-
-  const selectedSearchMarkerIndex = useMemo(() => {
-    const index = interactiveMapMarkers.findIndex((marker) => marker.markerKind === 'search');
-    return index >= 0 ? index : null;
-  }, [interactiveMapMarkers]);
-
-  const activeEditorMarkerIndex = useMemo(() => {
-    const index = interactiveMapMarkers.findIndex((marker) => marker.markerKind === 'editor');
-
-    if (index >= 0) {
-      return index;
-    }
-
-    return activeEditorPanel != null && activeEditorMatchesSearchMarker
-      ? selectedSearchMarkerIndex
-      : null;
-  }, [
-    activeEditorMatchesSearchMarker,
-    activeEditorPanel,
+  const {
+    activeEditorMarkerIndex,
     interactiveMapMarkers,
+    mapPlaces,
+    selectedExistingMarkerColor,
     selectedSearchMarkerIndex,
-  ]);
+  } = useMapMarkerModel({
+    activeEditorPanel,
+    allPlaces,
+    fallbackSavedMarkers: markerSnapshots,
+    lists,
+    markerFilter,
+    placeEntriesByLocationKey,
+    selectedExistingEntry,
+    selectedExistingMarkerKey: selectedExistingPlace?.markerKey,
+    selectedSearchResult,
+  });
 
   const effectiveViewport = useMemo<MapViewport | null>(
     () => manualViewport ?? (mapPlaces.length === 0 ? userViewport ?? defaultViewport : null),
     [manualViewport, mapPlaces.length, userViewport],
   );
 
-  const loadUserViewport = useCallback(
-    async (options?: { showToastOnError?: boolean; syncManualViewport?: boolean }) => {
-      setIsLocating(true);
-      setLocationErrorMessage(null);
-
-      try {
-        const permission = await Location.requestForegroundPermissionsAsync();
-
-        if (permission.status !== 'granted') {
-          setLocationPermissionDenied(true);
-          const deniedMessage = tr.map.locationPermissionRequired;
-          setLocationErrorMessage(deniedMessage);
-
-          if (options?.showToastOnError) {
-            showToast(deniedMessage, 'error');
-          }
-          return;
-        }
-
-        setLocationPermissionDenied(false);
-        const current = await getCurrentLocationWithTimeout();
-        setUserViewport({
-          latitude: current.coords.latitude,
-          longitude: current.coords.longitude,
-          zoom: 13.5,
-        });
-        if (options?.syncManualViewport) {
-          setManualViewport({
-            latitude: current.coords.latitude,
-            longitude: current.coords.longitude,
-            zoom: 14.5,
-          });
-        }
-      } catch (error) {
-        const message = getUserFacingErrorMessage(
-          error,
-          tr.map.locationRetryDescription,
-        );
-        setLocationErrorMessage(message);
-
-        if (options?.showToastOnError) {
-          showToast(message, 'error');
-        }
-      } finally {
-        setIsLocating(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    void loadUserViewport().catch((err) => { logger.debug('map', 'Failed to load user viewport', err); });
-  }, [loadUserViewport]);
-
   useEffect(() => {
     if (
       selectedExistingPlace &&
       selectedExistingEntries.length === 0 &&
+      shouldLoadFullMapData &&
       !visibleDataQuery.isLoading &&
       !visibleDataQuery.isFetching
     ) {
@@ -463,6 +255,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   }, [
     selectedExistingEntries.length,
     selectedExistingPlace,
+    shouldLoadFullMapData,
     visibleDataQuery.isFetching,
     visibleDataQuery.isLoading,
   ]);
@@ -504,7 +297,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     return () => {
       active = false;
     };
-  }, [userId, userViewport]);
+  }, [setUserViewport, userId, userViewport]);
 
   useEffect(() => {
     if (!userId || !hasRestoredPersistedStateRef.current) {
@@ -542,30 +335,6 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     userId,
     userViewport,
   ]);
-
-  const resolveAddress = useCallback(async (latitude: number, longitude: number) => {
-    try {
-      const results = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      const first = results[0];
-      if (!first) {
-        return undefined;
-      }
-
-      return [
-        [first.street, first.streetNumber].filter(Boolean).join(' '),
-        first.district,
-        first.city,
-      ]
-        .filter(Boolean)
-        .join(', ');
-    } catch {
-      return undefined;
-    }
-  }, []);
 
   const updateEditorData = useCallback((updater: (current: PanelData | null) => PanelData | null) => {
     setEditorData((current) => updater(current));
@@ -619,6 +388,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
           abortSignal: options?.abortSignal,
           lists: changedLists,
           onProgress: options?.onProgress,
+          previousLists: lists,
         });
         setSelectedSearchResult(null);
         setManualViewport(null);
@@ -886,6 +656,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
   const handleMarkerPress = useCallback(
     (index: number) => {
+      setShouldLoadFullMapData(true);
       if (activeEditorMarkerIndex != null && index === activeEditorMarkerIndex && minimizedEditor) {
         setEditorData(minimizedEditor.panel);
         setMinimizedEditor(null);
@@ -944,8 +715,13 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   );
 
   const handleLocateUser = useCallback(async () => {
-    await loadUserViewport({ showToastOnError: true, syncManualViewport: true });
-  }, [loadUserViewport]);
+    await locate({
+      showToastOnError: true,
+      onLocated: (viewport) => {
+        setManualViewport({ ...viewport, zoom: 14.5 });
+      },
+    });
+  }, [locate]);
 
   const closeEditor = useCallback(() => {
     if (isEditorInteractionLocked) {
@@ -1064,10 +840,14 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     handleSavePlace,
     handleSearchQueryChange,
     handleSearchResultPress,
-    hasMapDataPartialError: visibleDataQuery.hasPartialDataError,
+    hasMapDataPartialError:
+      visibleDataQuery.hasPartialDataError ||
+      Boolean(markerError && mapPlaces.length > 0),
     hasSearched,
     isSearching,
     isLocating,
+    isMapInitialLoading:
+      areMarkersLoading && mapPlaces.length === 0,
     isEditorInteractionLocked,
     lists,
     locationErrorMessage,

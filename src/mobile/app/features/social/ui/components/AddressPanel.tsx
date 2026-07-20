@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import {
 
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
 import { openMapLocationInApp } from '@/mobile/app/shared/utils/mapLinks';
 
 type AddressPanelProps = {
@@ -51,7 +52,12 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
     <View style={styles.panel}>
       <Text style={styles.panelTitle}>{location.name}</Text>
       <View style={styles.addressCard}>
-        <Pressable accessibilityRole="link" onPress={openInMaps} style={styles.addressLinkButton}>
+        <Pressable
+          accessibilityLabel={`${location.name}, ${addressText}`}
+          accessibilityRole="link"
+          onPress={openInMaps}
+          style={styles.addressLinkButton}
+        >
           <Text style={styles.addressLabel}>{tr.placeEditor.addressLabel}</Text>
           <Text numberOfLines={isAddressExpanded ? undefined : 1} style={styles.addressLinkText}>
             {addressText}
@@ -59,6 +65,8 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
         </Pressable>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={tr.cards.showAddressAction}
+          accessibilityState={{ expanded: isAddressExpanded }}
           hitSlop={6}
           onPress={() => setIsAddressExpanded((current) => !current)}
           style={[
@@ -70,11 +78,15 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
         </Pressable>
       </View>
       <View style={styles.panelActions}>
-        <Pressable style={styles.secondaryPanelButton} onPress={() => void copyAddress()}>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.secondaryPanelButton}
+          onPress={() => void copyAddress()}
+        >
           <Copy color={colors.textMuted} size={14} />
           <Text style={styles.secondaryPanelText}>{tr.cards.copy}</Text>
         </Pressable>
-        <Pressable style={styles.primaryPanelButton} onPress={openInMaps}>
+        <Pressable accessibilityRole="link" style={styles.primaryPanelButton} onPress={openInMaps}>
           <ExternalLink color={colors.primary} size={14} />
           <Text style={styles.primaryPanelText}>{tr.cards.openInMaps}</Text>
         </Pressable>
@@ -109,6 +121,7 @@ const styles = StyleSheet.create({
   addressLinkButton: {
     flex: 1,
     minWidth: 0,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     gap: 4,
   },
   addressLabel: {
@@ -125,8 +138,8 @@ const styles = StyleSheet.create({
     textDecorationColor: colors.primary,
   },
   addressToggleButton: {
-    width: 28,
-    height: 28,
+    width: Platform.OS === 'ios' ? touch.ios : touch.android,
+    height: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -148,6 +161,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 9,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
@@ -162,6 +176,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 9,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
   },

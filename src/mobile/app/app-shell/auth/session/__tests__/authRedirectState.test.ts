@@ -151,9 +151,38 @@ describe('authRedirectState', () => {
     expect(rawValue).not.toContain('not-json');
   });
 
+  it('rejects non-object state stores and leaves unknown discards untouched', async () => {
+    vi.mocked(Crypto.randomUUID).mockReturnValue('state-from-array');
+    await AsyncStorage.setItem(storageKey, '[]');
+
+    await createTrackedAuthRedirect('signup');
+    await expect(
+      consumePendingAuthRedirectState({
+        flow: 'signup',
+        state: 'state-from-array',
+        target: 'auth/callback',
+      }),
+    ).resolves.toMatchObject({ success: true });
+
+    await AsyncStorage.setItem(storageKey, 'null');
+    await discardPendingAuthRedirectState('unknown-state');
+    await expect(AsyncStorage.getItem(storageKey)).resolves.toBe('null');
+  });
+
   it('parses and normalizes auth deep links defensively', () => {
+    expect(parseAuthDeepLinkUrl('not-a-url')).toBeNull();
     expect(parseAuthDeepLinkUrl('https://auth.example.com/auth/callback')).toBeNull();
     expect(parseAuthDeepLinkUrl('sorita://unexpected/path?code=abc')).toBeNull();
+    expect(parseAuthDeepLinkUrl('sorita://reset-password/?code=reset-code')).toMatchObject({
+      code: 'reset-code',
+      target: 'reset-password',
+    });
+    expect(parseAuthDeepLinkUrl('sorita://auth/callback?#')).toMatchObject({
+      target: 'auth/callback',
+    });
+    expect(parseAuthDeepLinkUrl('sorita://auth/callback?=ignored&%E0%A4%A=value&flag')).toMatchObject({
+      target: 'auth/callback',
+    });
 
     expect(
       parseAuthDeepLinkUrl(
@@ -176,12 +205,12 @@ describe('authRedirectState', () => {
         {
           access_token: ['first-token', 'second-token'],
           code: ['code-1'],
+          type: [123],
           error: 123,
           error_code: 'provider_denied',
           flow: 'password-reset',
           refresh_token: 'refresh-token',
           state: ['state-1'],
-          type: undefined,
         },
         'reset-password',
       ),

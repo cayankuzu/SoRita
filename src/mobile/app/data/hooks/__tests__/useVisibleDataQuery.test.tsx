@@ -1,4 +1,3 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
@@ -284,5 +283,60 @@ describe('useVisibleDataQuery', () => {
         ],
       });
     });
+  });
+
+  it('merges and filters cached snapshots across every request scope', async () => {
+    const { visibleDataQueryInternals } = await import(
+      '@/mobile/app/data/hooks/useVisibleDataQuery'
+    );
+    const makeList = (id: string, userId: string, isPublic: boolean, updatedAt: string) => ({
+      id, userId, isPublic, updatedAt, name: id, places: [],
+      createdAt: '2025-01-01T00:00:00.000Z',
+    });
+    const listA = makeList('a', 'owner-1', true, '2025-01-02T00:00:00.000Z');
+    const listB = makeList('b', 'owner-2', false, '2025-01-03T00:00:00.000Z');
+    const listC = makeList('c', 'owner-1', false, '2025-01-04T00:00:00.000Z');
+    const snapshot = {
+      allUsers: [], blockRows: [], currentUser: null, users: [], lists: [listA, listB, listC],
+    };
+    const nextSnapshot = {
+      ...snapshot,
+      lists: [makeList('a', 'owner-1', true, '2025-01-05T00:00:00.000Z')],
+    };
+
+    expect(visibleDataQueryInternals.getViewerId('viewer')).toBe('viewer');
+    expect(visibleDataQueryInternals.getViewerId(null)).toBe('__public__');
+    expect(visibleDataQueryInternals.toVisibleDataContext(undefined)).toBeUndefined();
+    expect(visibleDataQueryInternals.toVisibleDataContext(snapshot)).not.toHaveProperty('lists');
+    expect(visibleDataQueryInternals.getSnapshotLists(undefined, {}, 2)).toEqual([]);
+    expect(visibleDataQueryInternals.getSnapshotLists(snapshot, { listId: 'a' }, 20)).toEqual([listA]);
+    expect(visibleDataQueryInternals.getSnapshotLists(snapshot, { listId: 'missing' }, 20)).toEqual([]);
+    expect(visibleDataQueryInternals.getSnapshotLists(snapshot, { ownerId: 'owner-1' }, 20)).toEqual([
+      listA, listC,
+    ]);
+    expect(visibleDataQueryInternals.getSnapshotLists(snapshot, { publicOnly: true }, 20)).toEqual([
+      listA,
+    ]);
+    expect(visibleDataQueryInternals.getSnapshotLists(snapshot, {}, 2)).toEqual([listA, listB]);
+
+    expect(visibleDataQueryInternals.isFullSnapshotRequest(true, {})).toBe(true);
+    expect(visibleDataQueryInternals.isFullSnapshotRequest(false, {})).toBe(false);
+    expect(visibleDataQueryInternals.isFullSnapshotRequest(true, { listId: 'a' })).toBe(false);
+    expect(visibleDataQueryInternals.isFullSnapshotRequest(true, { ownerId: 'owner' })).toBe(false);
+    expect(visibleDataQueryInternals.isFullSnapshotRequest(true, { publicOnly: true })).toBe(false);
+    expect(visibleDataQueryInternals.mergeSnapshotLists(snapshot.lists, nextSnapshot.lists).map(
+      (list) => list.id,
+    )).toEqual(['a', 'c', 'b']);
+
+    expect(visibleDataQueryInternals.buildSnapshotForCache(undefined, nextSnapshot, false, {}).lists).toEqual([]);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(snapshot, nextSnapshot, false, {}).lists).toEqual(snapshot.lists);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(snapshot, nextSnapshot, true, {})).toBe(nextSnapshot);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(undefined, nextSnapshot, true, { listId: 'a' })).toBe(nextSnapshot);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(snapshot, nextSnapshot, true, { listId: 'a' }).lists).toHaveLength(3);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(snapshot, nextSnapshot, true, { ownerId: 'owner-1' }).lists).toHaveLength(3);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(snapshot, nextSnapshot, true, { publicOnly: true }).lists).toEqual(snapshot.lists);
+    expect(visibleDataQueryInternals.buildSnapshotForCache(
+      { ...snapshot, lists: [] }, nextSnapshot, true, { publicOnly: true },
+    ).lists).toEqual(nextSnapshot.lists);
   });
 });

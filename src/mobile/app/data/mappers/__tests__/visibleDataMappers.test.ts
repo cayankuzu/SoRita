@@ -96,11 +96,11 @@ describe('visibleDataMappers', () => {
             id: 'place-1',
             list_id: 'list-1',
             created_by: 'viewer',
-            source_list_id: null,
-            source_place_id: null,
-            source_place_name: null,
-            source_user_avatar_url: null,
-            source_user_id: null,
+            source_list_id: 'source-list',
+            source_place_id: 'source-place',
+            source_place_name: 'Source place',
+            source_user_avatar_url: 'https://cdn.example.com/source.jpg',
+            source_user_id: 'target',
             source_user_name: null,
             name: 'Cafe',
             title: 'Brunch',
@@ -187,6 +187,10 @@ describe('visibleDataMappers', () => {
         userId: 'viewer',
         userName: 'Viewer',
         userAvatar: 'avatar.jpg',
+      },
+      sourceAttribution: {
+        listId: 'source-list', placeId: 'source-place', placeName: 'Source place',
+        userAvatar: 'https://cdn.example.com/source.jpg', userId: 'target', userName: 'SoRita',
       },
     });
     expect(list.places[0]?.comments?.[0]).toMatchObject({
@@ -472,6 +476,20 @@ describe('visibleDataMappers', () => {
       author: undefined,
       likedBy: undefined,
       replies: [],
+    });
+  });
+
+  it('maps lists whose optional relationships are omitted by PostgREST', () => {
+    const list = mapList({
+      id: 'list-empty', owner_id: 'viewer', name: 'Empty', description: null,
+      emoji: null, cover_image_url: null, is_public: true,
+      created_at: '2025-01-01T00:00:00.000Z', updated_at: '2025-01-01T00:00:00.000Z',
+      list_likes: null, list_places: null,
+    } as never, new Map() as never);
+
+    expect(list).toMatchObject({
+      id: 'list-empty', description: undefined, emoji: undefined,
+      coverImage: undefined, places: [], likes: 0, likedBy: undefined,
     });
   });
 });

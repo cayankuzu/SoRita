@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
-import { useNotificationsQuery } from '@/mobile/app/data/hooks/useNotificationsQuery';
+import { prioritizeStartupWarmupStage } from '@/mobile/app/app-shell/startup/startupDataWarmup';
+import { useNotificationUnreadCountQuery } from '@/mobile/app/data/hooks/useNotificationsQuery';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { logger } from '@/mobile/app/platform/feedback/logger';
@@ -22,7 +23,7 @@ export function AppHeader() {
   const { user } = useAuth();
   const showNotifications = route.name === 'Home';
   const appLayout = useAppLayout();
-  const notificationsQuery = useNotificationsQuery(user?.id, {
+  const notificationsQuery = useNotificationUnreadCountQuery(user?.id, {
     enabled: showNotifications,
   });
   const hasFocusedOnceRef = useRef(false);
@@ -75,10 +76,15 @@ export function AppHeader() {
     };
   }, [loadNotificationCount, showNotifications, user]);
 
-  const notificationCount = showNotifications && user
-    ? (notificationsQuery.data || []).filter((item) => !item.read).length
-    : 0;
+  const notificationCount = showNotifications && user ? notificationsQuery.data || 0 : 0;
   const badgeLabel = notificationCount > 99 ? '99+' : String(notificationCount);
+  const openNotifications = useCallback(() => {
+    if (user?.id) {
+      prioritizeStartupWarmupStage('notifications');
+    }
+
+    openStackScreen(navigation, 'Notifications');
+  }, [navigation, user?.id]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -88,7 +94,7 @@ export function AppHeader() {
           <IconButton
             accessibilityLabel={tr.notifications.title}
             accessibilityHint={notificationCount > 0 ? tr.notifications.unreadHint(notificationCount) : undefined}
-            onPress={() => openStackScreen(navigation, 'Notifications')}
+            onPress={openNotifications}
             style={styles.notificationButton}
           >
             <Bell color={colors.textMuted} size={22} />

@@ -44,9 +44,8 @@ type AppProgressBannerContextType = {
 
 const AppProgressBannerContext = createContext<AppProgressBannerContextType | null>(null);
 const CANCEL_PROGRESS_CONFIRMATION = {
-  description:
-    'Devam eden yukleme durdurulacak. Kaydedilmemis ilerleme korunmayabilir.',
-  title: 'Yukleme iptal edilsin mi?',
+  description: tr.system.uploadCancelDescription,
+  title: tr.system.uploadCancelTitle,
 } as const;
 
 function clampProgress(progress: number) {

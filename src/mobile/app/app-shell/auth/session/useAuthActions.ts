@@ -238,7 +238,7 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         return {
           success: false,
           code: 'unexpected',
-          message: 'Giris oturumu olusturulamadi.',
+          message: tr.auth.login.sessionCreateFailed,
         };
       }
 

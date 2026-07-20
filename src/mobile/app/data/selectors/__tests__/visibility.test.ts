@@ -146,4 +146,45 @@ describe('visibility selectors', () => {
     expect(visibleList.places[0]?.comments?.[0]?.likes).toBe(1);
     expect(visibleList.places[0]?.comments?.[0]?.replies).toBeUndefined();
   });
+
+  it('handles reverse blocks, empty metadata, and hidden place authors', () => {
+    const reverseBlocks: UserBlockRow[] = [
+      { blocker_user_id: 'hidden', blocked_user_id: 'viewer', created_at: '2025-01-01T00:00:00.000Z' },
+      { blocker_user_id: 'viewer', blocked_user_id: 'viewer', created_at: '2025-01-01T00:00:00.000Z' },
+    ];
+    expect(Array.from(getHiddenUserIdsFor(reverseBlocks, 'viewer'))).toEqual(['hidden']);
+    expect(getBlockStateForUsers(reverseBlocks, 'viewer', 'hidden')).toEqual({
+      blockedByCurrent: false, blockedByTarget: true,
+    });
+
+    const sparseList: PlaceList = {
+      id: 'sparse', userId: 'public', name: 'Sparse', isPublic: true,
+      createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+      places: [
+        {
+          id: 'safe', name: 'Safe', lat: 1, lng: 2,
+          addedAt: '2025-01-01T00:00:00.000Z',
+          comments: [{
+            id: 'comment', userId: 'public', content: 'safe',
+            createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+          }],
+        },
+        {
+          id: 'hidden-author', name: 'Hidden', lat: 3, lng: 4,
+          addedAt: '2025-01-01T00:00:00.000Z',
+          addedBy: { userId: 'hidden', userName: 'Hidden' },
+        },
+      ],
+    };
+    const [sanitized] = getVisibleListsFor([sparseList], reverseBlocks, 'viewer');
+    expect(sanitized).toMatchObject({
+      likes: 0, likedBy: undefined, likeDetails: undefined,
+      places: [{
+        id: 'safe', likes: 0, likedBy: undefined, likeDetails: undefined,
+        addedBy: undefined,
+        comments: [{ likes: 0, likedBy: undefined, likeDetails: undefined, replies: undefined }],
+      }],
+    });
+    expect(getVisibleUsersFor([viewer, hiddenUser], [], undefined)).toEqual([viewer, hiddenUser]);
+  });
 });
