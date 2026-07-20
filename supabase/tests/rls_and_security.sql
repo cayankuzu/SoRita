@@ -110,6 +110,10 @@ values
   ('10000000-0000-0000-0000-000000000011', '10000000-0000-0000-0000-000000000001', 'Private A', false),
   ('10000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'Public A', true);
 
+-- Exercise row visibility independently from the API grants installed outside
+-- this transactional pgTAP fixture. The final rollback removes these grants.
+grant select on public.lists, public.notifications to authenticated;
+
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000002', true);
 set local role authenticated;
 select is((select count(*) from public.lists where id = '10000000-0000-0000-0000-000000000011'), 0::bigint, 'user B cannot read user A private list');
