@@ -5,9 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 const vitestBin = fileURLToPath(new URL('../node_modules/vitest/vitest.mjs', import.meta.url));
 const localStorageFile = join(tmpdir(), 'sorita-vitest-localstorage.json');
+const localStorageOption = process.allowedNodeEnvironmentFlags.has('--localstorage-file')
+  ? `--localstorage-file=${localStorageFile}`
+  : null;
 const nodeOptions = [
   process.env.NODE_OPTIONS,
-  `--localstorage-file=${localStorageFile}`,
+  localStorageOption,
 ].filter(Boolean).join(' ');
 const childEnv = { ...process.env, NODE_OPTIONS: nodeOptions };
 const featureSuites = [
@@ -24,7 +27,7 @@ const featureSuites = [
 ];
 
 for (const suiteArgs of featureSuites) {
-  const result = spawnSync(process.execPath, [`--localstorage-file=${localStorageFile}`, vitestBin, 'run', ...suiteArgs], {
+  const result = spawnSync(process.execPath, [localStorageOption, vitestBin, 'run', ...suiteArgs].filter(Boolean), {
     env: childEnv,
     stdio: 'inherit',
   });

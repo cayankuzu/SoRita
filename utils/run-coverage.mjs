@@ -5,14 +5,17 @@ import { fileURLToPath } from 'node:url';
 
 const vitestBin = fileURLToPath(new URL('../node_modules/vitest/vitest.mjs', import.meta.url));
 const localStorageFile = join(tmpdir(), 'sorita-vitest-localstorage.json');
+const localStorageOption = process.allowedNodeEnvironmentFlags.has('--localstorage-file')
+  ? `--localstorage-file=${localStorageFile}`
+  : null;
 const nodeOptions = [
   process.env.NODE_OPTIONS,
-  `--localstorage-file=${localStorageFile}`,
+  localStorageOption,
 ].filter(Boolean).join(' ');
 
 const result = spawnSync(
   process.execPath,
-  [`--localstorage-file=${localStorageFile}`, vitestBin, 'run', '--coverage'],
+  [localStorageOption, vitestBin, 'run', '--coverage'].filter(Boolean),
   {
     env: { ...process.env, NODE_OPTIONS: nodeOptions },
     stdio: 'inherit',
