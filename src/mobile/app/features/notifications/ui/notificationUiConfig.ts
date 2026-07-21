@@ -8,6 +8,7 @@ export const notificationUiConfig = {
   emptyDescription: tr.notifications.emptyDescription,
   errorTitle: tr.notifications.errorTitle,
   markAllReadLabel: 'Tümünü okundu yap',
+  markAllReadShortLabel: 'Tümünü oku',
   partialTitle: tr.notifications.partialTitle,
   partialDescription: tr.notifications.partialDescription,
   toast: tr.notifications.toast,

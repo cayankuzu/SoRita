@@ -68,13 +68,13 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
     >
       <View style={styles.menuActionHeader}>
         <View style={styles.menuActionIcon}>
-          <UtensilsCrossed color={colors.primary} size={14} />
+          <UtensilsCrossed color={colors.primary} size={12} />
         </View>
         <Text style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</Text>
         {isExpanded ? (
-          <ChevronUp color={colors.primary} size={14} />
+          <ChevronUp color={colors.primary} size={12} />
         ) : (
-          <ChevronDown color={colors.primary} size={14} />
+          <ChevronDown color={colors.primary} size={12} />
         )}
       </View>
       {isExpanded ? (

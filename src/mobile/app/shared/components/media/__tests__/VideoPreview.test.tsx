@@ -110,4 +110,25 @@ describe('VideoPreview', () => {
       renderer.root.findAllByType('AppImage' as unknown as React.ElementType),
     ).toHaveLength(0);
   });
+
+  it('uses adaptive HLS playback for manifest URLs', async () => {
+    resolveStorageAssetUrlMock.mockResolvedValue(
+      'https://video.example/place/master.m3u8?token=short-lived',
+    );
+    const { VideoPreview } = await import('../VideoPreview');
+
+    await act(async () => {
+      TestRenderer.create(<VideoPreview uri="stream-ref" />);
+      await Promise.resolve();
+    });
+
+    expect(useVideoPlayerMock).toHaveBeenLastCalledWith(
+      {
+        contentType: 'hls',
+        uri: 'https://video.example/place/master.m3u8?token=short-lived',
+        useCaching: true,
+      },
+      expect.any(Function),
+    );
+  });
 });

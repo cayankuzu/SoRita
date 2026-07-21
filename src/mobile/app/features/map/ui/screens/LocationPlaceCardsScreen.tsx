@@ -1,8 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -20,9 +18,11 @@ import {
 import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   buildLocationPlaceStats,
   formatLocationPlaceCardsCount,
@@ -116,9 +116,10 @@ export function LocationPlaceCardsScreen() {
   if (visibleDataQuery.isLoading && entries.length === 0) {
     return (
       <Screen safeTop={false} padded={false} scroll={false}>
-        <View style={styles.loadingScreen}>
-          <ActivityIndicator color={colors.primary} size="small" />
-        </View>
+        <SkeletonGroup style={[styles.loadingScreen, { paddingTop: insets.top + 8 }]}>
+          <PlaceCardSkeleton />
+          <PlaceCardSkeleton />
+        </SkeletonGroup>
       </Screen>
     );
   }
@@ -127,14 +128,13 @@ export function LocationPlaceCardsScreen() {
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={styles.screenShell}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <Pressable
+          <IconButton
             accessibilityLabel={tr.common.back}
-            accessibilityRole="button"
             onPress={() => navigation.goBack()}
             style={styles.topBarButton}
           >
             <ArrowLeft color={colors.text} size={18} />
-          </Pressable>
+          </IconButton>
 
           <View style={styles.topBarCopy}>
             <Text numberOfLines={1} style={styles.topBarTitle}>
@@ -164,7 +164,7 @@ export function LocationPlaceCardsScreen() {
           }}
           ListEmptyComponent={
             <EmptyState
-              icon={<MapPin color={colors.textSoft} size={34} />}
+              icon={<MapPin color={colors.textSoft} size={30} />}
               title={tr.map.locationCardsEmptyTitle}
               description={tr.map.locationCardsEmptyDescription}
             />
@@ -228,20 +228,20 @@ const styles = StyleSheet.create({
   },
   loadingScreen: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.background,
+    gap: 12,
+    paddingHorizontal: 12,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
   topBarButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -250,8 +250,8 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   topBarButtonSpacer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
   },
   topBarCopy: {
     flex: 1,
@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   topBarTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   topBarSubtitle: {
@@ -271,9 +271,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 14,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 18,
   },
   contentEmpty: {
     flexGrow: 1,
@@ -289,16 +289,16 @@ const styles = StyleSheet.create({
   },
   highlightPill: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     zIndex: 2,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   highlightPillText: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.onPrimary,
   },

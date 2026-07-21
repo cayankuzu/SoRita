@@ -12,7 +12,7 @@ import {
 import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   PLACE_ADDRESS_MAX_LENGTH,
   PLACE_NAME_MAX_LENGTH,
@@ -97,12 +97,12 @@ export function PlaceEditorBasicsStep({
 
 const styles = StyleSheet.create({
   stepContent: {
-    gap: 16,
+    gap: 12,
   },
   coordCard: {
     backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
-    padding: 14,
+    padding: 10,
   },
   coordTitle: {
     fontSize: 12,
@@ -111,30 +111,30 @@ const styles = StyleSheet.create({
   },
   coordText: {
     marginTop: 2,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
   },
   coordMeta: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   sectionHelper: {
     marginTop: -2,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   selectionMeta: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.primary,
   },

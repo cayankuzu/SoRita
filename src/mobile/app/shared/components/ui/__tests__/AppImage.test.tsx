@@ -26,13 +26,15 @@ vi.mock('@/mobile/app/platform/supabase/media', () => ({
 }));
 
 describe('AppImage media cache', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     getCachePathAsyncMock.mockReset();
     loadAsyncMock.mockReset();
     resolveStorageAssetUrlMock.mockReset();
     resolveStorageAssetUrlsMock.mockReset();
     getCachePathAsyncMock.mockResolvedValue(null);
     loadAsyncMock.mockResolvedValue({});
+    const { appImageInternals } = await import('@/mobile/app/shared/components/ui/AppImage');
+    appImageInternals.clear();
   });
 
   it('prefetches signed media with the stable storage URI as its cache key', async () => {
@@ -103,5 +105,43 @@ describe('AppImage media cache', () => {
       cacheKey: storageUri,
       uri: 'https://storage.example/photo-c.jpg?token=valid',
     });
+  });
+
+  it('bounds each speculative prefetch job', async () => {
+    const uris = Array.from({ length: 40 }, (_, index) => `https://image.example/${index}.jpg`);
+    resolveStorageAssetUrlsMock.mockImplementation(async (values: string[]) => values);
+    const { appImageInternals, prefetchAppImages } = await import(
+      '@/mobile/app/shared/components/ui/AppImage'
+    );
+
+    await expect(prefetchAppImages(uris)).resolves.toBe(true);
+
+    expect(resolveStorageAssetUrlsMock).toHaveBeenCalledWith(
+      uris.slice(0, appImageInternals.MAX_PREFETCH_URIS_PER_JOB),
+    );
+  });
+
+  it('cancels a queued prefetch before it consumes network work', async () => {
+    let releaseFirstJob!: (uris: string[]) => void;
+    resolveStorageAssetUrlsMock.mockReturnValueOnce(
+      new Promise<string[]>((resolve) => {
+        releaseFirstJob = resolve;
+      }),
+    );
+    const { prefetchAppImages } = await import('@/mobile/app/shared/components/ui/AppImage');
+    const firstJob = prefetchAppImages(['https://image.example/first.jpg']);
+    await Promise.resolve();
+
+    const controller = new AbortController();
+    const cancelledJob = prefetchAppImages(
+      ['https://image.example/obsolete.jpg'],
+      { signal: controller.signal },
+    );
+    controller.abort();
+
+    await expect(cancelledJob).resolves.toBe(false);
+    releaseFirstJob(['https://image.example/first.jpg']);
+    await expect(firstJob).resolves.toBe(true);
+    expect(resolveStorageAssetUrlsMock).toHaveBeenCalledTimes(1);
   });
 });

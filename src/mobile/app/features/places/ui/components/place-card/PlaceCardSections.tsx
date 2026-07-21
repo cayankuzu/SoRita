@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Globe,
   GraduationCap,
@@ -20,6 +22,7 @@ import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaTh
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { categoryMeta } from '@/mobile/app/shared/utils/format';
@@ -37,7 +40,7 @@ export function PlaceOwnerHeader({
 
   return (
     <Pressable style={styles.userHeader} onPress={onPress}>
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={42} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
       <View style={styles.userBody}>
         <Text style={styles.userName}>{owner.name}</Text>
         <Text style={styles.userUsername}>@{owner.username}</Text>
@@ -67,7 +70,7 @@ export function PlaceSourceBar({
         <AvatarView
           uri={sourceUser?.profilePhoto || attribution.userAvatar}
           name={name}
-          size={34}
+          size={30}
         />
         <View style={styles.sourceBarIcon}>
           <Repeat2 color={colors.onPrimary} size={12} />
@@ -86,7 +89,7 @@ export function PlaceSourceBar({
           {tr.cards.quotedFromPlaceCard}
         </Text>
       </View>
-      <ChevronRight color={colors.primary} size={16} />
+      <ChevronRight color={colors.quote} size={14} />
     </Pressable>
   );
 }
@@ -120,12 +123,12 @@ export function PlaceListBar({
         />
       ) : (
         <View style={styles.linkBarCoverFallback}>
-          <ListIcon color={colors.primary} size={18} />
+          <ListIcon color={colors.primary} size={16} />
         </View>
       )}
       <View style={styles.linkBarBody}>
         <View style={styles.linkBarTitleRow}>
-          <ListIcon color={colors.primary} size={14} />
+          <ListIcon color={colors.primary} size={12} />
           <ExpandableText
             text={emoji ? `${emoji} ${name}` : name}
             collapsedLines={1}
@@ -135,9 +138,9 @@ export function PlaceListBar({
         </View>
         <View style={styles.linkBarMetaRow}>
           {isPublic ? (
-            <Globe color={colors.secondary} size={13} />
+            <Globe color={colors.secondary} size={12} />
           ) : (
-            <Lock color={colors.danger} size={13} />
+            <Lock color={colors.visibilityPrivate} size={12} />
           )}
           <Text
             style={[
@@ -149,7 +152,7 @@ export function PlaceListBar({
           </Text>
         </View>
       </View>
-      <ChevronRight color={colors.primary} size={16} />
+      <ChevronRight color={colors.primary} size={14} />
     </Pressable>
   );
 }
@@ -224,34 +227,84 @@ export function PlaceCardTags({
   priceLabel?: string;
   specialFeatures: string[];
 }) {
+  const [showDetails, setShowDetails] = React.useState(false);
+  React.useEffect(() => {
+    setShowDetails(false);
+  }, [place.id]);
+  const summaryItems: ReactNode[] = [];
+
+  if (place.rating) {
+    summaryItems.push(
+      <View key="rating" style={[styles.badge, styles.ratingBadge]}>
+        <Star size={12} color={colors.rating} fill={colors.rating} />
+        <Text style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</Text>
+      </View>,
+    );
+  }
+  if (place.studentDiscount) {
+    summaryItems.push(
+      <View key="student" style={[styles.badge, styles.studentBadge]}>
+        <GraduationCap size={12} color={colors.primary} />
+        <Text style={[styles.badgeText, styles.studentBadgeText]}>
+          {tr.cards.studentDiscount}
+        </Text>
+      </View>,
+    );
+  }
+  if (priceLabel) {
+    summaryItems.push(
+      <View key="price" style={styles.badge}><Text style={styles.badgeText}>{priceLabel}</Text></View>,
+    );
+  }
+
+  const summaryCategory = summaryItems.length < 3 ? categories[0] : undefined;
+  if (summaryCategory) {
+    const meta = categoryMeta[summaryCategory] || categoryMeta.other;
+    summaryItems.push(
+      <View key={`category-${summaryCategory}`} style={styles.badge}>
+        <Text style={styles.badgeText}>
+          {meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
+        </Text>
+      </View>,
+    );
+  }
+
+  const detailCategories = summaryCategory ? categories.slice(1) : categories;
+  const detailCount =
+    detailCategories.length +
+    dietaryOptions.length +
+    bestTimes.length +
+    (place.atmosphere?.length || 0) +
+    specialFeatures.length;
+
   return (
     <View style={styles.tagSection}>
-      {place.rating || place.studentDiscount || priceLabel ? (
-        <BadgeRow>
-          {place.rating ? (
-            <View style={[styles.badge, styles.ratingBadge]}>
-              <Star size={12} color={colors.warning} fill={colors.warning} />
-              <Text style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</Text>
-            </View>
-          ) : null}
-          {place.studentDiscount ? (
-            <View style={[styles.badge, styles.studentBadge]}>
-              <GraduationCap size={12} color={colors.primary} />
-              <Text style={[styles.badgeText, styles.studentBadgeText]}>
-                {tr.cards.studentDiscount}
-              </Text>
-            </View>
-          ) : null}
-          {priceLabel ? (
-            <View style={styles.badge}><Text style={styles.badgeText}>{priceLabel}</Text></View>
-          ) : null}
-        </BadgeRow>
+      {summaryItems.length > 0 ? (
+        <BadgeRow>{summaryItems.slice(0, 3)}</BadgeRow>
       ) : null}
 
-      {categories.length > 0 ? (
+      {detailCount > 0 ? (
+        <InstantPressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showDetails }}
+          onPress={() => setShowDetails((current) => !current)}
+          style={styles.moreFeaturesButton}
+        >
+          <Text style={styles.moreFeaturesText}>
+            {showDetails ? tr.cards.fewerFeatures : tr.cards.moreFeatures(detailCount)}
+          </Text>
+          {showDetails ? (
+            <ChevronUp color={colors.primary} size={13} />
+          ) : (
+            <ChevronDown color={colors.primary} size={13} />
+          )}
+        </InstantPressable>
+      ) : null}
+
+      {showDetails && detailCategories.length > 0 ? (
         <BadgeRow>
           <View style={styles.inlineIcon}><Shapes size={12} color={colors.primary} /></View>
-          {categories.map((category) => {
+          {detailCategories.map((category) => {
             const meta = categoryMeta[category] || categoryMeta.other;
             return (
               <View key={category} style={styles.badge}>
@@ -264,7 +317,7 @@ export function PlaceCardTags({
         </BadgeRow>
       ) : null}
 
-      {dietaryOptions.length > 0 ? (
+      {showDetails && dietaryOptions.length > 0 ? (
         <BadgeRow>
           <View style={styles.inlineIcon}><Leaf size={12} color={colors.secondary} /></View>
           {dietaryOptions.map((item) => (
@@ -275,7 +328,7 @@ export function PlaceCardTags({
         </BadgeRow>
       ) : null}
 
-      {bestTimes.length > 0 ? (
+      {showDetails && bestTimes.length > 0 ? (
         <BadgeRow>
           <View style={styles.inlineIcon}><Clock size={12} color={colors.textSoft} /></View>
           {bestTimes.map((item) => (
@@ -284,7 +337,7 @@ export function PlaceCardTags({
         </BadgeRow>
       ) : null}
 
-      {place.atmosphere?.length ? (
+      {showDetails && place.atmosphere?.length ? (
         <BadgeRow>
           <View style={styles.inlineIcon}><Sparkles size={12} color={colors.purple} /></View>
           {place.atmosphere.map((item) => (
@@ -295,7 +348,7 @@ export function PlaceCardTags({
         </BadgeRow>
       ) : null}
 
-      {specialFeatures.length > 0 ? (
+      {showDetails && specialFeatures.length > 0 ? (
         <BadgeRow>
           <View style={styles.inlineIcon}><Star size={12} color={colors.secondary} /></View>
           {specialFeatures.map((item) => (

@@ -36,7 +36,9 @@ function createChildEnv() {
     env.PATH = `${platformToolsDir};${env.PATH ?? ''}`;
   }
 
-  env.CI = env.CI || '1';
+  // Expo disables file watching, reloads and Fast Refresh when CI is set.
+  // This helper is the interactive development server, so never inherit CI.
+  delete env.CI;
 
   return env;
 }

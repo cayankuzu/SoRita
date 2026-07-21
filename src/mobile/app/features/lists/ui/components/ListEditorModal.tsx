@@ -26,7 +26,7 @@ import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/Medi
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { t } from '@/mobile/app/shared/i18n';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -89,7 +89,7 @@ export function ListEditorModal({
     paddingTop,
     paddingBottom,
     maxHeightRatio: 0.86,
-    minHeight: 360,
+    minHeight: 310,
   });
   const footerPaddingBottom = Platform.OS === 'android' ? 20 : 18;
   const [name, setName] = useState('');
@@ -286,7 +286,7 @@ export function ListEditorModal({
                   {isPublic ? (
                     <Globe color={colors.secondary} size={12} />
                   ) : (
-                    <Lock color={colors.danger} size={12} />
+                    <Lock color={colors.visibilityPrivate} size={12} />
                   )}
                   <Text
                     style={[
@@ -305,7 +305,7 @@ export function ListEditorModal({
                 <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
               </Pressable>
               <Pressable disabled={loading} onPress={handleRequestClose} style={styles.closeButton} accessibilityLabel={t.common.close} accessibilityRole="button">
-                <X color={colors.textMuted} size={18} />
+                <X color={colors.textMuted} size={16} />
               </Pressable>
             </View>
           </View>
@@ -330,7 +330,7 @@ export function ListEditorModal({
                   <View style={styles.coverPickerHeader}>
                     <View style={styles.coverPickerHeaderCopy}>
                       <View style={styles.coverPickerIconWrap}>
-                        <ImagePlus color={colors.secondary} size={18} />
+                        <ImagePlus color={colors.secondary} size={16} />
                       </View>
                       <View style={styles.coverPickerBody}>
                         <Text style={styles.coverPickerText}>
@@ -376,7 +376,7 @@ export function ListEditorModal({
                     onPress={() => setCoverImage('')}
                     style={styles.coverClearButton}
                   >
-                    <X color={colors.onPrimary} size={16} />
+                    <X color={colors.onPrimary} size={14} />
                   </Pressable>
                 ) : null}
               </View>
@@ -420,7 +420,7 @@ export function ListEditorModal({
                   disabled={loading}
                   onPress={() => setIsPublic(true)}
                 >
-                  <Globe color={isPublic ? colors.secondary : colors.textMuted} size={16} />
+                  <Globe color={isPublic ? colors.secondary : colors.textMuted} size={14} />
                   <View style={styles.privacyButtonBody}>
                     <Text
                       style={[
@@ -446,7 +446,7 @@ export function ListEditorModal({
                   disabled={loading}
                   onPress={() => setIsPublic(false)}
                 >
-                  <Lock color={!isPublic ? colors.danger : colors.textMuted} size={16} />
+                  <Lock color={!isPublic ? colors.primary : colors.textMuted} size={14} />
                   <View style={styles.privacyButtonBody}>
                     <Text
                       style={[
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   },
   panel: {
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 648,
     alignSelf: 'center',
     maxHeight: '86%',
     borderTopLeftRadius: radius.xl,
@@ -534,45 +534,45 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   handle: {
-    width: 42,
+    width: 36,
     height: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
     alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 6,
+    marginTop: 8,
+    marginBottom: 4,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
   },
   headerText: {
     flex: 1,
   },
   headerMetaRow: {
-    marginTop: 10,
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textSoft,
   },
   closeButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
@@ -581,87 +581,87 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   cancelButton: {
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   cancelButtonText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.textMuted,
   },
   content: {
-    gap: 18,
-    paddingHorizontal: 18,
-    paddingBottom: 18,
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   },
   sectionCard: {
-    gap: 12,
+    gap: 10,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   sectionHint: {
     flexShrink: 1,
     textAlign: 'right',
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   visibilityChip: {
     minHeight: 28,
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     borderWidth: 1,
   },
   visibilityChipPublic: {
     backgroundColor: colors.successBg,
-    borderColor: 'rgba(16,185,129,0.18)',
+    borderColor: colors.successBorder,
   },
   visibilityChipPrivate: {
-    backgroundColor: colors.dangerBg,
-    borderColor: 'rgba(239,68,68,0.18)',
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.borderStrong,
   },
   visibilityChipText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
   },
   visibilityChipTextPublic: {
     color: colors.secondary,
   },
   visibilityChipTextPrivate: {
-    color: colors.danger,
+    color: colors.visibilityPrivate,
   },
   coverPickerRow: {
     width: '100%',
-    gap: 10,
+    gap: 8,
   },
   coverClearButton: {
     alignSelf: 'flex-end',
-    width: 30,
-    height: 30,
+    width: 26,
+    height: 26,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -674,8 +674,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.secondary,
     backgroundColor: colors.successBg,
-    gap: 14,
-    padding: 14,
+    gap: 10,
+    padding: 10,
   },
   coverPickerSelected: {
     backgroundColor: colors.surface,
@@ -684,17 +684,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
   },
   coverPickerHeaderCopy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flex: 1,
   },
   coverPickerIconWrap: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -706,12 +706,11 @@ const styles = StyleSheet.create({
   },
   coverPickerText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.secondary,
   },
   coverPickerHint: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   selectionBadge: {
@@ -719,76 +718,75 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   selectionBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.textMuted,
   },
   fieldCount: {
     marginTop: -4,
     alignSelf: 'flex-end',
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   privacyRow: {
-    gap: 10,
+    gap: 8,
   },
   privacyButton: {
-    minHeight: 74,
+    minHeight: 64,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
     backgroundColor: colors.surfaceMuted,
   },
   privacyButtonActive: {
-    backgroundColor: colors.successBg,
-    borderColor: 'rgba(16,185,129,0.22)',
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.infoBorder,
   },
   privateButtonActive: {
-    backgroundColor: colors.dangerBg,
-    borderColor: 'rgba(239,68,68,0.22)',
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.infoBorder,
   },
   privacyButtonBody: {
     flex: 1,
     gap: 4,
   },
   privacyText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   privacyTextActivePublic: {
-    color: colors.secondary,
+    color: colors.primary,
   },
   privacyTextActivePrivate: {
-    color: colors.danger,
+    color: colors.primary,
   },
   privacyCaption: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   privacyCaptionActivePublic: {
-    color: colors.secondary,
+    color: colors.primaryDark,
   },
   privacyCaptionActivePrivate: {
-    color: colors.danger,
+    color: colors.primaryDark,
   },
   footer: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
     backgroundColor: colors.surface,

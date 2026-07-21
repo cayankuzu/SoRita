@@ -111,17 +111,17 @@ export function StaticDiscoveryGrid<ItemT>({
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   emptyContent: {
-    minHeight: 260,
+    minHeight: 224,
   },
   grid: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
   },
   column: {
-    gap: 10,
+    gap: 8,
   },
   cell: {
     width: '100%',

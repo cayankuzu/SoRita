@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react-native";
 
 import { InstantPressable } from "@/mobile/app/shared/components/ui/InstantPressable";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors } from "@/mobile/app/shared/theme/tokens";
+import { colors, typography } from "@/mobile/app/shared/theme/tokens";
 
 export type ProfileTabOption = {
   key: string;
@@ -81,6 +81,7 @@ export function ProfileTabs({
                 accessibilityState={{ selected: active }}
                 key={tab.key}
                 onPress={() => onChange(tab.key)}
+                hapticFeedback="selection"
                 style={styles.button}
               >
                 {tab.renderIcon(active)}
@@ -139,7 +140,7 @@ export function ProfileTabs({
           >
             <SlidersHorizontal
               color={filterOpen ? colors.primary : colors.textMuted}
-              size={15}
+              size={13}
             />
             <Text
               style={[
@@ -150,9 +151,9 @@ export function ProfileTabs({
               {activeFilterLabel}
             </Text>
             {filterOpen ? (
-              <ChevronUp color={colors.primary} size={14} />
+              <ChevronUp color={colors.primary} size={12} />
             ) : (
-              <ChevronDown color={colors.textMuted} size={14} />
+              <ChevronDown color={colors.textMuted} size={12} />
             )}
           </InstantPressable>
         ) : null}
@@ -171,6 +172,7 @@ export function ProfileTabs({
                   accessibilityState={{ selected: active }}
                   key={option.key}
                   onPress={() => onFilterChange?.(option.key)}
+                  hapticFeedback="selection"
                   style={[
                     styles.filterChip,
                     active ? styles.filterChipActive : null,
@@ -212,8 +214,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
+    gap: 4,
+    paddingVertical: 10,
   },
   labelWrap: {
     flexDirection: "row",
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   text: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
   },
   textActive: {
@@ -229,48 +231,48 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   countBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 6,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 4,
   },
   countBadgeActive: {
     backgroundColor: colors.primaryBg,
   },
   countText: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: "700",
-    color: colors.textMuted,
+    color: colors.textDisabled,
   },
   countTextActive: {
     color: colors.primary,
   },
   filterWrap: {
-    paddingHorizontal: 12,
-    paddingBottom: 14,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
   },
   filterToggle: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 4,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: colors.cardBorder,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   activeIndicatorSlot: {
     position: "absolute",
     left: 0,
     bottom: -1,
     height: 2,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   activeIndicator: {
     flex: 1,
@@ -291,16 +293,16 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 6,
   },
   filterChip: {
     minHeight: 44,
-    borderRadius: 17,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   filterChipActive: {
     backgroundColor: colors.primaryBg,

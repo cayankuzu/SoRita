@@ -5,7 +5,7 @@ import {
   View,
 } from 'react-native';
 
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileStat = {
   label: string;
@@ -34,21 +34,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 12,
   },
   item: {
     flex: 1,
     alignItems: 'center',
   },
   value: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   label: {
     marginTop: 2,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
 });

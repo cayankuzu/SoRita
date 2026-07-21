@@ -1,7 +1,8 @@
 import React from 'react';
-import { Camera, List, MapPin, Search, Users } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Camera, List, MapPin, Search, Users, X } from 'lucide-react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -24,22 +25,22 @@ const tabs: Array<{
   {
     key: 'lists',
     label: tr.explore.tabs.lists,
-    renderIcon: (active) => <List color={active ? colors.onPrimary : colors.textMuted} size={15} />,
+    renderIcon: (active) => <List color={active ? colors.onPrimary : colors.textMuted} size={13} />,
   },
   {
     key: 'places',
     label: tr.explore.tabs.places,
-    renderIcon: (active) => <MapPin color={active ? colors.onPrimary : colors.textMuted} size={15} />,
+    renderIcon: (active) => <MapPin color={active ? colors.onPrimary : colors.textMuted} size={13} />,
   },
   {
     key: 'photos',
     label: tr.explore.tabs.photos,
-    renderIcon: (active) => <Camera color={active ? colors.onPrimary : colors.textMuted} size={15} />,
+    renderIcon: (active) => <Camera color={active ? colors.onPrimary : colors.textMuted} size={13} />,
   },
   {
     key: 'people',
     label: tr.explore.tabs.people,
-    renderIcon: (active) => <Users color={active ? colors.onPrimary : colors.textMuted} size={15} />,
+    renderIcon: (active) => <Users color={active ? colors.onPrimary : colors.textMuted} size={13} />,
   },
 ];
 
@@ -68,7 +69,7 @@ export function ExploreHeaderControls({
 
       <View style={styles.filtersSection}>
         <View style={styles.searchWrap}>
-          <Search color={colors.textMuted} size={16} />
+          <Search color={colors.textMuted} size={14} />
           <TextInput
             value={searchQuery}
             onChangeText={onSearchQueryChange}
@@ -78,7 +79,19 @@ export function ExploreHeaderControls({
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel={placeholder}
+            returnKeyType="search"
           />
+          {searchQuery ? (
+            <InstantPressable
+              accessibilityLabel={tr.common.clear}
+              accessibilityRole="button"
+              hapticFeedback="selection"
+              onPress={() => onSearchQueryChange('')}
+              style={styles.searchClearButton}
+            >
+              <X color={colors.textMuted} size={14} />
+            </InstantPressable>
+          ) : null}
         </View>
 
         <View style={styles.tabRail}>
@@ -91,18 +104,19 @@ export function ExploreHeaderControls({
               const active = activeTab === tab.key;
 
               return (
-                <Pressable
+                <InstantPressable
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   key={tab.key}
                   onPress={() => onTabChange(tab.key)}
+                  hapticFeedback="selection"
                   style={[styles.tabButton, active ? styles.tabButtonActive : null]}
                 >
                   {tab.renderIcon(active)}
                   <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>
                     {tab.label}
                   </Text>
-                </Pressable>
+                </InstantPressable>
               );
             })}
           </ScrollView>

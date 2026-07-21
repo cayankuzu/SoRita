@@ -42,11 +42,11 @@ export function PlaceEditorModalHeader({
           </Pressable>
           {onMinimize ? (
             <Pressable disabled={isLocked} onPress={onMinimize} style={styles.closeButton}>
-              <Minus color={colors.textMuted} size={20} />
+              <Minus color={colors.textMuted} size={18} />
             </Pressable>
           ) : null}
           <Pressable disabled={isLocked} onPress={onClose} style={styles.closeButton}>
-            <X color={colors.textMuted} size={20} />
+            <X color={colors.textMuted} size={18} />
           </Pressable>
         </View>
       </View>

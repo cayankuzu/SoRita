@@ -45,7 +45,7 @@ export function ActionMenuSheet({
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>{title}</Text>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={16} />
+          <X color={colors.textMuted} size={14} />
         </IconButton>
       </View>
 
@@ -84,44 +84,44 @@ export function ActionMenuSheet({
 
 const styles = StyleSheet.create({
   sheet: {
-    maxWidth: 520,
+    maxWidth: 468,
   },
   sheetContent: {
-    gap: 14,
+    gap: 10,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   title: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   actions: {
-    gap: 10,
+    gap: 8,
   },
   action: {
-    minHeight: 52,
+    minHeight: 44,
     borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   actionIcon: {
-    width: 18,
+    width: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },

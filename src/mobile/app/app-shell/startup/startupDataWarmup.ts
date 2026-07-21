@@ -19,8 +19,10 @@ const IDLE_WARMUP_DELAY_MS = 1_200;
 const MIN_TRANSITIONS_FOR_PREDICTION = 2;
 const MIN_PREDICTION_CONFIDENCE = 0.6;
 const inFlightWarmups = new Map<string, Promise<void>>();
+const warmupControllers = new Map<string, AbortController>();
 const transitionCounts = new Map<StartupWarmupStage, Map<StartupWarmupStage, number>>();
 let activeContext: { queryClient: QueryClient; userId: string } | null = null;
+let activeWarmupStage: StartupWarmupStage | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let idleTask: ReturnType<typeof scheduleDeferredTask> | null = null;
 
@@ -68,20 +70,49 @@ export function warmScreenData({ queryClient, stage, userId }: WarmScreenDataPar
     return existingWarmup;
   }
 
-  const warmup = warmStageData(queryClient, userId, stage)
+  const controller = new AbortController();
+  warmupControllers.set(warmupKey, controller);
+  const warmup = warmStageData(queryClient, userId, stage, controller.signal)
     .catch((error) => {
       logger.debug('startup-warmup', `${stage} warmup failed`, error);
     })
     .finally(() => {
       inFlightWarmups.delete(warmupKey);
+      warmupControllers.delete(warmupKey);
     });
 
   inFlightWarmups.set(warmupKey, warmup);
   return warmup;
 }
 
+function cancelWarmupStage(stage: StartupWarmupStage) {
+  if (!activeContext) {
+    return;
+  }
+
+  const warmupKey = getWarmupKey(activeContext.userId, stage);
+  warmupControllers.get(warmupKey)?.abort();
+  const queryRoot: Record<StartupWarmupStage, string> = {
+    explore: 'explore',
+    home: 'feed',
+    map: 'map',
+    notifications: 'notifications',
+    profile: 'profile',
+  };
+  void activeContext.queryClient.cancelQueries({
+    exact: false,
+    queryKey: [queryRoot[stage]],
+  });
+}
+
 export function prioritizeStartupWarmupStage(stage: StartupWarmupStage) {
   cancelIdleWarmup();
+
+  if (activeWarmupStage && activeWarmupStage !== stage) {
+    cancelWarmupStage(activeWarmupStage);
+  }
+
+  activeWarmupStage = stage;
 
   if (activeContext && canRunBackgroundWarmup()) {
     void warmScreenData({ ...activeContext, stage });
@@ -149,7 +180,13 @@ export function stopStartupDataWarmup(userId?: string) {
   }
 
   cancelIdleWarmup();
+  warmupControllers.forEach((controller, key) => {
+    if (!userId || key.startsWith(`${userId}:`)) {
+      controller.abort();
+    }
+  });
   activeContext = null;
+  activeWarmupStage = null;
 }
 
 function warmIntent(key: string, task: () => Promise<void>) {
@@ -200,6 +237,7 @@ export async function startStartupDataWarmup({
 }: StartStartupDataWarmupParams) {
   activeContext = { queryClient, userId };
   const stage = initialStage ?? 'home';
+  activeWarmupStage = stage;
 
   if (isCancelled()) {
     return;
@@ -220,5 +258,6 @@ export const startupDataWarmupInternals = {
   getPredictedStage,
   getWarmupKey,
   inFlightWarmups,
+  warmupControllers,
   transitionCounts,
 };

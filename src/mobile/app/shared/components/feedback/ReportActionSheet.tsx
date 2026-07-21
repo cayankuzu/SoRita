@@ -67,7 +67,7 @@ export function ReportActionSheet({
       <View style={styles.header}>
         <View style={styles.titleWrap}>
           <View style={styles.iconWrap}>
-            <Flag color={colors.warning} size={16} />
+            <Flag color={colors.warning} size={14} />
           </View>
           <View style={styles.headerTextWrap}>
             <Text accessibilityRole="header" style={styles.title}>{title}</Text>
@@ -75,7 +75,7 @@ export function ReportActionSheet({
           </View>
         </View>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={16} />
+          <X color={colors.textMuted} size={14} />
         </IconButton>
       </View>
 
@@ -126,12 +126,12 @@ export function ReportActionSheet({
 
 const styles = StyleSheet.create({
   sheetContent: {
-    paddingTop: 10,
+    paddingTop: 8,
   },
   handle: {
     alignSelf: 'center',
-    width: 52,
-    height: 5,
+    width: 44,
+    height: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
   },
@@ -139,17 +139,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   titleWrap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -160,67 +160,67 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
   },
   description: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   options: {
-    gap: 10,
-  },
-  detailsWrap: {
     gap: 8,
   },
+  detailsWrap: {
+    gap: 6,
+  },
   detailsLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   detailsInput: {
-    minHeight: 108,
+    minHeight: 92,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    lineHeight: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.text,
   },
   option: {
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   optionActive: {
     borderColor: colors.warning,
     backgroundColor: colors.warningBg,
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
   },
   optionTextActive: {
     color: colors.warningText,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   actionButton: {
     flex: 1,
-    minWidth: 140,
+    minWidth: 120,
   },
 });

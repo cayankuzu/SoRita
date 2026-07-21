@@ -24,6 +24,7 @@ import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 
 type PlaceCardProps = {
   place: Place;
+  context?: 'default' | 'list-detail';
   owner?: User | null;
   ownerId?: string | null;
   listId?: string;
@@ -139,14 +140,14 @@ function buildPlaceActionItems(params: {
     {
       key: 'share',
       label: tr.cards.share,
-      renderIcon: (color) => <Share2 color={color} size={16} />,
+      renderIcon: (color) => <Share2 color={color} size={14} />,
       onPress: params.onSharePress,
     },
     params.onEdit || params.canManageOwnedPlace
       ? {
           key: 'edit',
           label: tr.common.edit,
-          renderIcon: (color) => <Pencil color={color} size={16} />,
+          renderIcon: (color) => <Pencil color={color} size={14} />,
           onPress: params.onEditPress,
         }
       : null,
@@ -154,7 +155,7 @@ function buildPlaceActionItems(params: {
       ? {
           key: 'delete',
           label: tr.common.delete,
-          renderIcon: (color) => <Trash2 color={color} size={16} />,
+          renderIcon: (color) => <Trash2 color={color} size={14} />,
           tone: 'danger',
           onPress: params.onDeletePress,
         }
@@ -163,7 +164,7 @@ function buildPlaceActionItems(params: {
       ? {
           key: 'report',
           label: tr.profile.actions.report,
-          renderIcon: (color) => <Flag color={color} size={16} />,
+          renderIcon: (color) => <Flag color={color} size={14} />,
           tone: 'danger',
           onPress: params.onReportPress,
         }
@@ -205,6 +206,7 @@ function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {
 
 function PlaceCardComponent({
   place,
+  context,
   owner,
   ownerId,
   listId,
@@ -566,7 +568,7 @@ function PlaceCardComponent({
     {
       key: 'copy-address',
       label: tr.cards.copyLink,
-      renderIcon: (color: string) => <Copy color={color} size={16} />,
+      renderIcon: (color: string) => <Copy color={color} size={14} />,
       onPress: () => {
         void handleCopyAddressPress();
       },
@@ -574,7 +576,7 @@ function PlaceCardComponent({
     {
       key: 'share-more',
       label: tr.cards.shareMore,
-      renderIcon: (color: string) => <Share2 color={color} size={16} />,
+      renderIcon: (color: string) => <Share2 color={color} size={14} />,
       onPress: () => {
         void handleShareLinkPress();
       },
@@ -586,6 +588,7 @@ function PlaceCardComponent({
     canReportPlace,
     categories,
     comments,
+    context,
     currentUserName: user?.name,
     currentUserPhoto: user?.profilePhoto,
     dietaryOptions,

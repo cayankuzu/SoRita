@@ -29,6 +29,7 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     isFetchingNextPage: false,
     listMarkerLists: [],
     listRef,
+    onClearSearch: vi.fn(),
     onContentReady: vi.fn(),
     onEndReached: vi.fn(),
     onFollowUser: vi.fn(),

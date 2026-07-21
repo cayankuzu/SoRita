@@ -186,7 +186,7 @@ export function ExploreScreen() {
             onTabChange={handleTabChange}
           />
           <SkeletonGroup style={loadMoreStyles.skeletonGrid}>
-            <View style={{ paddingHorizontal: screenPadding, gap: 14 }}>
+            <View style={{ paddingHorizontal: screenPadding, gap: 10 }}>
               <ListGridTileSkeleton />
               <ListGridTileSkeleton />
               <ListGridTileSkeleton />
@@ -266,6 +266,7 @@ export function ExploreScreen() {
                 listMarkerLists={listMarkerLists}
                 listRef={getTabScrollRefCallback(tab)}
                 onContentReady={() => notifyTabContentReady(tab)}
+                onClearSearch={() => setSearchQuery('')}
                 onEndReached={() => handleEndReached(tab)}
                 onFollowUser={(targetUserId) => {
                   void handleFollowUser(targetUserId);
@@ -301,12 +302,12 @@ const loadMoreStyles = StyleSheet.create({
     flex: 1,
   },
   noticeWrap: {
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   content: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   skeletonGrid: {
-    gap: 14,
+    gap: 10,
   },
 });

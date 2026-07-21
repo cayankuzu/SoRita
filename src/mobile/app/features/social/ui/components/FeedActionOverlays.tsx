@@ -6,28 +6,30 @@ import {
   CommentPanel,
   LikersPanel,
 } from '@/mobile/app/features/social/ui/components/FeedActionPanels';
-import type { FeedActionBarProps } from '@/mobile/app/features/social/ui/components/FeedActionBar';
+import type {
+  FeedActionComment,
+  FeedActionLiker,
+  FeedActionLocation,
+} from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type FeedActionState = ReturnType<typeof useFeedActionBarState>;
 
-type FeedActionOverlaysProps = Pick<
-  FeedActionBarProps,
-  | 'comments'
-  | 'currentUserName'
-  | 'currentUserPhoto'
-  | 'hasNextCommentsPage'
-  | 'isFetchingNextCommentsPage'
-  | 'likeCount'
-  | 'likers'
-  | 'location'
-  | 'onAddressCopied'
-  | 'onCommentsLoadMore'
-  | 'reportDescription'
-  | 'reportTitle'
-> & {
+type FeedActionOverlaysProps = {
+  comments?: FeedActionComment[];
+  currentUserName?: string;
+  currentUserPhoto?: string;
+  hasNextCommentsPage?: boolean;
+  isFetchingNextCommentsPage?: boolean;
+  likeCount?: number;
+  likers?: FeedActionLiker[];
+  location?: FeedActionLocation;
+  onAddressCopied?: () => void;
+  onCommentsLoadMore?: () => Promise<void> | void;
+  reportDescription?: string;
+  reportTitle?: string;
   state: FeedActionState;
 };
 

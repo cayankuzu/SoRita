@@ -64,7 +64,7 @@ export function AuthImagePicker({
           {hasSelection ? (
             <View style={styles.headerActions}>
               <View style={styles.selectionBadge}>
-                <Check color={colors.secondary} size={14} />
+                <Check color={colors.secondary} size={12} />
                 <Text style={styles.selectionBadgeText}>{tr.common.ready}</Text>
               </View>
 
@@ -78,7 +78,7 @@ export function AuthImagePicker({
                 }}
                 style={styles.clearButton}
               >
-                <X color={colors.onPrimary} size={14} />
+                <X color={colors.onPrimary} size={12} />
               </InstantPressable>
             </View>
           ) : null}
@@ -99,15 +99,15 @@ export function AuthImagePicker({
 const styles = StyleSheet.create({
   block: {
     width: '100%',
-    gap: 10,
+    gap: 8,
   },
   picker: {
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
-    padding: 16,
-    gap: 16,
+    padding: 12,
+    gap: 12,
     position: 'relative',
   },
   pickerSelected: {
@@ -119,18 +119,18 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   copy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
@@ -143,37 +143,37 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   selectionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   selectionBadgeText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.secondary,
   },
   clearButton: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
 });

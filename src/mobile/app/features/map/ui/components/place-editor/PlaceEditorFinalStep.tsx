@@ -24,7 +24,7 @@ import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/co
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   formatPlaceMediaDuration,
   getPlaceMediaCounts,
@@ -257,7 +257,7 @@ export function PlaceEditorFinalStep({
             disabled={isAddingMedia}
           >
             <View style={styles.mediaEmptyIconWrap}>
-              <Camera color={colors.primary} size={20} />
+              <Camera color={colors.primary} size={18} />
             </View>
             <View style={styles.mediaEmptyCopy}>
               <Text style={styles.mediaEmptyTitle}>{tr.placeEditor.mediaEmptyTitle}</Text>
@@ -266,7 +266,7 @@ export function PlaceEditorFinalStep({
               </Text>
             </View>
             <View style={styles.mediaEmptyAction}>
-              <ImagePlus color={colors.primary} size={18} />
+              <ImagePlus color={colors.primary} size={16} />
               <Text style={styles.mediaEmptyActionText}>
                 {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.mediaAddAction}
               </Text>
@@ -306,7 +306,7 @@ export function PlaceEditorFinalStep({
                   disabled={isAddingMedia}
                 >
                   <View style={styles.mediaAddIconWrap}>
-                    <ImagePlus color={colors.primary} size={18} />
+                    <ImagePlus color={colors.primary} size={16} />
                   </View>
                   <Text style={styles.addMediaText}>
                     {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.add}
@@ -348,32 +348,31 @@ export function PlaceEditorFinalStep({
 
 const styles = StyleSheet.create({
   stepContent: {
-    gap: 16,
+    gap: 12,
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   sectionHelper: {
     marginTop: -2,
-    fontSize: 11,
-    lineHeight: 17,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   sectionHelperActive: {
     color: colors.primary,
   },
   selectionMeta: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.primary,
   },
   mediaSectionHeader: {
-    gap: 10,
+    gap: 8,
   },
   mediaSectionHeaderCopy: {
     gap: 2,
@@ -381,28 +380,28 @@ const styles = StyleSheet.create({
   counterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   counterBadge: {
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   counterBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.primary,
   },
   counterBadgeStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   counterBadgeStrongText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.text,
   },
   mediaEmptyCard: {
@@ -410,8 +409,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    padding: 16,
-    gap: 12,
+    padding: 12,
+    gap: 10,
   },
   mediaBusy: {
     opacity: 0.65,
@@ -419,48 +418,48 @@ const styles = StyleSheet.create({
   mediaEmptyIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
   },
   mediaEmptyCopy: {
-    gap: 6,
+    gap: 4,
   },
   mediaEmptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   mediaEmptyText: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
   mediaEmptyAction: {
     alignSelf: 'flex-start',
     minHeight: 40,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     backgroundColor: colors.primaryBg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   mediaEmptyActionText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.primary,
   },
   mediaRail: {
     width: '100%',
   },
   mediaStrip: {
-    gap: 10,
+    gap: 8,
   },
   mediaThumbShell: {
-    width: 94,
-    height: 94,
+    width: 80,
+    height: 80,
     borderRadius: radius.md + 2,
     padding: 2.5,
     backgroundColor: 'transparent',
@@ -480,24 +479,24 @@ const styles = StyleSheet.create({
   },
   mediaOrderBadge: {
     position: 'absolute',
-    left: 6,
-    top: 6,
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
+    left: 4,
+    top: 4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   },
   mediaOrderBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   mediaAddTile: {
-    width: 94,
-    height: 94,
+    width: 80,
+    height: 80,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
@@ -508,20 +507,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mediaAddIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
   addMediaText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.primary,
   },
   addMediaSubtext: {
-    fontSize: 10,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.textSoft,
     textAlign: 'center',

@@ -7,6 +7,7 @@ import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
@@ -18,6 +19,7 @@ export type UserGridTileProps = {
   isPending?: boolean;
   onPress: () => void;
   onFollowPress: () => void;
+  searchQuery?: string;
 };
 
 function UserGridTileComponent({
@@ -27,6 +29,7 @@ function UserGridTileComponent({
   isPending = false,
   onPress,
   onFollowPress,
+  searchQuery,
 }: UserGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
   const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
@@ -36,6 +39,7 @@ function UserGridTileComponent({
       onPress={onPress}
       style={[
         styles.tile,
+        styles.userTile,
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
@@ -51,7 +55,7 @@ function UserGridTileComponent({
 
       <View style={styles.userAvatarWrap}>
         <View style={styles.userAvatarFrame}>
-          <AvatarView uri={user.profilePhoto} name={user.name} size={60} />
+          <AvatarView uri={user.profilePhoto} name={user.name} size={38} />
         </View>
       </View>
 
@@ -61,21 +65,26 @@ function UserGridTileComponent({
           collapsedLines={1}
           textStyle={styles.tileTitle}
           showIndicator={false}
+          renderContent={() => <HighlightedText query={searchQuery} text={user.name} />}
         />
         <ExpandableText
           text={`@${user.username}`}
           collapsedLines={1}
           textStyle={styles.ownerUsername}
           showIndicator={false}
+          renderContent={() => <HighlightedText query={searchQuery} text={`@${user.username}`} />}
         />
         {user.bio ? (
           <ExpandableText
             text={user.bio}
             collapsedLines={1}
             textStyle={styles.tileDescription}
+            renderContent={() => <HighlightedText query={searchQuery} text={user.bio || ''} />}
           />
         ) : null}
         <InstantPressable
+          hapticFeedback="light"
+          hitSlop={5}
           onPress={(event) => {
             event.stopPropagation();
             onFollowPress();
@@ -113,6 +122,7 @@ function areUserGridTilePropsEqual(
     previous.fillWidth === next.fillWidth &&
     previous.isFollowing === next.isFollowing &&
     previous.isPending === next.isPending
+    && previous.searchQuery === next.searchQuery
   );
 }
 

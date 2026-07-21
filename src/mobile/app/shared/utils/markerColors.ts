@@ -62,14 +62,14 @@ export function getMarkerVisibilityForPublicFlags(
 
 export function getMarkerColorByVisibility(visibility: MarkerVisibilityState) {
   if (visibility === 'private') {
-    return colors.danger;
+    return colors.visibilityPrivate;
   }
 
   if (visibility === 'mixed') {
-    return colors.primary;
+    return colors.visibilityMixed;
   }
 
-  return colors.secondary;
+  return colors.visibilityPublic;
 }
 
 export function getListMarkerColor(isPublic?: boolean) {

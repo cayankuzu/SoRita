@@ -125,6 +125,9 @@ jobs:
       - name: Startup and perceived-performance budgets
         run: npm run performance:test
 
+      - name: Android JavaScript bundle-size budget
+        run: npm run bundle:android:check
+
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -191,6 +194,35 @@ jobs:
 
       - name: Build Android preview
         run: eas build --platform android --profile preview --non-interactive
+
+  android-device-performance:
+    name: Low-end Android Performance & Baseline Profile
+    runs-on: [self-hosted, android-low-end]
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_ANDROID_DEVICE_BENCHMARKS == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Baseline and Startup Profiles from critical journeys
+        run: npm run android:profile:generate
+
+      - name: Measure cold start, navigation, scrolling and frame timing
+        run: npm run android:performance:test
+
+      - name: Upload benchmark reports and generated profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-device-performance
+          path: |
+            android/app/src/release/generated/baselineProfiles
+            android/baselineprofile/build/outputs
 
   build-ios:
     name: EAS Build (iOS Preview)

@@ -1,6 +1,9 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { getCurrentConnectionStatus } from '@/mobile/app/platform/network/connectivityStatus';
+import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 
 const QUERY_GC_TIME_MS = 1000 * 60 * 60 * 2;
 const QUERY_STALE_TIME_MS = 1000 * 60 * 5;
@@ -105,6 +108,60 @@ export const queryClientInternals = {
   shouldRetryQuery,
 };
 
+const queryStartedAt = new Map<string, number>();
+const queryCache = new QueryCache({
+  onError: (error, query) => {
+    if (query.state.data !== undefined) {
+      return;
+    }
+
+    logger.warn('query-client', `Query failed for ${query.queryHash}`, error);
+  },
+});
+
+function getQueryOperation(queryKey: readonly unknown[]) {
+  return queryKey
+    .slice(0, 2)
+    .filter((part): part is string | number => ['number', 'string'].includes(typeof part))
+    .join('.') || 'unknown';
+}
+
+queryCache.subscribe((event) => {
+  if (event.type !== 'updated') {
+    return;
+  }
+
+  const actionType = event.action.type;
+
+  if (actionType === 'fetch') {
+    queryStartedAt.set(event.query.queryHash, Date.now());
+    return;
+  }
+
+  if (actionType !== 'success' && actionType !== 'error') {
+    return;
+  }
+
+  const startedAt = queryStartedAt.get(event.query.queryHash);
+
+  if (startedAt == null) {
+    return;
+  }
+
+  queryStartedAt.delete(event.query.queryHash);
+  trackEvent({
+    name: 'query_complete',
+    params: {
+      ...getPerformanceContext(),
+      cacheHit: false,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      networkClass: getCurrentConnectionStatus(),
+      operation: getQueryOperation(event.query.queryKey),
+      status: actionType,
+    },
+  });
+});
+
 export const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
@@ -135,13 +192,5 @@ export const queryClient = new QueryClient({
       staleTime: QUERY_STALE_TIME_MS,
     },
   },
-  queryCache: new QueryCache({
-    onError: (error, query) => {
-      if (query.state.data !== undefined) {
-        return;
-      }
-
-      logger.warn('query-client', `Query failed for ${query.queryHash}`, error);
-    },
-  }),
+  queryCache,
 });

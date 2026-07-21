@@ -15,7 +15,7 @@ import {
 
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 import { openMapLocationInApp } from '@/mobile/app/shared/utils/mapLinks';
 
 type AddressPanelProps = {
@@ -74,7 +74,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
             isAddressExpanded ? styles.addressToggleButtonExpanded : null,
           ]}
         >
-          <ChevronRight color={colors.primary} size={16} />
+          <ChevronRight color={colors.primary} size={14} />
         </Pressable>
       </View>
       <View style={styles.panelActions}>
@@ -83,11 +83,11 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           style={styles.secondaryPanelButton}
           onPress={() => void copyAddress()}
         >
-          <Copy color={colors.textMuted} size={14} />
+          <Copy color={colors.textMuted} size={12} />
           <Text style={styles.secondaryPanelText}>{tr.cards.copy}</Text>
         </Pressable>
         <Pressable accessibilityRole="link" style={styles.primaryPanelButton} onPress={openInMaps}>
-          <ExternalLink color={colors.primary} size={14} />
+          <ExternalLink color={colors.primary} size={12} />
           <Text style={styles.primaryPanelText}>{tr.cards.openInMaps}</Text>
         </Pressable>
       </View>
@@ -98,25 +98,25 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
 const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 8,
   },
   panelTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   addressCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   addressLinkButton: {
     flex: 1,
@@ -125,14 +125,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addressLabel: {
-    fontSize: 10,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.textSoft,
-    textTransform: 'uppercase',
   },
   addressLinkText: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.primary,
     textDecorationLine: 'underline',
     textDecorationColor: colors.primary,
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
   addressToggleButton: {
     width: Platform.OS === 'ios' ? touch.ios : touch.android,
     height: Platform.OS === 'ios' ? touch.ios : touch.android,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -153,14 +152,14 @@ const styles = StyleSheet.create({
   },
   panelActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   secondaryPanelButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
@@ -173,9 +172,9 @@ const styles = StyleSheet.create({
   primaryPanelButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,

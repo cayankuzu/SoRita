@@ -273,7 +273,7 @@ export function VideoCameraCaptureHost() {
         ) : (
           <View style={styles.permissionState}>
             <View style={styles.permissionIconWrap}>
-              <Camera color={colors.primary} size={24} />
+              <Camera color={colors.primary} size={20} />
             </View>
             <Text style={styles.permissionTitle}>{tr.mediaPicker.videoRecorderPermissionTitle}</Text>
             <Text style={styles.permissionDescription}>
@@ -295,7 +295,7 @@ export function VideoCameraCaptureHost() {
 
         <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 18) }]}>
           <InstantPressable onPress={handleClose} style={styles.topIconButton}>
-            <X color={colors.onPrimary} size={18} />
+            <X color={colors.onPrimary} size={16} />
           </InstantPressable>
 
           <View style={styles.timerStack}>
@@ -316,7 +316,7 @@ export function VideoCameraCaptureHost() {
             disabled={isRecording}
             style={styles.topIconButton}
           >
-            <RefreshCcw color={colors.onPrimary} size={18} />
+            <RefreshCcw color={colors.onPrimary} size={16} />
           </InstantPressable>
         </View>
 
@@ -351,9 +351,9 @@ export function VideoCameraCaptureHost() {
           >
             <View style={[styles.recordButtonInner, isRecording ? styles.recordButtonInnerActive : null]}>
               {isRecording ? (
-                <Square color={colors.onPrimary} fill={colors.onPrimary} size={18} />
+                <Square color={colors.onPrimary} fill={colors.onPrimary} size={16} />
               ) : (
-                <Video color={colors.onPrimary} size={22} />
+                <Video color={colors.onPrimary} size={20} />
               )}
             </View>
           </Pressable>
@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 18,
+    gap: 10,
+    paddingHorizontal: 14,
   },
   topIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
@@ -391,26 +391,26 @@ const styles = StyleSheet.create({
   timerStack: {
     flex: 1,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   timerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   liveDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.danger,
   },
   timerText: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   timerHelper: {
@@ -424,10 +424,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.onPrimary,
   },
@@ -435,27 +435,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
-    paddingHorizontal: 28,
+    gap: 10,
+    paddingHorizontal: 22,
     backgroundColor: colors.background,
   },
   permissionIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
   },
   permissionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   permissionDescription: {
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
     textAlign: 'center',
   },
@@ -466,19 +466,19 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 2,
     alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 18,
+    gap: 12,
+    paddingHorizontal: 14,
   },
   bottomHint: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.onPrimary,
     textAlign: 'center',
   },
   recordButtonOuter: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
@@ -490,9 +490,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   recordButtonInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 50,
+    height: 50,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.danger,

@@ -47,7 +47,7 @@ export function PlaceEditorListCards({
       {listSelectionNotice ? (
         <View style={styles.listSelectionNotice}>
           <View style={styles.listSelectionNoticeIconWrap}>
-            <Info color={colors.warningText} size={14} />
+            <Info color={colors.warningText} size={12} />
           </View>
           <View style={styles.listSelectionNoticeBody}>
             <Text style={styles.listSelectionNoticeTitle}>{tr.placeEditor.listHintTitle}</Text>
@@ -118,7 +118,7 @@ export function PlaceEditorListCards({
                     {list.isPublic ? (
                       <Globe color={colors.primary} size={12} />
                     ) : (
-                      <Lock color={colors.danger} size={12} />
+                      <Lock color={colors.visibilityPrivate} size={12} />
                     )}
                     <Text style={styles.listPrivacyText}>
                       {list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList}

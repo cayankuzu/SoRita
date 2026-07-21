@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PROFILE_INTEREST_META } from '@/mobile/app/catalog/profileInterests';
 import { t } from '@/mobile/app/shared/i18n';
@@ -31,51 +26,61 @@ export function ProfileInterestChips({
     return null;
   }
 
+  const visibleLabels = labels.slice(0, 5);
+  const remainingCount = Math.max(0, labels.length - visibleLabels.length);
+
   return (
     <View style={styles.section}>
       {title ? <Text style={styles.title}>{title}</Text> : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-        directionalLockEnabled
-      >
-        {labels.map((label) => (
+      <View style={styles.row}>
+        {visibleLabels.map((label) => (
           <View key={label} style={styles.chip}>
             <Text style={styles.chipText}>{label}</Text>
           </View>
         ))}
-      </ScrollView>
+        {remainingCount > 0 ? (
+          <View style={[styles.chip, styles.moreChip]}>
+            <Text style={[styles.chipText, styles.moreChipText]}>+{remainingCount}</Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   section: {
-    gap: 8,
+    gap: 6,
   },
   title: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSoft,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
   },
   row: {
+    maxHeight: 62,
+    overflow: 'hidden',
     flexDirection: 'row',
-    gap: 8,
-    paddingRight: 12,
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingRight: 10,
   },
   chip: {
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   chipText: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.primaryDark,
+  },
+  moreChip: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  moreChipText: {
+    color: colors.textMuted,
   },
 });

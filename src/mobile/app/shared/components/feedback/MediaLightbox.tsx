@@ -24,7 +24,7 @@ import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/A
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -87,7 +87,7 @@ function MediaLightboxPage({
             priority={isActive ? 'high' : 'normal'}
             fallback={
               <View style={styles.videoPosterFallback}>
-                <Play color={colors.onPrimary} fill={colors.onPrimary} size={24} />
+                <Play color={colors.onPrimary} fill={colors.onPrimary} size={20} />
               </View>
             }
           />
@@ -194,7 +194,7 @@ export function MediaLightbox({
       nextItems.push({
         key: 'download-media',
         label: tr.common.download,
-        renderIcon: (color) => <Download color={color} size={16} />,
+        renderIcon: (color) => <Download color={color} size={14} />,
         onPress: () => {
           setMenuVisible(false);
           void handleDownloadCurrent();
@@ -207,7 +207,7 @@ export function MediaLightbox({
         key: 'delete-media',
         label: tr.common.delete,
         tone: 'danger',
-        renderIcon: (color) => <Trash2 color={color} size={16} />,
+        renderIcon: (color) => <Trash2 color={color} size={14} />,
         onPress: () => {
           triggerHaptic('medium');
           setMenuVisible(false);
@@ -264,7 +264,7 @@ export function MediaLightbox({
             onPress={handleClose}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={20} />
+            <X color={colors.onPrimary} size={18} />
           </IconButton>
 
           <View style={styles.topBarCopy}>
@@ -284,7 +284,7 @@ export function MediaLightbox({
               }}
               variant="inverse"
             >
-              <MoreHorizontal color={colors.onPrimary} size={20} />
+              <MoreHorizontal color={colors.onPrimary} size={18} />
             </IconButton>
           ) : (
             <View style={styles.topActionSpacer} />
@@ -386,18 +386,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 10,
   },
   topActionButton: {
     width: 44,
     height: 44,
-    borderRadius: 21,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(5,10,19,0.78)',
+    backgroundColor: colors.lightboxChrome,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: colors.controlsBorder,
   },
   topActionSpacer: {
     width: 44,
@@ -406,23 +406,23 @@ const styles = StyleSheet.create({
   topBarCopy: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(5,10,19,0.78)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.lightboxChrome,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: colors.controlsBorder,
   },
   topBarTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   topBarSubtitle: {
     marginTop: 3,
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
-    color: 'rgba(233,240,255,0.72)',
+    color: colors.onDarkFaint,
   },
   carouselViewport: {
     alignSelf: 'center',
@@ -434,31 +434,31 @@ const styles = StyleSheet.create({
   mediaPage: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   mediaFrame: {
     flex: 1,
     width: '100%',
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#040811',
+    backgroundColor: colors.lightboxDeep,
     borderWidth: 1,
     borderColor: colors.deepBorder,
   },
   image: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#040811',
+    backgroundColor: colors.lightboxDeep,
   },
   video: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#040811',
+    backgroundColor: colors.lightboxDeep,
   },
   videoPosterFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#040811',
+    backgroundColor: colors.lightboxDeep,
   },
 });

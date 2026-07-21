@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const authScreenStyles = StyleSheet.create({
   landingScreen: {
@@ -9,25 +9,25 @@ export const authScreenStyles = StyleSheet.create({
   },
   landingContent: {
     width: '100%',
-    gap: 14,
+    gap: 10,
   },
   logoWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   landingSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 22,
+    marginBottom: 18,
   },
   authScreen: {
     flexGrow: 1,
-    paddingTop: 8,
+    paddingTop: 6,
   },
   authBrandRow: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backButton: {
     width: 44,
@@ -37,17 +37,17 @@ export const authScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerBlock: {
-    marginTop: 6,
-    marginBottom: 18,
+    marginTop: 4,
+    marginBottom: 14,
   },
   previewBackRow: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   stepCounter: {
     fontSize: 12,
@@ -55,51 +55,51 @@ export const authScreenStyles = StyleSheet.create({
     color: colors.textMuted,
   },
   stepCopy: {
-    marginBottom: 18,
+    marginBottom: 14,
     gap: 4,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text,
   },
   stepDescription: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
   screenTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '700',
     color: colors.text,
   },
   screenSubtitle: {
     marginTop: 2,
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textMuted,
   },
   formBlock: {
-    gap: 16,
+    gap: 12,
   },
   confirmationCard: {
-    gap: 10,
+    gap: 8,
     borderRadius: radius.lg,
     backgroundColor: colors.primaryBg,
-    padding: 14,
+    padding: 10,
   },
   confirmationTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.primaryDark,
   },
   confirmationText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   footerText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
     textAlign: 'center',
   },
@@ -123,34 +123,34 @@ export const authScreenStyles = StyleSheet.create({
   footerLink: {
     color: colors.primary,
     fontWeight: '700',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   registerTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   spacer: {
     width: 44,
   },
   stepIconWrap: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   atIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textMuted,
     fontWeight: '600',
   },
   passwordMeter: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
     marginTop: -4,
   },
   passwordMeterItem: {
@@ -170,19 +170,19 @@ export const authScreenStyles = StyleSheet.create({
     width: '100%',
   },
   helperCard: {
-    gap: 6,
+    gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 14,
+    padding: 10,
   },
   helperCardTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   helperCardText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   selectionMeta: {
@@ -194,25 +194,25 @@ export const authScreenStyles = StyleSheet.create({
     color: colors.danger,
   },
   counterText: {
-    marginTop: -8,
+    marginTop: -6,
     textAlign: 'right',
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   bottomActions: {
-    gap: 12,
-    marginTop: 24,
-    paddingBottom: 12,
+    gap: 10,
+    marginTop: 18,
+    paddingBottom: 10,
   },
   stepActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 24,
-    paddingBottom: 12,
+    gap: 10,
+    marginTop: 18,
+    paddingBottom: 10,
   },
   stepButton: {
     flex: 1,
-    minWidth: 140,
+    minWidth: 120,
   },
 });

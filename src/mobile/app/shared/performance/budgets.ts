@@ -14,6 +14,16 @@ export const VIDEO_START_BUFFER_SECONDS = 0.75;
 export const VIDEO_CACHE_LOW_MEMORY_BYTES = 128 * 1024 * 1024;
 export const VIDEO_CACHE_DEFAULT_BYTES = 256 * 1024 * 1024;
 
+/** P75 release targets measured on the supported low-end physical-device tier. */
+export const releasePerformanceBudgets = {
+  coldStartMs: 2_500,
+  droppedFrameRatio: 0.05,
+  firstContentMs: 2_000,
+  interactiveMs: 2_500,
+  navigationMs: 500,
+  warmStartMs: 1_200,
+} as const;
+
 export const performanceBudgets = {
   authBootstrapShellFallbackMs: AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
   startupCacheRestoreMs: STARTUP_CACHE_RESTORE_BUDGET_MS,
@@ -22,6 +32,7 @@ export const performanceBudgets = {
   mediaPrefetchAheadCardCount: MEDIA_PREFETCH_AHEAD_CARD_COUNT,
   mediaPrefetchViewabilityDelayMs: MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
   navigationStateRestoreMs: NAVIGATION_STATE_RESTORE_BUDGET_MS,
+  release: releasePerformanceBudgets,
   videoForwardBufferSeconds: VIDEO_FORWARD_BUFFER_SECONDS,
   videoCacheDefaultBytes: VIDEO_CACHE_DEFAULT_BYTES,
   videoCacheLowMemoryBytes: VIDEO_CACHE_LOW_MEMORY_BYTES,

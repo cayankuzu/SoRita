@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type InlineNoticeProps = {
   title: string;
@@ -15,21 +15,21 @@ type InlineNoticeProps = {
 const tonePalettes = {
   info: {
     backgroundColor: colors.primaryBg,
-    borderColor: '#bfdbfe',
+    borderColor: colors.infoBorder,
     titleColor: colors.text,
     descriptionColor: colors.textMuted,
     actionColor: colors.primaryDark,
   },
   warning: {
     backgroundColor: colors.warningBg,
-    borderColor: '#fde68a',
+    borderColor: colors.warningBorder,
     titleColor: colors.warningText,
     descriptionColor: colors.textMuted,
     actionColor: colors.warningText,
   },
   danger: {
     backgroundColor: colors.dangerBg,
-    borderColor: '#fecaca',
+    borderColor: colors.dangerBorder,
     titleColor: colors.danger,
     descriptionColor: colors.textMuted,
     actionColor: colors.danger,
@@ -75,24 +75,23 @@ const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 4,
   },
   title: {
-    fontSize: 13,
+    ...typography.captionText,
     fontWeight: '700',
   },
   description: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.captionText,
   },
   actionButton: {
     alignSelf: 'flex-start',
     marginTop: 2,
   },
   actionLabel: {
-    fontSize: 12,
+    ...typography.captionText,
     fontWeight: '700',
   },
 });

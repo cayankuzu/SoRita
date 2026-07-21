@@ -1,19 +1,19 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const settingsScreenStyles = StyleSheet.create({
   sectionStack: {
-    gap: 24,
+    gap: 18,
   },
   form: {
-    gap: 16,
+    gap: 12,
   },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   stepCounter: {
     fontSize: 12,
@@ -21,33 +21,32 @@ export const settingsScreenStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   stepCopy: {
-    marginBottom: 18,
+    marginBottom: 14,
     gap: 4,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...typography.title,
     color: colors.text,
   },
   stepDescription: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
   helperCard: {
-    gap: 6,
+    gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 14,
+    padding: 10,
   },
   helperCardTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   helperCardText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   selectionMeta: {
@@ -62,54 +61,54 @@ export const settingsScreenStyles = StyleSheet.create({
   loadingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 14,
+    padding: 10,
   },
   loadingCardBody: {
     flex: 1,
     gap: 2,
   },
   loadingCardTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   loadingCardText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   stepActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+    gap: 10,
+    marginTop: 18,
   },
   stepButton: {
     flex: 1,
   },
   counterText: {
-    marginTop: -8,
+    marginTop: -6,
     textAlign: 'right',
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   passwordField: {
     position: 'relative',
   },
   emailInfoCard: {
-    gap: 8,
+    gap: 6,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    padding: 14,
+    padding: 10,
   },
   emailInfoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   emailInfoLabel: {
     fontSize: 12,
@@ -117,55 +116,55 @@ export const settingsScreenStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   emailInfoValue: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   emailInfoText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   successCard: {
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.successBg,
-    padding: 14,
+    padding: 10,
   },
   successTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.secondary,
   },
   successText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.secondary,
   },
   blockedList: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   blockedListEmpty: {
     flexGrow: 1,
   },
   blockedSeparator: {
-    height: 12,
+    height: 10,
   },
   blockedUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 14,
+    padding: 10,
   },
   blockedUserBody: {
     flex: 1,
   },
   blockedUserName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },

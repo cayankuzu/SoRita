@@ -48,6 +48,8 @@ import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLigh
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { ListDetailSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -279,9 +281,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   if (isInitialLoading) {
     return (
       <Screen safeTop={false} padded={false} scroll={false}>
-        <View style={styles.screenLoader}>
-          <ActivityIndicator color={colors.primary} size="small" />
-        </View>
+        <ListDetailSkeleton />
       </Screen>
     );
   }
@@ -290,7 +290,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     return (
       <Screen>
         <EmptyState
-          icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={34} />}
+          icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={30} />}
           title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
           description={errorMessage || tr.listDetail.notFoundDescription}
           actionLabel={errorMessage ? tr.common.retry : undefined}
@@ -306,7 +306,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'edit',
           label: tr.common.edit,
-          renderIcon: (color: string) => <Pencil color={color} size={16} />,
+          renderIcon: (color: string) => <Pencil color={color} size={14} />,
           onPress: () => {
             setListActionMenuVisible(false);
             setListEditorResumeDraft(null);
@@ -318,7 +318,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'delete',
           label: tr.common.delete,
-          renderIcon: (color: string) => <Trash2 color={color} size={16} />,
+          renderIcon: (color: string) => <Trash2 color={color} size={14} />,
           tone: 'danger' as const,
           onPress: () => {
             setListActionMenuVisible(false);
@@ -330,7 +330,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'report',
           label: tr.profile.actions.report,
-          renderIcon: (color: string) => <Flag color={color} size={16} />,
+          renderIcon: (color: string) => <Flag color={color} size={14} />,
           tone: 'danger' as const,
           onPress: () => {
             setListActionMenuVisible(false);
@@ -350,9 +350,13 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={styles.screenShell}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
-            <ArrowLeft color={colors.text} size={18} />
-          </Pressable>
+          <IconButton
+            accessibilityLabel={tr.common.back}
+            onPress={() => navigation.goBack()}
+            style={styles.topBarBackButton}
+          >
+            <ArrowLeft color={colors.text} size={16} />
+          </IconButton>
 
           <View style={styles.topBarTitleWrap}>
             <Text numberOfLines={1} style={styles.topBarTitle}>
@@ -364,15 +368,15 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           </View>
 
           {actionItems.length > 0 ? (
-            <Pressable
+            <IconButton
               accessibilityLabel={tr.profile.actions.menuTitle}
               onPress={() => setListActionMenuVisible(true)}
               style={styles.topBarMenuButton}
             >
-              <Ellipsis color={colors.text} size={18} />
-            </Pressable>
+              <Ellipsis color={colors.text} size={16} />
+            </IconButton>
           ) : (
-            <View style={{ width: 40, height: 40 }} />
+            <View style={{ width: 34, height: 34 }} />
           )}
         </View>
 
@@ -401,6 +405,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
                 ) : null}
 
                 <PlaceCard
+                  context="list-detail"
                   place={place}
                   owner={owner}
                   ownerId={list.userId}
@@ -446,7 +451,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon={<MapPin color={colors.textSoft} size={34} />}
+                icon={<MapPin color={colors.textSoft} size={30} />}
                 title={tr.listDetail.emptyTitle}
                 description={tr.listDetail.emptyDescription}
               />
@@ -460,7 +465,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             ) : hasPartialDataError && errorMessage ? (
               <View style={styles.emptyWrap}>
                 <EmptyState
-                  icon={<MapPin color={colors.danger} size={34} />}
+                  icon={<MapPin color={colors.danger} size={30} />}
                   title={tr.profile.error.contentUnavailable}
                   description={errorMessage}
                   actionLabel={tr.common.retry}
@@ -498,7 +503,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
             style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom, 18) + 16 }]}
           >
-            <ChevronUp color={colors.onPrimary} size={20} />
+            <ChevronUp color={colors.onPrimary} size={18} />
           </Pressable>
         ) : null}
       </View>

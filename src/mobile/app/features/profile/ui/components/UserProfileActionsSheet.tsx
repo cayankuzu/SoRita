@@ -32,7 +32,7 @@ export function UserProfileActionsSheet({
             {
               key: 'unblock',
               label: tr.profile.actions.unblock,
-              renderIcon: () => <Ban color={colors.secondary} size={16} />,
+              renderIcon: () => <Ban color={colors.secondary} size={14} />,
               onPress: onUnblock,
             },
           ]
@@ -40,14 +40,14 @@ export function UserProfileActionsSheet({
             {
               key: 'report',
               label: tr.profile.actions.report,
-              renderIcon: () => <Flag color={colors.warning} size={16} />,
+              renderIcon: () => <Flag color={colors.warning} size={14} />,
               onPress: onOpenReport,
             },
             {
               key: 'block',
               label: tr.profile.userActions.blockConfirmLabel,
               tone: 'danger',
-              renderIcon: () => <Ban color={colors.danger} size={16} />,
+              renderIcon: () => <Ban color={colors.danger} size={14} />,
               onPress: onOpenBlockConfirm,
             },
           ],

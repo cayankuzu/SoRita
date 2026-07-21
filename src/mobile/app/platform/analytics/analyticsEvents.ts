@@ -1,4 +1,7 @@
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import type { PerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
+
+type PartialPerformanceContext = Partial<PerformanceContext>;
 
 export type AnalyticsEvent =
   | {
@@ -10,7 +13,7 @@ export type AnalyticsEvent =
         nativeStartupDurationMs?: number;
         nativeToJavaScriptDurationMs?: number;
         networkClass?: string;
-      };
+      } & PartialPerformanceContext;
     }
   | { name: 'app_foreground'; params: { backgroundDurationMs: number } }
   | { name: 'screen_view'; params: { cached?: boolean; screen: string; source?: string } }
@@ -20,19 +23,27 @@ export type AnalyticsEvent =
       params: {
         cached?: boolean;
         durationMs: number;
+        networkClass?: string;
         screen: string;
         terminalState?: 'degraded' | 'empty' | 'error' | 'ready';
-      };
+      } & PartialPerformanceContext;
     }
-  | { name: 'screen_interactive'; params: { durationMs: number; screen: string } }
-  | { name: 'tab_switch'; params: { durationMs: number; screen: string } }
+  | {
+      name: 'screen_interactive';
+      params: {
+        durationMs: number;
+        networkClass?: string;
+        screen: string;
+      } & PartialPerformanceContext;
+    }
+  | { name: 'tab_switch'; params: { durationMs: number; screen: string } & PartialPerformanceContext }
   | {
       name: 'navigation_complete';
       params: {
         durationMs: number;
         screen: string;
         source: 'stack' | 'tab';
-      };
+      } & PartialPerformanceContext;
     }
   | {
       name: 'query_complete';
@@ -40,9 +51,10 @@ export type AnalyticsEvent =
         bytesApprox?: number;
         cacheHit?: boolean;
         durationMs: number;
+        networkClass?: string;
         operation: string;
         status: 'error' | 'success' | 'timeout';
-      };
+      } & PartialPerformanceContext;
     }
   | { name: 'feed_page_loaded'; params: { cached?: boolean; count: number; durationMs?: number } }
   | { name: 'feed_item_impression'; params: { feedItemId: string; listId?: string; placeId?: string } }

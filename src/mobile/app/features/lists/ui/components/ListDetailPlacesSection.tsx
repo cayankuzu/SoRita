@@ -41,7 +41,7 @@ export function ListDetailPlacesSection({
       {owner ? (
         <Pressable style={styles.ownerCard} onPress={onOpenOwnerProfile}>
           <View style={styles.ownerAvatarWrap}>
-            <AvatarView uri={owner.profilePhoto} name={owner.name} size={42} />
+            <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
           </View>
           <View style={styles.ownerBody}>
             <Text style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</Text>

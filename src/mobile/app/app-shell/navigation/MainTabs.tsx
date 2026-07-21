@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Compass, Home, MapPinned, User2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +26,9 @@ import {
 } from '@/mobile/app/app-shell/startup/startupDataWarmup';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout } from '@/mobile/app/shared/theme/tokens';
+import { colors, layout, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { markNavigationStarted } from '@/mobile/app/shared/performance/navigationPerformance';
 import { runAfterNextPaint, waitForNextPaint } from '@/mobile/app/shared/utils/interaction';
 
@@ -48,17 +49,25 @@ function getTabLabel(routeName: keyof MainTabParamList) {
   }
 }
 
-function getTabIcon(routeName: keyof MainTabParamList, color: string, size: number) {
+function getTabIcon(
+  routeName: keyof MainTabParamList,
+  color: string,
+  focused: boolean,
+) {
+  const icon = (() => {
   switch (routeName) {
     case 'Home':
-      return <Home color={color} size={size} />;
+      return <Home color={color} size={18} />;
     case 'Map':
-      return <MapPinned color={color} size={size} />;
+      return <MapPinned color={color} size={18} />;
     case 'Explore':
-      return <Compass color={color} size={size} />;
+      return <Compass color={color} size={18} />;
     case 'Profile':
-      return <User2 color={color} size={size} />;
+      return <User2 color={color} size={18} />;
   }
+  })();
+
+  return <View style={[styles.tabIcon, focused ? styles.tabIconActive : null]}>{icon}</View>;
 }
 
 function prioritizeTab(stage: StartupWarmupStage) {
@@ -91,7 +100,11 @@ function prioritizeTab(stage: StartupWarmupStage) {
       tabPressTimes.delete(stage);
       trackEvent({
         name: 'tab_switch',
-        params: { durationMs: Date.now() - pressedAt, screen: stage },
+        params: {
+          ...getPerformanceContext(),
+          durationMs: Date.now() - pressedAt,
+          screen: stage,
+        },
       });
     },
   };
@@ -145,7 +158,7 @@ export function MainTabs() {
         sceneContainerStyle: styles.scene,
         tabBarActiveTintColor: colors.primaryDark,
         tabBarHideOnKeyboard: true,
-        tabBarIcon: ({ color, size }) => getTabIcon(route.name, color, size),
+        tabBarIcon: ({ color, focused }) => getTabIcon(route.name, color, focused),
         tabBarInactiveTintColor: colors.textMuted,
         tabBarItemStyle: styles.tabItem,
         tabBarLabel: getTabLabel(route.name),
@@ -198,11 +211,22 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   tabItem: {
-    minHeight: 48,
+    minHeight: 44,
+    borderRadius: radius.md,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: typography.metadataText.fontSize,
     fontWeight: '700',
-    lineHeight: 14,
+    lineHeight: typography.metadataText.lineHeight,
+  },
+  tabIcon: {
+    width: 30,
+    height: 24,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconActive: {
+    backgroundColor: colors.primaryBg,
   },
 });

@@ -36,4 +36,5 @@ rootProject.name = 'SoRita'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
+include ':baselineprofile'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)

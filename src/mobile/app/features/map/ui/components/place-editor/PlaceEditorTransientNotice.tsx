@@ -19,7 +19,7 @@ export function PlaceEditorTransientNotice({
     <Pressable style={styles.overlay} onPress={onClose}>
       <View style={styles.card}>
         <View style={styles.iconWrap}>
-          <AlertTriangle color={colors.danger} size={20} />
+          <AlertTriangle color={colors.danger} size={18} />
         </View>
         <View style={styles.copy}>
           <Text style={styles.title}>{title}</Text>
@@ -35,25 +35,25 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 18,
     backgroundColor: colors.overlay,
   },
   card: {
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 378,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    padding: 18,
+    borderColor: colors.dangerBorder,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.dangerBg,
@@ -63,13 +63,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
 });

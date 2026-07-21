@@ -31,15 +31,15 @@ type AuthLegalSheetProps = {
 function renderDocumentIcon(documentId: LegalDocumentId) {
   switch (documentId) {
     case 'terms':
-      return <Scale color={colors.primary} size={18} />;
+      return <Scale color={colors.primary} size={16} />;
     case 'community':
-      return <Users color={colors.warning} size={18} />;
+      return <Users color={colors.warning} size={16} />;
     case 'privacy':
-      return <ShieldCheck color={colors.secondary} size={18} />;
+      return <ShieldCheck color={colors.secondary} size={16} />;
     case 'kvkk':
-      return <FileText color={colors.purple} size={18} />;
+      return <FileText color={colors.purple} size={16} />;
     default:
-      return <FileText color={colors.primary} size={18} />;
+      return <FileText color={colors.primary} size={16} />;
   }
 }
 
@@ -73,7 +73,7 @@ export function AuthLegalSheet({
         </View>
 
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={16} />
+          <X color={colors.textMuted} size={14} />
         </IconButton>
       </View>
 
@@ -98,17 +98,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   headerTitleRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   iconWrap: {
-    width: 38,
-    height: 38,
+    width: 32,
+    height: 32,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -119,30 +119,30 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
   },
   summary: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textSoft,
   },
   scrollContent: {
-    gap: 16,
+    gap: 12,
     paddingBottom: 4,
   },
   section: {
-    gap: 8,
+    gap: 6,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   paragraph: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
 });

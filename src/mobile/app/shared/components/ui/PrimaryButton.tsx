@@ -9,19 +9,30 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  InstantPressable,
+  type InstantPressableHapticFeedback,
+} from '@/mobile/app/shared/components/ui/InstantPressable';
+import {
+  colors,
+  controlSize,
+  fontWeight,
+  opacity,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type PrimaryButtonProps = {
   title: string;
   onPress: () => void | Promise<void>;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'end' | 'start';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  hapticFeedback?: InstantPressableHapticFeedback;
 };
 
 export function PrimaryButton({
@@ -34,6 +45,7 @@ export function PrimaryButton({
   iconPosition = 'start',
   style,
   textStyle,
+  hapticFeedback,
 }: PrimaryButtonProps) {
   const palette = palettes[variant];
   const isDisabled = disabled || loading;
@@ -44,23 +56,47 @@ export function PrimaryButton({
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: isDisabled }}
       disabled={isDisabled}
+      hapticFeedback={
+        hapticFeedback ??
+        (variant === 'danger'
+          ? 'warning'
+          : variant === 'success'
+            ? 'success'
+            : variant === 'primary'
+              ? 'light'
+              : false)
+      }
       onPress={onPress}
       style={({ pressed, busy }) => [
         styles.button,
         { backgroundColor: palette.backgroundColor, borderColor: palette.borderColor },
-        (pressed || busy) && !isDisabled ? { opacity: 0.88, transform: [{ scale: 0.98 }] } : null,
-        isDisabled ? { opacity: 0.45 } : null,
+        (pressed || busy) && !isDisabled ? styles.pressed : null,
+        isDisabled ? styles.disabled : null,
         style,
       ]}
     >
-      {({ busy }) => (
+      {({ busy }) => {
+        const showProgress = loading || busy;
+
+        return (
         <View style={styles.content}>
-          {loading || busy ? <ActivityIndicator color={palette.color} size="small" /> : null}
-          {!loading && !busy && icon && iconPosition === 'start' ? icon : null}
-          <Text style={[styles.label, { color: palette.color }, textStyle]}>{title}</Text>
-          {!loading && !busy && icon && iconPosition === 'end' ? icon : null}
+          <View
+            accessibilityElementsHidden={showProgress}
+            importantForAccessibility={showProgress ? 'no-hide-descendants' : 'auto'}
+            style={[styles.labelRow, showProgress ? styles.hiddenContent : null]}
+          >
+            {icon && iconPosition === 'start' ? icon : null}
+            <Text style={[styles.label, { color: palette.color }, textStyle]}>{title}</Text>
+            {icon && iconPosition === 'end' ? icon : null}
+          </View>
+          {showProgress ? (
+            <View pointerEvents="none" style={styles.progressOverlay}>
+              <ActivityIndicator color={palette.color} size="small" />
+            </View>
+          ) : null}
         </View>
-      )}
+        );
+      }}
     </InstantPressable>
   );
 }
@@ -70,25 +106,46 @@ const palettes = {
   secondary: { backgroundColor: colors.surface, borderColor: colors.cardBorder, color: colors.text },
   ghost: { backgroundColor: 'transparent', borderColor: 'transparent', color: colors.textMuted },
   danger: { backgroundColor: colors.danger, borderColor: colors.danger, color: colors.onPrimary },
+  success: { backgroundColor: colors.secondary, borderColor: colors.secondary, color: colors.onPrimary },
 };
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
   },
   content: {
+    minHeight: 20,
+    minWidth: 20,
+    position: 'relative',
+  },
+  labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.labelText,
+    fontWeight: fontWeight.strong,
+  },
+  progressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hiddenContent: {
+    opacity: 0,
+  },
+  pressed: {
+    opacity: opacity.pressed,
+    transform: [{ scale: 0.98 }],
+  },
+  disabled: {
+    opacity: opacity.disabled,
   },
 });

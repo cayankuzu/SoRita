@@ -1,14 +1,14 @@
 import React from 'react';
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/components/ProfileInterestChips';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileConnectionsSummaryProps = {
   followerCount: number;
@@ -29,7 +29,7 @@ export function ProfileConnectionsSummary({
     <View style={styles.detailsStack}>
       <ProfileInterestChips interestIds={interestIds} />
       <View style={styles.connectionsRow}>
-        <Pressable
+        <InstantPressable
           accessibilityLabel={`${followerCount} ${tr.profile.stats.follower}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -37,8 +37,8 @@ export function ProfileConnectionsSummary({
         >
           <Text style={styles.connectionValue}>{followerCount}</Text>
           <Text style={styles.connectionLabel}>{tr.profile.stats.follower}</Text>
-        </Pressable>
-        <Pressable
+        </InstantPressable>
+        <InstantPressable
           accessibilityLabel={`${followingCount} ${tr.profile.stats.following}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -46,7 +46,7 @@ export function ProfileConnectionsSummary({
         >
           <Text style={styles.connectionValue}>{followingCount}</Text>
           <Text style={styles.connectionLabel}>{tr.profile.stats.following}</Text>
-        </Pressable>
+        </InstantPressable>
       </View>
     </View>
   );
@@ -54,29 +54,31 @@ export function ProfileConnectionsSummary({
 
 const styles = StyleSheet.create({
   detailsStack: {
-    marginTop: 16,
-    gap: 14,
+    marginTop: 12,
+    gap: 10,
   },
   connectionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   connectionButton: {
     flex: 1,
     borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   connectionValue: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   connectionLabel: {
     marginTop: 2,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
 });

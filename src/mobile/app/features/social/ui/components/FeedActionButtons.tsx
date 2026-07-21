@@ -15,7 +15,7 @@ import { MINI_MAP_RESET_LONG_PRESS_MS } from '@/mobile/app/shared/components/map
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type FeedActionButtonsProps = {
   commentCount: number;
@@ -60,7 +60,7 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
       delayLongPress={500}
     >
       <Heart
-        size={18}
+        size={16}
         color={props.liked ? colors.danger : colors.textMuted}
         fill={props.liked ? colors.danger : 'transparent'}
       />
@@ -86,7 +86,7 @@ function CommentAction(props: Pick<
       onPressIn={props.onCommentsIntent}
       onPress={props.onCommentPress}
     >
-      <MessageCircle size={18} color={props.showComments ? colors.primary : colors.textMuted} />
+      <MessageCircle size={16} color={props.showComments ? colors.primary : colors.textMuted} />
       {props.commentCount > 0 ? (
         <Text style={[styles.actionCount, props.showComments ? styles.actionCountPrimary : null]}>
           {props.commentCount}
@@ -124,7 +124,7 @@ function FocusAction(props: Pick<
         props.onFocusLongPress?.();
       }}
     >
-      <Crosshair size={18} color={props.focusActionActive ? colors.primary : colors.textMuted} />
+      <Crosshair size={16} color={props.focusActionActive ? colors.primary : colors.textMuted} />
     </InstantPressable>
   );
 }
@@ -145,7 +145,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={styles.actionButton}
           onPress={props.onSharePress}
         >
-          <Share2 size={18} color={colors.textMuted} />
+          <Share2 size={16} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -160,7 +160,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={styles.actionButton}
           onPress={props.onAddToListPress}
         >
-          <ListPlus size={18} color={colors.textMuted} />
+          <ListPlus size={16} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -172,7 +172,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={[styles.actionButton, props.showAddress ? styles.successActionActive : null]}
           onPress={props.onToggleAddress}
         >
-          <MapPin size={18} color={props.showAddress ? colors.secondary : colors.textMuted} />
+          <MapPin size={16} color={props.showAddress ? colors.secondary : colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -183,7 +183,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={styles.actionButton}
           onPress={props.onOverflowPress}
         >
-          <Ellipsis size={18} color={colors.textMuted} />
+          <Ellipsis size={16} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -194,7 +194,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={[styles.actionButton, props.showReportSheet ? styles.warningActionActive : null]}
           onPress={props.onReportPress}
         >
-          <Flag size={18} color={props.showReportSheet ? colors.warning : colors.textMuted} />
+          <Flag size={16} color={props.showReportSheet ? colors.warning : colors.textMuted} />
         </InstantPressable>
       ) : null}
     </ScrollView>
@@ -203,25 +203,25 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
 
 const styles = StyleSheet.create({
   actions: {
-    gap: 6,
+    gap: 4,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginTop: 6,
   },
   actionButton: {
-    minWidth: 44,
-    height: 38,
+    minWidth: 38,
+    height: 32,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   actionCount: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.textMuted,
   },

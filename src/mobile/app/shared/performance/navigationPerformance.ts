@@ -1,5 +1,6 @@
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
+import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 
 type PendingNavigation = {
   source: 'stack' | 'tab';
@@ -37,6 +38,7 @@ export function markScreenVisible(screen: string, routeKey: string) {
     trackEvent({
       name: 'navigation_complete',
       params: {
+        ...getPerformanceContext(),
         durationMs: Math.max(0, Date.now() - pending.startedAt),
         screen,
         source: pending.source,

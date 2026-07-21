@@ -30,6 +30,7 @@ export function useMapLocation() {
   const [userViewport, setUserViewport] = useState<MapViewport | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
+  const [locationPermissionCanAskAgain, setLocationPermissionCanAskAgain] = useState(true);
   const [locationErrorMessage, setLocationErrorMessage] = useState<string | null>(null);
 
   const locate = useCallback(
@@ -45,6 +46,7 @@ export function useMapLocation() {
 
         if (permission.status !== 'granted') {
           setLocationPermissionDenied(true);
+          setLocationPermissionCanAskAgain(permission.canAskAgain);
           setLocationErrorMessage(tr.map.locationPermissionRequired);
           if (options?.showToastOnError) {
             showToast(tr.map.locationPermissionRequired, 'error');
@@ -53,6 +55,7 @@ export function useMapLocation() {
         }
 
         setLocationPermissionDenied(false);
+        setLocationPermissionCanAskAgain(true);
         const location = await getCurrentLocationWithTimeout();
         const viewport = {
           latitude: location.coords.latitude,
@@ -102,6 +105,7 @@ export function useMapLocation() {
     locate,
     locationErrorMessage,
     locationPermissionDenied,
+    locationPermissionCanAskAgain,
     resolveAddress,
     setUserViewport,
     userViewport,

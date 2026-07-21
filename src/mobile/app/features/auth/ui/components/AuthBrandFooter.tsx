@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, typography } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export function AuthBrandFooter() {
@@ -20,8 +20,8 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
     gap: 4,
-    marginTop: 18,
-    paddingBottom: 8,
+    marginTop: 14,
+    paddingBottom: 6,
   },
   poweredRow: {
     flexDirection: 'row',
@@ -30,14 +30,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   metaText: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
+    lineHeight: 15,
     textAlign: 'center',
     color: colors.textSoft,
   },
   brandText: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
+    lineHeight: 15,
     fontWeight: '700',
     color: colors.text,
   },

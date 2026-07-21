@@ -21,6 +21,7 @@ import {
   NotificationsRouteScreen,
   ResetPasswordRouteScreen,
   SettingsRouteScreen,
+  UICatalogRouteScreen,
   UserProfileRouteScreen,
 } from '@/mobile/app/app-shell/navigation/routes';
 import type { RootStackParamList } from '@/mobile/app/app-shell/navigation/types';
@@ -53,6 +54,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       AuthCallback: 'auth/callback',
       ListDetail: 'lists/:listId',
       ResetPassword: 'reset-password',
+      UICatalog: 'dev/ui-catalog',
     },
   },
 };
@@ -303,6 +305,9 @@ export function RootNavigator() {
                 {user ? <Stack.Screen name="UserProfile" component={UserProfileRouteScreen} /> : null}
                 {user ? <Stack.Screen name="Notifications" component={NotificationsRouteScreen} /> : null}
                 {user ? <Stack.Screen name="Settings" component={SettingsRouteScreen} /> : null}
+                {UICatalogRouteScreen ? (
+                  <Stack.Screen name="UICatalog" component={UICatalogRouteScreen} />
+                ) : null}
                 <Stack.Screen name="AuthCallback" component={AuthCallbackRouteScreen} />
                 <Stack.Screen name="ResetPassword" component={ResetPasswordRouteScreen} />
               </Stack.Navigator>

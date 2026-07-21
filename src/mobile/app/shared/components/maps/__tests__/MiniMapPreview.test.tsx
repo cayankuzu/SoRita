@@ -1,7 +1,10 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
-import { InteractionManager } from 'react-native';
+
+const { runAfterNextPaintMock } = vi.hoisted(() => ({
+  runAfterNextPaintMock: vi.fn(),
+}));
 
 vi.mock('@react-navigation/native', () => ({
   useIsFocused: () => true,
@@ -23,18 +26,19 @@ vi.mock('@/mobile/app/shared/components/ui/AppImage', () => ({
   AppImage: (props: Record<string, unknown>) => React.createElement('AppImage', props),
 }));
 
+vi.mock('@/mobile/app/shared/utils/interaction', () => ({
+  runAfterNextPaint: runAfterNextPaintMock,
+}));
+
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 
 describe('MiniMapPreview', () => {
   it('shows a local fallback and defers static-map network work until interactions finish', () => {
     let startDeferredPreview: (() => void) | undefined;
     const cancel = vi.fn();
-    vi.spyOn(InteractionManager, 'runAfterInteractions').mockImplementation((callback) => {
-      if (typeof callback === 'function') {
-        startDeferredPreview = callback;
-      }
-
-      return { cancel } as unknown as ReturnType<typeof InteractionManager.runAfterInteractions>;
+    runAfterNextPaintMock.mockImplementation((callback: () => void) => {
+      startDeferredPreview = callback;
+      return cancel;
     });
 
     let renderer!: TestRenderer.ReactTestRenderer;

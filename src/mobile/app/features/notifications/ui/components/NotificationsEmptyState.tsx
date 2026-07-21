@@ -13,7 +13,7 @@ export function NotificationsEmptyState({ title, description }: NotificationsEmp
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        <Heart color={colors.textSoft} size={28} />
+        <Heart color={colors.textSoft} size={24} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -25,27 +25,27 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 64,
+    paddingHorizontal: 18,
+    paddingTop: 38,
+    paddingBottom: 50,
   },
   iconWrap: {
-    width: 64,
-    height: 64,
-    marginBottom: 14,
+    width: 56,
+    height: 56,
+    marginBottom: 10,
     borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
   description: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
     color: colors.textMuted,
   },

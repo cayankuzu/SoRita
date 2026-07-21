@@ -33,7 +33,7 @@ export function AuthForgotPasswordView({
       </View>
 
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
-        <ArrowLeft color={colors.textMuted} size={20} />
+        <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
 
       <View style={styles.headerBlock}>
@@ -49,7 +49,7 @@ export function AuthForgotPasswordView({
           onChangeText={onChangeEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          icon={<Mail color={colors.textMuted} size={16} />}
+          icon={<Mail color={colors.textMuted} size={14} />}
         />
         <PrimaryButton title={tr.auth.forgotPassword.sendAction} onPress={onSubmit} />
       </View>

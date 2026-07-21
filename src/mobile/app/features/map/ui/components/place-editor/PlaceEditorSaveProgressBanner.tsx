@@ -37,7 +37,7 @@ export function PlaceEditorSaveProgressBanner({
               onPress={onMenuPress}
               style={styles.saveProgressMenuButton}
             >
-              <Ellipsis color={isFailed ? colors.danger : colors.textMuted} size={18} />
+              <Ellipsis color={isFailed ? colors.danger : colors.textMuted} size={16} />
             </Pressable>
           ) : null}
         </View>

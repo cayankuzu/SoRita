@@ -18,7 +18,7 @@ export function PasswordToggle({ visible, onPress }: PasswordToggleProps) {
       onPress={onPress}
       style={styles.passwordToggle}
     >
-      {visible ? <EyeOff color={colors.textSoft} size={18} /> : <Eye color={colors.textSoft} size={18} />}
+      {visible ? <EyeOff color={colors.textSoft} size={16} /> : <Eye color={colors.textSoft} size={16} />}
     </IconButton>
   );
 }

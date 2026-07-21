@@ -162,7 +162,7 @@ export function CompactPlaceCard({
                 {onPlaceNamePress ? (
                   <ChevronRight
                     color={colors.primary}
-                    size={13}
+                    size={12}
                     strokeWidth={2.3}
                     style={styles.contentTitleChevron}
                   />
@@ -201,7 +201,7 @@ export function CompactPlaceCard({
                 isMapInteractive ? styles.focusActionButtonActive : null,
               ]}
             >
-              <Crosshair color={colors.primary} size={14} />
+              <Crosshair color={colors.primary} size={12} />
             </Pressable>
           ) : null}
         </View>
@@ -225,7 +225,7 @@ export function CompactPlaceCard({
         ) : null}
         {place.rating ? (
           <View style={styles.ratingRow}>
-            <Star size={12} color={colors.warning} fill={colors.warning} />
+            <Star size={12} color={colors.rating} fill={colors.rating} />
             <Text style={styles.ratingText}>{place.rating}</Text>
           </View>
         ) : null}

@@ -71,7 +71,7 @@ export function ProfileConnectionsModal({
     paddingTop,
     paddingBottom,
     maxHeightRatio: 0.72,
-    minHeight: 280,
+    minHeight: 240,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const q = searchQuery.trim().toLowerCase();
@@ -103,13 +103,14 @@ export function ProfileConnectionsModal({
       })}
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
       <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
         <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
+          <View accessibilityElementsHidden style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <IconButton
@@ -118,7 +119,7 @@ export function ProfileConnectionsModal({
               style={styles.closeButton}
               variant="surface"
             >
-              <X color={colors.textSoft} size={18} />
+              <X color={colors.textSoft} size={16} />
             </IconButton>
           </View>
 
@@ -133,7 +134,7 @@ export function ProfileConnectionsModal({
                 style={styles.userRow}
                 onPress={() => onUserPress(item)}
               >
-                <AvatarView uri={item.profilePhoto} name={item.name} size={42} />
+                <AvatarView uri={item.profilePhoto} name={item.name} size={36} />
                 <View style={styles.userBody}>
                   <Text style={styles.userName}>{item.name}</Text>
                   <Text style={styles.userUsername}>@{item.username}</Text>
@@ -147,7 +148,7 @@ export function ProfileConnectionsModal({
             ListHeaderComponent={
               users.length > 0 ? (
                 <View style={styles.searchWrap}>
-                  <Search color={colors.textSoft} size={16} />
+                  <Search color={colors.textSoft} size={14} />
                   <TextInput
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -171,7 +172,7 @@ export function ProfileConnectionsModal({
             }
             ListEmptyComponent={
               <EmptyState
-                icon={<Users color={colors.textSoft} size={28} />}
+                icon={<Users color={colors.textSoft} size={24} />}
                 title={q ? tr.profile.connections.searchNoResult : emptyTitle}
                 description={q ? tr.profile.connections.searchTryDifferent : ''}
               />
@@ -202,30 +203,40 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
   },
   card: {
     width: '100%',
-    maxWidth: 540,
+    maxWidth: 648,
     alignSelf: 'center',
-    maxHeight: '72%',
-    borderRadius: radius.xl,
+    maxHeight: '90%',
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,
     overflow: 'hidden',
+  },
+  handle: {
+    width: 34,
+    height: 4,
+    marginTop: 6,
+    marginBottom: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.borderStrong,
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   closeButton: {
@@ -233,47 +244,47 @@ const styles = StyleSheet.create({
     height: 44,
   },
   searchWrap: {
-    minHeight: 48,
-    marginBottom: 12,
+    minHeight: 44,
+    marginBottom: 10,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 14,
+    fontSize: 12,
     paddingVertical: 0,
   },
   list: {
-    padding: 16,
-    paddingTop: 12,
+    padding: 12,
+    paddingTop: 10,
   },
   listEmpty: {
     flexGrow: 1,
   },
   separator: {
-    height: 12,
+    height: 10,
   },
   userRow: {
-    minHeight: 64,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 12,
+    padding: 10,
   },
   userBody: {
     flex: 1,
   },
   userName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },

@@ -11,7 +11,7 @@ import { PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorDetailsStepProps = {
   bestTimes: string[];
@@ -114,36 +114,36 @@ export function PlaceEditorDetailsStep({
 
 const styles = StyleSheet.create({
   stepContent: {
-    gap: 16,
+    gap: 12,
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
   },
   sectionHelper: {
     marginTop: -2,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   selectionMeta: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.primary,
   },
   inlineFields: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   inlineField: {
     flex: 1,
   },
   segmentedRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   segmentButton: {
     flex: 1,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
   },
   segmentText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.textMuted,
   },

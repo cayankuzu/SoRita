@@ -1,12 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Bell, Heart, MapPin, MessageCircle, Star, UserPlus } from 'lucide-react-native';
 
 import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationListItemProps = {
   notification: MobileNotification;
@@ -15,56 +14,12 @@ type NotificationListItemProps = {
   onRejectFollowRequest?: () => void;
 };
 
-const ICON_META = {
-  like: {
-    backgroundColor: colors.danger,
-    icon: <Heart color={colors.onPrimary} size={12} fill={colors.onPrimary} />,
-  },
-  follow: {
-    backgroundColor: colors.primary,
-    icon: <UserPlus color={colors.onPrimary} size={12} />,
-  },
-  follow_request: {
-    backgroundColor: colors.primary,
-    icon: <UserPlus color={colors.onPrimary} size={12} />,
-  },
-  comment: {
-    backgroundColor: colors.secondary,
-    icon: <MessageCircle color={colors.onPrimary} size={12} />,
-  },
-  comment_like: {
-    backgroundColor: colors.danger,
-    icon: <Heart color={colors.onPrimary} size={12} fill={colors.onPrimary} />,
-  },
-  comment_reply: {
-    backgroundColor: colors.secondary,
-    icon: <MessageCircle color={colors.onPrimary} size={12} />,
-  },
-  place_added: {
-    backgroundColor: colors.purple,
-    icon: <MapPin color={colors.onPrimary} size={12} />,
-  },
-  place_quote: {
-    backgroundColor: colors.primary,
-    icon: <MapPin color={colors.onPrimary} size={12} />,
-  },
-  list_liked: {
-    backgroundColor: colors.warning,
-    icon: <Star color={colors.onPrimary} size={12} fill={colors.onPrimary} />,
-  },
-  system_announcement: {
-    backgroundColor: colors.primary,
-    icon: <Bell color={colors.onPrimary} size={12} />,
-  },
-} as const;
-
 function NotificationListItemComponent({
   notification,
   onPress,
   onAcceptFollowRequest,
   onRejectFollowRequest,
 }: NotificationListItemProps) {
-  const iconMeta = ICON_META[notification.type];
   const isPendingFollowRequest =
     notification.type === 'follow_request' && notification.followRequest?.status === 'pending';
   const isResolvedFollowRequest =
@@ -78,10 +33,7 @@ function NotificationListItemComponent({
       style={[styles.row, !notification.read ? styles.rowUnread : null]}
     >
       <View style={styles.avatarWrap}>
-        <AvatarView uri={notification.userPhoto} name={notification.userName} size={44} />
-        <View style={[styles.iconBubble, { backgroundColor: iconMeta.backgroundColor }]}>
-          {iconMeta.icon}
-        </View>
+        <AvatarView uri={notification.userPhoto} name={notification.userName} size={38} />
       </View>
 
       <View style={styles.body}>
@@ -144,10 +96,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    minHeight: 78,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: 10,
+    minHeight: 68,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -156,21 +108,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   avatarWrap: {
-    position: 'relative',
-    width: 46,
+    width: 40,
     paddingTop: 2,
-  },
-  iconBubble: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 20,
-    height: 20,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.surface,
   },
   body: {
     flex: 1,
@@ -178,8 +117,8 @@ const styles = StyleSheet.create({
     paddingTop: 1,
   },
   message: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
   },
   messageStrong: {
     fontWeight: '600',
@@ -190,18 +129,18 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     marginTop: 4,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
+    gap: 6,
+    marginTop: 8,
   },
   actionButton: {
-    minWidth: 82,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    minWidth: 70,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -227,21 +166,21 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    marginTop: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
   statusLabel: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.textSoft,
   },
   unreadDot: {
-    width: 9,
-    height: 9,
-    marginTop: 10,
+    width: 8,
+    height: 8,
+    marginTop: 8,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
   },

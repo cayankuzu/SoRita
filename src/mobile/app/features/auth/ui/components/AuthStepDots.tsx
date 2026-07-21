@@ -32,16 +32,16 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   dot: {
-    width: 16,
+    width: 14,
     height: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
   },
   dotActive: {
-    width: 30,
+    width: 26,
     backgroundColor: colors.primary,
   },
   dotDone: {

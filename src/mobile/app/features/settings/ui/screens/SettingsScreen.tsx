@@ -3,6 +3,7 @@ import {
   Ban,
   Lock,
   LogOut,
+  Palette,
   Shield,
   Trash2,
   User as UserIcon,
@@ -192,21 +193,21 @@ export function SettingsScreen() {
       title: tr.settings.sections.account,
       items: [
         {
-          icon: <UserIcon color={colors.onPrimary} size={18} />,
+          icon: <UserIcon color={colors.primary} size={18} />,
           label: tr.settings.editProfile.title,
-          color: colors.primary,
+          color: colors.primaryBg,
           action: openEditProfile,
         },
         {
-          icon: <Shield color={colors.onPrimary} size={18} />,
+          icon: <Shield color={colors.secondary} size={18} />,
           label: tr.settings.privacy.title,
-          color: colors.secondary,
+          color: colors.successBg,
           action: openPrivacy,
         },
         {
-          icon: <Lock color={colors.onPrimary} size={18} />,
+          icon: <Lock color={colors.primary} size={18} />,
           label: tr.settings.password.title,
-          color: colors.warning,
+          color: colors.primaryBg,
           action: openPassword,
         },
       ],
@@ -215,27 +216,41 @@ export function SettingsScreen() {
       title: tr.settings.sections.other,
       items: [
         {
-          icon: <Ban color={colors.onPrimary} size={18} />,
+          icon: <Ban color={colors.textMuted} size={18} />,
           label: tr.settings.blocked.title,
-          color: colors.textMuted,
+          color: colors.surfaceMuted,
           action: openBlocked,
         },
         {
-          icon: <LogOut color={colors.onPrimary} size={18} />,
+          icon: <LogOut color={colors.textMuted} size={18} />,
           label: tr.settings.logout,
-          color: colors.warning,
+          color: colors.surfaceMuted,
           action: () => setShowLogoutConfirm(true),
         },
         {
-          icon: <Trash2 color={colors.onPrimary} size={18} />,
+          icon: <Trash2 color={colors.danger} size={18} />,
           label: tr.settings.deleteAccount,
-          color: colors.danger,
+          color: colors.dangerBg,
           action: () => setShowDeleteConfirm(true),
           danger: true,
         },
       ],
     },
   ];
+
+  if (__DEV__) {
+    sections.push({
+      title: tr.uiCatalog.developerSection,
+      items: [
+        {
+          icon: <Palette color={colors.purple} size={18} />,
+          label: tr.uiCatalog.title,
+          color: colors.purpleBg,
+          action: () => openStackScreen(navigation, 'UICatalog'),
+        },
+      ],
+    });
+  }
 
   if (view === 'editProfile') {
     return (

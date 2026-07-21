@@ -9,6 +9,7 @@ import {
   NAVIGATION_STATE_RESTORE_BUDGET_MS,
   STARTUP_CACHE_RESTORE_BUDGET_MS,
   performanceBudgets,
+  releasePerformanceBudgets,
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_CACHE_DEFAULT_BYTES,
   VIDEO_CACHE_LOW_MEMORY_BYTES,
@@ -31,6 +32,9 @@ describe('performance budgets', () => {
     expect(VIDEO_START_BUFFER_SECONDS).toBeLessThanOrEqual(1);
     expect(VIDEO_FORWARD_BUFFER_SECONDS).toBeGreaterThanOrEqual(6);
     expect(VIDEO_CACHE_LOW_MEMORY_BYTES).toBeLessThan(VIDEO_CACHE_DEFAULT_BYTES);
+    expect(releasePerformanceBudgets.coldStartMs).toBeLessThanOrEqual(2_500);
+    expect(releasePerformanceBudgets.droppedFrameRatio).toBeLessThanOrEqual(0.05);
+    expect(releasePerformanceBudgets.navigationMs).toBeLessThanOrEqual(500);
     expect(performanceBudgets).toEqual({
       authBootstrapShellFallbackMs: AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
       startupCacheRestoreMs: STARTUP_CACHE_RESTORE_BUDGET_MS,
@@ -39,6 +43,7 @@ describe('performance budgets', () => {
       mediaPrefetchAheadCardCount: MEDIA_PREFETCH_AHEAD_CARD_COUNT,
       mediaPrefetchViewabilityDelayMs: MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
       navigationStateRestoreMs: NAVIGATION_STATE_RESTORE_BUDGET_MS,
+      release: releasePerformanceBudgets,
       videoForwardBufferSeconds: VIDEO_FORWARD_BUFFER_SECONDS,
       videoCacheDefaultBytes: VIDEO_CACHE_DEFAULT_BYTES,
       videoCacheLowMemoryBytes: VIDEO_CACHE_LOW_MEMORY_BYTES,

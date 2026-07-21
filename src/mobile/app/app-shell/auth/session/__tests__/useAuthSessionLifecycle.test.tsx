@@ -17,6 +17,7 @@ const syncAuthenticatedUserMock = vi.fn();
 const onAuthStateChangeMock = vi.fn();
 const refreshSessionMock = vi.fn();
 const signOutMock = vi.fn();
+const loggerDebugMock = vi.fn();
 const loggerErrorMock = vi.fn();
 const loggerWarnMock = vi.fn();
 
@@ -68,6 +69,7 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
 
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: {
+    debug: loggerDebugMock,
     error: loggerErrorMock,
     warn: loggerWarnMock,
   },
@@ -88,6 +90,7 @@ describe('useAuthSessionLifecycle', () => {
     onAuthStateChangeMock.mockReset();
     refreshSessionMock.mockReset();
     signOutMock.mockReset();
+    loggerDebugMock.mockReset();
     loggerErrorMock.mockReset();
     loggerWarnMock.mockReset();
     refreshSessionMock.mockResolvedValue({ data: { session: null }, error: null });
@@ -336,7 +339,7 @@ describe('useAuthSessionLifecycle', () => {
         vi.advanceTimersByTime(AUTH_BOOTSTRAP_SHELL_FALLBACK_MS);
       });
 
-      expect(loggerWarnMock).toHaveBeenCalledWith(
+      expect(loggerDebugMock).toHaveBeenCalledWith(
         'auth',
         'Auth bootstrap is taking longer than expected; showing app shell fallback.',
       );

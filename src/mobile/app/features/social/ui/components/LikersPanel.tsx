@@ -75,7 +75,7 @@ export function LikersPanel({
           onPress={() => onUserPress?.(item.id)}
           disabled={!onUserPress}
         >
-          <AvatarView uri={item.profilePhoto} name={item.name} size={32} />
+          <AvatarView uri={item.profilePhoto} name={item.name} size={28} />
           <View style={styles.likerBody}>
             <Text style={styles.panelTitle}>{item.name}</Text>
             <Text style={styles.panelMuted}>@{item.username}</Text>
@@ -92,20 +92,20 @@ export function LikersPanel({
         <View>
           <View style={styles.panelHeader}>
             <View style={styles.panelTitleRow}>
-              <Users color={colors.danger} size={16} />
+              <Users color={colors.danger} size={14} />
               <Text style={styles.panelTitle}>
                 {tr.cards.likedBy}
                 {likeCount > 0 ? ` (${likeCount})` : ''}
               </Text>
             </View>
             <Pressable onPress={onClose} accessibilityLabel={tr.common.close} accessibilityRole="button">
-              <X color={colors.textSoft} size={16} />
+              <X color={colors.textSoft} size={14} />
             </Pressable>
           </View>
 
           {likers.length > 0 ? (
             <View style={styles.searchWrap}>
-              <Search color={colors.textSoft} size={15} />
+              <Search color={colors.textSoft} size={13} />
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -140,13 +140,13 @@ export function LikersPanel({
 const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.surface,
-    maxHeight: 320,
+    maxHeight: 288,
   },
   panelContent: {
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   panelContentEmpty: {
     flexGrow: 1,
@@ -155,15 +155,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   panelTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   panelTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
@@ -173,29 +173,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 8,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 13,
-    paddingVertical: 8,
+    fontSize: 12,
+    paddingVertical: 6,
   },
   panelMuted: {
     fontSize: 12,
     color: colors.textSoft,
   },
   separator: {
-    height: 10,
+    height: 8,
   },
   likerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   likerBody: {
     flex: 1,

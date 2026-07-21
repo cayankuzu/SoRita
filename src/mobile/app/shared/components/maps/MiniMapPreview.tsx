@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import { InteractionManager, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { t } from '@/mobile/app/shared/i18n';
+import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapPreviewProps = {
   places: MapMarkerItem[];
@@ -106,7 +107,7 @@ function MiniMapFallback({ places }: MiniMapFallbackProps) {
   return (
     <View style={styles.fallbackContent}>
       <View style={styles.fallbackPin}>
-        <MapPin color={colors.primary} size={18} />
+        <MapPin color={colors.primary} size={16} />
       </View>
       <Text numberOfLines={1} style={styles.fallbackTitle}>
         {title}
@@ -158,11 +159,11 @@ function MiniMapPreviewComponent({
       return;
     }
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const cancelDeferredPreview = runAfterNextPaint(() => {
       setStaticPreviewReady(true);
     });
 
-    return () => task.cancel();
+    return cancelDeferredPreview;
   }, [shouldRenderInteractiveMap, staticMapUrl]);
 
   useEffect(() => {
@@ -265,28 +266,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
+    gap: 4,
+    paddingHorizontal: 12,
     backgroundColor: colors.mapBackground,
   },
   fallbackPin: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
   },
   fallbackTitle: {
     maxWidth: '88%',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   fallbackSubtitle: {
     maxWidth: '88%',
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '600',
     color: colors.textSoft,
     textAlign: 'center',

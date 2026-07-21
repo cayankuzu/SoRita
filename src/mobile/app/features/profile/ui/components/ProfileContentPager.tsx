@@ -152,11 +152,11 @@ const styles = StyleSheet.create({
   },
   loadMoreStatus: {
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 18,
+    gap: 6,
+    paddingVertical: 14,
   },
   loadMoreLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
   },

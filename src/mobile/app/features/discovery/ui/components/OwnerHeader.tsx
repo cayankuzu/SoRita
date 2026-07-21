@@ -14,7 +14,7 @@ type OwnerHeaderProps = {
 export function OwnerHeader({ owner, onPress }: OwnerHeaderProps) {
   return (
     <Pressable onPress={onPress} style={styles.ownerHeader}>
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={20} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={16} />
       <View style={styles.ownerBody}>
         <ExpandableText text={owner.name} collapsedLines={1} textStyle={styles.ownerName} showIndicator={false} />
         <ExpandableText

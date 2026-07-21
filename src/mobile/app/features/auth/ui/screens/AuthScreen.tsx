@@ -36,19 +36,19 @@ export function AuthScreen() {
     () => [
       {
         ...registerStepCopy[0],
-        icon: <User color={colors.primary} size={22} />,
+        icon: <User color={colors.primary} size={20} />,
       },
       {
         ...registerStepCopy[1],
-        icon: <Lock color={colors.primary} size={22} />,
+        icon: <Lock color={colors.primary} size={20} />,
       },
       {
         ...registerStepCopy[2],
-        icon: <Sparkles color={colors.primary} size={22} />,
+        icon: <Sparkles color={colors.primary} size={20} />,
       },
       {
         ...registerStepCopy[3],
-        icon: <Camera color={colors.primary} size={22} />,
+        icon: <Camera color={colors.primary} size={20} />,
       },
     ],
     [],

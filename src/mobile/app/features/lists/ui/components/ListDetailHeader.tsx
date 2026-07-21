@@ -101,21 +101,21 @@ export function ListDetailHeader({
             <MetaChip
               icon={
                 list.isPublic ? (
-                  <Globe color={colors.secondary} size={14} />
+                  <Globe color={colors.secondary} size={12} />
                 ) : (
-                  <Lock color={colors.danger} size={14} />
+                  <Lock color={colors.visibilityPrivate} size={12} />
                 )
               }
               label={list.isPublic ? tr.listDetail.public : tr.listDetail.private}
-              tone={list.isPublic ? 'accent' : 'danger'}
+              tone={list.isPublic ? 'accent' : 'neutral'}
             />
             <MetaChip
-              icon={<MapPin color={colors.textMuted} size={14} />}
+              icon={<MapPin color={colors.textMuted} size={12} />}
               label={tr.cards.placesCount(list.places.length)}
             />
             {(list.likes || 0) > 0 ? (
               <MetaChip
-                icon={<Heart color={colors.danger} fill={colors.danger} size={14} />}
+                icon={<Heart color={colors.danger} fill={colors.danger} size={12} />}
                 label={`${list.likes}`}
               />
             ) : null}

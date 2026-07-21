@@ -252,13 +252,13 @@ export function PlaceEditorModal({
     paddingTop,
     paddingBottom,
     maxHeightRatio: 0.88,
-    minHeight: 360,
+    minHeight: 310,
   });
   const compressedPanelMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
     paddingTop,
     paddingBottom,
-    minHeight: 360,
+    minHeight: 310,
     reservedSpace: progressBannerReserve,
   });
   const panelMaxHeight = isProgressBannerVisible

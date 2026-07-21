@@ -51,7 +51,7 @@ export function SettingsBlockedUsersView({
             style={styles.blockedUserRow}
             onPress={() => onOpenBlockedUser(item.id)}
           >
-            <AvatarView uri={item.profilePhoto} name={item.name} size={48} />
+            <AvatarView uri={item.profilePhoto} name={item.name} size={40} />
             <View style={styles.blockedUserBody}>
               <Text style={styles.blockedUserName}>{item.name}</Text>
               <Text style={styles.blockedUserUsername}>@{item.username}</Text>
@@ -66,7 +66,7 @@ export function SettingsBlockedUsersView({
         ListHeaderComponent={<SettingsHeader title={tr.settings.blocked.title} onBack={onBack} />}
         ListEmptyComponent={
           <EmptyState
-            icon={<Ban color={colors.textSoft} size={34} />}
+            icon={<Ban color={colors.textSoft} size={30} />}
             title={tr.settings.blocked.emptyTitle}
             description={tr.settings.blocked.emptyDescription}
           />

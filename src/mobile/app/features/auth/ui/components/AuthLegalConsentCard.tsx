@@ -96,7 +96,7 @@ export function AuthLegalConsentCard({
         onPress={onToggle}
       >
         <View style={[styles.checkbox, accepted ? styles.checkboxChecked : null]}>
-          {accepted ? <Check color={colors.onPrimary} size={14} /> : null}
+          {accepted ? <Check color={colors.onPrimary} size={12} /> : null}
         </View>
         <Text style={styles.checkboxLabel}>
           {tr.auth.legalConsent.consentLabel}
@@ -108,27 +108,27 @@ export function AuthLegalConsentCard({
 
 const styles = StyleSheet.create({
   card: {
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 14,
+    padding: 10,
   },
   copyBlock: {
-    gap: 6,
+    gap: 4,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   linksText: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   linksFlow: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   inlineLink: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.primary,
     fontWeight: '700',
     textDecorationLine: 'underline',
@@ -151,11 +151,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 18,
+    height: 18,
     marginTop: 1,
     borderRadius: 6,
     borderWidth: 1.5,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     flex: 1,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
 });

@@ -31,7 +31,7 @@ import {
 } from '@/mobile/app/platform/media/mediaLibraryAssetPreparation';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -350,7 +350,7 @@ export function MediaLibrarySelectionHost() {
               style={styles.closeButton}
               onPress={() => resolveMediaLibrarySelection(null)}
             >
-              <X color={colors.textSoft} size={18} />
+              <X color={colors.textSoft} size={16} />
             </Pressable>
           </View>
 
@@ -420,21 +420,21 @@ export function MediaLibrarySelectionHost() {
             </View>
           ) : loadFailed ? (
             <View style={styles.stateWrap}>
-              <ImageIcon color={colors.textSoft} size={22} />
+              <ImageIcon color={colors.textSoft} size={20} />
               <Text style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</Text>
               <Text style={styles.stateText}>{tr.system.connectionUnavailable}</Text>
               <Pressable style={styles.retryButton} onPress={() => void loadAssetsPage(true)}>
-                <RefreshCcw color={colors.primary} size={14} />
+                <RefreshCcw color={colors.primary} size={12} />
                 <Text style={styles.retryButtonText}>{tr.common.retry}</Text>
               </Pressable>
             </View>
           ) : permissionDenied ? (
             <View style={styles.stateWrap}>
-              <ImageIcon color={colors.textSoft} size={22} />
+              <ImageIcon color={colors.textSoft} size={20} />
               <Text style={styles.stateTitle}>{tr.mediaPicker.permissionTitle}</Text>
               <Text style={styles.stateText}>{tr.mediaPicker.permissionDescription}</Text>
               <Pressable style={styles.retryButton} onPress={() => void loadAssetsPage(true)}>
-                <RefreshCcw color={colors.primary} size={14} />
+                <RefreshCcw color={colors.primary} size={12} />
                 <Text style={styles.retryButtonText}>{tr.common.retry}</Text>
               </Pressable>
             </View>
@@ -517,33 +517,33 @@ const styles = StyleSheet.create({
   },
   sheet: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   headerCopy: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   description: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   closeButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -552,41 +552,41 @@ const styles = StyleSheet.create({
   counterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 14,
-    marginBottom: 12,
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 10,
   },
   counterChip: {
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   counterChipText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.primary,
   },
   counterChipStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   counterChipStrongText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.text,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
+    gap: 6,
+    marginBottom: 10,
   },
   filterChip: {
     minHeight: 34,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   gridContent: {
-    paddingBottom: 24,
+    paddingBottom: 18,
   },
   gridRow: {
     justifyContent: 'flex-start',
@@ -646,19 +646,19 @@ const styles = StyleSheet.create({
   },
   orderBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
+    top: 6,
+    left: 6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   },
   orderBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   disabledOverlay: {
@@ -670,46 +670,46 @@ const styles = StyleSheet.create({
   },
   disabledLabel: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   stateWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 24,
+    gap: 8,
+    paddingHorizontal: 18,
   },
   stateTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   stateText: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textSoft,
     textAlign: 'center',
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     minHeight: 38,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     backgroundColor: colors.primaryBg,
   },
   retryButtonText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.primary,
   },
   loadMoreWrap: {
-    paddingVertical: 14,
+    paddingVertical: 10,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   loadMoreText: {
     fontSize: 12,
@@ -718,25 +718,25 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    gap: 10,
-    paddingTop: 12,
+    gap: 8,
+    paddingTop: 10,
   },
   footerSecondaryButton: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
   footerSecondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.textMuted,
   },
   footerPrimaryButton: {
     flex: 1.3,
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -746,8 +746,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   footerPrimaryButtonText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
 });

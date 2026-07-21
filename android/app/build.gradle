@@ -2,6 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "com.google.gms.google-services"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "androidx.baselineprofile"
 
 import java.io.FileInputStream
 import java.security.KeyStore
@@ -244,8 +245,8 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 95
-        versionName "1.0.90"
+        versionCode 97
+        versionName "1.0.92"
         manifestPlaceholders = [
             googleMapsApiKey: resolveGoogleMapsApiKey()
         ]
@@ -346,6 +347,16 @@ tasks.matching { task ->
     dependsOn(verifyReleaseSigningKey)
 }
 
+tasks.matching { task -> task.name == "mergeLibDexDebug" }.configureEach { task ->
+    def forceDebugDexMerge = (
+        findProperty("soritaForceDebugDexMerge") ?: "false"
+    ).toBoolean()
+
+    if (forceDebugDexMerge) {
+        task.outputs.upToDateWhen { false }
+    }
+}
+
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
 // Accepts values in comma delimited lists, example:
 // android.packagingOptions.pickFirsts=/LICENSE,**/picasa.ini
@@ -370,6 +381,7 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile project(':baselineprofile')
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
@@ -394,6 +406,10 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+}
+
+baselineProfile {
+    saveInSrc true
 }
 
 afterEvaluate {

@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Check } from 'lucide-react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PrivacyOptionProps = {
   active: boolean;
@@ -14,62 +15,72 @@ type PrivacyOptionProps = {
 
 export function PrivacyOption({ active, icon, title, description, onPress }: PrivacyOptionProps) {
   return (
-    <InstantPressable style={[styles.privacyCard, active ? styles.privacyCardActive : null]} onPress={onPress}>
+    <InstantPressable
+      hapticFeedback="selection"
+      style={[styles.privacyCard, active ? styles.privacyCardActive : null]}
+      onPress={onPress}
+    >
       <View style={[styles.privacyIcon, active ? styles.privacyIconActive : null]}>{icon}</View>
       <View style={styles.privacyBody}>
         <Text style={styles.privacyTitle}>{title}</Text>
         <Text style={styles.privacyDescription}>{description}</Text>
       </View>
-      {active ? <View style={styles.activeDot} /> : null}
+      {active ? (
+        <View style={styles.activeCheck}>
+          <Check color={colors.onPrimary} size={12} strokeWidth={2.5} />
+        </View>
+      ) : null}
     </InstantPressable>
   );
 }
 
 const styles = StyleSheet.create({
   privacyCard: {
-    minHeight: 74,
+    minHeight: 64,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 14,
+    gap: 10,
+    padding: 10,
   },
   privacyCardActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryBg,
   },
   privacyIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
   privacyIconActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
   privacyBody: {
     flex: 1,
   },
   privacyTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   privacyDescription: {
     marginTop: 3,
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
+    lineHeight: 15,
     color: colors.textMuted,
   },
-  activeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  activeCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary,
   },
 });

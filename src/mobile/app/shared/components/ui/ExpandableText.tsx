@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LayoutChangeEvent,
+  LayoutAnimation,
   NativeSyntheticEvent,
   Pressable,
   StyleProp,
@@ -15,6 +16,7 @@ import { ChevronRight } from 'lucide-react-native';
 
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
 
 type ExpandableTextProps = {
@@ -48,6 +50,7 @@ export function ExpandableText({
   onExpandedChange,
   variant = 'default',
 }: ExpandableTextProps) {
+  const reduceMotion = useReduceMotion();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [hasExpandedLinks, setHasExpandedLinks] = useState(false);
   const [isExpandable, setIsExpandable] = useState(false);
@@ -100,12 +103,16 @@ export function ExpandableText({
 
     const nextExpanded = !resolvedExpanded;
 
+    if (!reduceMotion) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+
     if (!isControlled) {
       setInternalExpanded(nextExpanded);
     }
 
     onExpandedChange?.(nextExpanded);
-  }, [isControlled, isExpandable, onExpandedChange, resolvedExpanded]);
+  }, [isControlled, isExpandable, onExpandedChange, reduceMotion, resolvedExpanded]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -235,13 +242,13 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   textWithIndicator: {
-    paddingRight: 18,
+    paddingRight: 14,
   },
   hiddenMeasure: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: -10000,
+    top: -7800,
     height: 0,
     opacity: 0,
     overflow: 'hidden',

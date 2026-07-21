@@ -62,7 +62,7 @@ export function PlaceEditorNewListForm({
   if (!showNewListForm) {
     return (
       <InstantPressable style={styles.createListTrigger} onPress={() => onShowNewListFormChange(true)}>
-        <Plus color={colors.primary} size={18} />
+        <Plus color={colors.primary} size={16} />
         <Text style={styles.createListTriggerText}>{tr.placeEditor.createList}</Text>
       </InstantPressable>
     );
@@ -73,7 +73,7 @@ export function PlaceEditorNewListForm({
       <View style={styles.createListHeader}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.newList}</Text>
         <InstantPressable disabled={isCreatingList} onPress={() => onShowNewListFormChange(false)}>
-          <X color={colors.textSoft} size={18} />
+          <X color={colors.textSoft} size={16} />
         </InstantPressable>
       </View>
 
@@ -86,7 +86,7 @@ export function PlaceEditorNewListForm({
           <View style={styles.coverPickerHeader}>
             <View style={styles.coverPickerHeaderCopy}>
               <View style={styles.coverPickerIconWrap}>
-                <ImagePlus color={colors.secondary} size={18} />
+                <ImagePlus color={colors.secondary} size={16} />
               </View>
               <View style={styles.coverPickerBody}>
                 <Text style={styles.coverPickerTitle}>
@@ -131,7 +131,7 @@ export function PlaceEditorNewListForm({
             onPress={() => onNewListCoverImageChange('')}
             style={styles.coverClearInline}
           >
-            <X color={colors.onPrimary} size={16} />
+            <X color={colors.onPrimary} size={14} />
           </InstantPressable>
         ) : null}
       </View>
@@ -156,7 +156,7 @@ export function PlaceEditorNewListForm({
           style={[styles.privacyButton, newListPublic ? styles.privacyButtonActive : null]}
           onPress={() => onNewListPublicChange(true)}
         >
-          <Globe color={newListPublic ? colors.onPrimary : colors.textMuted} size={14} />
+          <Globe color={newListPublic ? colors.primary : colors.textMuted} size={12} />
           <Text style={[styles.privacyText, newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.publicList}
           </Text>
@@ -166,7 +166,7 @@ export function PlaceEditorNewListForm({
           style={[styles.privacyButton, !newListPublic ? styles.privateButtonActive : null]}
           onPress={() => onNewListPublicChange(false)}
         >
-          <Lock color={!newListPublic ? colors.onPrimary : colors.textMuted} size={14} />
+          <Lock color={!newListPublic ? colors.primary : colors.textMuted} size={12} />
           <Text style={[styles.privacyText, !newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.privateList}
           </Text>
@@ -174,6 +174,7 @@ export function PlaceEditorNewListForm({
       </View>
 
       <PrimaryButton
+        hapticFeedback="success"
         title={tr.placeEditor.createListAction}
         onPress={onCreateList}
         disabled={!newListName.trim() || isPickingListCover}

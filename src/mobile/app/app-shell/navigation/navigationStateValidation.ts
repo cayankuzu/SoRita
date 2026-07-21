@@ -8,6 +8,7 @@ const AUTHENTICATED_ROOT_ROUTE_NAMES = new Set([
   'Notifications',
   'ResetPassword',
   'Settings',
+  ...(__DEV__ ? ['UICatalog'] : []),
   'UserProfile',
 ]);
 const UNAUTHENTICATED_ROOT_ROUTE_NAMES = new Set([

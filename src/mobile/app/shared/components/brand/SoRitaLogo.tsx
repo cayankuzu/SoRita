@@ -8,6 +8,7 @@ import { colors } from '@/mobile/app/shared/theme/tokens';
 type SoRitaLogoProps = {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showIcon?: boolean;
+  showTagline?: boolean;
 };
 
 const textSizes = {
@@ -25,10 +26,10 @@ const iconSizes = {
 };
 
 const subtitleSizes = {
-  sm: 10,
-  md: 11,
-  lg: 12,
-  xl: 13,
+  sm: 9,
+  md: 10,
+  lg: 11,
+  xl: 12,
 };
 
 const gaps = {
@@ -38,9 +39,22 @@ const gaps = {
   xl: 12,
 };
 
-export function SoRitaLogo({ size = 'md', showIcon = true }: SoRitaLogoProps) {
+export function SoRitaLogo({
+  size = 'md',
+  showIcon = true,
+  showTagline = true,
+}: SoRitaLogoProps) {
+  const accessibilityLabel = showTagline
+    ? `${tr.brand.first}${tr.brand.second}, ${tr.brand.taglineFirst} ${tr.brand.taglineSecond.trim()}`
+    : `${tr.brand.first}${tr.brand.second}`;
+
   return (
-    <View style={[styles.wrap, { gap: gaps[size] }]}>
+    <View
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="header"
+      accessible
+      style={[styles.wrap, { gap: gaps[size] }]}
+    >
       {showIcon ? (
         <Image
           source={brandIconAsset}
@@ -49,15 +63,17 @@ export function SoRitaLogo({ size = 'md', showIcon = true }: SoRitaLogoProps) {
         />
       ) : null}
 
-      <View>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Text style={[styles.title, { fontSize: textSizes[size], lineHeight: textSizes[size] + 2 }]}>
           <Text style={styles.brandPrimary}>{tr.brand.first}</Text>
           <Text style={styles.brandSecondary}>{tr.brand.second}</Text>
         </Text>
-        <Text style={[styles.subtitle, { fontSize: subtitleSizes[size], lineHeight: subtitleSizes[size] + 2 }]}>
-          <Text style={styles.brandPrimary}>{tr.brand.taglineFirst}</Text>
-          <Text style={styles.brandSecondary}>{tr.brand.taglineSecond}</Text>
-        </Text>
+        {showTagline ? (
+          <Text style={[styles.subtitle, { fontSize: subtitleSizes[size], lineHeight: subtitleSizes[size] + 2 }]}>
+            <Text style={styles.brandPrimary}>{tr.brand.taglineFirst}</Text>
+            <Text style={styles.brandSecondary}>{tr.brand.taglineSecond}</Text>
+          </Text>
+        ) : null}
       </View>
     </View>
   );

@@ -1,4 +1,4 @@
-import { InteractionManager, Keyboard } from 'react-native';
+import { Keyboard } from 'react-native';
 
 export function runAfterNextPaint(task: () => void | Promise<void>) {
   if (typeof requestAnimationFrame !== 'function') {
@@ -33,11 +33,7 @@ export function waitForNextPaint() {
 
 export function dismissKeyboardAndRunAfterInteractions(task: () => void | Promise<void>) {
   Keyboard.dismiss();
-  InteractionManager.runAfterInteractions(() => {
-    setTimeout(() => {
-      void task();
-    }, 0);
-  });
+  runAfterNextPaint(task);
 }
 
 export function isPromiseLike<T = unknown>(value: unknown): value is Promise<T> {

@@ -29,6 +29,7 @@ export function NotificationCategoryTabs({
           <InstantPressable
             key={tab.key}
             onPress={() => onChange(tab.key)}
+            hapticFeedback="selection"
             style={[styles.tab, active ? styles.tabActive : null]}
           >
             <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{tab.label}</Text>
@@ -42,21 +43,21 @@ export function NotificationCategoryTabs({
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 0,
-    maxHeight: 64,
+    maxHeight: 56,
     backgroundColor: colors.surface,
   },
   content: {
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 10,
     backgroundColor: colors.surface,
   },
   tab: {
     alignSelf: 'center',
     height: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

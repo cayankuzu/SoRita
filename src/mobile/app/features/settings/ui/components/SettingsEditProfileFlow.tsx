@@ -162,7 +162,7 @@ export function SettingsEditProfileFlow({
             <AuthImagePicker
               uri={profilePhoto}
               shape="circle"
-              placeholderIcon={<Camera color={colors.textSoft} size={26} />}
+              placeholderIcon={<Camera color={colors.textSoft} size={22} />}
               placeholderText={tr.settings.editProfile.profilePhoto}
               helperText={tr.settings.editProfile.profilePhotoHelper}
               onPress={selectProfilePhoto}
@@ -173,7 +173,7 @@ export function SettingsEditProfileFlow({
           <AuthImagePicker
             uri={coverPhoto}
             shape="cover"
-            placeholderIcon={<Camera color={colors.textSoft} size={24} />}
+            placeholderIcon={<Camera color={colors.textSoft} size={20} />}
             placeholderText={tr.settings.editProfile.coverPhoto}
             helperText={tr.settings.editProfile.coverPhotoHelper}
             onPress={selectCoverPhoto}

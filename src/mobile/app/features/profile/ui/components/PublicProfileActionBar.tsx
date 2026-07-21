@@ -57,11 +57,11 @@ export function PublicProfileActionBar({
           ]}
         >
           {isFollowing ? (
-            <UserMinus color={colors.textMuted} size={14} />
+            <UserMinus color={colors.textMuted} size={12} />
           ) : (
             <UserPlus
               color={hasPendingFollowRequest ? colors.textMuted : colors.onPrimary}
-              size={14}
+              size={12}
             />
           )}
           <Text
@@ -85,7 +85,7 @@ export function PublicProfileActionBar({
         style={styles.moreButton}
         variant="surface"
       >
-        <Ellipsis color={colors.textMuted} size={18} />
+        <Ellipsis color={colors.textMuted} size={16} />
       </IconButton>
     </View>
   );
@@ -95,22 +95,22 @@ const styles = StyleSheet.create({
   profileActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   followButton: {
     minHeight: 44,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   followButtonPassive: {
     backgroundColor: colors.surfaceMuted,
   },
   followText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.onPrimary,
   },
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   unblockButton: {
     minHeight: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   unblockButtonText: {
     fontSize: 12,

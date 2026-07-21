@@ -25,7 +25,7 @@ export function SettingsHeader({
   return (
     <View style={styles.header}>
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
-        <ArrowLeft color={colors.textMuted} size={20} />
+        <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
       <Text style={styles.headerTitle}>{title}</Text>
       {actionLabel && onAction ? (
@@ -56,9 +56,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 16,
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 12,
   },
   backButton: {
     width: 44,
@@ -77,13 +77,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   headerActionGhost: {
     backgroundColor: colors.surfaceMuted,
   },
   headerActionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.onPrimary,
   },

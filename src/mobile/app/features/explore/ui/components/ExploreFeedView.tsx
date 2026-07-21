@@ -82,7 +82,7 @@ export function ExploreFeedView({
           onPress={onBack}
           style={styles.backButton}
         >
-          <ArrowLeft color={colors.textMuted} size={20} />
+          <ArrowLeft color={colors.textMuted} size={18} />
         </IconButton>
         <Text style={styles.feedTitle}>{tr.explore.title}</Text>
       </View>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import {
   Check,
   ChevronLeft,
@@ -40,15 +40,20 @@ export function PlaceEditorModalFooter({
   return (
     <View style={[styles.footer, { paddingBottom }]}>
       {step > 0 ? (
-        <Pressable disabled={isBusy} style={styles.backButton} onPress={onPrevious}>
-          <ChevronLeft color={colors.textMuted} size={16} />
+        <InstantPressable disabled={isBusy} style={styles.backButton} onPress={onPrevious}>
+          <ChevronLeft color={colors.textMuted} size={14} />
           <Text style={styles.backButtonText}>{tr.common.back}</Text>
-        </Pressable>
+        </InstantPressable>
       ) : onDelete ? (
-        <Pressable disabled={isBusy} style={styles.deleteButton} onPress={onDelete}>
-          <Trash2 color={colors.danger} size={16} />
+        <InstantPressable
+          disabled={isBusy}
+          hapticFeedback="warning"
+          style={styles.deleteButton}
+          onPress={onDelete}
+        >
+          <Trash2 color={colors.danger} size={14} />
           <Text style={styles.deleteButtonText}>{tr.common.delete}</Text>
-        </Pressable>
+        </InstantPressable>
       ) : null}
 
       {!isLastStep ? (
@@ -57,9 +62,10 @@ export function PlaceEditorModalFooter({
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onNext}
+          hapticFeedback="light"
         >
           <Text style={styles.nextButtonText}>{tr.placeEditor.continue}</Text>
-          <ChevronRight color={colors.onPrimary} size={16} />
+          <ChevronRight color={colors.onPrimary} size={14} />
         </InstantPressable>
       ) : (
         <InstantPressable
@@ -67,8 +73,9 @@ export function PlaceEditorModalFooter({
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onSave}
+          hapticFeedback="success"
         >
-          <Check color={colors.onPrimary} size={16} />
+          <Check color={colors.onPrimary} size={14} />
           <Text style={styles.nextButtonText}>
             {isEditing ? tr.placeEditor.update : tr.placeEditor.complete}
           </Text>

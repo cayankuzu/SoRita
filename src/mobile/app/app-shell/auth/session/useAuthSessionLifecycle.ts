@@ -252,7 +252,7 @@ export function useAuthSessionLifecycle({
           return;
         }
 
-        logger.warn('auth', 'Auth bootstrap is taking longer than expected; showing app shell fallback.');
+        logger.debug('auth', 'Auth bootstrap is taking longer than expected; showing app shell fallback.');
         setBootedIfMounted();
       }, AUTH_BOOTSTRAP_SHELL_FALLBACK_MS);
     };

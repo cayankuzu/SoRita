@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { ArrowLeft, Heart } from 'lucide-react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ArrowLeft, CheckCheck, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -20,11 +20,14 @@ import { NotificationsEmptyState } from '@/mobile/app/features/notifications/ui/
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -77,9 +80,7 @@ export function NotificationsScreen() {
   if (isInitialLoading) {
     return (
       <Screen padded={false} scroll={false}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} size="small" />
-        </View>
+        <NotificationListSkeleton />
       </Screen>
     );
   }
@@ -91,24 +92,23 @@ export function NotificationsScreen() {
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
     >
-      <View style={styles.brandBar}>
-        <SoRitaLogo size="sm" />
-      </View>
-
       <View style={styles.header}>
-        <Pressable
+        <IconButton
           accessibilityLabel={tr.common.back}
-          accessibilityRole="button"
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <ArrowLeft color={colors.textMuted} size={20} />
-        </Pressable>
+          <ArrowLeft color={colors.textMuted} size={18} />
+        </IconButton>
         <View style={styles.headerBody}>
-          <Text style={styles.title}>{notificationUiConfig.title}</Text>
+          <View style={styles.headerTitleRow}>
+            <SoRitaLogo size="sm" showIcon={false} showTagline={false} />
+            <View style={styles.headerTitleDivider} />
+            <Text style={styles.title}>{notificationUiConfig.title}</Text>
+          </View>
           {unreadCount > 0 ? <Text style={styles.subtitle}>{notificationUiConfig.newCount(unreadCount)}</Text> : null}
         </View>
-        <Pressable
+        <InstantPressable
           accessibilityLabel={notificationUiConfig.markAllReadLabel}
           accessibilityRole="button"
           disabled={unreadCount === 0 || isMarkingAllRead}
@@ -121,15 +121,19 @@ export function NotificationsScreen() {
             pressed && unreadCount > 0 && !isMarkingAllRead ? styles.markAllButtonPressed : null,
           ]}
         >
+          <CheckCheck
+            color={unreadCount === 0 || isMarkingAllRead ? colors.textDisabled : colors.primary}
+            size={14}
+          />
           <Text
             style={[
               styles.markAllButtonLabel,
               unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonLabelDisabled : null,
             ]}
           >
-            {notificationUiConfig.markAllReadLabel}
+            {notificationUiConfig.markAllReadShortLabel}
           </Text>
-        </Pressable>
+        </InstantPressable>
       </View>
 
       <NotificationCategoryTabs
@@ -185,7 +189,7 @@ export function NotificationsScreen() {
           errorMessage ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon={<Heart color={colors.danger} size={28} />}
+                icon={<Heart color={colors.danger} size={24} />}
                 title={notificationUiConfig.errorTitle}
                 description={errorMessage}
                 actionLabel={tr.common.retry}
@@ -254,23 +258,16 @@ const styles = StyleSheet.create({
   screenContent: {
     paddingBottom: 0,
   },
-  brandBar: {
-    minHeight: 58,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.cardBorder,
-    backgroundColor: colors.surface,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    gap: 8,
+    paddingHorizontal: 12,
+    minHeight: 56,
+    paddingVertical: 6,
     backgroundColor: colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.cardBorder,
   },
   backButton: {
     width: 44,
@@ -281,12 +278,24 @@ const styles = StyleSheet.create({
   headerBody: {
     flex: 1,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerTitleDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: colors.cardBorder,
+  },
   markAllButton: {
     minHeight: 44,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
     backgroundColor: colors.primaryBg,
   },
   markAllButtonDisabled: {
@@ -296,7 +305,7 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   markAllButtonLabel: {
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
     color: colors.primary,
   },
@@ -310,7 +319,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 2,
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.primary,
     fontWeight: '600',
   },
@@ -321,22 +330,22 @@ const styles = StyleSheet.create({
   },
   list: {
     backgroundColor: colors.surface,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   listEmpty: {
     flexGrow: 1,
   },
   emptyWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 28,
+    paddingHorizontal: 12,
+    paddingTop: 22,
   },
   noticeWrap: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
 });

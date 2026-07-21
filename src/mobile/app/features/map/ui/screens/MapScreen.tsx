@@ -16,13 +16,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useMapScreenState } from '@/mobile/app/features/map/application/useMapScreenState';
-import { env } from '@/mobile/app/platform/config/env';
+import {
+  MapAddHint,
+  MapPriorityNotice,
+  MapVisibilityLegend,
+} from '@/mobile/app/features/map/ui/components/MapScreenOverlays';
+import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
 import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
-import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type PlaceEditorModalProps = React.ComponentProps<
@@ -50,6 +54,7 @@ export function MapScreen() {
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false);
+  const [showMapAddHint, setShowMapAddHint] = React.useState(false);
   const {
     activeEditorMarkerIndex,
     clearSearch,
@@ -79,6 +84,7 @@ export function MapScreen() {
     lists,
     locationErrorMessage,
     locationPermissionDenied,
+    locationPermissionCanAskAgain,
     markerFilter,
     mapPlaces,
     minimizedEditor,
@@ -114,19 +120,39 @@ export function MapScreen() {
   const markerFilterOptions = React.useMemo(
     () => [
       { value: 'all', label: tr.map.filterAll, color: colors.textSoft },
-      { value: 'public', label: tr.map.filterPublic, color: colors.secondary },
-      { value: 'private', label: tr.map.filterPrivate, color: colors.danger },
-      { value: 'mixed', label: tr.map.filterMixed, color: colors.primary },
+      { value: 'public', label: tr.map.filterPublic, color: colors.visibilityPublic },
+      { value: 'private', label: tr.map.filterPrivate, color: colors.visibilityPrivate },
+      { value: 'mixed', label: tr.map.filterMixed, color: colors.visibilityMixed },
       { value: 'none', label: tr.map.filterNone, color: colors.textSoft },
     ] as const,
     [],
   );
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (isFocused) {
+      void hasSeenMapAddHint().then((seen) => {
+        if (!cancelled && !seen) {
+          setShowMapAddHint(true);
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isFocused]);
+  const dismissMapAddHint = React.useCallback(() => {
+    setShowMapAddHint(false);
+    void markMapAddHintSeen();
+  }, []);
   const handleInteractiveMapPress = React.useCallback(
     (coords: { lat: number; lng: number }) => {
       setIsFilterMenuOpen(false);
+      dismissMapAddHint();
       void handleMapPress(coords);
     },
-    [handleMapPress],
+    [dismissMapAddHint, handleMapPress],
   );
   const handleInteractiveMarkerPress = React.useCallback(
     (index: number) => {
@@ -152,84 +178,28 @@ export function MapScreen() {
       <Screen padded={false} scroll={false} safeTop={false}>
         <View style={styles.container}>
           <View style={[styles.searchLayer, { top: searchLayerTopOffset }]} pointerEvents="box-none">
-            {visibleDataErrorMessage ? (
-              <InlineNotice
-                tone={hasMapDataPartialError ? 'warning' : 'danger'}
-                title={
-                  hasMapDataPartialError
-                    ? tr.map.cachedDataTitle
-                    : tr.map.dataErrorTitle
-                }
-                description={visibleDataErrorMessage}
-                actionLabel={tr.common.retry}
-                onAction={() => {
-                  void retryLists();
-                }}
-              />
-            ) : null}
+            <MapPriorityNotice
+              hasMapDataPartialError={hasMapDataPartialError}
+              locationErrorMessage={locationErrorMessage}
+              locationPermissionCanAskAgain={locationPermissionCanAskAgain}
+              locationPermissionDenied={locationPermissionDenied}
+              onRetryLists={() => void retryLists()}
+              onRetryLocation={() => void retryLocation()}
+              onRetrySearch={() => void runSearch()}
+              searchErrorMessage={searchErrorMessage}
+              visibleDataErrorMessage={visibleDataErrorMessage}
+            />
 
-            {searchErrorMessage ? (
-              <InlineNotice
-                tone="warning"
-                title={tr.map.searchUnavailableTitle}
-                description={searchErrorMessage}
-                actionLabel={tr.map.searchRetry}
-                onAction={() => {
-                  void runSearch();
-                }}
-              />
-            ) : null}
-
-            {locationErrorMessage ? (
-              <InlineNotice
-                tone={locationPermissionDenied ? 'warning' : 'danger'}
-                title={
-                  locationPermissionDenied
-                    ? tr.map.locationPermissionRequired
-                    : tr.map.locationUnavailableTitle
-                }
-                description={locationErrorMessage}
-                actionLabel={locationPermissionDenied ? tr.map.permissionRetry : tr.common.retry}
-                onAction={() => {
-                  void retryLocation();
-                }}
-              />
-            ) : null}
-
-            {env.isExpoGo ? (
-              <InlineNotice
-                tone="warning"
-                title={tr.system.expoGoMapLimitationTitle}
-                description={tr.system.expoGoMapLimitationDescription}
-              />
-            ) : null}
-
-            <View
-              style={styles.searchBar}
-              collapsable={false}
-              needsOffscreenAlphaCompositing
-              renderToHardwareTextureAndroid
-              shouldRasterizeIOS
-            >
-              <Pressable
-                accessibilityLabel={tr.map.refreshButton}
-                accessibilityRole="button"
-                disabled={refreshing}
-                style={[
-                  styles.refreshButton,
-                  refreshing ? styles.refreshButtonActive : null,
-                ]}
-                onPress={handleRefreshPress}
+            <View style={styles.searchControlsRow}>
+              <View
+                style={styles.searchBar}
+                collapsable={false}
+                needsOffscreenAlphaCompositing
+                renderToHardwareTextureAndroid
+                shouldRasterizeIOS
               >
-                {refreshing ? (
-                  <ActivityIndicator color={colors.primary} size="small" />
-                ) : (
-                  <RefreshCw color={colors.textMuted} size={18} />
-                )}
-              </Pressable>
-              <View style={styles.searchBarDivider} />
               <View style={styles.searchInputWrap}>
-                <Search color={colors.textSoft} size={18} />
+                <Search color={colors.textSoft} size={16} />
                 <TextInput
                   accessibilityLabel={tr.map.searchPlaceholder}
                   value={searchQuery}
@@ -265,27 +235,40 @@ export function MapScreen() {
                     onPress={clearSearch}
                     style={styles.clearButton}
                   >
-                    <X color={colors.textSoft} size={16} />
+                    <X color={colors.textSoft} size={14} />
                   </Pressable>
                 ) : null}
               </View>
-              <View style={styles.searchBarDivider} />
-              <Pressable
-                accessibilityLabel={tr.map.filterButton}
-                accessibilityRole="button"
-                style={[
-                  styles.filterButton,
-                  markerFilter !== 'all' ? styles.filterButtonActive : null,
-                ]}
-                onPress={() => {
-                  setIsFilterMenuOpen((current) => !current);
-                }}
-              >
-                <SlidersHorizontal
-                  color={markerFilter !== 'all' ? colors.primary : colors.textMuted}
-                  size={18}
-                />
-              </Pressable>
+              </View>
+              <View style={styles.searchActionGroup}>
+                <Pressable
+                  accessibilityLabel={tr.map.refreshButton}
+                  accessibilityRole="button"
+                  disabled={refreshing}
+                  style={[styles.floatingSearchAction, refreshing ? styles.refreshButtonActive : null]}
+                  onPress={handleRefreshPress}
+                >
+                  {refreshing ? (
+                    <ActivityIndicator color={colors.primary} size="small" />
+                  ) : (
+                    <RefreshCw color={colors.textMuted} size={16} />
+                  )}
+                </Pressable>
+                <Pressable
+                  accessibilityLabel={tr.map.filterButton}
+                  accessibilityRole="button"
+                  style={[
+                    styles.floatingSearchAction,
+                    markerFilter !== 'all' ? styles.filterButtonActive : null,
+                  ]}
+                  onPress={() => setIsFilterMenuOpen((current) => !current)}
+                >
+                  <SlidersHorizontal
+                    color={markerFilter !== 'all' ? colors.primary : colors.textMuted}
+                    size={16}
+                  />
+                </Pressable>
+              </View>
             </View>
 
             {isFilterMenuOpen ? (
@@ -395,6 +378,12 @@ export function MapScreen() {
             )}
           </View>
 
+          <MapVisibilityLegend bottom={locateButtonBottomOffset + 58} />
+
+          {showMapAddHint && !editorData && !minimizedEditor ? (
+            <MapAddHint bottom={locateButtonBottomOffset + 8} onClose={dismissMapAddHint} />
+          ) : null}
+
           <Pressable
             accessibilityLabel={tr.map.locateMe}
             accessibilityRole="button"
@@ -412,7 +401,7 @@ export function MapScreen() {
             {isLocating ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <LocateFixed color={colors.text} size={20} />
+              <LocateFixed color={colors.text} size={18} />
             )}
           </Pressable>
 
@@ -434,7 +423,7 @@ export function MapScreen() {
                   {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
                 </Text>
               </View>
-              <ChevronUp color={colors.onPrimary} size={18} />
+              <ChevronUp color={colors.onPrimary} size={16} />
             </Pressable>
           ) : null}
 
@@ -454,7 +443,7 @@ export function MapScreen() {
                 />
                 <Text style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</Text>
               </View>
-              <ChevronUp color={colors.onPrimary} size={18} />
+              <ChevronUp color={colors.onPrimary} size={16} />
             </Pressable>
           ) : null}
         </View>
@@ -510,15 +499,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    gap: 8,
+    gap: 6,
     elevation: 8,
+    paddingHorizontal: 10,
   },
-  searchBar: {
+  searchControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 56,
-    paddingLeft: 8,
-    paddingRight: 8,
+    gap: 6,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingLeft: 10,
+    paddingRight: 4,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -526,23 +522,23 @@ const styles = StyleSheet.create({
     shadowColor: colors.text,
     shadowOpacity: 0.1,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
   searchInputWrap: {
     flex: 1,
-    minHeight: 52,
-    paddingRight: 8,
+    minHeight: 44,
+    paddingRight: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   searchInput: {
     flex: 1,
     minHeight: 40,
-    height: 40,
-    fontSize: 15,
-    lineHeight: 20,
+    height: 34,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.text,
     backgroundColor: 'transparent',
     includeFontPadding: false,
@@ -550,75 +546,70 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   clearButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchBarDivider: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginVertical: 10,
-    backgroundColor: colors.cardBorder,
+  searchActionGroup: {
+    flexDirection: 'row',
+    gap: 4,
   },
-  refreshButton: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.pill,
+  floatingSearchAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    elevation: 4,
   },
   refreshButtonActive: {
     backgroundColor: colors.primaryBg,
-  },
-  filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
   },
   filterButtonActive: {
     backgroundColor: colors.primaryBg,
   },
   filterMenu: {
+    width: 190,
+    alignSelf: 'flex-end',
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 10,
+    padding: 8,
     gap: 4,
     shadowColor: colors.text,
     shadowOpacity: 0.08,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
   filterMenuTitle: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     paddingBottom: 4,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.textSoft,
   },
   filterOption: {
     minHeight: 42,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   filterOptionActive: {
     backgroundColor: colors.surfaceMuted,
   },
   filterOptionDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   filterOptionDotNone: {
     backgroundColor: 'transparent',
@@ -626,7 +617,7 @@ const styles = StyleSheet.create({
     borderColor: colors.textSoft,
   },
   filterOptionText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
   },
@@ -634,7 +625,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   resultsCard: {
-    maxHeight: 360,
+    maxHeight: 324,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -649,8 +640,8 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   resultsHeader: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: colors.surfaceMuted,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
@@ -661,8 +652,8 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   resultRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
@@ -670,14 +661,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   resultTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   resultAddress: {
     marginTop: 4,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   emptyResultsCard: {
@@ -685,18 +676,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   emptyResultsTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
   emptyResultsDescription: {
     marginTop: 4,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   map: {
@@ -709,10 +700,10 @@ const styles = StyleSheet.create({
   },
   locateButton: {
     position: 'absolute',
-    right: 16,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -724,16 +715,16 @@ const styles = StyleSheet.create({
   },
   reopenEditorButton: {
     position: 'absolute',
-    left: 16,
-    right: 76,
-    minHeight: 54,
+    left: 12,
+    right: 60,
+    minHeight: 46,
     borderRadius: radius.lg,
     backgroundColor: colors.text,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
     shadowColor: colors.text,
     shadowOpacity: 0.18,
     shadowRadius: 10,
@@ -745,12 +736,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   reopenEditorTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
   reopenEditorSubtitle: {
-    fontSize: 11,
+    ...typography.metadataText,
     color: colors.onDarkSubtle,
   },
 });

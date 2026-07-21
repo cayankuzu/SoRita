@@ -36,6 +36,7 @@ type PlaceCardFullProps = {
   canReportPlace: boolean;
   categories: string[];
   comments: FeedActionComment[];
+  context?: 'default' | 'list-detail';
   currentUserName?: string;
   currentUserPhoto?: string;
   dietaryOptions: string[];
@@ -94,6 +95,7 @@ export function PlaceCardFull({
   canReportPlace: _canReportPlace,
   categories,
   comments,
+  context = 'default',
   currentUserName,
   currentUserPhoto,
   dietaryOptions,
@@ -144,43 +146,33 @@ export function PlaceCardFull({
   showActionMenu = false,
   hasNextCommentsPage = false,
 }: PlaceCardFullProps) {
-  const [isPlaceNameExpanded, setIsPlaceNameExpanded] = React.useState(false);
-  const [isPlaceNameTruncated, setIsPlaceNameTruncated] = React.useState(false);
-  React.useEffect(() => {
-    setIsPlaceNameExpanded(false);
-    setIsPlaceNameTruncated(false);
-  }, [place.id, place.name, onPlaceNamePress]);
-
   const handlePlaceNamePress = () => {
     if (!onPlaceNamePress) {
       return;
     }
-
-    if (isPlaceNameTruncated && !isPlaceNameExpanded) {
-      setIsPlaceNameExpanded(true);
-      return;
-    }
-
-    setIsPlaceNameExpanded(false);
     onPlaceNamePress();
   };
 
   return (
     <View style={styles.feedCard}>
-      <PlaceOwnerHeader owner={owner} onPress={onOwnerPress} />
+      {context === 'list-detail' ? null : (
+        <PlaceOwnerHeader owner={owner} onPress={onOwnerPress} />
+      )}
       <PlaceSourceBar
         attribution={sourceAttribution}
         onPress={onSourcePress}
         sourceUser={sourceUser}
       />
-      <PlaceListBar
-        coverImage={listCoverImage}
-        emoji={listEmoji}
-        isPublic={listIsPublic}
-        name={listName}
-        onPress={onPress}
-        onPressIn={onPressIn}
-      />
+      {context === 'list-detail' ? null : (
+        <PlaceListBar
+          coverImage={listCoverImage}
+          emoji={listEmoji}
+          isPublic={listIsPublic}
+          name={listName}
+          onPress={onPress}
+          onPressIn={onPressIn}
+        />
+      )}
 
       <View style={styles.mapWrap}>
         <MiniMapPreview
@@ -213,25 +205,9 @@ export function PlaceCardFull({
             ]}
           >
             <View style={styles.contentTitleStack}>
-              <Text
-                onTextLayout={(event) => {
-                  const nextIsTruncated = event.nativeEvent.lines.length > 1;
-                  setIsPlaceNameTruncated((current) =>
-                    current === nextIsTruncated ? current : nextIsTruncated,
-                  );
-                }}
-                pointerEvents="none"
-                style={[
-                  styles.title,
-                  onPlaceNamePress ? styles.titleLink : null,
-                  styles.contentTitleMeasureText,
-                ]}
-              >
-                {place.name}
-              </Text>
               <View style={styles.contentTitleInline}>
                 <Text
-                  numberOfLines={isPlaceNameExpanded ? undefined : 1}
+                  numberOfLines={2}
                   style={[styles.title, onPlaceNamePress ? styles.titleLink : null]}
                 >
                   {place.name}
@@ -239,7 +215,7 @@ export function PlaceCardFull({
                 {onPlaceNamePress ? (
                   <ChevronRight
                     color={colors.text}
-                    size={15}
+                    size={13}
                     strokeWidth={2.3}
                     style={styles.contentTitleChevron}
                   />

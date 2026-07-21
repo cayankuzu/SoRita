@@ -133,7 +133,7 @@ export function ResetPasswordScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoCapitalize="none"
-          icon={<Lock color={colors.textMuted} size={16} />}
+          icon={<Lock color={colors.textMuted} size={14} />}
         />
         <AuthField
           label={tr.auth.resetPassword.newPasswordConfirmLabel}
@@ -142,7 +142,7 @@ export function ResetPasswordScreen() {
           onChangeText={setPasswordConfirm}
           secureTextEntry
           autoCapitalize="none"
-          icon={<Lock color={colors.textMuted} size={16} />}
+          icon={<Lock color={colors.textMuted} size={14} />}
         />
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
         <PrimaryButton
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   content: {
     flexGrow: 1,
@@ -168,26 +168,26 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    gap: 14,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    padding: 18,
+    padding: 14,
   },
   title: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: 'center',
   },
   formError: {
     color: colors.danger,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
   },

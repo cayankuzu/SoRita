@@ -38,8 +38,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   card: {
-    gap: 14,
-    padding: 22,
+    gap: 10,
+    padding: 18,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
@@ -47,17 +47,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.screenTitle,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.text,
   },
   body: {
     fontSize: typography.body,
-    lineHeight: 21,
+    lineHeight: 18,
     color: colors.textMuted,
   },
   list: {
-    gap: 8,
-    padding: 14,
+    gap: 6,
+    padding: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
   },
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: typography.caption,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textSoft,
   },
 });

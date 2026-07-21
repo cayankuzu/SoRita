@@ -295,7 +295,7 @@ export function HomeScreen() {
     return (
       <Screen safeTop={false}>
         <EmptyState
-          icon={<MapPin color={colors.danger} size={38} />}
+          icon={<MapPin color={colors.danger} size={32} />}
           title={tr.home.errorTitle}
           description={errorMessage}
           actionLabel={tr.common.retry}
@@ -311,12 +311,12 @@ export function HomeScreen() {
       return (
         <View style={styles.centeredState}>
           <EmptyState
-            icon={<Users color={colors.primary} size={38} />}
+            icon={<Users color={colors.primary} size={32} />}
             title={tr.home.noFollowingTitle}
             description={tr.home.noFollowingDescription}
           />
           <InstantPressable style={styles.primaryCta} onPress={() => navigation.navigate('Explore')}>
-            <MapPin color={colors.onPrimary} size={16} />
+            <MapPin color={colors.onPrimary} size={14} />
             <Text style={styles.primaryCtaText}>{tr.home.exploreCta}</Text>
           </InstantPressable>
         </View>
@@ -327,7 +327,7 @@ export function HomeScreen() {
       return (
         <View style={styles.emptyStateWrap}>
           <EmptyState
-            icon={<MapPin color={colors.textSoft} size={38} />}
+            icon={<MapPin color={colors.textSoft} size={32} />}
             title={tr.home.noFeedTitle}
             description={tr.home.noFeedDescription}
           />
@@ -373,33 +373,33 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   skeletonWrap: {
     flex: 1,
-    paddingTop: 12,
-    gap: 24,
+    paddingTop: 10,
+    gap: 18,
   },
   centeredState: {
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingTop: 36,
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingTop: 28,
   },
   primaryCta: {
     alignSelf: 'center',
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.md,
-    paddingHorizontal: 24,
+    paddingHorizontal: 18,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   primaryCtaText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.onPrimary,
   },
   emptyStateWrap: {
-    paddingTop: 36,
-    paddingHorizontal: 16,
+    paddingTop: 28,
+    paddingHorizontal: 12,
   },
   feedListContent: {
     paddingTop: 4,
@@ -408,11 +408,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   cardRow: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
 });

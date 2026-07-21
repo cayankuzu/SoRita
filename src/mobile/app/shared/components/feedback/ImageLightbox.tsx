@@ -20,7 +20,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { saveUriToGallery } from '@/mobile/app/platform/media/gallery';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -95,7 +95,7 @@ export function ImageLightbox({
             {
               key: 'download-image',
               label: tr.common.download,
-              renderIcon: (color) => <Download color={color} size={16} />,
+              renderIcon: (color) => <Download color={color} size={14} />,
               onPress: () => {
                 setMenuVisible(false);
                 void handleDownloadCurrent();
@@ -137,7 +137,7 @@ export function ImageLightbox({
             style={styles.topActionButton}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={20} />
+            <X color={colors.onPrimary} size={18} />
           </IconButton>
 
           <View style={styles.topBarCopy}>
@@ -156,7 +156,7 @@ export function ImageLightbox({
               style={styles.topActionButton}
               variant="inverse"
             >
-              <MoreHorizontal color={colors.onPrimary} size={20} />
+              <MoreHorizontal color={colors.onPrimary} size={18} />
             </IconButton>
           ) : (
             <View style={styles.topActionSpacer} />
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 10,
   },
   topActionButton: {
     width: 44,
@@ -251,18 +251,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.controlsOverlay,
     borderWidth: 1,
     borderColor: colors.controlsBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     gap: 2,
   },
   topBarTitle: {
     color: colors.onPrimary,
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
   },
   topBarSubtitle: {
     color: colors.onDarkMuted,
-    fontSize: 11,
+    ...typography.metadataText,
     fontWeight: '700',
   },
   carouselViewport: {

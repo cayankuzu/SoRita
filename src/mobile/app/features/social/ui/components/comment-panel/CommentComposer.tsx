@@ -168,7 +168,7 @@ export function CommentComposer({
         <AvatarView
           uri={currentUserPhoto}
           name={currentUserName || 'SoRita'}
-          size={42}
+          size={36}
         />
         <View style={[styles.composerInputWrap, composerIsContextual ? styles.composerInputWrapActive : null]}>
           <TextInput
@@ -207,7 +207,7 @@ export function CommentComposer({
           accessibilityLabel={tr.common.send}
           accessibilityRole="button"
         >
-          <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={17} />
+          <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={15} />
         </Pressable>
       </View>
     </View>

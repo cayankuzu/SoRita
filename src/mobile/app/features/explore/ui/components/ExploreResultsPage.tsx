@@ -37,6 +37,7 @@ type ExploreResultsPageProps = {
   listMarkerLists: PlaceList[];
   listRef: React.Ref<FlatList<ExploreGridItem>>;
   onContentReady: () => void;
+  onClearSearch: () => void;
   onEndReached: () => void;
   onFollowUser: (userId: string) => void;
   onListPress: (listId: string) => void;
@@ -53,15 +54,16 @@ type ExploreResultsPageProps = {
 
 function ExplorePageEmptyState({
   errorMessage,
+  onClearSearch,
   onRetry,
   searchQuery,
   tab,
-}: Pick<ExploreResultsPageProps, 'errorMessage' | 'onRetry' | 'searchQuery' | 'tab'>) {
+}: Pick<ExploreResultsPageProps, 'errorMessage' | 'onClearSearch' | 'onRetry' | 'searchQuery' | 'tab'>) {
   if (errorMessage) {
     return (
       <View style={styles.errorWrap}>
         <EmptyState
-          icon={<Compass color={colors.danger} size={32} />}
+          icon={<Compass color={colors.danger} size={28} />}
           title={tr.explore.errorTitle}
           description={errorMessage}
           actionLabel={tr.common.retry}
@@ -75,13 +77,15 @@ function ExplorePageEmptyState({
   if (tab === 'lists') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={32} />}
+        icon={<Compass color={colors.textSoft} size={28} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noList}
         description={
           searchQuery.trim()
             ? tr.explore.empty.tryDifferentSearch
             : tr.explore.empty.noListDescription
         }
+        actionLabel={searchQuery.trim() ? tr.common.clear : undefined}
+        onAction={searchQuery.trim() ? onClearSearch : undefined}
       />
     );
   }
@@ -89,13 +93,15 @@ function ExplorePageEmptyState({
   if (tab === 'places') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={32} />}
+        icon={<Compass color={colors.textSoft} size={28} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPlace}
         description={
           searchQuery.trim()
             ? tr.explore.empty.tryDifferentSearch
             : tr.explore.empty.noPlaceDescription
         }
+        actionLabel={searchQuery.trim() ? tr.common.clear : undefined}
+        onAction={searchQuery.trim() ? onClearSearch : undefined}
       />
     );
   }
@@ -103,26 +109,30 @@ function ExplorePageEmptyState({
   if (tab === 'photos') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={32} />}
+        icon={<Compass color={colors.textSoft} size={28} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPhoto}
         description={
           searchQuery.trim()
             ? tr.explore.empty.tryDifferentSearch
             : tr.explore.empty.noPhotoDescription
         }
+        actionLabel={searchQuery.trim() ? tr.common.clear : undefined}
+        onAction={searchQuery.trim() ? onClearSearch : undefined}
       />
     );
   }
 
   return (
     <EmptyState
-      icon={<Compass color={colors.textSoft} size={32} />}
+      icon={<Compass color={colors.textSoft} size={28} />}
       title={searchQuery.trim() ? tr.explore.empty.noUserResult : tr.explore.empty.noUser}
       description={
         searchQuery.trim()
           ? tr.explore.empty.tryDifferentSearch
           : tr.explore.empty.noUserDescription
       }
+      actionLabel={searchQuery.trim() ? tr.common.clear : undefined}
+      onAction={searchQuery.trim() ? onClearSearch : undefined}
     />
   );
 }
@@ -137,6 +147,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   listMarkerLists,
   listRef,
   onContentReady,
+  onClearSearch,
   onEndReached,
   onFollowUser,
   onListPress,
@@ -181,6 +192,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
       ListEmptyComponent={
         <ExplorePageEmptyState
           errorMessage={errorMessage}
+          onClearSearch={onClearSearch}
           onRetry={onRetry}
           searchQuery={searchQuery}
           tab={tab}
@@ -211,6 +223,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
               allListsForMarkerColor={listMarkerLists}
               onOwnerPress={() => listItem.owner && onOwnerPress(listItem.owner.id)}
               onPress={() => onListPress(listItem.list.id)}
+              searchQuery={searchQuery}
             />
           );
         }
@@ -226,6 +239,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
               isPending={pendingFollowRequests.includes(targetUser.id)}
               onPress={() => onOwnerPress(targetUser.id)}
               onFollowPress={() => onFollowUser(targetUser.id)}
+              searchQuery={searchQuery}
             />
           );
         }
@@ -249,6 +263,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
             )}
             onOwnerPress={() => placeItem.owner && onOwnerPress(placeItem.owner.id)}
             onPress={() => onPlacePress(tab, index)}
+            searchQuery={searchQuery}
           />
         );
       }}
@@ -258,18 +273,18 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
 
 const styles = StyleSheet.create({
   errorWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
   },
   loadMoreLabel: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
   loadMoreStatus: {
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
 });

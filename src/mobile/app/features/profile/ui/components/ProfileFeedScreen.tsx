@@ -87,7 +87,7 @@ export function ProfileFeedScreen({
           onPress={onBack}
           style={styles.backButton}
         >
-          <ArrowLeft color={colors.textMuted} size={20} />
+          <ArrowLeft color={colors.textMuted} size={18} />
         </IconButton>
         <Text style={styles.title}>{title}</Text>
       </View>
@@ -143,9 +143,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingTop: 10,
-    paddingBottom: 12,
+    gap: 8,
+    paddingTop: 8,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -155,12 +155,12 @@ const styles = StyleSheet.create({
     height: 44,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
   content: {
-    paddingVertical: 12,
-    gap: 16,
+    paddingVertical: 10,
+    gap: 12,
   },
 });

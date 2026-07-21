@@ -22,6 +22,7 @@ import {
   getAppLaunchBreakdown,
   getAppLaunchElapsedMs,
 } from '@/mobile/app/shared/performance/appLaunch';
+import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 
 let appStartTracked = false;
 
@@ -37,7 +38,11 @@ export function AppProviders({ children }: AppProvidersProps) {
       appStartTracked = true;
       trackEvent({
         name: 'app_start',
-        params: { cold: true, ...getAppLaunchBreakdown() },
+        params: {
+          ...getPerformanceContext(),
+          cold: true,
+          ...getAppLaunchBreakdown(),
+        },
       });
     }
 

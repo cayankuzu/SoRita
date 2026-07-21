@@ -130,14 +130,14 @@ export function MediaSelectionPreview({
                     y={0}
                     width={metrics.outerFrameStyle.width}
                     height={metrics.outerFrameStyle.height}
-                    fill="#fff"
+                    fill={colors.onPrimary}
                   />
                   {variant === 'avatar' ? (
                     <Circle
                       cx={metrics.focusFrameStyle.left + metrics.focusFrameStyle.width / 2}
                       cy={metrics.focusFrameStyle.top + metrics.focusFrameStyle.height / 2}
                       r={metrics.focusFrameStyle.width / 2}
-                      fill="#000"
+                      fill={colors.cameraBackground}
                     />
                   ) : (
                     <Rect
@@ -147,7 +147,7 @@ export function MediaSelectionPreview({
                       height={metrics.focusFrameStyle.height}
                       rx={radius.xl}
                       ry={radius.xl}
-                      fill="#000"
+                      fill={colors.cameraBackground}
                     />
                   )}
                 </Mask>
@@ -157,7 +157,7 @@ export function MediaSelectionPreview({
                 y={0}
                 width={metrics.outerFrameStyle.width}
                 height={metrics.outerFrameStyle.height}
-                fill="rgba(248,250,252,0.72)"
+                fill={colors.onDarkSubtle}
                 mask={`url(#${maskId})`}
               />
             </Svg>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',
-    padding: 18,
+    padding: 14,
     position: 'relative',
   },
   avatarStage: {},

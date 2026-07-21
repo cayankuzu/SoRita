@@ -12,7 +12,7 @@ import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, layout, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 
 const NOTIFICATION_COUNT_REFRESH_WINDOW_MS = 1000 * 60;
@@ -86,31 +86,31 @@ export function AppHeader() {
     openStackScreen(navigation, 'Notifications');
   }, [navigation, user?.id]);
 
+  if (!showNotifications) {
+    return <SafeAreaView edges={['top']} style={styles.safeArea} />;
+  }
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={[styles.header, { paddingHorizontal: appLayout.screenPadding }]}>
-        <SoRitaLogo size="lg" />
-        {showNotifications ? (
-          <IconButton
-            accessibilityLabel={tr.notifications.title}
-            accessibilityHint={notificationCount > 0 ? tr.notifications.unreadHint(notificationCount) : undefined}
-            onPress={openNotifications}
-            style={styles.notificationButton}
-          >
-            <Bell color={colors.textMuted} size={22} />
-            {notificationCount > 0 ? (
-              <View
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-                style={styles.notificationBadge}
-              >
-                <Text style={styles.notificationBadgeText}>{badgeLabel}</Text>
-              </View>
-            ) : null}
-          </IconButton>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
+        <SoRitaLogo size="sm" showIcon={false} showTagline />
+        <IconButton
+          accessibilityLabel={tr.notifications.title}
+          accessibilityHint={notificationCount > 0 ? tr.notifications.unreadHint(notificationCount) : undefined}
+          onPress={openNotifications}
+          style={styles.notificationButton}
+        >
+          <Bell color={colors.textMuted} size={20} />
+          {notificationCount > 0 ? (
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={styles.notificationBadge}
+            >
+              <Text style={styles.notificationBadgeText}>{badgeLabel}</Text>
+            </View>
+          ) : null}
+        </IconButton>
       </View>
     </SafeAreaView>
   );
@@ -129,15 +129,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   notificationButton: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
   },
   notificationBadge: {
     position: 'absolute',
-    top: 8,
-    right: 6,
-    minWidth: 18,
-    height: 18,
+    top: 6,
+    right: 4,
+    minWidth: 16,
+    height: 16,
     paddingHorizontal: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.danger,
@@ -147,12 +147,8 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   notificationBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: typography.metadataText.fontSize,
+    fontWeight: '700',
     color: colors.onPrimary,
-  },
-  headerSpacer: {
-    width: 46,
-    height: 46,
   },
 });

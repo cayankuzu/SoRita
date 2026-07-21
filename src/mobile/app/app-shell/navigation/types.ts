@@ -17,4 +17,5 @@ export type RootStackParamList = {
   UserProfile: { userId: string; allowBlockedView?: boolean };
   Notifications: undefined;
   Settings: undefined;
+  UICatalog: undefined;
 };

@@ -43,7 +43,7 @@ export function SettingsPasswordView({
       <View style={styles.form}>
         <View style={styles.emailInfoCard}>
           <View style={styles.emailInfoHeader}>
-            <Mail color={colors.primary} size={16} />
+            <Mail color={colors.primary} size={14} />
             <Text style={styles.emailInfoLabel}>{tr.settings.password.emailLabel}</Text>
           </View>
           <Text style={styles.emailInfoValue}>{email}</Text>

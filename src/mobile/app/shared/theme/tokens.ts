@@ -20,26 +20,44 @@ export const colors = {
   warning: '#b45309',
   warningText: '#b45309',
   purple: '#6d28d9',
+  social: '#047857',
+  rating: '#b45309',
+  quote: '#6d28d9',
+  visibilityPublic: '#047857',
+  visibilityPrivate: '#475569',
+  visibilityMixed: '#2563eb',
   successBg: '#ecfdf5',
   primaryBg: '#eff6ff',
   dangerBg: '#fef2f2',
+  dangerBorder: '#fecaca',
+  dangerBorderSubtle: 'rgba(239, 68, 68, 0.22)',
   warningBg: '#fffbeb',
+  warningBorder: '#fde68a',
   purpleBg: '#f5f3ff',
-  ownProfileCover: '#60a5fa',
-  publicProfileCover: '#f9a8d4',
+  infoBorder: '#bfdbfe',
+  successBorder: '#a7f3d0',
+  successBorderSubtle: 'rgba(16, 185, 129, 0.22)',
+  profileCoverFallback: '#dbeafe',
+  ownProfileCover: '#dbeafe',
+  publicProfileCover: '#dbeafe',
   userCoverFallback: '#dbeafe',
   darkOverlay: 'rgba(15, 23, 42, 0.7)',
   lightboxOverlay: 'rgba(15, 23, 42, 0.92)',
+  lightboxChrome: 'rgba(5, 10, 19, 0.78)',
+  lightboxDeep: '#040811',
   overlay: 'rgba(15, 23, 42, 0.4)',
   controlsOverlay: 'rgba(15, 23, 42, 0.72)',
   controlsBorder: 'rgba(255, 255, 255, 0.1)',
+  controlsDivider: 'rgba(255, 255, 255, 0.22)',
   onDarkMuted: 'rgba(255, 255, 255, 0.78)',
+  onDarkFaint: 'rgba(233, 240, 255, 0.72)',
   deepBackground: '#020617',
   deepBorder: 'rgba(255, 255, 255, 0.08)',
   mediaPickerOverlay: 'rgba(15, 23, 42, 0.84)',
   shadowSubtle: 'rgba(15, 23, 42, 0.12)',
   cameraBorder: 'rgba(255, 255, 255, 0.18)',
   cameraBackground: '#000000',
+  glassSurface: 'rgba(255, 255, 255, 0.82)',
   mapBackground: '#ebe7de',
   onDarkSubtle: 'rgba(255, 255, 255, 0.72)',
 };
@@ -47,47 +65,56 @@ export const colors = {
 export const spacing = {
   none: 0,
   xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  '2xl': 32,
-  screen: 16,
-  section: 20,
-  card: 14,
+  sm: 6,
+  md: 10,
+  lg: 12,
+  xl: 18,
+  '2xl': 24,
+  screen: 12,
+  section: 16,
+  card: 10,
 };
 
 export const layout = {
   screenPadding: spacing.screen,
-  headerHeight: 76,
-  tabBarHeight: 68,
-  tabBarPaddingTop: 8,
-  tabBarPaddingBottom: 8,
+  headerHeight: 56,
+  tabBarHeight: 60,
+  tabBarPaddingTop: 6,
+  tabBarPaddingBottom: 6,
   discoveryTileWidth: '48.5%' as const,
-  discoveryTileHeight: 176,
-  thumbnailSize: 64,
+  discoveryTileHeight: 132,
+  thumbnailSize: 56,
 };
 
 export const typography = {
-  display: { fontSize: 28, lineHeight: 34, fontWeight: '800' as const },
-  title: { fontSize: 22, lineHeight: 28, fontWeight: '800' as const },
-  section: { fontSize: 18, lineHeight: 24, fontWeight: '800' as const },
-  bodyText: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
-  labelText: { fontSize: 14, lineHeight: 20, fontWeight: '700' as const },
-  captionText: { fontSize: 12, lineHeight: 17, fontWeight: '500' as const },
-  metadataText: { fontSize: 11, lineHeight: 15, fontWeight: '600' as const },
-  screenTitle: 22,
-  sectionTitle: 18,
-  body: 14,
+  display: { fontSize: 24, lineHeight: 29, fontWeight: '800' as const },
+  title: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
+  section: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
+  bodyText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
+  labelText: { fontSize: 12, lineHeight: 17, fontWeight: '700' as const },
+  captionText: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
+  metadataText: { fontSize: 12, lineHeight: 15, fontWeight: '600' as const },
+  compactCardTitleText: { fontSize: 11, lineHeight: 14, fontWeight: '700' as const },
+  compactCardMetaText: { fontSize: 10, lineHeight: 13, fontWeight: '600' as const },
+  screenTitle: 18,
+  sectionTitle: 16,
+  body: 13,
   caption: 12,
-  micro: 11,
+  micro: 12,
 };
 
+export const fontWeight = {
+  regular: '400',
+  medium: '600',
+  strong: '700',
+  heavy: '800',
+} as const;
+
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 8,
+  md: 11,
+  lg: 15,
+  xl: 20,
   pill: 999,
 };
 
@@ -105,6 +132,23 @@ export const semanticColors = {
     success: colors.secondary,
     danger: colors.danger,
     disabled: colors.surfaceMuted,
+  },
+  brand: {
+    primary: colors.primary,
+    secondary: colors.secondary,
+  },
+  social: {
+    primary: colors.social,
+    background: colors.successBg,
+  },
+  visibility: {
+    public: colors.visibilityPublic,
+    private: colors.visibilityPrivate,
+    mixed: colors.visibilityMixed,
+  },
+  accent: {
+    rating: colors.rating,
+    quote: colors.quote,
   },
   surface: {
     canvas: colors.background,
@@ -139,39 +183,51 @@ export const touch = {
   android: 48,
 } as const;
 
+export const controlSize = {
+  compact: 32,
+  default: 44,
+  large: 48,
+} as const;
+
+export const opacity = {
+  disabled: 0.62,
+  pressed: 0.9,
+  muted: 0.72,
+} as const;
+
 export const iconSize = {
-  sm: 16,
-  md: 20,
-  lg: 24,
+  sm: 14,
+  md: 18,
+  lg: 20,
 } as const;
 
 export const contentWidth = {
-  form: 520,
-  feed: 680,
-  settings: 720,
-  sheet: 760,
+  form: 480,
+  feed: 620,
+  settings: 660,
+  sheet: 700,
 } as const;
 
 export const elevation = {
   card: {
     shadowColor: colors.shadowSubtle,
     shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   floating: {
     shadowColor: colors.shadowSubtle,
     shadowOpacity: 0.16,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 4,
   },
   modal: {
     shadowColor: colors.shadowSubtle,
     shadowOpacity: 0.2,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
 } as const;

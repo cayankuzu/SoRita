@@ -87,11 +87,11 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
               style={styles.starButton}
             >
               {isFull ? (
-                <Star color={colors.warning} fill={colors.warning} size={28} />
+                <Star color={colors.rating} fill={colors.rating} size={24} />
               ) : isHalf ? (
-                <StarHalf color={colors.warning} fill={colors.warning} size={28} />
+                <StarHalf color={colors.rating} fill={colors.rating} size={24} />
               ) : (
-                <Star color={colors.cardBorder} size={28} />
+                <Star color={colors.cardBorder} size={24} />
               )}
             </Pressable>
           );
@@ -104,18 +104,18 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
 
 const styles = StyleSheet.create({
   optionRail: {
-    gap: 10,
-    paddingRight: 16,
+    gap: 8,
+    paddingRight: 12,
     alignItems: 'flex-start',
   },
   optionColumn: {
-    gap: 8,
+    gap: 6,
   },
   railChip: {
     minHeight: 38,
     borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -137,26 +137,26 @@ const styles = StyleSheet.create({
   ratingSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   starButton: {
     paddingVertical: 2,
   },
   ratingValue: {
-    minWidth: 58,
+    minWidth: 50,
     borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: colors.warningBg,
     color: colors.warningText,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

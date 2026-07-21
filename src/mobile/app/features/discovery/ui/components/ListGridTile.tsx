@@ -15,6 +15,7 @@ import {
 } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, layout } from '@/mobile/app/shared/theme/tokens';
@@ -37,6 +38,7 @@ export type ListGridTileProps = {
   onPress: () => void;
   onOwnerPress?: () => void;
   menuActions?: ActionMenuSheetItem[];
+  searchQuery?: string;
 };
 
 function ListGridTileComponent({
@@ -49,6 +51,7 @@ function ListGridTileComponent({
   onPress,
   onOwnerPress,
   menuActions,
+  searchQuery,
 }: ListGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
   const coverPhoto = list.coverImage || null;
@@ -142,9 +145,9 @@ function ListGridTileComponent({
           {showPrivacyBadge ? (
             <View style={styles.visibilityBadge}>
               {list.isPublic ? (
-                <Globe color={colors.onPrimary} size={12} />
+                <Globe color={colors.onPrimary} size={10} />
               ) : (
-                <Lock color={colors.onPrimary} size={12} />
+                <Lock color={colors.onPrimary} size={10} />
               )}
               <Text style={styles.visibilityBadgeText}>
                 {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
@@ -161,7 +164,7 @@ function ListGridTileComponent({
               }}
               style={styles.singleActionBadge}
             >
-              <Ellipsis color={colors.onPrimary} size={14} />
+              <Ellipsis color={colors.onPrimary} size={10} />
             </Pressable>
           ) : null}
 
@@ -170,7 +173,7 @@ function ListGridTileComponent({
               <View style={styles.mediaFooterBadge}>
                 <Heart
                   color={colors.onPrimary}
-                  size={12}
+                  size={10}
                   fill={colors.onPrimary}
                 />
                 <Text style={styles.mediaFooterBadgeText}>{list.likes}</Text>
@@ -187,6 +190,12 @@ function ListGridTileComponent({
                 collapsedLines={1}
                 textStyle={styles.tileTitle}
                 showIndicator={false}
+                renderContent={() => (
+                  <HighlightedText
+                    query={searchQuery}
+                    text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
+                  />
+                )}
               />
             </View>
             {hasMiniMap ? (
@@ -216,27 +225,14 @@ function ListGridTileComponent({
                   isMapInteractive ? styles.titleActionButtonActive : null,
                 ]}
               >
-                <Crosshair color={colors.primary} size={14} />
+                <Crosshair color={colors.primary} size={10} />
               </Pressable>
             ) : null}
           </View>
-          {list.description ? (
-            <ExpandableText
-              text={list.description}
-              collapsedLines={2}
-              textStyle={styles.tileDescription}
-            />
-          ) : null}
-          <View style={styles.metaRow}>
-            <Text style={styles.tileMeta}>
-              {tr.cards.placesCount(list.places.length)}
-            </Text>
-          </View>
-          {timestampText ? (
-            <Text numberOfLines={2} style={styles.tileTimestamp}>
-              {timestampText}
-            </Text>
-          ) : null}
+          <Text numberOfLines={2} style={styles.tileMetaSummary}>
+            {tr.cards.placesCount(list.places.length)}
+            {timestampText ? ` · ${timestampText}` : ''}
+          </Text>
         </View>
       </Pressable>
 

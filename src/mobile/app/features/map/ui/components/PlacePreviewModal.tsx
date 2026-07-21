@@ -61,7 +61,7 @@ export function PlacePreviewModal({
     paddingTop,
     paddingBottom,
     maxHeightRatio: 0.82,
-    minHeight: 320,
+    minHeight: 276,
   });
 
   const primaryEntry = entries[0];
@@ -120,7 +120,7 @@ export function PlacePreviewModal({
                   onPress={onCreatePlaceCard}
                   style={styles.headerButton}
                 >
-                  <Plus color={colors.primary} size={20} />
+                  <Plus color={colors.primary} size={18} />
                 </Pressable>
               ) : null}
               {onMinimize ? (
@@ -130,7 +130,7 @@ export function PlacePreviewModal({
                   onPress={onMinimize}
                   style={styles.headerButton}
                 >
-                  <Minus color={colors.textMuted} size={20} />
+                  <Minus color={colors.textMuted} size={18} />
                 </Pressable>
               ) : null}
               <Pressable
@@ -139,7 +139,7 @@ export function PlacePreviewModal({
                 onPress={onClose}
                 style={styles.headerButton}
               >
-                <X color={colors.textMuted} size={20} />
+                <X color={colors.textMuted} size={18} />
               </Pressable>
             </View>
           </View>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 684,
     alignSelf: 'center',
     maxHeight: '82%',
     borderTopLeftRadius: radius.xl,
@@ -195,12 +195,12 @@ const styles = StyleSheet.create({
   handleWrap: {
     alignItems: 'center',
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 2,
   },
   handle: {
-    width: 52,
-    height: 5,
+    width: 44,
+    height: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
   },
@@ -208,17 +208,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
   headerCopy: {
     flex: 1,
     gap: 4,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
   },
   headerSubtitle: {
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   headerButton: {
     width: Platform.OS === 'ios' ? touch.ios : touch.android,
@@ -241,9 +241,9 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   content: {
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
   cardWrap: {
     overflow: 'hidden',

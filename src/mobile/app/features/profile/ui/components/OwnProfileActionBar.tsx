@@ -17,7 +17,7 @@ export function OwnProfileActionBar({ onOpenSettings }: OwnProfileActionBarProps
         title={tr.profile.actions.settings}
         variant="secondary"
         onPress={onOpenSettings}
-        icon={<Settings color={colors.textMuted} size={14} />}
+        icon={<Settings color={colors.textMuted} size={12} />}
         style={styles.actionButton}
         textStyle={styles.actionButtonText}
       />
@@ -27,11 +27,11 @@ export function OwnProfileActionBar({ onOpenSettings }: OwnProfileActionBarProps
 
 const styles = StyleSheet.create({
   actionRow: {
-    minWidth: 112,
+    minWidth: 96,
   },
   actionButton: {
     minHeight: 44,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
   },

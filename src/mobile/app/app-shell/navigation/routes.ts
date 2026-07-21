@@ -58,6 +58,11 @@ export const NotificationsRouteScreen = createDeferredScreen(
 export const SettingsRouteScreen = createDeferredScreen(
   () => require('@/mobile/app/features/settings/public/settingsScreen').SettingsScreen,
 );
+export const UICatalogRouteScreen = __DEV__
+  ? createDeferredScreen(
+      () => require('@/mobile/app/features/settings/public/uiCatalogScreen').UiCatalogScreen,
+    )
+  : null;
 
 const startupScreenPreloaders: Record<StartupWarmupStage, () => void> = {
   explore: ExploreRouteScreen.preload,

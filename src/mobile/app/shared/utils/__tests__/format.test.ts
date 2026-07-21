@@ -8,14 +8,14 @@ import {
 
 describe('format marker helpers', () => {
   it('returns public, private, and mixed marker colors from memberships', () => {
-    expect(getMarkerColorForMemberships([{ listIsPublic: true }], true)).toBe(colors.secondary);
-    expect(getMarkerColorForMemberships([{ listIsPublic: false }], true)).toBe(colors.danger);
+    expect(getMarkerColorForMemberships([{ listIsPublic: true }], true)).toBe(colors.visibilityPublic);
+    expect(getMarkerColorForMemberships([{ listIsPublic: false }], true)).toBe(colors.visibilityPrivate);
     expect(
       getMarkerColorForMemberships(
         [{ listIsPublic: true }, { listIsPublic: false }],
         true,
       ),
-    ).toBe(colors.primary);
+    ).toBe(colors.visibilityMixed);
   });
 
   it('resolves a mixed marker color when the same place exists in public and private lists', () => {
@@ -36,6 +36,6 @@ describe('format marker helpers', () => {
           places: [{ ...targetPlace, name: '  salt fried chicken kadikoy  ' }],
         },
       ]),
-    ).toBe(colors.primary);
+    ).toBe(colors.visibilityMixed);
   });
 });

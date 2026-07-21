@@ -163,7 +163,7 @@ export function ProfileScreen() {
         label: tr.profile.tabs.lists,
         count: filteredLists.length,
         renderIcon: (active) => (
-          <List color={active ? colors.primary : colors.textSoft} size={15} />
+          <List color={active ? colors.primary : colors.textSoft} size={13} />
         ),
       },
       {
@@ -171,7 +171,7 @@ export function ProfileScreen() {
         label: tr.profile.tabs.places,
         count: filteredPlaces.length,
         renderIcon: (active) => (
-          <MapPin color={active ? colors.primary : colors.textSoft} size={15} />
+          <MapPin color={active ? colors.primary : colors.textSoft} size={13} />
         ),
       },
       {
@@ -181,7 +181,7 @@ export function ProfileScreen() {
         renderIcon: (active) => (
           <ImageIcon
             color={active ? colors.primary : colors.textSoft}
-            size={15}
+            size={13}
           />
         ),
       },
@@ -356,7 +356,7 @@ export function ProfileScreen() {
       return (
         <Screen>
           <EmptyState
-            icon={<MapPin color={colors.danger} size={32} />}
+            icon={<MapPin color={colors.danger} size={28} />}
             title={tr.profile.error.ownUnavailable}
             description={errorMessage}
             actionLabel={tr.common.retry}
@@ -420,7 +420,7 @@ export function ProfileScreen() {
     if (shouldShowErrorState) {
       return (
         <EmptyState
-          icon={<MapPin color={colors.danger} size={32} />}
+          icon={<MapPin color={colors.danger} size={28} />}
           title={tr.profile.error.contentUnavailable}
           description={errorMessage || tr.profile.error.loadingUnavailable}
           actionLabel={tr.common.retry}
@@ -433,7 +433,7 @@ export function ProfileScreen() {
     if (tab === 'lists') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={32} />}
+          icon={<MapPin color={colors.textSoft} size={28} />}
           title={tr.profile.empty.myNoList}
           description={tr.profile.empty.myNoListDescription}
         />
@@ -443,7 +443,7 @@ export function ProfileScreen() {
     if (tab === 'places') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={32} />}
+          icon={<MapPin color={colors.textSoft} size={28} />}
           title={tr.profile.empty.myNoPlace}
           description={tr.profile.empty.myNoPlaceDescription}
         />
@@ -452,7 +452,7 @@ export function ProfileScreen() {
 
     return (
       <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={32} />}
+        icon={<ImageIcon color={colors.textSoft} size={28} />}
         title={tr.profile.empty.myNoPhoto}
         description={tr.profile.empty.myNoPhotoDescription}
       />
@@ -642,9 +642,9 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   headerContent: {
-    paddingTop: 14,
+    paddingTop: 10,
   },
   noticeWrap: {
-    paddingBottom: 14,
+    paddingBottom: 10,
   },
 });

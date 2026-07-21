@@ -405,7 +405,7 @@ describe('listsRepository', () => {
     expect(rpcMock).toHaveBeenCalledWith('upsert_list_place_with_media', {
       p_media: [],
       p_place: expect.objectContaining({
-        name: 'Kaydedilen Mekân',
+        name: 'Kaydedilen mekân',
         categories: [],
         best_times: [],
         atmosphere: [],

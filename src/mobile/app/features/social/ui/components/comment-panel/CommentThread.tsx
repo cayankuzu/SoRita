@@ -147,7 +147,7 @@ export function CommentThread({
                 <View style={[styles.commentLikeButton, comment.liked ? styles.commentLikeButtonActive : null]}>
                   <Heart
                     color={comment.liked ? colors.danger : colors.textSoft}
-                    size={17}
+                    size={15}
                     fill={comment.liked ? colors.danger : 'transparent'}
                   />
                 </View>
@@ -180,7 +180,7 @@ export function CommentThread({
                 style={styles.commentInlineAction}
                 hitSlop={8}
               >
-                <Reply color={colors.textSoft} size={13} />
+                <Reply color={colors.textSoft} size={12} />
                 <Text style={styles.commentInlineActionText}>{tr.cards.reply}</Text>
               </InstantPressable>
 
@@ -197,7 +197,7 @@ export function CommentThread({
                 >
                   <MoreHorizontal
                     color={isEditing ? colors.primary : colors.textSoft}
-                    size={16}
+                    size={14}
                   />
                 </InstantPressable>
               ) : null}
@@ -220,9 +220,9 @@ export function CommentThread({
                 hitSlop={8}
               >
                 {repliesExpanded ? (
-                  <ChevronUp color={colors.textSoft} size={14} />
+                  <ChevronUp color={colors.textSoft} size={12} />
                 ) : (
-                  <ChevronDown color={colors.textSoft} size={14} />
+                  <ChevronDown color={colors.textSoft} size={12} />
                 )}
                 <Text style={styles.replyToggleText}>
                   {repliesExpanded ? tr.cards.hideReplies : tr.cards.viewReplies(replies.length)}

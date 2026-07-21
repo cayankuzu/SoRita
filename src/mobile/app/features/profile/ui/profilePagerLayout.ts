@@ -15,14 +15,14 @@ type EstimateProfilePagerHeightsParams = {
   tabs: Record<ProfilePagerTab, ProfilePagerItem[]>;
 };
 
-const GRID_ITEM_GAP = 10;
-const GRID_BOTTOM_PADDING = 20;
+const GRID_ITEM_GAP = 8;
+const GRID_BOTTOM_PADDING = 16;
 const EMPTY_STATE_HEIGHT = 280;
 const FOOTER_HEIGHT = 54;
-const PAGE_SAFETY_PADDING = 16;
+const PAGE_SAFETY_PADDING = 12;
 const MEDIA_HEIGHT = layout.discoveryTileHeight;
-const TEXT_LINE_HEIGHT = 17;
-const TIMESTAMP_LINE_HEIGHT = 15;
+const TEXT_LINE_HEIGHT = 13;
+const TIMESTAMP_LINE_HEIGHT = 13;
 
 function estimateTextLines(
   text: string | undefined,
@@ -67,22 +67,22 @@ function getColumnWidth(
 }
 
 function estimateListTileHeight(list: PlaceList, columnWidth: number) {
-  const charsPerLine = Math.max(18, Math.floor((columnWidth - 24) / 6.4));
+  const charsPerLine = Math.max(20, Math.floor((columnWidth - 20) / 5.6));
   const descriptionLines = estimateTextLines(list.description, charsPerLine, 2);
-  const titleRowHeight = !list.coverImage && list.places.length > 0 ? 28 : 18;
+  const titleRowHeight = !list.coverImage && list.places.length > 0 ? 22 : 14;
   const descriptionHeight =
-    descriptionLines > 0 ? 6 + descriptionLines * TEXT_LINE_HEIGHT : 0;
-  const metaHeight = 20;
-  const timestampHeight = 6 + TIMESTAMP_LINE_HEIGHT * 2;
+    descriptionLines > 0 ? 4 + descriptionLines * TEXT_LINE_HEIGHT : 0;
+  const metaHeight = 16;
+  const timestampHeight = 3 + TIMESTAMP_LINE_HEIGHT * 2;
 
   return (
     MEDIA_HEIGHT +
-    22 +
+    13 +
     titleRowHeight +
     descriptionHeight +
     metaHeight +
     timestampHeight +
-    8
+    7
   );
 }
 
@@ -91,23 +91,23 @@ function estimatePlaceTileHeight(
   columnWidth: number,
   tab: Extract<ProfilePagerTab, 'places' | 'gallery'>,
 ) {
-  const charsPerLine = Math.max(16, Math.floor((columnWidth - 24) / 6.2));
+  const charsPerLine = Math.max(18, Math.floor((columnWidth - 20) / 5.6));
   const notesLines = estimateTextLines(item.place.notes, charsPerLine, 3);
-  const notesHeight = notesLines > 0 ? 6 + notesLines * TEXT_LINE_HEIGHT : 0;
-  const titleRowHeight = tab === 'gallery' ? 18 : 28;
-  const listContextHeight = item.listName ? 60 : 0;
-  const ratingHeight = item.place.rating ? 18 : 0;
-  const timestampHeight = 21;
+  const notesHeight = notesLines > 0 ? 4 + notesLines * TEXT_LINE_HEIGHT : 0;
+  const titleRowHeight = tab === 'gallery' ? 14 : 22;
+  const listContextHeight = item.listName ? 40 : 0;
+  const ratingHeight = item.place.rating ? 14 : 0;
+  const timestampHeight = 17;
 
   return (
     MEDIA_HEIGHT +
-    22 +
+    13 +
     titleRowHeight +
     notesHeight +
     listContextHeight +
     ratingHeight +
     timestampHeight +
-    8
+    7
   );
 }
 

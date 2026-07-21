@@ -12,7 +12,7 @@ import { CircleAlert, CircleCheck, Eye, EyeOff } from 'lucide-react-native';
 
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, semanticColors } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, semanticColors, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildCharacterLimitLabel } from '@/mobile/app/shared/validation/contentLimits';
 
 export type AuthFieldStatus =
@@ -75,9 +75,9 @@ function AuthFieldStatusAccessory({
       style={style}
     >
       {tone === 'success' ? (
-        <CircleCheck color={colors.secondary} size={17} />
+        <CircleCheck color={colors.secondary} size={15} />
       ) : (
-        <CircleAlert color={colors.danger} size={17} />
+        <CircleAlert color={colors.danger} size={15} />
       )}
     </View>
   );
@@ -98,9 +98,9 @@ function PasswordVisibilityButton({
       style={styles.passwordToggle}
     >
       {visible ? (
-        <EyeOff color={colors.textMuted} size={18} />
+        <EyeOff color={colors.textMuted} size={16} />
       ) : (
-        <Eye color={colors.textMuted} size={18} />
+        <Eye color={colors.textMuted} size={16} />
       )}
     </IconButton>
   );
@@ -282,32 +282,32 @@ export function AuthField({
 
 const styles = StyleSheet.create({
   block: {
-    gap: 6,
+    gap: 4,
   },
   label: {
     position: 'absolute',
-    left: 40,
-    top: 14,
+    left: 32,
+    top: 10,
     zIndex: 1,
     backgroundColor: colors.surface,
     paddingHorizontal: 3,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textMuted,
   },
   labelFloating: {
-    left: 12,
-    top: -8,
+    left: 10,
+    top: -6,
     fontSize: 12,
     color: colors.text,
   },
   inputWrap: {
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    paddingLeft: 40,
+    paddingLeft: 32,
     justifyContent: 'center',
   },
   inputWrapFocused: {
@@ -321,30 +321,30 @@ const styles = StyleSheet.create({
   },
   icon: {
     position: 'absolute',
-    left: 14,
+    left: 10,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
   },
   input: {
     color: colors.text,
-    fontSize: 15,
-    paddingTop: 18,
-    paddingBottom: 8,
-    paddingRight: 38,
+    fontSize: 13,
+    paddingTop: 14,
+    paddingBottom: 6,
+    paddingRight: 30,
   },
   inputWithToggle: {
-    paddingRight: 78,
+    paddingRight: 60,
   },
   statusIcon: {
     position: 'absolute',
-    right: 12,
+    right: 10,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
   },
   statusIconWithToggle: {
-    right: 44,
+    right: 34,
   },
   passwordToggle: {
     position: 'absolute',
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
     minHeight: 16,
   },
   helper: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
+    lineHeight: 15,
     color: colors.textMuted,
   },
   helperDanger: {

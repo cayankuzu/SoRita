@@ -1,27 +1,27 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const exploreScreenStyles = StyleSheet.create({
   headerRail: {
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   header: {
-    paddingBottom: 14,
+    paddingBottom: 10,
     gap: 4,
   },
   title: {
     fontSize: typography.screenTitle,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
-    fontSize: 14,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   filtersSection: {
-    gap: 10,
+    gap: 8,
   },
   searchWrap: {
     minHeight: 44,
@@ -29,22 +29,30 @@ export const exploreScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 14,
-    paddingVertical: 10,
+    ...typography.bodyText,
+    paddingVertical: 8,
+  },
+  searchClearButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
   },
   tabRail: {
-    minHeight: 48,
+    minHeight: 44,
   },
   tabRow: {
-    gap: 8,
+    gap: spacing.sm,
     paddingVertical: 2,
     alignItems: 'center',
   },
@@ -54,9 +62,9 @@ export const exploreScreenStyles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     minHeight: 44,
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -67,8 +75,8 @@ export const exploreScreenStyles = StyleSheet.create({
     borderColor: colors.text,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   tabTextActive: {
@@ -77,16 +85,16 @@ export const exploreScreenStyles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
     justifyContent: 'space-between',
     paddingHorizontal: 0,
   },
   feedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingTop: 10,
-    paddingBottom: 12,
+    gap: 8,
+    paddingTop: 8,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -97,12 +105,12 @@ export const exploreScreenStyles = StyleSheet.create({
     borderRadius: radius.md,
   },
   feedTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
   feedContent: {
-    paddingVertical: 12,
-    gap: 16,
+    paddingVertical: 10,
+    gap: 12,
   },
 });

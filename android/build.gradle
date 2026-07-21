@@ -1,6 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 import java.util.Locale
+import groovy.json.JsonSlurper
 
 buildscript {
   repositories {
@@ -12,6 +13,7 @@ buildscript {
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('com.google.gms:google-services:4.4.2')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    classpath('androidx.baselineprofile:androidx.baselineprofile.gradle.plugin:1.4.1')
   }
 }
 
@@ -63,6 +65,22 @@ def ensureMirroredDirectory = { File sourceDir, String mirrorPath ->
   markerFile.write(sourceMarker, "UTF-8")
 }
 
+def ensureEquivalentMirror = { Collection<File> sourceDirs, String mirrorPath ->
+  if (sourceDirs.isEmpty()) {
+    return
+  }
+
+  File markerFile = new File(file(mirrorPath), ".sorita-source")
+  String existingSource = markerFile.exists()
+    ? markerFile.getText("UTF-8")
+    : null
+  File selectedSource = sourceDirs.find { candidate ->
+    normalizePath(candidate) == existingSource
+  } ?: sourceDirs.max { candidate -> candidate.lastModified() }
+
+  ensureMirroredDirectory(selectedSource, mirrorPath)
+}
+
 def cleanupWindowsShortcut = { String linkPath ->
   File linkFile = file(linkPath)
 
@@ -95,6 +113,21 @@ def collectMatchingDirectories = { File rootDir, Closure<Boolean> matcher ->
 }
 
 def collectNativePathReplacements = {
+  File reactNativePackageFile = new File(
+    rootDir.getParentFile(),
+    "node_modules/react-native/package.json",
+  )
+  String reactNativeVersion = new JsonSlurper()
+    .parse(reactNativePackageFile)
+    .version
+  File reactNativeVersionsFile = new File(
+    rootDir.getParentFile(),
+    "node_modules/react-native/gradle/libs.versions.toml",
+  )
+  def fbjniVersionMatch = reactNativeVersionsFile.getText("UTF-8") =~ /(?m)^fbjni\s*=\s*"([^"]+)"/
+  String fbjniVersion = fbjniVersionMatch.find()
+    ? fbjniVersionMatch.group(1)
+    : null
   def cacheRoots = [
     System.getenv("GRADLE_USER_HOME"),
     new File(System.getProperty("user.home"), ".gradle").absolutePath,
@@ -130,30 +163,39 @@ def collectNativePathReplacements = {
 
     def reactTransforms = collectMatchingDirectories(transformsDir) { candidate ->
       candidate.parentFile?.name == "transformed" &&
-        (candidate.name ==~ /react-android-.*-(release|debug)/)
+        candidate.name in [
+          "react-android-${reactNativeVersion}-debug",
+          "react-android-${reactNativeVersion}-release",
+        ]
     }
 
-    reactTransforms.each { reactRoot ->
-      def suffix = reactRoot.name.endsWith("-debug") ? "debug" : "release"
+    reactTransforms.groupBy { reactRoot ->
+      reactRoot.name.endsWith("-debug") ? "debug" : "release"
+    }.each { suffix, equivalentRoots ->
       def shortcutPath = suffix == "debug" ? "C:\\n\\rd" : "C:\\n\\rr"
 
       cleanupWindowsShortcut("C:\\ra-${suffix}")
-      ensureMirroredDirectory(reactRoot, shortcutPath)
-      replacements[normalizePath(reactRoot)] = shortcutPath.replace("\\", "/")
+      ensureEquivalentMirror(equivalentRoots, shortcutPath)
+      equivalentRoots.each { reactRoot ->
+        replacements[normalizePath(reactRoot)] = shortcutPath.replace("\\", "/")
+      }
     }
 
     def fbjniTransforms = collectMatchingDirectories(transformsDir) { candidate ->
       candidate.parentFile?.name == "transformed" &&
-        (candidate.name ==~ /fbjni-.+/)
+        fbjniVersion != null &&
+        candidate.name == "fbjni-${fbjniVersion}"
     }
 
-    fbjniTransforms.each { fbjniRoot ->
+    if (!fbjniTransforms.isEmpty()) {
       def shortcutPath = "C:\\n\\fb"
 
       cleanupWindowsShortcut("C:\\fbjni")
       cleanupWindowsShortcut("C:\\fb")
-      ensureMirroredDirectory(fbjniRoot, shortcutPath)
-      replacements[normalizePath(fbjniRoot)] = shortcutPath.replace("\\", "/")
+      ensureEquivalentMirror(fbjniTransforms, shortcutPath)
+      fbjniTransforms.each { fbjniRoot ->
+        replacements[normalizePath(fbjniRoot)] = shortcutPath.replace("\\", "/")
+      }
     }
   }
 
@@ -196,12 +238,18 @@ gradle.projectsEvaluated {
   def configureCMakeTasks = allprojects.collectMany { project ->
     project.tasks.matching { task -> task.name.startsWith("configureCMake") }.toList()
   }
+  def isBaselineProfileInvocation = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase(Locale.ROOT).contains("baselineprofile")
+  }
+  def requiredConfigureCMakeTasks = isBaselineProfileInvocation
+    ? configureCMakeTasks.findAll { task -> !task.name.startsWith("configureCMakeDebug") }
+    : configureCMakeTasks
   def buildCMakeTasks = allprojects.collectMany { project ->
     project.tasks.matching { task -> task.name.startsWith("buildCMake") }.toList()
   }
 
   rewriteNativePrefabPaths.configure {
-    dependsOn(configureCMakeTasks)
+    dependsOn(requiredConfigureCMakeTasks)
   }
 
   buildCMakeTasks.each { task ->

@@ -26,6 +26,7 @@ import {
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, layout } from '@/mobile/app/shared/theme/tokens';
@@ -54,6 +55,7 @@ export type PlaceGridTileProps = {
   onPress: () => void;
   onOwnerPress?: () => void;
   menuActions?: ActionMenuSheetItem[];
+  searchQuery?: string;
 };
 
 function getPlaceGridTileModel(
@@ -98,6 +100,7 @@ function PlaceGridTileComponent({
   onPress,
   onOwnerPress,
   menuActions,
+  searchQuery,
 }: PlaceGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
   const {
@@ -172,7 +175,7 @@ function PlaceGridTileComponent({
               }}
               style={styles.singleActionBadge}
             >
-              <Ellipsis color={colors.onPrimary} size={14} />
+              <Ellipsis color={colors.onPrimary} size={10} />
             </Pressable>
           ) : null}
 
@@ -189,7 +192,7 @@ function PlaceGridTileComponent({
                 <View style={styles.photoCountBadge}>
                   {mediaCounts.photos > 0 ? (
                     <View style={styles.photoCountGroup}>
-                      <Camera color={colors.onPrimary} size={10} />
+                      <Camera color={colors.onPrimary} size={9} />
                       <Text style={styles.photoCountText}>
                         {mediaCounts.photos}
                       </Text>
@@ -200,7 +203,7 @@ function PlaceGridTileComponent({
                   ) : null}
                   {mediaCounts.videos > 0 ? (
                     <View style={styles.photoCountGroup}>
-                      <PlayCircle color={colors.onPrimary} size={10} />
+                      <PlayCircle color={colors.onPrimary} size={9} />
                       <Text style={styles.photoCountText}>
                         {mediaCounts.videos}
                       </Text>
@@ -235,6 +238,7 @@ function PlaceGridTileComponent({
                 collapsedLines={1}
                 textStyle={styles.tileTitle}
                 showIndicator={false}
+                renderContent={() => <HighlightedText query={searchQuery} text={place.name} />}
               />
             </View>
             {hasMiniMap ? (
@@ -264,19 +268,10 @@ function PlaceGridTileComponent({
                   isMapInteractive ? styles.titleActionButtonActive : null,
                 ]}
               >
-                <Crosshair color={colors.primary} size={14} />
+                <Crosshair color={colors.primary} size={10} />
               </Pressable>
             ) : null}
           </View>
-          {place.notes ? (
-            <ExpandableText
-              text={place.notes}
-              collapsedLines={1}
-              preserveLineBreaks
-              maxCollapsedLinesWhenPreservingBreaks={3}
-              textStyle={styles.tileDescription}
-            />
-          ) : null}
           {hasListContext ? (
             <View style={styles.listContextBar}>
               {listCoverImage ? (
@@ -289,12 +284,12 @@ function PlaceGridTileComponent({
                 />
               ) : (
                 <View style={styles.listContextCoverFallback}>
-                  <ListIcon color={colors.primary} size={14} />
+                  <ListIcon color={colors.primary} size={10} />
                 </View>
               )}
               <View style={styles.listContextBody}>
                 <View style={styles.listContextTitleRow}>
-                  <ListIcon color={colors.primary} size={11} />
+                  <ListIcon color={colors.primary} size={9} />
                   <ExpandableText
                     text={
                       listEmoji ? `${listEmoji} ${listName}` : listName || ''
@@ -306,9 +301,9 @@ function PlaceGridTileComponent({
                 </View>
                 <View style={styles.listContextMetaRow}>
                   {listIsPublic === false ? (
-                    <Lock color={colors.danger} size={11} />
+                    <Lock color={colors.visibilityPrivate} size={9} />
                   ) : (
-                    <Globe color={colors.secondary} size={11} />
+                    <Globe color={colors.secondary} size={9} />
                   )}
                   <Text
                     numberOfLines={1}
@@ -323,18 +318,20 @@ function PlaceGridTileComponent({
                   </Text>
                 </View>
               </View>
-              <ChevronRight color={colors.primary} size={14} />
+              <ChevronRight color={colors.primary} size={10} />
             </View>
           ) : null}
-          {place.rating ? (
-            <View style={styles.ratingRow}>
-              <Star color={colors.warning} fill={colors.warning} size={10} />
-              <Text style={styles.ratingText}>{place.rating}</Text>
-            </View>
-          ) : null}
-          <Text numberOfLines={1} style={styles.tileTimestamp}>
-            {timestampText}
-          </Text>
+          <View style={styles.tileSecondaryRow}>
+            {place.rating ? (
+              <View style={styles.ratingRow}>
+                <Star color={colors.rating} fill={colors.rating} size={9} />
+                <Text style={styles.ratingText}>{place.rating}</Text>
+              </View>
+            ) : null}
+            <Text numberOfLines={1} style={styles.tileTimestampInline}>
+              {timestampText}
+            </Text>
+          </View>
         </View>
       </Pressable>
 
@@ -375,6 +372,7 @@ function arePlaceGridTilePropsEqual(
     previous.onPress === next.onPress &&
     previous.onOwnerPress === next.onOwnerPress &&
     previous.menuActions === next.menuActions
+    && previous.searchQuery === next.searchQuery
   );
 }
 

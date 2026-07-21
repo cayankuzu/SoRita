@@ -36,6 +36,7 @@ type ModalScaffoldProps = {
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
   variant?: 'dialog' | 'sheet';
+  showHandle?: boolean;
   visible: boolean;
 };
 
@@ -51,6 +52,7 @@ export function ModalScaffold({
   scroll = false,
   style,
   variant = 'dialog',
+  showHandle,
   visible,
 }: ModalScaffoldProps) {
   const insets = useSafeAreaInsets();
@@ -69,7 +71,7 @@ export function ModalScaffold({
     paddingTop,
     paddingBottom,
     maxHeightRatio: variant === 'sheet' ? 0.9 : 0.82,
-    minHeight: 260,
+    minHeight: 224,
   });
 
   React.useEffect(() => {
@@ -111,7 +113,7 @@ export function ModalScaffold({
       })}
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={variant === 'sheet' ? 'slide' : 'fade'}
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
@@ -146,6 +148,11 @@ export function ModalScaffold({
             style,
           ]}
         >
+          {variant === 'sheet' && showHandle !== false ? (
+            <View accessibilityElementsHidden style={styles.handleWrap}>
+              <View style={styles.handle} />
+            </View>
+          ) : null}
           {scroll ? (
             <ScrollView
               automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
@@ -169,7 +176,7 @@ export function ModalScaffold({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     backgroundColor: colors.overlay,
   },
   dialogOverlay: {
@@ -186,7 +193,7 @@ const styles = StyleSheet.create({
     ...elevation.modal,
   },
   dialog: {
-    maxWidth: 440,
+    maxWidth: 396,
     borderRadius: radius.xl,
   },
   sheet: {
@@ -195,14 +202,25 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
   },
+  handleWrap: {
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  handle: {
+    width: 34,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.borderStrong,
+  },
   content: {
-    padding: 18,
-    gap: 16,
+    padding: 14,
+    gap: 12,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.cardBorder,
-    padding: 18,
-    paddingTop: 14,
+    padding: 14,
+    paddingTop: 10,
   },
 });

@@ -30,7 +30,7 @@ export function SettingsPrivacyView({
       <View style={styles.form}>
         <PrivacyOption
           active={isPublicAccount}
-          icon={<Globe color={isPublicAccount ? colors.onPrimary : colors.textMuted} size={20} />}
+          icon={<Globe color={isPublicAccount ? colors.primary : colors.textMuted} size={18} />}
           title={tr.settings.privacy.public}
           description={tr.settings.privacy.publicDescription}
           onPress={() => {
@@ -39,7 +39,7 @@ export function SettingsPrivacyView({
         />
         <PrivacyOption
           active={!isPublicAccount}
-          icon={<LockKeyhole color={!isPublicAccount ? colors.onPrimary : colors.textMuted} size={20} />}
+          icon={<LockKeyhole color={!isPublicAccount ? colors.primary : colors.textMuted} size={18} />}
           title={tr.settings.privacy.private}
           description={tr.settings.privacy.privateDescription}
           onPress={() => {

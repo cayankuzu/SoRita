@@ -97,7 +97,7 @@ export function ConfirmActionModal({
     >
       <View style={styles.confirmHeader}>
         <View style={[styles.confirmIcon, isDanger ? styles.confirmIconDanger : styles.confirmIconPrimary]}>
-          <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={20} />
+          <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={18} />
         </View>
         <View style={styles.confirmCopy}>
           <Text accessibilityRole="header" style={styles.confirmTitle}>{title}</Text>
@@ -117,12 +117,12 @@ const styles = StyleSheet.create({
   confirmHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   confirmIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -137,27 +137,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   confirmTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
   confirmText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
   errorText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.danger,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   modalButton: {
     flex: 1,
-    minWidth: 140,
+    minWidth: 120,
   },
 });

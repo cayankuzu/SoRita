@@ -23,7 +23,7 @@ import {
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
   autoPlay?: boolean;
@@ -40,6 +40,10 @@ type VideoPreviewProps = {
   surfaceType?: SurfaceType;
   uri: string;
 };
+
+function inferVideoContentType(uri: string) {
+  return /\.m3u8(?:$|[?#])/i.test(uri) ? ('hls' as const) : ('progressive' as const);
+}
 
 function runVideoPlayerOperation(label: string, operation: () => unknown) {
   try {
@@ -80,7 +84,7 @@ export function VideoPreview({
   const videoSource = React.useMemo(
     () => resolvedUri
       ? {
-          contentType: 'progressive' as const,
+          contentType: inferVideoContentType(resolvedUri),
           uri: resolvedUri,
           useCaching: true,
         }
@@ -203,6 +207,8 @@ export function VideoPreview({
   );
 }
 
+export const videoPreviewInternals = { inferVideoContentType };
+
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
@@ -210,29 +216,29 @@ const styles = StyleSheet.create({
   },
   playOverlay: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 4,
+    right: 4,
   },
   playBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
   },
   durationBadge: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
+    right: 6,
+    bottom: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
   },
   durationText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
 });

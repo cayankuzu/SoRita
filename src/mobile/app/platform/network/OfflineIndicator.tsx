@@ -54,12 +54,12 @@ const styles = StyleSheet.create({
   },
   content: {
     backgroundColor: colors.warning,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
   text: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.onPrimary,
   },

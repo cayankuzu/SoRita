@@ -192,7 +192,7 @@ export function CommentPanel({
     paddingTop: overlayTopPadding,
     paddingBottom: modalBottomInset,
     maxHeightRatio: 0.92,
-    minHeight: 360,
+    minHeight: 310,
   });
   const preferredCommentSheetHeight = Math.max(Math.round(windowHeight * 0.84), 420);
   const commentSheetHeight = Math.min(commentSheetMaxHeight, preferredCommentSheetHeight);
@@ -241,7 +241,7 @@ export function CommentPanel({
                   <Text style={styles.sheetSubtitle}>{tr.cards.commentCount(totalComments)}</Text>
                 </View>
                 <Pressable onPress={handleClose} style={styles.sheetCloseButton} accessibilityLabel={tr.common.close} accessibilityRole="button">
-                  <X color={colors.textSoft} size={18} />
+                  <X color={colors.textSoft} size={16} />
                 </Pressable>
               </View>
 
@@ -266,7 +266,7 @@ export function CommentPanel({
                   contentContainerStyle={[
                     styles.commentScrollContent,
                     comments.length === 0 ? styles.commentScrollContentEmpty : null,
-                    { paddingBottom: 18 },
+                    { paddingBottom: 14 },
                   ]}
                   initialNumToRender={8}
                   keyboardShouldPersistTaps="handled"

@@ -19,7 +19,7 @@ import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, radius } from "@/mobile/app/shared/theme/tokens";
+import { colors, radius, typography } from "@/mobile/app/shared/theme/tokens";
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
@@ -98,7 +98,7 @@ export function ProfileHero({
             style={[styles.backButton, { top: insets.top + 12 }]}
             variant="inverse"
           >
-            <ArrowLeft color={colors.onPrimary} size={20} />
+            <ArrowLeft color={colors.onPrimary} size={18} />
           </IconButton>
         ) : null}
       </View>
@@ -155,25 +155,25 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    left: 12,
+    left: 10,
     width: 44,
     height: 44,
     borderRadius: radius.pill,
   },
   body: {
-    paddingHorizontal: 16,
-    paddingBottom: 18,
-    marginTop: -34,
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    marginTop: -26,
   },
   avatarRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
   },
   avatarFrame: {
     borderRadius: radius.pill,
-    padding: 5,
+    padding: 4,
     backgroundColor: colors.surface,
   },
   actionSlot: {
@@ -181,19 +181,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   name: {
-    marginTop: 14,
-    fontSize: 18,
-    fontWeight: "800",
+    marginTop: 10,
+    ...typography.title,
     color: colors.text,
   },
   username: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSoft,
   },
   bio: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
   },
 });

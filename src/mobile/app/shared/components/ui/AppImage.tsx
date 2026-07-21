@@ -26,12 +26,16 @@ const LOADER_DELAY_MS = 220;
 const LOADER_FAILSAFE_MS = 1800;
 const IMAGE_PREFETCH_CONCURRENCY = 4;
 const MAX_WARMED_IMAGE_KEYS = 512;
+const MAX_PREFETCH_QUEUE_JOBS = 24;
+const MAX_PREFETCH_URIS_PER_JOB = 24;
+const DEFAULT_IMAGE_BLURHASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4';
 
 const warmedImageKeys = new Set<string>();
 type PrefetchPriority = 'high' | 'low' | 'normal';
 type PrefetchJob = {
   priority: PrefetchPriority;
   resolve: (succeeded: boolean) => void;
+  signal?: AbortSignal;
   uris: string[];
 };
 const prefetchQueue: PrefetchJob[] = [];
@@ -41,6 +45,7 @@ type AppImageProps = Omit<ExpoImageProps, 'contentFit' | 'placeholder' | 'source
   backgroundColor?: string;
   fallback?: React.ReactNode;
   imageStyle?: StyleProp<ImageStyle>;
+  placeholder?: ExpoImageProps['placeholder'];
   recycleKey?: string;
   resizeMode?: ImageContentFit;
   showLoader?: boolean;
@@ -151,6 +156,21 @@ function takeNextPrefetchJob() {
   return prefetchQueue.shift();
 }
 
+function trimPrefetchQueue(priority: PrefetchPriority) {
+  if (prefetchQueue.length < MAX_PREFETCH_QUEUE_JOBS) {
+    return true;
+  }
+
+  const disposableIndex = prefetchQueue.findLastIndex((job) => job.priority === 'low');
+
+  if (disposableIndex < 0 || priority === 'low') {
+    return false;
+  }
+
+  prefetchQueue.splice(disposableIndex, 1)[0]?.resolve(false);
+  return true;
+}
+
 function drainPrefetchQueue() {
   if (prefetchQueueRunning) {
     return;
@@ -159,6 +179,12 @@ function drainPrefetchQueue() {
   const job = takeNextPrefetchJob();
 
   if (!job) {
+    return;
+  }
+
+  if (job.signal?.aborted) {
+    job.resolve(false);
+    drainPrefetchQueue();
     return;
   }
 
@@ -180,22 +206,45 @@ function drainPrefetchQueue() {
 
 export function prefetchAppImages(
   uris: Array<string | null | undefined>,
-  options: { priority?: PrefetchPriority } = {},
+  options: { priority?: PrefetchPriority; signal?: AbortSignal } = {},
 ) {
-  const uniqueUris = Array.from(new Set(uris.filter((uri): uri is string => Boolean(uri))));
+  const uniqueUris = Array.from(new Set(uris.filter((uri): uri is string => Boolean(uri))))
+    .slice(0, MAX_PREFETCH_URIS_PER_JOB);
 
-  if (uniqueUris.length === 0) {
+  if (uniqueUris.length === 0 || options.signal?.aborted) {
+    return Promise.resolve(false);
+  }
+
+  const priority = options.priority ?? 'normal';
+
+  if (!trimPrefetchQueue(priority)) {
     return Promise.resolve(false);
   }
 
   return new Promise<boolean>((resolve) => {
-    prefetchQueue.push({
-      priority: options.priority ?? 'normal',
+    const job: PrefetchJob = {
+      priority,
       resolve,
+      signal: options.signal,
       uris: uniqueUris,
-    });
+    };
+    prefetchQueue.push(job);
+
+    options.signal?.addEventListener('abort', () => {
+      const queuedIndex = prefetchQueue.indexOf(job);
+
+      if (queuedIndex >= 0) {
+        prefetchQueue.splice(queuedIndex, 1);
+        resolve(false);
+      }
+    }, { once: true });
     drainPrefetchQueue();
   });
+}
+
+export function clearAppImagePrefetchQueue() {
+  prefetchQueue.splice(0).forEach((job) => job.resolve(false));
+  warmedImageKeys.clear();
 }
 
 export function AppImage({
@@ -208,6 +257,7 @@ export function AppImage({
   onLoad,
   onLoadEnd,
   onLoadStart,
+  placeholder = DEFAULT_IMAGE_BLURHASH,
   recycleKey,
   recyclingKey,
   resizeMode = 'cover',
@@ -297,6 +347,8 @@ export function AppImage({
           {...imageProps}
           cachePolicy={cachePolicy}
           contentFit={resizeMode}
+          placeholder={placeholder}
+          placeholderContentFit={resizeMode}
           recyclingKey={recyclingKey || recycleKey || uri || resolvedSource.uri}
           source={{
             cacheKey: uri || resolvedSource.uri,
@@ -363,3 +415,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export const appImageInternals = {
+  DEFAULT_IMAGE_BLURHASH,
+  MAX_PREFETCH_QUEUE_JOBS,
+  MAX_PREFETCH_URIS_PER_JOB,
+  clear() {
+    clearAppImagePrefetchQueue();
+  },
+};

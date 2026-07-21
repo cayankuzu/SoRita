@@ -33,6 +33,12 @@ export function AuthLandingView({
         </View>
         <Text style={styles.landingSubtitle}>{tr.auth.landing.subtitle}</Text>
 
+        <AuthLegalConsentCard
+          accepted={hasAcceptedLegal}
+          onToggle={onToggleLegalConsent}
+          onOpenDocument={onOpenLegalDocument}
+        />
+
         <PrimaryButton
           title={tr.auth.landing.login}
           variant="secondary"
@@ -43,12 +49,6 @@ export function AuthLandingView({
           title={tr.auth.landing.register}
           onPress={onRegisterPress}
           disabled={!hasAcceptedLegal}
-        />
-
-        <AuthLegalConsentCard
-          accepted={hasAcceptedLegal}
-          onToggle={onToggleLegalConsent}
-          onOpenDocument={onOpenLegalDocument}
         />
 
         <AuthBrandFooter />

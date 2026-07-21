@@ -140,7 +140,7 @@ export function VirtualizedDiscoveryGrid<ItemT>({
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   contentEmpty: {
     flexGrow: 1,
@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   cell: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
 });

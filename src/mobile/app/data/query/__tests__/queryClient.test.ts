@@ -1,12 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { loggerErrorMock, loggerWarnMock } = vi.hoisted(() => ({
+const { loggerErrorMock, loggerWarnMock, trackEventMock } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
+  trackEventMock: vi.fn(),
 }));
 
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: { error: loggerErrorMock, warn: loggerWarnMock },
+}));
+
+vi.mock('@/mobile/app/platform/analytics/analyticsEvents', () => ({
+  trackEvent: trackEventMock,
+}));
+
+vi.mock('@/mobile/app/platform/network/connectivityStatus', () => ({
+  getCurrentConnectionStatus: () => 'wifi',
+}));
+
+vi.mock('@/mobile/app/shared/performance/performanceContext', () => ({
+  getPerformanceContext: () => ({
+    deviceClass: 'mid',
+    osVersion: 'test',
+    platform: 'android',
+  }),
 }));
 
 import { queryClient, queryClientInternals } from '@/mobile/app/data/query/queryClient';
@@ -99,5 +116,43 @@ describe('queryClient', () => {
       queryHash: 'empty-query', state: { data: undefined },
     } as never);
     expect(loggerWarnMock).toHaveBeenCalledOnce();
+  });
+
+  it('records successful and failed query durations with low-cardinality operations', async () => {
+    trackEventMock.mockClear();
+
+    await queryClient.fetchQuery({
+      queryKey: ['places', 7, { page: 2 }],
+      queryFn: async () => ({ id: 'place-1' }),
+      staleTime: 0,
+    });
+
+    await expect(queryClient.fetchQuery({
+      queryKey: [{ private: 'value' }],
+      queryFn: async () => {
+        throw new Error('expected');
+      },
+      retry: false,
+    })).rejects.toThrow('expected');
+
+    queryClient.setQueryData(['local-only'], { ready: true });
+
+    expect(trackEventMock).toHaveBeenCalledWith({
+      name: 'query_complete',
+      params: expect.objectContaining({
+        cacheHit: false,
+        deviceClass: 'mid',
+        networkClass: 'wifi',
+        operation: 'places.7',
+        status: 'success',
+      }),
+    });
+    expect(trackEventMock).toHaveBeenCalledWith({
+      name: 'query_complete',
+      params: expect.objectContaining({
+        operation: 'unknown',
+        status: 'error',
+      }),
+    });
   });
 });

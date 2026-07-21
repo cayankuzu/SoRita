@@ -10,6 +10,8 @@ type InstantPressableRenderState = {
   disabled: boolean;
 };
 
+export type InstantPressableHapticFeedback = false | 'light' | 'selection' | 'success' | 'warning';
+
 type InstantPressableProps = Omit<PressableProps, 'children' | 'onPress' | 'style'> & {
   onPress?: (event: GestureResponderEvent) => void | Promise<void>;
   style?: StyleProp<ViewStyle> | ((state: InstantPressableRenderState) => StyleProp<ViewStyle>);
@@ -19,7 +21,32 @@ type InstantPressableProps = Omit<PressableProps, 'children' | 'onPress' | 'styl
   busyOpacity?: number;
   disableFeedback?: boolean;
   preventRepeatWhileBusy?: boolean;
+  hapticFeedback?: InstantPressableHapticFeedback;
 };
+
+function triggerHapticFeedback(feedback: InstantPressableProps['hapticFeedback']) {
+  if (!feedback) {
+    return;
+  }
+
+  void import('expo-haptics')
+    .then((Haptics) => {
+      if (feedback === 'selection') {
+        return Haptics.selectionAsync();
+      }
+
+      if (feedback === 'success' || feedback === 'warning') {
+        return Haptics.notificationAsync(
+          feedback === 'success'
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Warning,
+        );
+      }
+
+      return Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    })
+    .catch(() => undefined);
+}
 
 export function InstantPressable({
   onPress,
@@ -32,6 +59,7 @@ export function InstantPressable({
   busyOpacity = 0.72,
   disableFeedback = false,
   preventRepeatWhileBusy = true,
+  hapticFeedback = false,
   ...rest
 }: InstantPressableProps) {
   const [busy, setBusy] = useState(false);
@@ -44,6 +72,7 @@ export function InstantPressable({
       }
 
       event.persist?.();
+      triggerHapticFeedback(hapticFeedback);
       const result = onPress(event);
 
       if (!isPromiseLike(result)) {
@@ -53,7 +82,7 @@ export function InstantPressable({
       setBusy(true);
       void result.finally(() => setBusy(false));
     },
-    [isDisabled, onPress],
+    [hapticFeedback, isDisabled, onPress],
   );
 
   const renderStyle = useCallback(

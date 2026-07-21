@@ -81,7 +81,7 @@ export function CommentActionSheet({
   const options: ActionOption[] = comment
     ? [
         {
-          icon: <Copy color={colors.textSoft} size={16} />,
+          icon: <Copy color={colors.textSoft} size={14} />,
           key: 'copy',
           label: tr.cards.copy,
           onPress: () => onCopy(comment),
@@ -89,7 +89,7 @@ export function CommentActionSheet({
         ...(comment.canEdit
           ? [
               {
-                icon: <Pencil color={isEditing ? colors.primary : colors.textSoft} size={16} />,
+                icon: <Pencil color={isEditing ? colors.primary : colors.textSoft} size={14} />,
                 key: 'edit',
                 label: tr.cards.editComment,
                 onPress: () => onEdit(comment),
@@ -99,7 +99,7 @@ export function CommentActionSheet({
         ...(comment.canReport
           ? [
               {
-                icon: <Flag color={colors.warning} size={16} />,
+                icon: <Flag color={colors.warning} size={14} />,
                 key: 'report',
                 label: tr.cards.report,
                 onPress: () => onReport(comment),
@@ -109,7 +109,7 @@ export function CommentActionSheet({
         ...(comment.canDelete
           ? [
               {
-                icon: <Trash2 color={colors.danger} size={16} />,
+                icon: <Trash2 color={colors.danger} size={14} />,
                 key: 'delete',
                 label: tr.common.delete,
                 onPress: () => onDelete(comment),
@@ -128,7 +128,7 @@ export function CommentActionSheet({
       })}
       visible={Boolean(comment)}
       transparent
-      animationType="fade"
+      animationType="slide"
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
@@ -144,7 +144,7 @@ export function CommentActionSheet({
               {comment ? <Text style={styles.subtitle}>{comment.userName}</Text> : null}
             </View>
             <InstantPressable onPress={onClose} style={styles.closeButton}>
-              <X color={colors.textSoft} size={16} />
+              <X color={colors.textSoft} size={14} />
             </InstantPressable>
           </View>
 
@@ -173,20 +173,20 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 648,
     alignSelf: 'center',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 20,
-    gap: 16,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 16,
+    gap: 12,
   },
   handle: {
     alignSelf: 'center',
-    width: 52,
-    height: 5,
+    width: 44,
+    height: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
   },
@@ -194,15 +194,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   headerText: {
     flex: 1,
     gap: 4,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
@@ -210,39 +210,39 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   closeButton: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
   options: {
-    gap: 10,
+    gap: 8,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   actionRowDanger: {
     backgroundColor: colors.dangerBg,
     borderColor: colors.danger,
   },
   actionRowIcon: {
-    width: 22,
+    width: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionRowLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },

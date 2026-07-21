@@ -7,7 +7,13 @@ import {
   View,
 } from 'react-native';
 
-import { colors, radius, semanticColors } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  semanticColors,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   buildCharacterLimitLabel,
   normalizeLineBreaks,
@@ -18,6 +24,7 @@ type TextFieldProps = TextInputProps & {
   helper?: string;
   multilineRows?: number;
   helperTone?: 'muted' | 'danger' | 'success';
+  status?: 'default' | 'error' | 'success';
 };
 
 export function TextField({
@@ -25,6 +32,7 @@ export function TextField({
   helper,
   multilineRows,
   helperTone = 'muted',
+  status = 'default',
   style,
   accessibilityLabel: providedAccessibilityLabel,
   autoCapitalize,
@@ -50,6 +58,11 @@ export function TextField({
       ? buildCharacterLimitLabel(props.value, props.maxLength)
       : null;
   const resolvedHelper = helper || valueLengthHelper || undefined;
+  const valueLength = typeof props.value === 'string' ? props.value.length : 0;
+  const isNearCharacterLimit =
+    typeof props.maxLength === 'number' && valueLength >= props.maxLength * 0.8;
+  const resolvedTone =
+    status === 'error' ? 'danger' : status === 'success' ? 'success' : helperTone;
   const isMultiline = Boolean(multilineRows);
   const handleChangeText = React.useCallback(
     (value: string) => {
@@ -80,6 +93,7 @@ export function TextField({
         accessibilityHint={resolvedHelper}
         accessibilityLabel={accessibilityLabel}
         accessibilityLabelledBy={label ? labelId : undefined}
+        accessibilityState={{ disabled: Boolean(props.editable === false) }}
         allowFontScaling
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
@@ -95,6 +109,10 @@ export function TextField({
         style={[
           styles.input,
           focused ? styles.inputFocused : null,
+          props.value ? styles.inputFilled : null,
+          status === 'error' ? styles.inputError : null,
+          status === 'success' ? styles.inputSuccess : null,
+          props.editable === false ? styles.inputDisabled : null,
           multilineRows ? styles.multiline : null,
           style,
         ]}
@@ -105,8 +123,9 @@ export function TextField({
           nativeID={helperId}
           style={[
             styles.helper,
-            helperTone === 'danger' ? styles.helperDanger : null,
-            helperTone === 'success' ? styles.helperSuccess : null,
+            resolvedTone === 'danger' ? styles.helperDanger : null,
+            resolvedTone === 'success' ? styles.helperSuccess : null,
+            isNearCharacterLimit ? styles.helperNearLimit : null,
           ]}
         >
           {resolvedHelper}
@@ -118,16 +137,15 @@ export function TextField({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 6,
+    gap: 4,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.metadataText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
   helper: {
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   helperDanger: {
@@ -142,18 +160,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 15,
-    lineHeight: 21,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    ...typography.bodyText,
     includeFontPadding: false,
   },
   inputFocused: {
     borderColor: semanticColors.border.focus,
+    borderWidth: 2,
+  },
+  inputFilled: {
+    borderColor: colors.borderStrong,
+  },
+  inputError: {
+    borderColor: semanticColors.border.danger,
+    backgroundColor: colors.dangerBg,
+  },
+  inputSuccess: {
+    borderColor: semanticColors.border.success,
+  },
+  inputDisabled: {
+    backgroundColor: colors.surfaceMuted,
+    color: colors.textDisabled,
+  },
+  helperNearLimit: {
+    fontWeight: fontWeight.strong,
   },
   multiline: {
-    minHeight: 96,
-    maxHeight: 180,
+    minHeight: 82,
+    maxHeight: 154,
     textAlignVertical: 'top',
   },
 });

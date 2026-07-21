@@ -37,7 +37,6 @@ export async function ensureAndroidPushChannel() {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 150, 250],
     lightColor: '#3b82f6',
-    sound: 'default',
     bypassDnd: false,
     enableLights: true,
     enableVibrate: true,

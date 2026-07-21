@@ -171,7 +171,7 @@ export function AuthRegisterFlow({
               onPress={goToPreviousRegisterStep}
               style={styles.backButton}
             >
-              <ArrowLeft color={colors.textMuted} size={20} />
+              <ArrowLeft color={colors.textMuted} size={18} />
             </IconButton>
           </View>
 
@@ -195,7 +195,7 @@ export function AuthRegisterFlow({
               onPress={handleRegisterBack}
               style={styles.backButton}
             >
-              <ArrowLeft color={colors.textMuted} size={20} />
+              <ArrowLeft color={colors.textMuted} size={18} />
             </IconButton>
             <AuthStepDots current={regStep} total={steps.length} />
             <View style={styles.spacer} />
@@ -220,7 +220,7 @@ export function AuthRegisterFlow({
             placeholder={tr.auth.register.namePlaceholder}
             value={regName}
             onChangeText={setRegName}
-            icon={<User color={colors.textMuted} size={16} />}
+            icon={<User color={colors.textMuted} size={14} />}
             status={buildHelperFieldStatus(registerFieldErrors.name, 'danger')}
             maxLength={USER_NAME_MAX_LENGTH}
           />
@@ -265,7 +265,7 @@ export function AuthRegisterFlow({
               helper: emailHelper,
               helperTone: emailHelperTone,
             })}
-            icon={<Mail color={colors.textMuted} size={16} />}
+            icon={<Mail color={colors.textMuted} size={14} />}
             maxLength={EMAIL_MAX_LENGTH}
           />
           <AuthField
@@ -279,7 +279,7 @@ export function AuthRegisterFlow({
               registerFieldErrors.password || passwordHint,
               registerFieldErrors.password ? 'danger' : passwordHintTone,
             )}
-            icon={<Lock color={colors.textMuted} size={16} />}
+            icon={<Lock color={colors.textMuted} size={14} />}
           />
 
           <View style={styles.passwordMeter}>
@@ -325,7 +325,7 @@ export function AuthRegisterFlow({
             <AuthImagePicker
               uri={profilePhoto}
               shape="circle"
-              placeholderIcon={<Camera color={colors.textMuted} size={26} />}
+              placeholderIcon={<Camera color={colors.textMuted} size={22} />}
               placeholderText={tr.auth.register.profilePhotoAdd}
               helperText={tr.auth.register.profilePhotoHelper}
               onPress={selectProfilePhoto}
@@ -336,7 +336,7 @@ export function AuthRegisterFlow({
           <AuthImagePicker
             uri={coverPhoto}
             shape="cover"
-            placeholderIcon={<Camera color={colors.textMuted} size={24} />}
+            placeholderIcon={<Camera color={colors.textMuted} size={20} />}
             placeholderText={tr.auth.register.coverPhotoAdd}
             helperText={tr.auth.register.coverPhotoOptional}
             onPress={selectCoverPhoto}
@@ -362,7 +362,7 @@ export function AuthRegisterFlow({
       ) : (
         <View style={styles.bottomActions}>
           <PrimaryButton
-            icon={<ArrowRight color={colors.onPrimary} size={16} />}
+            icon={<ArrowRight color={colors.onPrimary} size={14} />}
             iconPosition="end"
             title={tr.auth.register.continue}
             onPress={goToNextRegisterStep}

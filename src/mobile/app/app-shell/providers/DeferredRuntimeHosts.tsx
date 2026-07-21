@@ -55,6 +55,10 @@ type RuntimeHostLoader = {
 
 const runtimeHostLoaders: RuntimeHostLoader[] = [
   {
+    key: 'toast',
+    load: () => require('@/mobile/app/platform/feedback/ToastHost').ToastHost,
+  },
+  {
     key: 'network',
     load: () => require('@/mobile/app/platform/network/OfflineIndicator').OfflineIndicator,
   },
@@ -65,6 +69,10 @@ const runtimeHostLoaders: RuntimeHostLoader[] = [
   {
     key: 'video-cache',
     load: () => require('@/mobile/app/platform/media/VideoCacheController').VideoCacheController,
+  },
+  {
+    key: 'media-memory',
+    load: () => require('@/mobile/app/platform/media/MediaMemoryController').MediaMemoryController,
   },
   { key: 'notification-presentation', load: () => NotificationPresentationController },
   { key: 'push-notifications', load: () => DeferredPushNotificationsController },

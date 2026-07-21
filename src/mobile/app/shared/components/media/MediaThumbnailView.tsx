@@ -10,7 +10,7 @@ import { Image as ImageIcon, Play } from 'lucide-react-native';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MediaThumbnailViewProps = {
   accessibilityLabel?: string;
@@ -47,9 +47,9 @@ function getPreviewUris(item: MediaThumbnailViewProps['item']) {
 
 function getFallbackIcon(type: PlaceMedia['type']) {
   return type === 'video' ? (
-    <Play color={colors.textSoft} fill={colors.textSoft} size={18} />
+    <Play color={colors.textSoft} fill={colors.textSoft} size={16} />
   ) : (
-    <ImageIcon color={colors.textSoft} size={18} />
+    <ImageIcon color={colors.textSoft} size={16} />
   );
 }
 
@@ -184,29 +184,29 @@ const styles = StyleSheet.create({
   },
   playOverlay: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 4,
+    right: 4,
   },
   playBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
   },
   durationBadge: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
+    right: 6,
+    bottom: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
   },
   durationText: {
-    fontSize: 11,
-    fontWeight: '800',
+    ...typography.metadataText,
+    fontWeight: '700',
     color: colors.onPrimary,
   },
 });

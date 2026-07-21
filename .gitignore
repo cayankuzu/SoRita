@@ -1,4 +1,5 @@
 .expo
+.codex-artifacts/
 .codex-expo-config.json
 .env
 .env.local

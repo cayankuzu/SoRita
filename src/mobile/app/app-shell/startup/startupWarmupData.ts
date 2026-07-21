@@ -66,13 +66,17 @@ function getFeedItemMediaUris(item: PlaceFeedCardItem) {
   ];
 }
 
-function warmMedia(uris: Array<string | null | undefined>) {
+function warmMedia(
+  uris: Array<string | null | undefined>,
+  signal?: AbortSignal,
+) {
   void prefetchAppImages(uris.slice(0, STARTUP_MEDIA_PREFETCH_LIMIT), {
     priority: 'low',
+    ...(signal ? { signal } : {}),
   });
 }
 
-async function warmHomeData(queryClient: QueryClient, userId: string) {
+async function warmHomeData(queryClient: QueryClient, userId: string, signal?: AbortSignal) {
   const queryKey = queryKeys.feed.page(userId, HOME_FEED_ALGORITHM_VERSION);
   await queryClient.prefetchInfiniteQuery({
     initialPageParam: null as HomeFeedCursor | null,
@@ -89,10 +93,10 @@ async function warmHomeData(queryClient: QueryClient, userId: string) {
   const data = queryClient.getQueryData<
     InfiniteData<HomeFeedPage, HomeFeedCursor | null>
   >(queryKey);
-  warmMedia((data?.pages[0]?.items || []).flatMap(getFeedItemMediaUris));
+  warmMedia((data?.pages[0]?.items || []).flatMap(getFeedItemMediaUris), signal);
 }
 
-async function warmExploreData(queryClient: QueryClient, userId: string) {
+async function warmExploreData(queryClient: QueryClient, userId: string, signal?: AbortSignal) {
   const queryKey = queryKeys.explore.page(userId, 'lists', '');
   await queryClient.prefetchInfiniteQuery({
     initialPageParam: null as ExploreCursor | null,
@@ -118,18 +122,18 @@ async function warmExploreData(queryClient: QueryClient, userId: string) {
     ]),
     ...(page?.placeItems || []).flatMap(getFeedItemMediaUris),
     ...(page?.userItems || []).map((item) => item.profilePhoto),
-  ]);
+  ], signal);
 }
 
-async function warmProfileData(queryClient: QueryClient, userId: string) {
+async function warmProfileData(queryClient: QueryClient, userId: string, signal?: AbortSignal) {
   const summary = await queryClient.fetchQuery({
     queryKey: queryKeys.profile.summary(userId, userId),
     queryFn: ({ signal }) => fetchProfileSummary(userId, signal),
     staleTime: PROFILE_READ_MODEL_STALE_TIME_MS,
   });
-  warmMedia([summary?.user.profilePhoto, summary?.user.coverPhoto]);
+  warmMedia([summary?.user.profilePhoto, summary?.user.coverPhoto], signal);
 
-  if (!summary?.canViewContent) {
+  if (!summary?.canViewContent || signal?.aborted) {
     return;
   }
 
@@ -151,7 +155,7 @@ async function warmProfileData(queryClient: QueryClient, userId: string) {
   const page = queryClient.getQueryData<
     InfiniteData<ProfileContentPage, ProfileContentCursor | null>
   >(queryKey)?.pages[0];
-  warmMedia((page?.lists || []).map((list) => list.coverImage));
+  warmMedia((page?.lists || []).map((list) => list.coverImage), signal);
 }
 
 async function warmMapData(queryClient: QueryClient, userId: string) {
@@ -162,7 +166,11 @@ async function warmMapData(queryClient: QueryClient, userId: string) {
   });
 }
 
-async function warmNotificationsData(queryClient: QueryClient, userId: string) {
+async function warmNotificationsData(
+  queryClient: QueryClient,
+  userId: string,
+  signal?: AbortSignal,
+) {
   const queryKey = queryKeys.notifications.list(userId);
   await Promise.all([
     queryClient.prefetchInfiniteQuery({
@@ -187,20 +195,21 @@ async function warmNotificationsData(queryClient: QueryClient, userId: string) {
   const page = queryClient.getQueryData<
     InfiniteData<MobileNotification[], NotificationCursor | null>
   >(queryKey)?.pages[0];
-  warmMedia((page || []).map((notification) => notification.userPhoto));
+  warmMedia((page || []).map((notification) => notification.userPhoto), signal);
 }
 
 export function warmStageData(
   queryClient: QueryClient,
   userId: string,
   stage: StartupWarmupStage,
+  signal?: AbortSignal,
 ) {
   const warmers: Record<StartupWarmupStage, () => Promise<void>> = {
-    explore: () => warmExploreData(queryClient, userId),
-    home: () => warmHomeData(queryClient, userId),
+    explore: () => warmExploreData(queryClient, userId, signal),
+    home: () => warmHomeData(queryClient, userId, signal),
     map: () => warmMapData(queryClient, userId),
-    notifications: () => warmNotificationsData(queryClient, userId),
-    profile: () => warmProfileData(queryClient, userId),
+    notifications: () => warmNotificationsData(queryClient, userId, signal),
+    profile: () => warmProfileData(queryClient, userId, signal),
   };
 
   return warmers[stage]();

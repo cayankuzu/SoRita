@@ -1,7 +1,7 @@
 {
   "name": "sorita",
   "private": true,
-  "version": "1.0.90",
+  "version": "1.0.92",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,10 @@
     "android:apk": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:SENTRY_DISABLE_AUTO_UPLOAD='true'; Set-Location android; .\\gradlew.bat :app:assembleStandalone --console=plain\"",
     "android:rebuild": "concurrently --kill-others-on-fail -n EXPO,NATIVE,LOGS -c green,blue,magenta \"npm run mobile:live\" \"npm run run:android\" \"npm run logs:android\"",
     "android:profile:verify": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location android; .\\gradlew.bat :app:mergeReleaseArtProfile --console=plain\"",
+    "android:profile:generate": "node utils/android-benchmark.mjs generate",
+    "android:performance:test": "node utils/android-benchmark.mjs measure",
     "architecture:check": "node utils/guards/check-architecture-boundaries.cjs",
+    "bundle:android:check": "npx expo export --platform android --output-dir .expo/bundle-budget --clear && node utils/guards/check-bundle-size.mjs .expo/bundle-budget",
     "dead-code:check": "knip --include files,dependencies,unlisted,binaries --no-progress",
     "e2e:evidence": "node utils/guards/check-critical-flow-evidence.mjs",
     "check": "npm run lint && npm run typecheck && npm run test",
@@ -22,7 +25,7 @@
     "logs:android": "node utils/android-logcat.mjs --clear",
     "logs:android:all": "node utils/android-logcat.mjs --clear --all",
     "load:test": "k6 run tests/load/read-models.k6.js",
-    "lint": "eslint App.tsx app.config.ts index.js src supabase/functions utils --max-warnings=0 && npm run architecture:check && npm run ui-copy:check",
+    "lint": "eslint App.tsx app.config.ts index.js src supabase/functions utils --max-warnings=0 && npm run architecture:check && npm run source-health:check && npm run ui-copy:check && npm run ui-tokens:check",
     "mobile:live": "node utils/android-metro.mjs",
     "notify:broadcast": "node utils/send-system-notification.mjs",
     "open:android": "node utils/android-launch-app.mjs",
@@ -33,6 +36,7 @@
     "security:licenses": "node utils/guards/check-production-licenses.mjs",
     "security:provenance": "npm audit signatures",
     "security:verify": "vitest run src/mobile/app/platform/supabase/__tests__/media.test.ts supabase/functions/_shared/requestSecurity.test.ts supabase/functions/auth-gateway/handler.test.ts supabase/functions/delete-user/handler.test.ts supabase/functions/maps-geocoding/handler.test.ts supabase/functions/media-assets/handler.test.ts",
+    "source-health:check": "node utils/guards/check-source-health.mjs",
     "test": "node utils/run-tests.mjs",
     "test:app-shell-data": "vitest run src/mobile/app/app-shell src/mobile/app/data",
     "test:coverage": "node utils/run-coverage.mjs",
@@ -51,7 +55,8 @@
     "typecheck": "npm run typecheck:app && npm run typecheck:tests",
     "typecheck:app": "tsc --noEmit",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
-    "ui-copy:check": "node utils/guards/check-ui-copy.mjs"
+    "ui-copy:check": "node utils/guards/check-ui-copy.mjs",
+    "ui-tokens:check": "node utils/guards/check-ui-tokens.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^2.2.0",

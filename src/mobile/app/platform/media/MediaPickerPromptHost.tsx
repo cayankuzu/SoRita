@@ -85,7 +85,7 @@ export function MediaPickerPromptHost() {
     paddingTop,
     paddingBottom,
     maxHeightRatio: 0.88,
-    minHeight: 320,
+    minHeight: 276,
   });
   const availableSources = React.useMemo(
     () => options.availableSources || ['camera', 'library'],
@@ -169,7 +169,7 @@ export function MediaPickerPromptHost() {
               onPress={() => resolveMediaPickerPrompt(null)}
               style={styles.closeButton}
             >
-              <X color={colors.textSoft} size={18} />
+              <X color={colors.textSoft} size={16} />
             </InstantPressable>
           </View>
 
@@ -185,7 +185,7 @@ export function MediaPickerPromptHost() {
                       ? tr.mediaPicker.cameraMixedDescription
                       : tr.mediaPicker.cameraDescription
                 }
-                icon={<Camera color={colors.primary} size={20} />}
+                icon={<Camera color={colors.primary} size={18} />}
                 title={
                   hasDedicatedVideoCaptureOption
                     ? tr.mediaPicker.cameraPhoto
@@ -200,7 +200,7 @@ export function MediaPickerPromptHost() {
                 accentColor={colors.primary}
                 backgroundColor={colors.primaryBg}
                 description={tr.mediaPicker.cameraVideoDescription}
-                icon={<Video color={colors.primary} size={20} />}
+                icon={<Video color={colors.primary} size={18} />}
                 title={tr.mediaPicker.cameraVideo}
                 onPress={() => handleResolve({ cameraCaptureMode: 'video', source: 'camera' })}
               />
@@ -211,7 +211,7 @@ export function MediaPickerPromptHost() {
                 accentColor={colors.secondary}
                 backgroundColor={colors.successBg}
                 description={galleryDescription}
-                icon={<Images color={colors.secondary} size={20} />}
+                icon={<Images color={colors.secondary} size={18} />}
                 title={tr.mediaPicker.gallery}
                 onPress={() => handleResolve({ source: 'library' })}
               />
@@ -237,22 +237,22 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 684,
     maxHeight: '88%',
     alignSelf: 'center',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 16,
-    gap: 16,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 12,
     overflow: 'hidden',
   },
   handle: {
     alignSelf: 'center',
-    width: 52,
-    height: 5,
+    width: 44,
+    height: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
   },
@@ -260,48 +260,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   headerCopy: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
   },
   description: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
   options: {
-    gap: 10,
+    gap: 8,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 10,
     borderRadius: radius.lg,
     borderWidth: 1,
-    padding: 14,
+    padding: 10,
   },
   optionCardPressed: {
     opacity: 0.92,
   },
   optionIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   optionDescription: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: colors.textMuted,
   },
 });

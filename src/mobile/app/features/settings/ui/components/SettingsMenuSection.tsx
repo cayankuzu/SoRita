@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 export type SettingsMenuItem = {
   label: string;
@@ -31,7 +31,7 @@ export function SettingsMenuSection({ title, items }: SettingsMenuSectionProps) 
           >
             <View style={[styles.menuIcon, { backgroundColor: item.color }]}>{item.icon}</View>
             <Text style={[styles.menuLabel, item.danger ? styles.menuLabelDanger : null]}>{item.label}</Text>
-            <ChevronRight color={colors.textSoft} size={18} />
+            <ChevronRight color={colors.textSoft} size={iconSize.md} />
           </InstantPressable>
         ))}
       </View>
@@ -41,9 +41,9 @@ export function SettingsMenuSection({ title, items }: SettingsMenuSectionProps) 
 
 const styles = StyleSheet.create({
   sectionTitle: {
-    marginBottom: 8,
-    paddingHorizontal: 4,
-    fontSize: 12,
+    ...typography.metadataText,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
     fontWeight: '700',
     color: colors.textSoft,
   },
@@ -55,26 +55,26 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   menuRow: {
-    minHeight: 60,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
+    gap: spacing.md,
+    paddingHorizontal: spacing.card,
   },
   menuRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
   menuIcon: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuLabel: {
+    ...typography.labelText,
     flex: 1,
-    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
