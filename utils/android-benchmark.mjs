@@ -18,22 +18,47 @@ const adb = path.join(sdkRoot, 'platform-tools', isWindows ? 'adb.exe' : 'adb');
 const gradle = path.resolve('android', isWindows ? 'gradlew.bat' : 'gradlew');
 
 let deviceAbi;
+let deviceSerial;
+let isEmulator;
 try {
   const devices = execFileSync(adb, ['devices'], { encoding: 'utf8' })
     .split(/\r?\n/)
     .slice(1)
     .map((line) => line.trim().split(/\s+/))
     .filter((parts) => parts[0] && parts[1] === 'device');
-  if (devices.length !== 1) {
+  const requestedSerial = process.env.ANDROID_SERIAL?.trim();
+  const selectedDevice = requestedSerial
+    ? devices.find(([serial]) => serial === requestedSerial)
+    : devices.length === 1
+      ? devices[0]
+      : undefined;
+
+  if (!selectedDevice) {
+    if (requestedSerial) {
+      throw new Error(`ANDROID_SERIAL device is not connected: ${requestedSerial}.`);
+    }
+
     throw new Error(`Expected exactly one connected Android device, found ${devices.length}.`);
   }
+
+  deviceSerial = selectedDevice[0];
   deviceAbi = execFileSync(
     adb,
-    ['-s', devices[0][0], 'shell', 'getprop', 'ro.product.cpu.abi'],
+    ['-s', deviceSerial, 'shell', 'getprop', 'ro.product.cpu.abi'],
     { encoding: 'utf8' },
   ).trim();
+  isEmulator = execFileSync(
+    adb,
+    ['-s', deviceSerial, 'shell', 'getprop', 'ro.kernel.qemu'],
+    { encoding: 'utf8' },
+  ).trim() === '1';
 } catch (error) {
   console.error(`[android-benchmark] ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
+
+if (mode === 'measure' && isEmulator) {
+  console.error('[android-benchmark] Macrobenchmark measurements require a physical Android device.');
   process.exit(1);
 }
 
@@ -61,10 +86,14 @@ if (mode === 'measure') {
   args.push('-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark');
 }
 
-console.log(`[android-benchmark] ${mode} on ${supportedAbi}`);
+console.log(`[android-benchmark] ${mode} on ${deviceSerial} (${supportedAbi})`);
 const result = spawnSync(gradle, args, {
   cwd: path.resolve('android'),
-  env: { ...process.env, SENTRY_DISABLE_AUTO_UPLOAD: 'true' },
+  env: {
+    ...process.env,
+    ANDROID_SERIAL: deviceSerial,
+    SENTRY_DISABLE_AUTO_UPLOAD: 'true',
+  },
   shell: isWindows,
   stdio: 'inherit',
 });

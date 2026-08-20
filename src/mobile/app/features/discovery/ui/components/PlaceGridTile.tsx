@@ -51,9 +51,11 @@ export type PlaceGridTileProps = {
   listIsPublic?: boolean;
   listName?: string;
   markerColor?: string;
-  markerContext?: 'feed' | 'list';
+  compact?: boolean;
   onPress: () => void;
+  onPressIn?: () => void;
   onOwnerPress?: () => void;
+  onOwnerPressIn?: () => void;
   menuActions?: ActionMenuSheetItem[];
   searchQuery?: string;
 };
@@ -80,9 +82,102 @@ function getPlaceGridTileModel(
     primaryMedia,
     timestampText: formatCreatedUpdatedInline(
       place.addedAt,
-      place.updatedAt || place.addedAt,
+      place.updatedAt,
     ),
   };
+}
+
+type PlaceTileMediaProps = {
+  hasMenuActions: boolean;
+  hasMiniMap: boolean;
+  isMapInteractive: boolean;
+  mapFocusKey: number;
+  markers: React.ComponentProps<typeof MiniMapPreview>['places'];
+  mediaCount: number;
+  mediaCounts: ReturnType<typeof getPlaceMediaCounts>;
+  mode: 'place' | 'photo';
+  onMapGesture: () => void;
+  onOpenMenu: () => void;
+  place: Place;
+  primaryMedia: React.ComponentProps<typeof MediaThumbnailView>['item'] | undefined;
+  showInteractionHint: boolean;
+};
+
+function PlaceTileMedia({
+  hasMenuActions,
+  hasMiniMap,
+  isMapInteractive,
+  mapFocusKey,
+  markers,
+  mediaCount,
+  mediaCounts,
+  mode,
+  onMapGesture,
+  onOpenMenu,
+  place,
+  primaryMedia,
+  showInteractionHint,
+}: PlaceTileMediaProps) {
+  return (
+    <View style={styles.mediaSquare}>
+      {hasMenuActions ? (
+        <Pressable
+          accessibilityLabel={tr.common.contentActionsTitle}
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={(event) => {
+            event.stopPropagation();
+            onOpenMenu();
+          }}
+          style={styles.singleActionBadge}
+        >
+          <Ellipsis color={colors.onPrimary} size={10} />
+        </Pressable>
+      ) : null}
+
+      {mode === 'photo' && primaryMedia ? (
+        <>
+          <MediaThumbnailView
+            item={primaryMedia}
+            priority="high"
+            style={styles.mediaSquare}
+            accessibilityLabel={tr.placeEditor.placePhotoLabel(place.name)}
+            fallbackToVideoPreview={false}
+          />
+          {mediaCount > 0 ? (
+            <View style={styles.photoCountBadge}>
+              {mediaCounts.photos > 0 ? (
+                <View style={styles.photoCountGroup}>
+                  <Camera color={colors.onPrimary} size={9} />
+                  <Text style={styles.photoCountText}>{mediaCounts.photos}</Text>
+                </View>
+              ) : null}
+              {mediaCounts.photos > 0 && mediaCounts.videos > 0 ? (
+                <View style={styles.photoCountDivider} />
+              ) : null}
+              {mediaCounts.videos > 0 ? (
+                <View style={styles.photoCountGroup}>
+                  <PlayCircle color={colors.onPrimary} size={9} />
+                  <Text style={styles.photoCountText}>{mediaCounts.videos}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </>
+      ) : (
+        <MiniMapPreview
+          places={markers}
+          height={layout.discoveryTileHeight}
+          interactive={isMapInteractive}
+          instanceId={mapFocusKey}
+          focusIndex={0}
+          focusTrigger={mapFocusKey}
+          onMapGesture={onMapGesture}
+        />
+      )}
+      {hasMiniMap ? <MiniMapInteractionHint visible={showInteractionHint} /> : null}
+    </View>
+  );
 }
 
 function PlaceGridTileComponent({
@@ -96,9 +191,11 @@ function PlaceGridTileComponent({
   listIsPublic,
   listName,
   markerColor,
-  markerContext = 'feed',
+  compact = false,
   onPress,
+  onPressIn,
   onOwnerPress,
+  onOwnerPressIn,
   menuActions,
   searchQuery,
 }: PlaceGridTileProps) {
@@ -140,8 +237,6 @@ function PlaceGridTileComponent({
     onPress();
   };
 
-  void markerContext;
-
   const miniMapMarkers = React.useMemo(
     () => [
       {
@@ -158,79 +253,39 @@ function PlaceGridTileComponent({
     <View
       style={[
         styles.tile,
+        compact ? styles.tileCompact : null,
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
-      {showOwner && owner ? (
-        <OwnerHeader owner={owner} onPress={onOwnerPress} />
+      {showOwner && owner && !compact ? (
+        <OwnerHeader owner={owner} onPress={onOwnerPress} onPressIn={onOwnerPressIn} />
       ) : null}
-      <Pressable onPress={handleTilePress} style={styles.tilePressable}>
-        <View style={styles.mediaSquare}>
-          {menuActions?.length ? (
-            <Pressable
-              hitSlop={10}
-              onPress={(event) => {
-                event.stopPropagation();
-                setMenuVisible(true);
-              }}
-              style={styles.singleActionBadge}
-            >
-              <Ellipsis color={colors.onPrimary} size={10} />
-            </Pressable>
-          ) : null}
+      <Pressable
+        accessibilityLabel={place.name}
+        accessibilityRole="button"
+        onPress={handleTilePress}
+        onPressIn={onPressIn}
+        style={styles.tilePressable}
+      >
+        <PlaceTileMedia
+          hasMenuActions={Boolean(menuActions?.length)}
+          hasMiniMap={hasMiniMap}
+          isMapInteractive={isMapInteractive}
+          mapFocusKey={mapFocusKey}
+          markers={miniMapMarkers}
+          mediaCount={mediaCount}
+          mediaCounts={mediaCounts}
+          mode={mode}
+          onMapGesture={() => {
+            lastMapGestureAtRef.current = Date.now();
+          }}
+          onOpenMenu={() => setMenuVisible(true)}
+          place={place}
+          primaryMedia={primaryMedia}
+          showInteractionHint={showInteractionHint}
+        />
 
-          {mode === 'photo' && primaryMedia ? (
-            <>
-              <MediaThumbnailView
-                item={primaryMedia}
-                priority="high"
-                style={styles.mediaSquare}
-                accessibilityLabel={tr.placeEditor.placePhotoLabel(place.name)}
-                fallbackToVideoPreview={false}
-              />
-              {mediaCount > 0 ? (
-                <View style={styles.photoCountBadge}>
-                  {mediaCounts.photos > 0 ? (
-                    <View style={styles.photoCountGroup}>
-                      <Camera color={colors.onPrimary} size={9} />
-                      <Text style={styles.photoCountText}>
-                        {mediaCounts.photos}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {mediaCounts.photos > 0 && mediaCounts.videos > 0 ? (
-                    <View style={styles.photoCountDivider} />
-                  ) : null}
-                  {mediaCounts.videos > 0 ? (
-                    <View style={styles.photoCountGroup}>
-                      <PlayCircle color={colors.onPrimary} size={9} />
-                      <Text style={styles.photoCountText}>
-                        {mediaCounts.videos}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-            </>
-          ) : (
-            <MiniMapPreview
-              places={miniMapMarkers}
-              height={layout.discoveryTileHeight}
-              interactive={isMapInteractive}
-              instanceId={mapFocusKey}
-              focusIndex={0}
-              focusTrigger={mapFocusKey}
-              onMapGesture={() => {
-                lastMapGestureAtRef.current = Date.now();
-              }}
-            />
-          )}
-          {hasMiniMap ? (
-            <MiniMapInteractionHint visible={showInteractionHint} />
-          ) : null}
-        </View>
-
-        <View style={styles.tileBody}>
+        <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
           <View style={styles.tileTitleRow}>
             <View style={styles.tileTitleContent}>
               <ExpandableText
@@ -241,9 +296,10 @@ function PlaceGridTileComponent({
                 renderContent={() => <HighlightedText query={searchQuery} text={place.name} />}
               />
             </View>
-            {hasMiniMap ? (
+            {hasMiniMap && !compact ? (
               <Pressable
                 accessibilityLabel={tr.cards.focusMiniMap}
+                accessibilityRole="button"
                 delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
                 hitSlop={8}
                 onPressIn={() => {
@@ -272,7 +328,7 @@ function PlaceGridTileComponent({
               </Pressable>
             ) : null}
           </View>
-          {hasListContext ? (
+          {hasListContext && !compact ? (
             <View style={styles.listContextBar}>
               {listCoverImage ? (
                 <AppImage
@@ -328,9 +384,11 @@ function PlaceGridTileComponent({
                 <Text style={styles.ratingText}>{place.rating}</Text>
               </View>
             ) : null}
-            <Text numberOfLines={1} style={styles.tileTimestampInline}>
-              {timestampText}
-            </Text>
+            {!compact ? (
+              <Text numberOfLines={1} style={styles.tileTimestampInline}>
+                {timestampText}
+              </Text>
+            ) : null}
           </View>
         </View>
       </Pressable>
@@ -368,9 +426,11 @@ function arePlaceGridTilePropsEqual(
     previous.listIsPublic === next.listIsPublic &&
     previous.listName === next.listName &&
     previous.markerColor === next.markerColor &&
-    previous.markerContext === next.markerContext &&
+    previous.compact === next.compact &&
     previous.onPress === next.onPress &&
+    previous.onPressIn === next.onPressIn &&
     previous.onOwnerPress === next.onOwnerPress &&
+    previous.onOwnerPressIn === next.onOwnerPressIn &&
     previous.menuActions === next.menuActions
     && previous.searchQuery === next.searchQuery
   );

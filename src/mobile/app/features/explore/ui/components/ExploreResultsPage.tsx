@@ -36,11 +36,14 @@ type ExploreResultsPageProps = {
   isFetchingNextPage: boolean;
   listMarkerLists: PlaceList[];
   listRef: React.Ref<FlatList<ExploreGridItem>>;
+  listHeader?: React.ReactElement | null;
   onContentReady: () => void;
   onClearSearch: () => void;
   onEndReached: () => void;
-  onFollowUser: (userId: string) => void;
+  onFollowUser: (userId: string) => Promise<void>;
+  onListIntent: (listId: string) => void;
   onListPress: (listId: string) => void;
+  onOwnerIntent: (userId: string) => void;
   onOwnerPress: (userId: string) => void;
   onPlacePress: (tab: Extract<ExploreTabType, 'photos' | 'places'>, index: number) => void;
   onRefresh: () => void;
@@ -137,6 +140,107 @@ function ExplorePageEmptyState({
   );
 }
 
+type ExploreResultCellProps = Pick<
+  ExploreResultsPageProps,
+  | 'listMarkerLists'
+  | 'onFollowUser'
+  | 'onListIntent'
+  | 'onListPress'
+  | 'onOwnerIntent'
+  | 'onOwnerPress'
+  | 'onPlacePress'
+  | 'searchQuery'
+  | 'tab'
+> & {
+  compact: boolean;
+  following: Set<string>;
+  index: number;
+  item: ExploreGridItem;
+  pendingFollowRequests: Set<string>;
+};
+
+const ExploreResultCell = React.memo(function ExploreResultCell({
+  compact,
+  following,
+  index,
+  item,
+  listMarkerLists,
+  onFollowUser,
+  onListIntent,
+  onListPress,
+  onOwnerIntent,
+  onOwnerPress,
+  onPlacePress,
+  pendingFollowRequests,
+  searchQuery,
+  tab,
+}: ExploreResultCellProps) {
+  if (tab === 'lists') {
+    const listItem = item as ExploreListItem;
+    const ownerId = listItem.owner?.id;
+
+    return (
+      <ListGridTile
+        compact={compact}
+        list={listItem.list}
+        owner={listItem.owner}
+        fillWidth
+        showOwner={Boolean(listItem.owner)}
+        allListsForMarkerColor={listMarkerLists}
+        onOwnerPress={ownerId ? () => onOwnerPress(ownerId) : undefined}
+        onOwnerPressIn={ownerId ? () => onOwnerIntent(ownerId) : undefined}
+        onPress={() => onListPress(listItem.list.id)}
+        onPressIn={() => onListIntent(listItem.list.id)}
+        searchQuery={searchQuery}
+      />
+    );
+  }
+
+  if (tab === 'people') {
+    const targetUser = item as User;
+
+    return (
+      <UserGridTile
+        compact={compact}
+        user={targetUser}
+        fillWidth
+        isFollowing={following.has(targetUser.id)}
+        isPending={pendingFollowRequests.has(targetUser.id)}
+        onPress={() => onOwnerPress(targetUser.id)}
+        onPressIn={() => onOwnerIntent(targetUser.id)}
+        onFollowPress={() => onFollowUser(targetUser.id)}
+        searchQuery={searchQuery}
+      />
+    );
+  }
+
+  const placeItem = item as PlaceFeedCardItem;
+  const ownerId = placeItem.owner?.id;
+
+  return (
+    <PlaceGridTile
+      compact={compact}
+      place={placeItem.place}
+      fillWidth
+      owner={placeItem.owner}
+      showOwner={Boolean(placeItem.owner)}
+      mode={tab === 'photos' ? 'photo' : 'place'}
+      listCoverImage={placeItem.listCoverImage}
+      listEmoji={placeItem.listEmoji}
+      listIsPublic={placeItem.listIsPublic}
+      listName={placeItem.listName}
+      markerColor={getMarkerColorForMemberships(
+        placeItem.memberships,
+        placeItem.listIsPublic,
+      )}
+      onOwnerPress={ownerId ? () => onOwnerPress(ownerId) : undefined}
+      onOwnerPressIn={ownerId ? () => onOwnerIntent(ownerId) : undefined}
+      onPress={() => onPlacePress(tab, index)}
+      searchQuery={searchQuery}
+    />
+  );
+});
+
 export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   active,
   data,
@@ -146,11 +250,14 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   isFetchingNextPage,
   listMarkerLists,
   listRef,
+  listHeader = null,
   onContentReady,
   onClearSearch,
   onEndReached,
   onFollowUser,
+  onListIntent,
   onListPress,
+  onOwnerIntent,
   onOwnerPress,
   onPlacePress,
   onRefresh,
@@ -161,30 +268,80 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   searchQuery,
   tab,
 }: ExploreResultsPageProps) {
+  const followingSet = React.useMemo(() => new Set(following), [following]);
+  const pendingFollowRequestSet = React.useMemo(
+    () => new Set(pendingFollowRequests),
+    [pendingFollowRequests],
+  );
   const listState = React.useMemo(
-    () => ({ following, pendingFollowRequests }),
-    [following, pendingFollowRequests],
+    () => ({ followingSet, pendingFollowRequestSet }),
+    [followingSet, pendingFollowRequestSet],
   );
   const footer =
-    active && hasNextPage ? (
+    active && hasNextPage && isFetchingNextPage ? (
       <View style={styles.loadMoreStatus} accessibilityRole="progressbar">
-        {isFetchingNextPage ? (
-          <ActivityIndicator color={colors.primary} size="small" />
-        ) : null}
-        <Text style={styles.loadMoreLabel}>
-          {isFetchingNextPage ? tr.common.loadingMore : tr.explore.loadMoreHint}
-        </Text>
+        <ActivityIndicator color={colors.primary} size="small" />
+        <Text style={styles.loadMoreLabel}>{tr.common.loadingMore}</Text>
       </View>
     ) : null;
+  const keyExtractor = React.useCallback(
+    (item: ExploreGridItem, index: number) => {
+      if (tab === 'lists') {
+        return (item as ExploreListItem).list.id;
+      }
+
+      if (tab === 'people') {
+        return (item as User).id;
+      }
+
+      return (item as PlaceFeedCardItem).key || `${tab}:${index}`;
+    },
+    [tab],
+  );
+  const renderResult = React.useCallback(
+    ({ columnCount, item, index }: { columnCount: number; item: ExploreGridItem; index: number }) => (
+      <ExploreResultCell
+        compact={columnCount >= 3}
+        following={followingSet}
+        index={index}
+        item={item}
+        listMarkerLists={listMarkerLists}
+        onFollowUser={onFollowUser}
+        onListIntent={onListIntent}
+        onListPress={onListPress}
+        onOwnerIntent={onOwnerIntent}
+        onOwnerPress={onOwnerPress}
+        onPlacePress={onPlacePress}
+        pendingFollowRequests={pendingFollowRequestSet}
+        searchQuery={searchQuery}
+        tab={tab}
+      />
+    ),
+    [
+      followingSet,
+      listMarkerLists,
+      onFollowUser,
+      onListIntent,
+      onListPress,
+      onOwnerIntent,
+      onOwnerPress,
+      onPlacePress,
+      pendingFollowRequestSet,
+      searchQuery,
+      tab,
+    ],
+  );
 
   return (
     <VirtualizedDiscoveryGrid<ExploreGridItem>
       listRef={listRef}
       listKey={`explore:${tab}`}
+      columnStrategy={tab === 'photos' ? 'gallery' : 'discovery'}
       data={errorMessage ? [] : data}
       extraData={listState}
       containsNativeMaps={tab !== 'people'}
       refreshing={active && refreshing}
+      scrollEnabled={active}
       onRefresh={active ? onRefresh : undefined}
       onEndReached={active ? onEndReached : undefined}
       onContentSizeChange={onContentReady}
@@ -198,75 +355,10 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
           tab={tab}
         />
       }
+      ListHeaderComponent={listHeader}
       ListFooterComponent={footer}
-      keyExtractor={(item, index) => {
-        if (tab === 'lists') {
-          return (item as ExploreListItem).list.id;
-        }
-
-        if (tab === 'people') {
-          return (item as User).id;
-        }
-
-        return (item as PlaceFeedCardItem).key || `${tab}:${index}`;
-      }}
-      renderItem={({ item, index }) => {
-        if (tab === 'lists') {
-          const listItem = item as ExploreListItem;
-
-          return (
-            <ListGridTile
-              list={listItem.list}
-              owner={listItem.owner}
-              fillWidth
-              showOwner={Boolean(listItem.owner)}
-              allListsForMarkerColor={listMarkerLists}
-              onOwnerPress={() => listItem.owner && onOwnerPress(listItem.owner.id)}
-              onPress={() => onListPress(listItem.list.id)}
-              searchQuery={searchQuery}
-            />
-          );
-        }
-
-        if (tab === 'people') {
-          const targetUser = item as User;
-
-          return (
-            <UserGridTile
-              user={targetUser}
-              fillWidth
-              isFollowing={following.includes(targetUser.id)}
-              isPending={pendingFollowRequests.includes(targetUser.id)}
-              onPress={() => onOwnerPress(targetUser.id)}
-              onFollowPress={() => onFollowUser(targetUser.id)}
-              searchQuery={searchQuery}
-            />
-          );
-        }
-
-        const placeItem = item as PlaceFeedCardItem;
-
-        return (
-          <PlaceGridTile
-            place={placeItem.place}
-            fillWidth
-            owner={placeItem.owner}
-            showOwner={Boolean(placeItem.owner)}
-            mode={tab === 'photos' ? 'photo' : 'place'}
-            listCoverImage={placeItem.listCoverImage}
-            listEmoji={placeItem.listEmoji}
-            listIsPublic={placeItem.listIsPublic}
-            listName={placeItem.listName}
-            markerColor={getMarkerColorForMemberships(
-              placeItem.memberships,
-              placeItem.listIsPublic,
-            )}
-            onOwnerPress={() => placeItem.owner && onOwnerPress(placeItem.owner.id)}
-            onPress={() => onPlacePress(tab, index)}
-            searchQuery={searchQuery}
-          />
-        );
-      }}
+      keyExtractor={keyExtractor}
+      renderItem={renderResult}
     />
   );
 });

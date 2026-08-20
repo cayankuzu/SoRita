@@ -9,11 +9,21 @@ vi.mock('@/mobile/app/platform/media/videoThumbnails', () => ({
 }));
 
 import {
+  buildAndroidMediaStoreUri,
   buildMediaTypeFilter,
   buildSelectionCounts,
 } from '@/mobile/app/platform/media/mediaLibraryAssetPreparation';
 
 describe('mediaLibraryAssetPreparation', () => {
+  it('uses scoped-storage-safe MediaStore URIs on Android', () => {
+    expect(buildAndroidMediaStoreUri({ id: '42', mediaType: 'photo' } as never)).toBe(
+      'content://media/external/images/media/42',
+    );
+    expect(buildAndroidMediaStoreUri({ id: '84', mediaType: 'video' } as never)).toBe(
+      'content://media/external/video/media/84',
+    );
+  });
+
   it('builds the smallest allowed media filter', () => {
     expect(buildMediaTypeFilter('all', true)).toEqual(['photo', 'video']);
     expect(buildMediaTypeFilter('all', false)).toEqual(['photo']);

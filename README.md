@@ -117,13 +117,13 @@ Notlar:
 ## Calistirma
 
 ```bash
-# Metro bundler'i baslat
-npx expo start
+# Metro bundler'i proje portunda (18083) baslat
+npm run mobile:live
 
 # Android emulatorunde calistir
 npm run android
 
-# Android native build + calistir
+# Ilk kurulumda veya standalone APK sonrasinda debug build + calistir
 npm run android:rebuild
 
 # Metro cache temizle
@@ -150,6 +150,7 @@ Notlar:
 - `supabase db push` icin CLI oturumu ve hedef proje veritabani sifresi gerekir.
 - Edge Function deploy icin `SUPABASE_ACCESS_TOKEN` veya aktif `supabase login` oturumu gerekir.
 - `SUPABASE_SERVICE_ROLE_KEY` gibi server-side secret'lar repo yerine Supabase project secrets veya CI environment tarafinda tutulmalidir.
+- Sistem bildirimi deploy edilmeden once idempotent delivery migration'i uygulanmalidir. `notify:broadcast` her canli gonderim icin bir UUID uretir; belirsiz sonuc veren bir istegi tekrar ederken ayni anahtari `--idempotency-key <uuid>` ile yeniden kullanin.
 
 ## Test
 

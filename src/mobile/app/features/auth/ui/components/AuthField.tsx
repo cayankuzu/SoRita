@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardTypeOptions,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -12,7 +13,13 @@ import { CircleAlert, CircleCheck, Eye, EyeOff } from 'lucide-react-native';
 
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, semanticColors, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  radius,
+  semanticColors,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { buildCharacterLimitLabel } from '@/mobile/app/shared/validation/contentLimits';
 
 export type AuthFieldStatus =
@@ -40,6 +47,8 @@ type AuthFieldProps = Omit<
 };
 
 type HelperTone = NonNullable<AuthFieldProps['helperTone']>;
+
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 function AuthFieldStatusAccessory({
   checking,
@@ -107,22 +116,22 @@ function PasswordVisibilityButton({
 }
 
 function AuthFieldHelper({ id, message, tone }: { id: string; message?: string; tone: HelperTone }) {
+  if (!message) {
+    return null;
+  }
+
   return (
-    <View style={styles.helperSlot}>
-      {message ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          nativeID={id}
-          style={[
-            styles.helper,
-            tone === 'danger' ? styles.helperDanger : null,
-            tone === 'success' ? styles.helperSuccess : null,
-          ]}
-        >
-          {message}
-        </Text>
-      ) : null}
-    </View>
+    <Text
+      accessibilityLiveRegion="polite"
+      nativeID={id}
+      style={[
+        styles.helper,
+        tone === 'danger' ? styles.helperDanger : null,
+        tone === 'success' ? styles.helperSuccess : null,
+      ]}
+    >
+      {message}
+    </Text>
   );
 }
 
@@ -165,7 +174,7 @@ function getAutoCorrect(
   return autoCapitalize !== 'none' && !secureTextEntry;
 }
 
-export function AuthField({
+export const AuthField = React.forwardRef<TextInput, AuthFieldProps>(function AuthField({
   label,
   placeholder,
   value,
@@ -178,7 +187,7 @@ export function AuthField({
   helperTone = 'muted',
   status,
   ...inputProps
-}: AuthFieldProps) {
+}: AuthFieldProps, ref) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const reactId = React.useId();
@@ -196,7 +205,6 @@ export function AuthField({
     ...restInputProps
   } = inputProps;
   const shouldShowPasswordToggle = secureTextEntry;
-  const shouldFloatLabel = focused || value.length > 0;
   const accessibilityLabel = providedAccessibilityLabel || label;
   const autoCorrect = getAutoCorrect(
     restInputProps.autoCorrect,
@@ -228,6 +236,9 @@ export function AuthField({
 
   return (
     <View style={styles.block}>
+      <Text nativeID={labelId} style={styles.label}>
+        {label}
+      </Text>
       <View
         style={[
           styles.inputWrap,
@@ -236,15 +247,9 @@ export function AuthField({
           resolvedHelperTone === 'success' ? styles.inputWrapValid : null,
         ]}
       >
-        <Text
-          nativeID={labelId}
-          pointerEvents="none"
-          style={[styles.label, shouldFloatLabel ? styles.labelFloating : null]}
-        >
-          {label}
-        </Text>
         <View style={styles.icon}>{icon}</View>
         <TextInput
+          ref={ref}
           {...restInputProps}
           accessibilityHint={resolvedHelper}
           accessibilityLabel={accessibilityLabel}
@@ -255,7 +260,7 @@ export function AuthField({
           onChangeText={onChangeText}
           onBlur={handleBlur}
           onFocus={handleFocus}
-          placeholder={shouldFloatLabel ? placeholder : ''}
+          placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
           secureTextEntry={secureTextEntry && !passwordVisible}
           keyboardType={keyboardType}
@@ -278,31 +283,19 @@ export function AuthField({
       <AuthFieldHelper id={helperId} message={resolvedHelper} tone={resolvedHelperTone} />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   block: {
     gap: 4,
   },
   label: {
-    position: 'absolute',
-    left: 32,
-    top: 10,
-    zIndex: 1,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 3,
-    fontSize: 13,
+    ...typography.metadataText,
     fontWeight: '600',
     color: colors.textMuted,
   },
-  labelFloating: {
-    left: 10,
-    top: -6,
-    fontSize: 12,
-    color: colors.text,
-  },
   inputWrap: {
-    minHeight: 44,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -329,8 +322,8 @@ const styles = StyleSheet.create({
   input: {
     color: colors.text,
     fontSize: 13,
-    paddingTop: 14,
-    paddingBottom: 6,
+    minHeight: MIN_TOUCH_SIZE,
+    paddingVertical: 8,
     paddingRight: 30,
   },
   inputWithToggle: {
@@ -351,9 +344,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-  },
-  helperSlot: {
-    minHeight: 16,
   },
   helper: {
     ...typography.metadataText,

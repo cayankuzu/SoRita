@@ -3,6 +3,8 @@ import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query'
 import type { Place, PlaceComment, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import type { ExplorePage } from '@/mobile/app/data/repositories/exploreRepository';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
+import { updatePlaceReadModelCaches } from '@/mobile/app/data/query/optimisticPlaceReadModels';
+import type { FollowStateResult } from '@/mobile/app/data/query/optimisticFollowState';
 import { getVisibleListsFor } from '@/mobile/app/data/selectors/visibility';
 import type {
   ListPlaceCommentLikeRow,
@@ -11,7 +13,11 @@ import type {
 } from '@/mobile/app/platform/supabase/databaseTypes';
 import { uniqueStrings } from '@/mobile/app/shared/utils/format';
 
-type FollowStateResult = 'following' | 'requested' | 'unfollowed';
+export {
+  inferOptimisticFollowResult,
+  readOptimisticFollowState,
+} from '@/mobile/app/data/query/optimisticFollowState';
+export { inferOptimisticPlaceLikeState } from '@/mobile/app/data/query/optimisticPlaceReadModels';
 
 export type QuerySnapshot = Array<[QueryKey, unknown]>;
 
@@ -58,7 +64,16 @@ function isVisibleUserData(value: unknown): value is VisibleUserData {
 }
 
 function isInfiniteListsData(value: unknown): value is InfiniteData<PlaceList[], number> {
-  return isRecord(value) && Array.isArray(value.pages) && Array.isArray(value.pageParams);
+  return (
+    isRecord(value) &&
+    Array.isArray(value.pages) &&
+    value.pages.every(
+      (page) =>
+        Array.isArray(page) &&
+        page.every((list) => isRecord(list) && Array.isArray(list.places)),
+    ) &&
+    Array.isArray(value.pageParams)
+  );
 }
 
 function isInfiniteCommentsData(
@@ -74,7 +89,18 @@ function isInfiniteNotificationsData(
 }
 
 function isInfiniteExploreData(value: unknown): value is InfiniteData<ExplorePage> {
-  return isRecord(value) && Array.isArray(value.pages) && Array.isArray(value.pageParams);
+  return (
+    isRecord(value) &&
+    Array.isArray(value.pages) &&
+    Array.isArray(value.pageParams) &&
+    value.pages.every(
+      (page) =>
+        isRecord(page) &&
+        Array.isArray(page.listItems) &&
+        Array.isArray(page.placeItems) &&
+        Array.isArray(page.userItems),
+    )
+  );
 }
 
 function optionalStrings(values?: string[]) {
@@ -510,39 +536,6 @@ function filterBlockedTargetFromNotifications(data: unknown, targetUserId: strin
   };
 }
 
-export function inferOptimisticFollowResult(
-  queryClient: QueryClient,
-  input: { currentUserId: string; targetUserId: string },
-): FollowStateResult {
-  const visibleQueries = queryClient.getQueriesData({ queryKey: queryKeys.visibleData.all });
-
-  for (const [, data] of visibleQueries) {
-    if (!isVisibleUserData(data)) {
-      continue;
-    }
-
-    const currentUser =
-      data.currentUser?.id === input.currentUserId
-        ? data.currentUser
-        : data.allUsers.find((item) => item.id === input.currentUserId);
-    const targetUser = data.allUsers.find((item) => item.id === input.targetUserId);
-
-    if ((currentUser?.following || []).includes(input.targetUserId)) {
-      return 'unfollowed';
-    }
-
-    if ((currentUser?.pendingFollowRequestsSent || []).includes(input.targetUserId)) {
-      return 'requested';
-    }
-
-    if (targetUser?.isPublicAccount === false) {
-      return 'requested';
-    }
-  }
-
-  return 'following';
-}
-
 export function applyOptimisticFollow(
   queryClient: QueryClient,
   input: { currentUserId: string; targetUserId: string },
@@ -656,6 +649,9 @@ export function applyOptimisticPlaceLike(
     updatePlaceInVisibleLists(data, input.placeId, (place) =>
       updateLikeFields(place, input.userId, createdAt),
     ),
+  );
+  updatePlaceReadModelCaches(queryClient, input.placeId, (place) =>
+    updateLikeFields(place, input.userId, createdAt),
   );
 }
 

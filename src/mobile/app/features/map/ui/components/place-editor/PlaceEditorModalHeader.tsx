@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Minus, X } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
@@ -28,7 +29,7 @@ export function PlaceEditorModalHeader({
       <View style={styles.handle} />
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>
+          <Text accessibilityRole="header" style={styles.headerTitle}>
             {isEditing ? tr.placeEditor.editTitle : tr.placeEditor.createTitle}
           </Text>
           <Text style={styles.headerSubtitle}>{subtitle}</Text>
@@ -37,17 +38,35 @@ export function PlaceEditorModalHeader({
           ) : null}
         </View>
         <View style={styles.headerActions}>
-          <Pressable disabled={isLocked} onPress={onClose} style={styles.cancelButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isLocked }}
+            disabled={isLocked}
+            onPress={onClose}
+            style={styles.cancelButton}
+          >
             <Text style={styles.cancelButtonText}>{tr.common.cancel}</Text>
           </Pressable>
           {onMinimize ? (
-            <Pressable disabled={isLocked} onPress={onMinimize} style={styles.closeButton}>
+            <IconButton
+              accessibilityLabel={tr.common.minimize}
+              disabled={isLocked}
+              onPress={onMinimize}
+              style={styles.closeButton}
+              variant="surface"
+            >
               <Minus color={colors.textMuted} size={18} />
-            </Pressable>
+            </IconButton>
           ) : null}
-          <Pressable disabled={isLocked} onPress={onClose} style={styles.closeButton}>
+          <IconButton
+            accessibilityLabel={tr.common.close}
+            disabled={isLocked}
+            onPress={onClose}
+            style={styles.closeButton}
+            variant="surface"
+          >
             <X color={colors.textMuted} size={18} />
-          </Pressable>
+          </IconButton>
         </View>
       </View>
     </View>

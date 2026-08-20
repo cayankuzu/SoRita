@@ -153,7 +153,6 @@ queryCache.subscribe((event) => {
     name: 'query_complete',
     params: {
       ...getPerformanceContext(),
-      cacheHit: false,
       durationMs: Math.max(0, Date.now() - startedAt),
       networkClass: getCurrentConnectionStatus(),
       operation: getQueryOperation(event.query.queryKey),

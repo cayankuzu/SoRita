@@ -382,9 +382,8 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
       await callJsonEdgeFunction<{ success: true }>(
         env.supabaseAuthGatewayFunctionName,
         {
-          action: 'request-password-reset',
+          action: 'prepare-password-reset',
           email: normalizedEmail,
-          redirectUrl: redirect.url,
         },
       );
     } catch (error) {
@@ -403,6 +402,20 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
       }
 
       return toAuthActionResult(error);
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: redirect.url,
+      });
+
+      if (error) {
+        await discardPendingAuthRedirectState(redirect.state);
+        return toFallbackAuthActionResult(error);
+      }
+    } catch (error) {
+      await discardPendingAuthRedirectState(redirect.state);
+      return toFallbackAuthActionResult(error);
     }
 
     return { success: true };
@@ -426,13 +439,14 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         return { success: false, code: 'unexpected', message: error?.message };
       }
 
+      let passwordResetEmail = user.email;
+
       try {
         await callJsonEdgeFunction<{ success: true }>(
           env.supabaseAuthGatewayFunctionName,
           {
-            action: 'request-password-reset-authenticated',
+            action: 'prepare-password-reset-authenticated',
             currentPassword,
-            redirectUrl: redirect.url,
           },
           {
             accessToken: session.access_token,
@@ -459,6 +473,8 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
           };
         }
 
+        passwordResetEmail = authenticatedUserEmail;
+
         const verificationResult = await supabase.auth.signInWithPassword({
           email: authenticatedUserEmail,
           password: currentPassword,
@@ -472,9 +488,11 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         if (verificationResult.data.session) {
           await persistAuthSession(verificationResult.data.session);
         }
+      }
 
+      try {
         const resetPasswordResult = await supabase.auth.resetPasswordForEmail(
-          authenticatedUserEmail,
+          passwordResetEmail,
           {
             redirectTo: redirect.url,
           },
@@ -484,6 +502,9 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
           await discardPendingAuthRedirectState(redirect.state);
           return toFallbackAuthActionResult(resetPasswordResult.error);
         }
+      } catch (resetError) {
+        await discardPendingAuthRedirectState(redirect.state);
+        return toFallbackAuthActionResult(resetError);
       }
 
       return { success: true };
@@ -492,15 +513,26 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
   );
 
   const logout = useCallback(async () => {
-    const { unregisterPushNotifications } = await loadPushNotificationRepository();
-    const { unregisterSystemPushNotifications } = await loadSystemPushNotificationRepository();
+    const [{ unregisterAllPushNotifications }, { unregisterSystemPushNotifications }] =
+      await Promise.all([
+        loadPushNotificationRepository(),
+        loadSystemPushNotificationRepository(),
+      ]);
     const userId = user?.id;
     await persistAuthSession(null);
-    if (userId) {
-      await clearOutboxForUser(userId).catch((err) => { logger.debug('auth', 'Failed to clear outbox during logout', err); });
-    }
-    await unregisterPushNotifications(null).catch((err) => { logger.debug('auth', 'Failed to unregister push notifications during logout', err); });
-    await unregisterSystemPushNotifications().catch((err) => { logger.debug('auth', 'Failed to unregister system push notifications during logout', err); });
+    await Promise.all([
+      userId
+        ? clearOutboxForUser(userId).catch((err) => {
+            logger.debug('auth', 'Failed to clear outbox during logout', err);
+          })
+        : Promise.resolve(),
+      unregisterAllPushNotifications().catch((err) => {
+        logger.debug('auth', 'Failed to unregister push notifications during logout', err);
+      }),
+      unregisterSystemPushNotifications().catch((err) => {
+        logger.debug('auth', 'Failed to unregister system push notifications during logout', err);
+      }),
+    ]);
     await supabase.auth.signOut();
     clearCurrentUserState();
     setUser(null);

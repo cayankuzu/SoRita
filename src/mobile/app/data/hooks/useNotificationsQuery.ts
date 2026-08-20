@@ -20,7 +20,6 @@ import {
 import { flattenPages, mapInfinitePages } from '@/mobile/app/data/query/queryDataHelpers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
-import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 
 export const NOTIFICATION_STALE_TIME_MS = 1000 * 20;
 export const NOTIFICATIONS_PAGE_SIZE = 20;
@@ -94,9 +93,7 @@ export function useMarkNotificationReadMutation(userId?: string | null) {
           kind: 'notification-read',
           payloadRef: { notificationId: notification.id },
           userId,
-        }).then(() => {
-          trackEvent({ name: 'outbox_enqueued', params: { operation: 'notification-read' } });
-        });
+        }).then(() => undefined);
       }
 
       return markNotificationRead(notification.id);

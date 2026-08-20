@@ -29,7 +29,6 @@ import {
   usePlaceEditorMediaController,
   type MediaSelectionIssueSummary,
 } from '@/mobile/app/features/map/application/usePlaceEditorMediaController';
-import { usePreparedPlaceMediaUploads } from '@/mobile/app/features/map/application/usePreparedPlaceMediaUploads';
 import {
   MAX_PLACE_MEDIA_ITEMS,
   MAX_PLACE_PHOTOS,
@@ -165,8 +164,6 @@ export function usePlaceEditorState({
   const isMountedRef = useRef(true);
   const listsRef = useRef(lists);
   listsRef.current = lists;
-  usePreparedPlaceMediaUploads({ lists, media, selectedListIds: selectedLists, visible });
-
   const clearBlockingNotice = useCallback(() => {
     if (blockingNoticeTimeoutRef.current) {
       clearTimeout(blockingNoticeTimeoutRef.current);
@@ -760,6 +757,7 @@ export function usePlaceEditorState({
     const draftSnapshot = buildDraft();
     const saveSessionConfig = onSaveStart?.(draftSnapshot);
     const progressSession = beginProgress({
+      detail: tr.placeEditor.saveProgressLists(targetListIds.length),
       onCancel: saveSessionConfig?.onBannerCancel,
       onOpen: saveSessionConfig?.onBannerOpen,
     });

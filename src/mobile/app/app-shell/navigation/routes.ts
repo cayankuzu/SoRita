@@ -21,6 +21,7 @@ export function getWarmupStageForRoute(routeName?: string): StartupWarmupStage |
 
 export const AppHeaderScreen = createDeferredScreen(
   () => require('@/mobile/app/app-shell/chrome/AppHeader').AppHeader,
+  'header',
 );
 export const AuthRouteScreen = createDeferredScreen(
   () => require('@/mobile/app/features/auth/public/authScreen').AuthScreen,
@@ -72,6 +73,27 @@ const startupScreenPreloaders: Record<StartupWarmupStage, () => void> = {
   profile: ProfileRouteScreen.preload,
 };
 
+const routeScreenPreloaders: Record<string, () => void> = {
+  Auth: AuthRouteScreen.preload,
+  AuthCallback: AuthCallbackRouteScreen.preload,
+  Explore: ExploreRouteScreen.preload,
+  Home: HomeRouteScreen.preload,
+  ListDetail: ListDetailRouteScreen.preload,
+  LocationPlaceCards: LocationPlaceCardsRouteScreen.preload,
+  Map: MapRouteScreen.preload,
+  Notifications: NotificationsRouteScreen.preload,
+  Profile: ProfileRouteScreen.preload,
+  ResetPassword: ResetPasswordRouteScreen.preload,
+  Settings: SettingsRouteScreen.preload,
+  UserProfile: UserProfileRouteScreen.preload,
+};
+
 export function preloadStartupScreen(stage: StartupWarmupStage) {
   startupScreenPreloaders[stage]();
+}
+
+export function preloadRouteScreen(routeName?: string) {
+  const preload = routeName ? routeScreenPreloaders[routeName] : undefined;
+  preload?.();
+  return Boolean(preload);
 }

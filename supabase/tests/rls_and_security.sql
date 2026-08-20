@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(28);
 
 select has_table('public', 'account_deletion_jobs', 'account deletion ledger exists');
 select ok(
@@ -57,12 +57,75 @@ select is(
   'all security definer functions pin search_path'
 );
 
+select ok(
+  to_regprocedure('public.contains_objectionable_content(text)') is not null,
+  'server-side objectionable-content predicate exists'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.contains_objectionable_content(text)',
+    'execute'
+  ),
+  'moderation predicate is not directly client callable'
+);
+select ok(
+  public.contains_objectionable_content('o r o s p u'),
+  'moderation detects whitespace-obfuscated expressions'
+);
+select ok(
+  not public.contains_objectionable_content('Sıcak kahve ve güzel müzik'),
+  'moderation keeps ordinary Turkish copy valid'
+);
+select is(
+  (
+    select count(*)::integer
+    from pg_trigger
+    where not tgisinternal
+      and tgname in (
+        'profiles_enforce_safe_ugc',
+        'lists_enforce_safe_ugc',
+        'list_places_enforce_safe_ugc',
+        'list_place_comments_enforce_safe_ugc'
+      )
+  ),
+  4,
+  'all public UGC write tables enforce moderation'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'private.cleanup_expired_edge_security_rows()',
+    'execute'
+  ),
+  'security-row cleanup is not client callable'
+);
+select is(
+  (
+    select count(*)::integer
+    from pg_trigger
+    where not tgisinternal
+      and tgname in (
+        'request_nonces_cleanup_expired',
+        'edge_rate_limits_cleanup_expired'
+      )
+  ),
+  2,
+  'nonce and rate-limit expiry use amortized cleanup triggers'
+);
+
 select has_index('public', 'list_place_comments', 'idx_comments_place_top_level_keyset', 'top-level comments use a keyset index');
 select has_index('public', 'list_place_comments', 'idx_comments_parent_keyset', 'comment replies use a parent keyset index');
 select has_index('public', 'notifications', 'idx_notifications_recipient_unread', 'unread count uses a partial recipient index');
 select has_index('public', 'list_place_photos', 'idx_place_media_storage_ref_ready', 'private media storage refs are indexed');
 select has_index('public', 'list_place_photos', 'idx_place_media_url_ready', 'private media URLs are indexed');
 select has_index('public', 'list_place_photos', 'idx_place_media_thumbnail_url_ready', 'private media thumbnail URLs are indexed');
+select has_index(
+  'public',
+  'list_places',
+  'idx_list_places_complete_card_location',
+  'complete-card location summaries use a normalized lookup index'
+);
 
 insert into auth.users (
   id,
@@ -104,6 +167,16 @@ values
     timezone('utc', now()),
     timezone('utc', now())
   );
+
+select throws_ok(
+  $$
+    insert into public.lists (owner_id, name, is_public)
+    values ('10000000-0000-0000-0000-000000000001', 'o r o s p u', true)
+  $$,
+  '22023',
+  'objectionable_content',
+  'database rejects objectionable UGC from a bypassing client'
+);
 
 insert into public.lists (id, owner_id, name, is_public)
 values

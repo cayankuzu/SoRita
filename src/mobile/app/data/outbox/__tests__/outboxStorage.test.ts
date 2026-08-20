@@ -40,6 +40,37 @@ describe('outboxStorage', () => {
     await expect(readOutboxEntries('user-2')).resolves.toEqual([]);
   });
 
+  it('serializes concurrent writes without losing offline operations', async () => {
+    await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        enqueueOutboxEntry({
+          id: `entry-${index}`,
+          idempotencyKey: `intent-${index}`,
+          kind: 'notification-read' as const,
+          payloadRef: { notificationId: `notification-${index}` },
+          userId: 'user-1',
+        }),
+      ),
+    );
+
+    const entries = await readOutboxEntries('user-1');
+    expect(entries).toHaveLength(12);
+    expect(new Set(entries.map((entry) => entry.id)).size).toBe(12);
+  });
+
+  it('treats a removed successful dependency as satisfied', async () => {
+    await enqueueOutboxEntry({
+      id: 'dependent-1',
+      dependencies: ['completed-and-removed'],
+      kind: 'notification-read',
+      payloadRef: { notificationId: 'notification-1' },
+      userId: 'user-1',
+    });
+
+    const dueEntries = await readDueOutboxEntries('user-1');
+    expect(dueEntries.map((entry) => entry.id)).toEqual(['dependent-1']);
+  });
+
   it('returns only due entries whose dependencies are done', async () => {
     await enqueueOutboxEntry({
       id: 'report-1',

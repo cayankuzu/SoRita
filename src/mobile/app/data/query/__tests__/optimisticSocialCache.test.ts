@@ -19,6 +19,7 @@ import {
   applyOptimisticUnblock,
   applyOptimisticUserProfile,
   inferOptimisticFollowResult,
+  inferOptimisticPlaceLikeState,
   restoreQueries,
   snapshotQueries,
 } from '@/mobile/app/data/query/optimisticSocialCache';
@@ -423,6 +424,35 @@ describe('optimisticSocialCache', () => {
       queryKeys.visibleData.context('viewer'),
     );
     expect(data?.lists?.[0]?.places[0]).toMatchObject({ likes: 0, likedBy: undefined, likeDetails: undefined });
+  });
+
+  it('updates and infers place likes in the screen read-model caches', () => {
+    const place = createPlace({ id: 'place-1' });
+    queryClient.setQueryData(queryKeys.feed.page('viewer'), {
+      pageParams: [null],
+      pages: [{
+        items: [{
+          key: 'list-1:place-1',
+          listId: 'list-1',
+          listIsPublic: true,
+          listName: 'List',
+          memberships: [],
+          ownerId: 'target',
+          place,
+          sortTime: 1,
+        }],
+      }],
+    });
+
+    applyOptimisticPlaceLike(queryClient, { placeId: 'place-1', userId: 'viewer' }, createdAt);
+
+    expect(inferOptimisticPlaceLikeState(queryClient, {
+      placeId: 'place-1',
+      userId: 'viewer',
+    })).toBe(true);
+    expect(queryClient.getQueryData(queryKeys.feed.page('viewer'))).toMatchObject({
+      pages: [{ items: [{ place: { likedBy: ['viewer'], likes: 1 } }] }],
+    });
   });
 
   it('creates comments in empty caches, preserves missing parents, and toggles raw likes', () => {

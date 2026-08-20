@@ -91,10 +91,6 @@ async function extractResponseErrorMessage(response: Response) {
   return tr.system.requestFailed(response.status);
 }
 
-function shouldRetryDeleteWithDefaultFunction(response: Response, functionName: string) {
-  return functionName !== 'delete-user' && (response.status === 404 || response.status === 405);
-}
-
 export async function fetchVisibleUserById(userId: string) {
   return fetchUserByIdIncludingBlocked(userId);
 }
@@ -231,6 +227,84 @@ export async function followUser(currentUserId: string, targetUserId: string): P
   return 'following';
 }
 
+export async function setFollowState(
+  currentUserId: string,
+  targetUserId: string,
+  desiredState: FollowStateResult,
+): Promise<FollowStateResult> {
+  if (desiredState === 'unfollowed') {
+    const [followResult, requestResult] = await Promise.all([
+      supabase
+        .from('user_follows')
+        .delete()
+        .eq('follower_id', currentUserId)
+        .eq('following_id', targetUserId),
+      supabase
+        .from('follow_requests')
+        .delete()
+        .eq('requester_id', currentUserId)
+        .eq('target_user_id', targetUserId),
+    ]);
+
+    if (followResult.error) {
+      throw followResult.error;
+    }
+    if (requestResult.error) {
+      throw requestResult.error;
+    }
+    return 'unfollowed';
+  }
+
+  const blockState = await fetchBlockState(currentUserId, targetUserId);
+  if (blockState.blockedByCurrent) {
+    throw new Error(tr.profile.userActions.blockedFollowAttempt);
+  }
+  if (blockState.blockedByTarget) {
+    throw new Error(tr.profile.userActions.cannotInteract);
+  }
+
+  const targetIsPublic = await getTargetIsPublic(targetUserId);
+  const resolvedState = desiredState === 'following' && targetIsPublic
+    ? 'following'
+    : 'requested';
+  const removeTable = resolvedState === 'following' ? 'follow_requests' : 'user_follows';
+  const removeResult = resolvedState === 'following'
+    ? await supabase
+        .from(removeTable)
+        .delete()
+        .eq('requester_id', currentUserId)
+        .eq('target_user_id', targetUserId)
+    : await supabase
+        .from(removeTable)
+        .delete()
+        .eq('follower_id', currentUserId)
+        .eq('following_id', targetUserId);
+
+  if (removeResult.error) {
+    throw removeResult.error;
+  }
+
+  const upsertResult = resolvedState === 'following'
+    ? await supabase.from('user_follows').upsert(
+        { follower_id: currentUserId, following_id: targetUserId },
+        { onConflict: 'follower_id,following_id', ignoreDuplicates: true },
+      )
+    : await supabase.from('follow_requests').upsert(
+        {
+          requester_id: currentUserId,
+          status: 'pending',
+          target_user_id: targetUserId,
+        },
+        { onConflict: 'requester_id,target_user_id', ignoreDuplicates: true },
+      );
+
+  if (upsertResult.error) {
+    throw upsertResult.error;
+  }
+
+  return resolvedState;
+}
+
 export async function blockUser(currentUserId: string, targetUserId: string) {
   if (currentUserId === targetUserId) {
     throw new Error(tr.profile.userActions.cannotBlockSelf);
@@ -337,6 +411,8 @@ export async function deleteCurrentUser() {
   const signedHeaders = await createSignedEdgeHeaders({
     accessToken: session.access_token,
     bodyText,
+    functionName: env.supabaseDeleteUserFunctionName,
+    method: 'POST',
   });
   const requestInit = {
     method: 'POST',
@@ -348,11 +424,7 @@ export async function deleteCurrentUser() {
     },
     body: bodyText,
   } satisfies RequestInit;
-  let response = await fetch(getFunctionUrl(env.supabaseDeleteUserFunctionName), requestInit);
-
-  if (shouldRetryDeleteWithDefaultFunction(response, env.supabaseDeleteUserFunctionName)) {
-    response = await fetch(getFunctionUrl('delete-user'), requestInit);
-  }
+  const response = await fetch(getFunctionUrl(env.supabaseDeleteUserFunctionName), requestInit);
 
   if (!response.ok) {
     throw new Error(await extractResponseErrorMessage(response));

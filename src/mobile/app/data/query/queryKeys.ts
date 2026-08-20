@@ -54,6 +54,22 @@ export const queryKeys = {
     all: ['map'] as const,
     markers: (viewerId: string) =>
       [...queryKeys.map.all, 'markers', viewerId] as const,
+    locationCards: (
+      viewerId: string,
+      lat: number,
+      lng: number,
+      ownerId?: string | null,
+      placeName?: string | null,
+    ) =>
+      [
+        ...queryKeys.map.all,
+        'location-cards',
+        viewerId,
+        lat.toFixed(5),
+        lng.toFixed(5),
+        ownerId || null,
+        placeName?.trim().toLocaleLowerCase('tr-TR') || null,
+      ] as const,
   },
   placeComments: {
     all: ['placeComments'] as const,

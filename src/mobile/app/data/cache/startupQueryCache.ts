@@ -7,7 +7,8 @@ import {
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { scheduleDeferredTask } from '@/mobile/app/shared/utils/deferredTask';
 
-const STARTUP_QUERY_INDEX_NAME = 'startup-queries-v2';
+// v3 invalidates snapshots produced by the old truncated-media read models.
+const STARTUP_QUERY_INDEX_NAME = 'startup-queries-v3';
 const MAX_STARTUP_QUERY_RETENTION_MS = 1000 * 60 * 60 * 24;
 const STARTUP_QUERY_PERSIST_DEBOUNCE_MS = 650;
 const MAX_PERSISTED_QUERY_COUNT = 7;

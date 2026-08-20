@@ -122,6 +122,7 @@ export const InteractionManager = {
 };
 
 export const Keyboard = {
+  addListener: () => ({ remove: () => undefined }),
   dismiss: () => undefined,
 };
 
@@ -129,8 +130,10 @@ export const AccessibilityInfo = {
   addEventListener: () => ({
     remove: () => undefined,
   }),
+  announceForAccessibility: () => undefined,
   isReduceMotionEnabled: async () => false,
   isScreenReaderEnabled: async () => false,
+  setAccessibilityFocus: () => undefined,
 };
 
 export const NativeModules = {};

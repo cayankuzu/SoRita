@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, contentWidth, elevation, radius } from '@/mobile/app/shared/theme/tokens';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -25,7 +26,7 @@ import {
 type FocusTarget = Parameters<typeof findNodeHandle>[0];
 
 type ModalScaffoldProps = {
-  accessibilityLabel?: string;
+  accessibilityLabel: string;
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   dismissOnBackdropPress?: boolean;
@@ -55,9 +56,9 @@ export function ModalScaffold({
   showHandle,
   visible,
 }: ModalScaffoldProps) {
+  const animationType = useModalAnimationType(variant === 'sheet' ? 'slide' : 'fade');
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const containerRef = React.useRef<View>(null);
   const wasVisibleRef = React.useRef(false);
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
     topInset: insets.top,
@@ -78,12 +79,16 @@ export function ModalScaffold({
     if (visible) {
       wasVisibleRef.current = true;
       const focusTimer = setTimeout(() => {
-        const target = initialFocusRef?.current ?? containerRef.current;
-        const targetHandle = findNodeHandle(target as FocusTarget);
+        const targetHandle = initialFocusRef?.current
+          ? findNodeHandle(initialFocusRef.current as FocusTarget)
+          : null;
 
         if (targetHandle) {
           AccessibilityInfo.setAccessibilityFocus(targetHandle);
+          return;
         }
+
+        AccessibilityInfo.announceForAccessibility(accessibilityLabel);
       }, 120);
 
       return () => clearTimeout(focusTimer);
@@ -103,7 +108,7 @@ export function ModalScaffold({
     }
 
     return undefined;
-  }, [initialFocusRef, returnFocusRef, visible]);
+  }, [accessibilityLabel, initialFocusRef, returnFocusRef, visible]);
 
   return (
     <Modal
@@ -113,7 +118,7 @@ export function ModalScaffold({
       })}
       visible={visible}
       transparent
-      animationType={variant === 'sheet' ? 'slide' : 'fade'}
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
@@ -130,6 +135,7 @@ export function ModalScaffold({
       >
         {dismissOnBackdropPress ? (
           <InstantPressable
+            accessible={false}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             onPress={onClose}
@@ -137,10 +143,7 @@ export function ModalScaffold({
           />
         ) : null}
         <View
-          ref={containerRef}
-          accessible={Boolean(accessibilityLabel)}
-          accessibilityLabel={accessibilityLabel}
-          accessibilityRole={variant === 'dialog' ? 'alert' : undefined}
+          accessible={false}
           style={[
             styles.container,
             variant === 'sheet' ? styles.sheet : styles.dialog,

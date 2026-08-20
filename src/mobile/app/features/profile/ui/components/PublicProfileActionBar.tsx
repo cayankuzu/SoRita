@@ -16,7 +16,7 @@ type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
   isBlockedByCurrent: boolean;
   isFollowing: boolean;
-  onFollowPress: () => void;
+  onFollowPress: () => Promise<void>;
   onMorePress: () => void;
   onUnblockPress: () => void;
 };

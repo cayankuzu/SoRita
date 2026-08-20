@@ -62,14 +62,6 @@ export const commentPanelStyles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSoft,
   },
-  sheetCloseButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
   sheetBody: {
     flex: 1,
   },

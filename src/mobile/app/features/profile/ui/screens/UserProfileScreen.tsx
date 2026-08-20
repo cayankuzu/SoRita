@@ -147,7 +147,7 @@ function PublicUserAction({
       hasPendingFollowRequest={hasPendingFollowRequest}
       isBlockedByCurrent={isBlockedByCurrent}
       isFollowing={isFollowing}
-      onFollowPress={() => void handleFollowPress()}
+      onFollowPress={handleFollowPress}
       onMorePress={onMorePress}
       onUnblockPress={onUnblockPress}
     />
@@ -769,9 +769,7 @@ export function UserProfileScreen() {
             setReportDetails('');
             setReportReason('');
           }}
-          onSubmit={() => {
-            void submitReport();
-          }}
+          onSubmit={submitReport}
         />
       ) : null}
 

@@ -136,11 +136,14 @@ describe('queryClient', () => {
     })).rejects.toThrow('expected');
 
     queryClient.setQueryData(['local-only'], { ready: true });
+    await queryClient.invalidateQueries({
+      queryKey: ['local-only'],
+      refetchType: 'none',
+    });
 
     expect(trackEventMock).toHaveBeenCalledWith({
       name: 'query_complete',
       params: expect.objectContaining({
-        cacheHit: false,
         deviceClass: 'mid',
         networkClass: 'wifi',
         operation: 'places.7',

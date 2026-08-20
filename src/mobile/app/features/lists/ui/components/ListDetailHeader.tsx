@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import {
   Globe,
   Heart,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
+import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -60,13 +61,14 @@ export function ListDetailHeader({
       <View style={styles.heroCard}>
         <View style={styles.heroMediaWrap}>
           <Pressable
+            accessibilityRole={list.coverImage ? 'imagebutton' : undefined}
             disabled={!list.coverImage}
             onPress={onOpenCover}
             style={styles.heroMediaButton}
           >
             {list.coverImage ? (
               <>
-                <Image source={{ uri: list.coverImage }} style={styles.heroMedia} resizeMode="cover" />
+                <AppImage uri={list.coverImage} style={styles.heroMedia} resizeMode="cover" />
                 <View style={styles.heroMediaScrim} />
               </>
             ) : (

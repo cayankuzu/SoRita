@@ -140,6 +140,62 @@ export function formatLocationPlaceCardsCount(count: number) {
   return `${count} kart`;
 }
 
+const COUNTRY_ADDRESS_SEGMENTS = new Set(['tr', 'turkey', 'turkiye', 'türkiye']);
+
+function normalizeAddressSegment(segment: string) {
+  return segment.trim().replace(/^\d{5}\s+/, '').replace(/\s+/g, ' ');
+}
+
+function parseDistrictCitySegment(segment: string) {
+  const [locationPart] = segment.split(/\s*·\s*/, 1);
+  const parts = locationPart
+    .split('/')
+    .map(normalizeAddressSegment)
+    .filter(Boolean);
+
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [district, city] = parts;
+  return { city, district };
+}
+
+export function formatPlaceCardLocation(address?: string) {
+  const segments = (address || '')
+    .split(',')
+    .map(normalizeAddressSegment)
+    .filter(Boolean);
+
+  while (
+    segments.length > 0 &&
+    COUNTRY_ADDRESS_SEGMENTS.has(segments[segments.length - 1].toLocaleLowerCase('tr-TR'))
+  ) {
+    segments.pop();
+  }
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const districtCity = segments
+    .map(parseDistrictCitySegment)
+    .find((location) => location !== null);
+
+  if (districtCity) {
+    return `${districtCity.city} · ${districtCity.district}`;
+  }
+
+  const city = segments[segments.length - 1];
+  const district = segments.length > 1 ? segments[segments.length - 2] : undefined;
+
+  if (!district || district.toLocaleLowerCase('tr-TR') === city.toLocaleLowerCase('tr-TR')) {
+    return city;
+  }
+
+  return `${city} · ${district}`;
+}
+
 export function formatListStats(list: PlaceListLike) {
   const likes = list.likes || 0;
   return tr.cards.listStats(list.places.length, likes);

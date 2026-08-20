@@ -220,6 +220,8 @@ describe('media-assets handler', () => {
     const payloadHash = await sha256Hex(body);
     const signature = await createRequestSignature('token-1', {
       deviceId,
+      functionName: 'media-assets',
+      method: 'POST',
       nonce,
       payloadHash,
       timestamp,
@@ -540,7 +542,7 @@ describe('media-assets handler', () => {
       bucket: 'place-media-private',
       contentType: 'video/mp4',
       extension: 'mp4',
-      fileSizeBytes: 48_512_751,
+      fileSizeBytes: 140_313_801,
       prefix: 'list-1/video',
     });
     const oversizedSignedUploadResponse = await oversizedHandler(
@@ -552,7 +554,7 @@ describe('media-assets handler', () => {
     );
     expect(oversizedSignedUploadResponse.status).toBe(413);
     await expect(oversizedSignedUploadResponse.json()).resolves.toMatchObject({
-      error: 'Dosya boyutu limiti asildi. En fazla 47 MB destekleniyor.',
+      error: 'Dosya boyutu limiti asildi. En fazla 134 MB destekleniyor.',
     });
 
     const { handler: uploadFailureHandler } = createDeps({
@@ -664,7 +666,10 @@ describe('media-assets handler', () => {
     );
 
     expect(uploadUrlResponse.status).toBe(200);
-    expect(createSignedUploadUrlMock).toHaveBeenCalledWith('user-1/list-1/place-1/0-request-1.jpg');
+    expect(createSignedUploadUrlMock).toHaveBeenCalledWith(
+      'user-1/list-1/place-1/0-request-1.jpg',
+      { upsert: true },
+    );
     await expect(uploadUrlResponse.json()).resolves.toMatchObject({
       objectPath: 'user-1/list-1/place-1/0-request-1.jpg',
       signedUrl: 'https://storage.example/upload/user-1%2Flist-1%2Fplace-1%2F0-request-1.jpg',

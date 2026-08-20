@@ -70,7 +70,7 @@ describe('startupQueryCache', () => {
     await persistStartupQueryCache(queryClient, 'user-1');
 
     const rawValue = await AsyncStorage.getItem(
-      'sorita.screen-index.1.user-1.startup-queries-v2',
+      'sorita.screen-index.1.user-1.startup-queries-v3',
     );
     expect(rawValue).toContain('https://cdn.example.com/photo.jpg');
     expect(rawValue).toContain('sorita-storage://place-media-private/user-1/photo.jpg');
@@ -167,7 +167,7 @@ describe('startupQueryCache', () => {
     const now = Date.now();
     const profileKey = queryKeys.profile.summary(userId, userId);
 
-    await writeScreenIndex(userId, 'startup-queries-v2', {
+    await writeScreenIndex(userId, 'startup-queries-v3', {
       queries: [
         { data: { unread: 2 }, dataUpdatedAt: now - 3 * 60 * 60 * 1000, queryKey: queryKeys.notifications.unreadCount(userId) },
         { data: { user: { id: userId } }, dataUpdatedAt: now, queryKey: profileKey },
@@ -181,7 +181,7 @@ describe('startupQueryCache', () => {
     await expect(firstRestore).resolves.toBe(1);
     expect(client.getQueryData(profileKey)).toEqual({ user: { id: userId } });
 
-    await writeScreenIndex(userId, 'startup-queries-v2', { invalid: true });
+    await writeScreenIndex(userId, 'startup-queries-v3', { invalid: true });
     await expect(restoreStartupQueryCache(createClient(), userId)).resolves.toBe(0);
   });
 

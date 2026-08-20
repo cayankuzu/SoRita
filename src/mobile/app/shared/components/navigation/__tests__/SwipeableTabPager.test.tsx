@@ -52,7 +52,8 @@ describe('SwipeableTabPager controller', () => {
     expect(shouldRenderPagedItem(3, 0, true, true)).toBe(true);
     expect(shouldRenderPagedItem(3, 0, false, false)).toBe(true);
     expect(shouldRenderPagedItem(3, 0, false, true)).toBe(false);
-    expect(shouldRenderPagedItem(2, 0, false, true)).toBe(true);
+    expect(shouldRenderPagedItem(1, 0, false, true)).toBe(true);
+    expect(shouldRenderPagedItem(2, 0, false, true)).toBe(false);
   });
 
   it('commits one onChange call for one settled swipe', () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -50,6 +50,10 @@ function getCategory(type: MobileNotification['type']): NotificationCategory {
 
 export function useNotificationsScreenState({ userId }: UseNotificationsScreenStateParams) {
   const [category, setCategory] = useState<NotificationCategory>('all');
+  const pendingFollowRequestIdsRef = useRef(new Set<string>());
+  const [pendingFollowRequestIds, setPendingFollowRequestIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const queryClient = useQueryClient();
   const notificationsQuery = useNotificationsQuery(userId);
   const markAllNotificationsReadMutation = useMarkAllNotificationsReadMutation(userId);
@@ -126,8 +130,20 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
         return;
       }
 
-      await respondToFollowRequestMutation.mutateAsync({ notification, decision });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.visibleData.all });
+      if (pendingFollowRequestIdsRef.current.has(notification.id)) {
+        return;
+      }
+
+      pendingFollowRequestIdsRef.current.add(notification.id);
+      setPendingFollowRequestIds(new Set(pendingFollowRequestIdsRef.current));
+
+      try {
+        await respondToFollowRequestMutation.mutateAsync({ notification, decision });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.visibleData.all });
+      } finally {
+        pendingFollowRequestIdsRef.current.delete(notification.id);
+        setPendingFollowRequestIds(new Set(pendingFollowRequestIdsRef.current));
+      }
     },
     [queryClient, respondToFollowRequestMutation, userId],
   );
@@ -145,6 +161,7 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
     markAllItemsRead,
     markItemRead,
     onRefresh,
+    pendingFollowRequestIds,
     refreshing,
     respondToFollowRequest,
     retry: loadNotifications,

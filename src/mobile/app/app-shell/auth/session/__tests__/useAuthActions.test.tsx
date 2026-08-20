@@ -15,7 +15,7 @@ const resolveImmediateAuthUserMock = vi.fn();
 const syncAuthenticatedUserMock = vi.fn();
 const createTrackedAuthRedirectMock = vi.fn();
 const discardPendingAuthRedirectStateMock = vi.fn();
-const unregisterPushNotificationsMock = vi.fn();
+const unregisterAllPushNotificationsMock = vi.fn();
 const unregisterSystemPushNotificationsMock = vi.fn();
 const savePendingSignupMediaMock = vi.fn();
 const callJsonEdgeFunctionMock = vi.fn();
@@ -60,7 +60,7 @@ vi.mock('@/mobile/app/app-shell/auth/session/authRedirectState', () => ({
 }));
 
 vi.mock('@/mobile/app/data/repositories/pushNotificationRepository', () => ({
-  unregisterPushNotifications: unregisterPushNotificationsMock,
+  unregisterAllPushNotifications: unregisterAllPushNotificationsMock,
 }));
 
 vi.mock('@/mobile/app/data/repositories/systemPushNotificationRepository', () => ({
@@ -123,7 +123,7 @@ describe('useAuthActions', () => {
     syncAuthenticatedUserMock.mockReset();
     createTrackedAuthRedirectMock.mockReset();
     discardPendingAuthRedirectStateMock.mockReset();
-    unregisterPushNotificationsMock.mockReset();
+    unregisterAllPushNotificationsMock.mockReset();
     unregisterSystemPushNotificationsMock.mockReset();
     savePendingSignupMediaMock.mockReset();
     callJsonEdgeFunctionMock.mockReset();
@@ -147,8 +147,8 @@ describe('useAuthActions', () => {
       state: `${flow}-state`,
       url:
         flow === 'signup'
-          ? `https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=${flow}-state`
-          : `https://cayankuzu.github.io/SoRita_web/reset-password/?flow=password-reset&state=${flow}-state`,
+          ? `sorita://auth/callback?flow=signup&state=${flow}-state`
+          : `sorita://reset-password?flow=password-reset&state=${flow}-state`,
     }));
     discardPendingAuthRedirectStateMock.mockResolvedValue(undefined);
     assertNoObjectionableContentMock.mockReturnValue(undefined);
@@ -197,7 +197,7 @@ describe('useAuthActions', () => {
     resendMock.mockResolvedValue({ error: null });
     resetPasswordForEmailMock.mockResolvedValue({ error: null });
     signOutMock.mockResolvedValue(undefined);
-    unregisterPushNotificationsMock.mockResolvedValue(undefined);
+    unregisterAllPushNotificationsMock.mockResolvedValue(undefined);
     unregisterSystemPushNotificationsMock.mockResolvedValue(undefined);
     clearOutboxForUserMock.mockResolvedValue(undefined);
   });
@@ -378,7 +378,7 @@ describe('useAuthActions', () => {
       name: 'N'.repeat(USER_NAME_MAX_LENGTH - 1),
       password: 'P@ssword123',
       profilePhoto: 'file://profile.jpg',
-      redirectUrl: 'https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=signup-state',
+      redirectUrl: 'sorita://auth/callback?flow=signup&state=signup-state',
       username: 'user__xxxxxxxxxxxxxxxxxxxxxxxx',
     });
     expect(savePendingSignupMediaMock).toHaveBeenCalledWith({
@@ -474,7 +474,7 @@ describe('useAuthActions', () => {
       password: 'P@ssword123',
       options: expect.objectContaining({
         emailRedirectTo:
-          'https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=signup-state',
+          'sorita://auth/callback?flow=signup&state=signup-state',
       }),
     });
     expect(resendMock).toHaveBeenCalledWith({
@@ -482,7 +482,7 @@ describe('useAuthActions', () => {
       email: 'ada@example.com',
       options: {
         emailRedirectTo:
-          'https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=signup-state',
+          'sorita://auth/callback?flow=signup&state=signup-state',
       },
     });
     expect(resetPasswordForEmailMock).toHaveBeenCalledTimes(1);
@@ -548,7 +548,7 @@ describe('useAuthActions', () => {
       password: 'P@ssword123',
       options: expect.objectContaining({
         emailRedirectTo:
-          'https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=signup-state',
+          'sorita://auth/callback?flow=signup&state=signup-state',
       }),
     });
     expect(savePendingSignupMediaMock).toHaveBeenCalledWith({
@@ -617,31 +617,33 @@ describe('useAuthActions', () => {
     });
 
     expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith('auth-gateway', {
-      action: 'request-password-reset',
+      action: 'prepare-password-reset',
       email: 'ada@example.com',
-      redirectUrl:
-        'https://cayankuzu.github.io/SoRita_web/reset-password/?flow=password-reset&state=password-reset-state',
     });
     expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith('auth-gateway', {
       action: 'resend-confirmation',
       email: 'ada@example.com',
       redirectUrl:
-        'https://cayankuzu.github.io/SoRita_web/auth/callback/?flow=signup&state=signup-state',
+        'sorita://auth/callback?flow=signup&state=signup-state',
     });
     expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith(
       'auth-gateway',
       {
-        action: 'request-password-reset-authenticated',
+        action: 'prepare-password-reset-authenticated',
         currentPassword: 'secret123',
-        redirectUrl:
-          'https://cayankuzu.github.io/SoRita_web/reset-password/?flow=password-reset&state=password-reset-state',
       },
       {
         accessToken: 'session-token',
       },
     );
+    expect(resetPasswordForEmailMock).toHaveBeenNthCalledWith(1, 'ada@example.com', {
+      redirectTo: 'sorita://reset-password?flow=password-reset&state=password-reset-state',
+    });
+    expect(resetPasswordForEmailMock).toHaveBeenNthCalledWith(2, 'ada@example.com', {
+      redirectTo: 'sorita://reset-password?flow=password-reset&state=password-reset-state',
+    });
     expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
-    expect(unregisterPushNotificationsMock).toHaveBeenCalledWith(null);
+    expect(unregisterAllPushNotificationsMock).toHaveBeenCalledWith();
     expect(unregisterSystemPushNotificationsMock).toHaveBeenCalledTimes(1);
     expect(signOutMock).toHaveBeenCalled();
     expect(clearCurrentUserStateMock).toHaveBeenCalled();
@@ -868,7 +870,7 @@ describe('useAuthActions', () => {
     });
 
     clearOutboxForUserMock.mockRejectedValueOnce(new Error('outbox'));
-    unregisterPushNotificationsMock.mockRejectedValueOnce(new Error('push'));
+    unregisterAllPushNotificationsMock.mockRejectedValueOnce(new Error('push'));
     unregisterSystemPushNotificationsMock.mockRejectedValueOnce(new Error('system push'));
     await hook.result.current.logout();
     expect(loggerDebugMock).toHaveBeenCalledTimes(3);

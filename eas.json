@@ -17,8 +17,7 @@
       "credentialsSource": "local",
       "environment": "production",
       "env": {
-        "EXPO_OWNER": "cayann",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_OWNER": "cayann"
       }
     }
   },

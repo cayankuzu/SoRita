@@ -20,6 +20,8 @@ vi.mock('@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid', () => ({
 import { ExploreResultsPage } from '@/mobile/app/features/explore/ui/components/ExploreResultsPage';
 
 function createProps(active: boolean, listRef: (node: unknown) => void) {
+  const listHeader = <React.Fragment />;
+
   return {
     active,
     data: [],
@@ -29,11 +31,14 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     isFetchingNextPage: false,
     listMarkerLists: [],
     listRef,
+    listHeader,
     onClearSearch: vi.fn(),
     onContentReady: vi.fn(),
     onEndReached: vi.fn(),
     onFollowUser: vi.fn(),
+    onListIntent: vi.fn(),
     onListPress: vi.fn(),
+    onOwnerIntent: vi.fn(),
     onOwnerPress: vi.fn(),
     onPlacePress: vi.fn(),
     onRefresh: vi.fn(),
@@ -68,8 +73,34 @@ describe('ExploreResultsPage', () => {
     );
     expect(lists[0]?.props.listRef).toBe(activeRef);
     expect(lists[1]?.props.listRef).toBe(backgroundRef);
+    expect(lists[0]?.props.ListHeaderComponent).toBe(activeProps.listHeader);
     expect(lists[0]?.props.onEndReached).toBe(activeProps.onEndReached);
     expect(lists[1]?.props.onEndReached).toBeUndefined();
     expect(lists[1]?.props.onRefresh).toBeUndefined();
+    expect(lists[0]?.props.scrollEnabled).toBe(true);
+    expect(lists[1]?.props.scrollEnabled).toBe(false);
+  });
+
+  it('shows pagination feedback only while a next page is actually loading', () => {
+    const props = createProps(true, vi.fn());
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(<ExploreResultsPage {...props} />);
+    });
+
+    let list = renderer.root.find(
+      (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
+    );
+    expect(list.props.ListFooterComponent).toBeNull();
+
+    act(() => {
+      renderer.update(<ExploreResultsPage {...props} isFetchingNextPage />);
+    });
+
+    list = renderer.root.find(
+      (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
+    );
+    expect(list.props.ListFooterComponent).not.toBeNull();
   });
 });

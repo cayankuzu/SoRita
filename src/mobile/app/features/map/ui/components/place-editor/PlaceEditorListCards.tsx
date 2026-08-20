@@ -63,6 +63,8 @@ export function PlaceEditorListCards({
 
           return (
             <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected, disabled: blocked }}
               key={list.id}
               onPress={() => onToggleList(list.id, { blocked, listName: list.name })}
               style={[

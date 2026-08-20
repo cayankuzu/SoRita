@@ -1,9 +1,9 @@
 import React from 'react';
 import {
+  FlatList,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -47,6 +48,7 @@ export function PlacePreviewModal({
   onCreatePlaceCard,
   onOpenList,
 }: PlacePreviewModalProps) {
+  const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
@@ -85,13 +87,17 @@ export function PlacePreviewModal({
       })}
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
+        <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
           <Pressable
@@ -105,7 +111,7 @@ export function PlacePreviewModal({
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text numberOfLines={1} style={styles.headerTitle}>
+              <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>
                 {headerTitle}
               </Text>
               <Text numberOfLines={1} style={styles.headerSubtitle}>
@@ -144,13 +150,16 @@ export function PlacePreviewModal({
             </View>
           </View>
 
-          <ScrollView
+          <FlatList
+            data={entries}
             contentContainerStyle={styles.content}
+            initialNumToRender={2}
+            keyExtractor={({ list, place }) => `${list.id}:${place.id}`}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {entries.map(({ place, list }) => (
-              <View key={`${list.id}:${place.id}`} style={styles.cardWrap}>
+            maxToRenderPerBatch={3}
+            removeClippedSubviews={Platform.OS === 'android'}
+            renderItem={({ item: { place, list } }) => (
+              <View style={styles.cardWrap}>
                 <PlaceCard
                   place={place}
                   ownerId={list.userId}
@@ -163,13 +172,15 @@ export function PlacePreviewModal({
                   locationOriginalPlaceName={headerTitle}
                   allowAddToList={false}
                   markerColor={markerColor}
-                  markerContext="list"
                   onPress={() => onOpenList(list, place.id)}
                   onRefresh={onRefresh}
                 />
               </View>
-            ))}
-          </ScrollView>
+            )}
+            showsVerticalScrollIndicator={false}
+            updateCellsBatchingPeriod={40}
+            windowSize={5}
+          />
         </View>
       </View>
     </Modal>

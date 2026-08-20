@@ -14,7 +14,8 @@
     "utils/*.{cjs,mjs}"
   ],
   "ignoreBinaries": [
-    "k6"
+    "k6",
+    "maestro"
   ],
   "ignoreDependencies": [
     "@react-native-community/datetimepicker",

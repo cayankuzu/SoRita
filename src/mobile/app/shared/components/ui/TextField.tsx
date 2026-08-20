@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   StyleSheet,
+  Platform,
   Text,
   TextInput,
   TextInputProps,
@@ -12,6 +13,7 @@ import {
   fontWeight,
   radius,
   semanticColors,
+  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -27,7 +29,9 @@ type TextFieldProps = TextInputProps & {
   status?: 'default' | 'error' | 'success';
 };
 
-export function TextField({
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
+
+export const TextField = React.forwardRef<TextInput, TextFieldProps>(function TextField({
   label,
   helper,
   multilineRows,
@@ -41,7 +45,7 @@ export function TextField({
   onChangeText,
   onFocus,
   ...props
-}: TextFieldProps) {
+}: TextFieldProps, ref) {
   const [focused, setFocused] = React.useState(false);
   const reactId = React.useId();
   const fieldId = React.useMemo(
@@ -89,6 +93,7 @@ export function TextField({
     <View style={styles.wrapper}>
       {label ? <Text nativeID={labelId} style={styles.label}>{label}</Text> : null}
       <TextInput
+        ref={ref}
         {...props}
         accessibilityHint={resolvedHelper}
         accessibilityLabel={accessibilityLabel}
@@ -133,7 +138,7 @@ export function TextField({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -155,6 +160,7 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   input: {
+    minHeight: MIN_TOUCH_SIZE,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -167,7 +173,6 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: semanticColors.border.focus,
-    borderWidth: 2,
   },
   inputFilled: {
     borderColor: colors.borderStrong,

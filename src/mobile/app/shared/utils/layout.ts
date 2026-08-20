@@ -64,11 +64,24 @@ export function getResponsiveDiscoveryColumnCount(
     return 4;
   }
 
-  if (usableWidth >= 600) {
+  // Three or more columns use the compact, media-first card presentation.
+  if (usableWidth >= 540) {
     return 3;
   }
 
-  return usableWidth < 320 ? 1 : 2;
+  // Rich cards need roughly 220dp of usable width per cell.
+  return usableWidth >= 442 ? 2 : 1;
+}
+
+export function getResponsiveGalleryColumnCount(
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  const horizontalPadding = getResponsiveScreenPadding(viewportWidth, viewportHeight);
+  const usableWidth = Math.max(0, viewportWidth - horizontalPadding * 2);
+  const approximateThumbnailWidth = 112;
+
+  return Math.max(3, Math.min(6, Math.floor(usableWidth / approximateThumbnailWidth)));
 }
 
 export function getResponsiveDiscoveryTileWidth(

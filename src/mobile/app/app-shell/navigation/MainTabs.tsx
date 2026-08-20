@@ -18,8 +18,8 @@ import {
 import type { MainTabParamList } from '@/mobile/app/app-shell/navigation/types';
 import {
   prioritizeStartupWarmupStage,
-  recordStartupWarmupTransition,
-  schedulePredictedStartupWarmup,
+  getAdjacentStartupWarmupStage,
+  scheduleAdjacentStartupWarmup,
   startStartupDataWarmup,
   stopStartupDataWarmup,
   type StartupWarmupStage,
@@ -34,7 +34,6 @@ import { runAfterNextPaint, waitForNextPaint } from '@/mobile/app/shared/utils/i
 
 const Tabs = createBottomTabNavigator<MainTabParamList>();
 const tabPressTimes = new Map<StartupWarmupStage, number>();
-let activeTabStage: StartupWarmupStage | null = null;
 
 function getTabLabel(routeName: keyof MainTabParamList) {
   switch (routeName) {
@@ -49,12 +48,7 @@ function getTabLabel(routeName: keyof MainTabParamList) {
   }
 }
 
-function getTabIcon(
-  routeName: keyof MainTabParamList,
-  color: string,
-  focused: boolean,
-) {
-  const icon = (() => {
+function getTabIconGlyph(routeName: keyof MainTabParamList, color: string) {
   switch (routeName) {
     case 'Home':
       return <Home color={color} size={18} />;
@@ -65,9 +59,14 @@ function getTabIcon(
     case 'Profile':
       return <User2 color={color} size={18} />;
   }
-  })();
+}
 
-  return <View style={[styles.tabIcon, focused ? styles.tabIconActive : null]}>{icon}</View>;
+function getTabIcon(routeName: keyof MainTabParamList, color: string, focused: boolean) {
+  return (
+    <View style={[styles.tabIcon, focused ? styles.tabIconActive : null]}>
+      {getTabIconGlyph(routeName, color)}
+    </View>
+  );
 }
 
 function prioritizeTab(stage: StartupWarmupStage) {
@@ -84,13 +83,15 @@ function prioritizeTab(stage: StartupWarmupStage) {
               : 'Profile',
         'tab',
       );
-      preloadStartupScreen(stage);
       prioritizeStartupWarmupStage(stage);
     },
     focus: () => {
-      recordStartupWarmupTransition(activeTabStage, stage);
-      activeTabStage = stage;
-      schedulePredictedStartupWarmup(stage);
+      scheduleAdjacentStartupWarmup(stage);
+      const adjacentStage = getAdjacentStartupWarmupStage(stage);
+
+      if (adjacentStage) {
+        runAfterNextPaint(() => preloadStartupScreen(adjacentStage));
+      }
       const pressedAt = tabPressTimes.get(stage);
 
       if (pressedAt == null) {
@@ -108,6 +109,17 @@ function prioritizeTab(stage: StartupWarmupStage) {
       });
     },
   };
+}
+
+const tabListeners = {
+  Home: prioritizeTab('home'),
+  Map: prioritizeTab('map'),
+  Explore: prioritizeTab('explore'),
+  Profile: prioritizeTab('profile'),
+} as const;
+
+function renderAppHeader() {
+  return <AppHeaderScreen />;
 }
 
 export function MainTabs() {
@@ -175,26 +187,26 @@ export function MainTabs() {
       <Tabs.Screen
         name="Home"
         component={HomeRouteScreen}
-        listeners={prioritizeTab('home')}
-        options={{ header: () => <AppHeaderScreen /> }}
+        listeners={tabListeners.Home}
+        options={{ header: renderAppHeader }}
       />
       <Tabs.Screen
         name="Map"
         component={MapRouteScreen}
-        listeners={prioritizeTab('map')}
-        options={{ header: () => <AppHeaderScreen /> }}
+        listeners={tabListeners.Map}
+        options={{ header: renderAppHeader }}
       />
       <Tabs.Screen
         name="Explore"
         component={ExploreRouteScreen}
-        listeners={prioritizeTab('explore')}
-        options={{ header: () => <AppHeaderScreen /> }}
+        listeners={tabListeners.Explore}
+        options={{ header: renderAppHeader }}
       />
       <Tabs.Screen
         name="Profile"
         component={ProfileRouteScreen}
-        listeners={prioritizeTab('profile')}
-        options={{ header: () => <AppHeaderScreen /> }}
+        listeners={tabListeners.Profile}
+        options={{ header: renderAppHeader }}
       />
     </Tabs.Navigator>
   );

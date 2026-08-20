@@ -40,12 +40,18 @@ export function PlaceEditorModalFooter({
   return (
     <View style={[styles.footer, { paddingBottom }]}>
       {step > 0 ? (
-        <InstantPressable disabled={isBusy} style={styles.backButton} onPress={onPrevious}>
+        <InstantPressable
+          accessibilityState={{ disabled: isBusy }}
+          disabled={isBusy}
+          style={styles.backButton}
+          onPress={onPrevious}
+        >
           <ChevronLeft color={colors.textMuted} size={14} />
           <Text style={styles.backButtonText}>{tr.common.back}</Text>
         </InstantPressable>
       ) : onDelete ? (
         <InstantPressable
+          accessibilityState={{ disabled: isBusy }}
           disabled={isBusy}
           hapticFeedback="warning"
           style={styles.deleteButton}
@@ -58,7 +64,7 @@ export function PlaceEditorModalFooter({
 
       {!isLastStep ? (
         <InstantPressable
-          accessibilityState={{ disabled: !canContinue }}
+          accessibilityState={{ disabled: !canContinue || isBusy }}
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onNext}
@@ -69,7 +75,7 @@ export function PlaceEditorModalFooter({
         </InstantPressable>
       ) : (
         <InstantPressable
-          accessibilityState={{ disabled: !canContinue }}
+          accessibilityState={{ disabled: !canContinue || isBusy }}
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
           onPress={onSave}

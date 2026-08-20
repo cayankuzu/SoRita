@@ -3,6 +3,11 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 
 import { env } from '@/mobile/app/platform/config/env';
+import {
+  deleteSecureStorageItem,
+  getSecureStorageItem,
+  setSecureStorageItem,
+} from '@/mobile/app/platform/storage/secureKeyValueStore';
 
 const FALLBACK_SUPABASE_URL = 'https://placeholder.invalid';
 const FALLBACK_SUPABASE_PUBLISHABLE_KEY = 'missing-supabase-publishable-key';
@@ -24,5 +29,11 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     autoRefreshToken: true,
     persistSession: false,
     detectSessionInUrl: false,
+    flowType: 'pkce',
+    storage: {
+      getItem: getSecureStorageItem,
+      removeItem: deleteSecureStorageItem,
+      setItem: setSecureStorageItem,
+    },
   },
 });

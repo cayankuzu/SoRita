@@ -34,7 +34,12 @@ const googleMapsIosApiKey =
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY ??
   process.env.GOOGLE_MAPS_IOS_API_KEY ??
   googleMapsApiKey;
-const googleMapsServicesApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_SERVICES_API_KEY ?? '';
+const googleMapsStaticApiKey =
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_STATIC_API_KEY ??
+  // Temporary config compatibility: the legacy value was only public because
+  // it is embedded in Static Maps image URLs. Geocoding never consumes it.
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_SERVICES_API_KEY ??
+  '';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 const supabaseDeleteUserFunctionName =
@@ -47,8 +52,7 @@ const supabaseModerationReportsFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_MODERATION_REPORTS_FUNCTION_NAME ?? 'moderation-reports';
 const supabaseMapsFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_MAPS_FUNCTION_NAME ?? 'maps-geocoding';
-const authWebOrigin =
-  process.env.EXPO_PUBLIC_AUTH_WEB_ORIGIN ?? 'https://cayankuzu.github.io/SoRita_web';
+const appScheme = 'sorita';
 const facebookAppId = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '';
 const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID ?? '';
 const enablePushNotifications = process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS;
@@ -70,10 +74,10 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-    version: '1.0.92',
+  version: '1.0.100',
   newArchEnabled: true,
   orientation: 'default',
-  scheme: 'sorita',
+  scheme: appScheme,
   icon: './assets/app-icons_background_removed/appstore.png',
   userInterfaceStyle: 'light',
   // OTA/runtime bundle: keep only assets required by JavaScript. Native app
@@ -86,7 +90,33 @@ const config: SoRitaExpoConfig = {
     'expo-image',
     'expo-video',
     'expo-secure-store',
-    'expo-notifications',
+    [
+      'expo-notifications',
+      {
+        // Remote messages without an explicit channel use the same stable
+        // channel as foreground/system notifications in new native builds.
+        defaultChannel: 'sorita-alerts-v4',
+      },
+    ],
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#f8fafc',
+        android: {
+          backgroundColor: '#f8fafc',
+          image:
+            './assets/app-icons_background_removed/android/adaptive-foreground.png',
+          imageWidth: 160,
+          resizeMode: 'contain',
+        },
+        ios: {
+          backgroundColor: '#f8fafc',
+          enableFullScreenImage_legacy: true,
+          image: './assets/splash/launch-splash.png',
+          resizeMode: 'cover',
+        },
+      },
+    ],
     [
       'expo-build-properties',
       {
@@ -102,27 +132,27 @@ const config: SoRitaExpoConfig = {
       'expo-location',
       {
         locationWhenInUsePermission:
-          'SoRita, yakinindaki mekanlari gosterebilmek ve harita deneyimini iyilestirmek icin konumunuzu kullanir.',
+          'SoRita, yakınınızdaki mekânları gösterebilmek ve harita deneyimini iyileştirmek için konumunuzu kullanır.',
       },
     ],
     [
       'expo-image-picker',
       {
         cameraPermission:
-          'SoRita, kameradan yeni fotograf ve video cekebilmeniz icin kameraniza erisim ister.',
+          'SoRita, kameradan yeni fotoğraf ve video çekebilmeniz için kameranıza erişim ister.',
         microphonePermission:
-          'SoRita, mekan kartlarina sesli video ekleyebilmeniz icin mikrofonunuza erisim ister.',
+          'SoRita, mekân kartlarına sesli video ekleyebilmeniz için mikrofonunuza erişim ister.',
         photosPermission:
-          'SoRita, profilinize ve paylasimlariniza fotograf ekleyebilmeniz icin fotograf kitapliginiza erisim ister.',
+          'SoRita, profilinize ve paylaşımlarınıza fotoğraf ekleyebilmeniz için fotoğraf kitaplığınıza erişim ister.',
       },
     ],
     [
       'expo-camera',
       {
         cameraPermission:
-          'SoRita, uygulama ici video kaydi alabilmeniz icin kameraniza erisim ister.',
+          'SoRita, uygulama içi video kaydı alabilmeniz için kameranıza erişim ister.',
         microphonePermission:
-          'SoRita, videolarinizdaki sesi kaydedebilmek icin mikrofonunuza erisim ister.',
+          'SoRita, videolarınızdaki sesi kaydedebilmek için mikrofonunuza erişim ister.',
         recordAudioAndroid: true,
       },
     ],
@@ -130,9 +160,9 @@ const config: SoRitaExpoConfig = {
       'expo-media-library',
       {
         photosPermission:
-          'SoRita, fotograf ve videolari liste kartlarina ekleyebilmeniz icin galerinizdeki iceriklere erisim ister.',
+          'SoRita, fotoğraf ve videoları liste kartlarına ekleyebilmeniz için galerinizdeki içeriklere erişim ister.',
         savePhotosPermission:
-          'SoRita, kamera ile eklediginiz icerikleri isterseniz galerinizde de saklayabilmeniz icin kaydetme izni ister.',
+          'SoRita, kamera ile eklediğiniz içerikleri isterseniz galerinizde de saklayabilmeniz için kaydetme izni ister.',
         granularPermissions: ['photo', 'video'],
       },
     ],
@@ -157,7 +187,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 97,
+    versionCode: 105,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -185,16 +215,18 @@ const config: SoRitaExpoConfig = {
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '77',
+    buildNumber: '85',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
+      CFBundleDevelopmentRegion: 'tr',
+      CFBundleLocalizations: ['tr'],
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
-        'SoRita, yakinindaki mekanlari gosterebilmek ve harita deneyimini iyilestirmek icin konumunuzu kullanir.',
+        'SoRita, yakınınızdaki mekânları gösterebilmek ve harita deneyimini iyileştirmek için konumunuzu kullanır.',
       NSPhotoLibraryUsageDescription:
-        'SoRita, profilinize ve paylasimlariniza fotograf ekleyebilmeniz icin fotograf kitapliginiza erisim ister.',
+        'SoRita, profilinize ve paylaşımlarınıza fotoğraf ekleyebilmeniz için fotoğraf kitaplığınıza erişim ister.',
       NSPhotoLibraryAddUsageDescription:
-        'SoRita, sectiginiz gorselleri uygulama icerisinde kullanabilmeniz icin fotograf kitapliginiza kaydetme izni isteyebilir.',
+        'SoRita, seçtiğiniz görselleri uygulama içerisinde kullanabilmeniz için fotoğraf kitaplığınıza kaydetme izni isteyebilir.',
       UIBackgroundModes: ['remote-notification'],
     },
     privacyManifests: {
@@ -228,7 +260,7 @@ const config: SoRitaExpoConfig = {
     googleMapsApiKey,
     googleMapsAndroidApiKey,
     googleMapsIosApiKey,
-    googleMapsServicesApiKey,
+    googleMapsStaticApiKey,
     supabaseUrl,
     supabasePublishableKey,
     supabaseDeleteUserFunctionName,
@@ -236,7 +268,7 @@ const config: SoRitaExpoConfig = {
     supabaseAuthGatewayFunctionName,
     supabaseModerationReportsFunctionName,
     supabaseMapsFunctionName,
-    authWebOrigin,
+    appScheme,
     facebookAppId,
     expoProjectId,
     enablePushNotifications,

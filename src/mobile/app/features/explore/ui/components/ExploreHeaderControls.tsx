@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera, List, MapPin, Search, Users, X } from 'lucide-react-native';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
@@ -51,6 +51,9 @@ export function ExploreHeaderControls({
   onTabChange,
 }: ExploreHeaderControlsProps) {
   const { screenPadding } = useAppLayout();
+  const tabScrollRef = React.useRef<ScrollView | null>(null);
+  const tabLayoutsRef = React.useRef<Partial<Record<ExploreTabType, { width: number; x: number }>>>({});
+  const [tabRailWidth, setTabRailWidth] = React.useState(0);
   const placeholder =
     activeTab === 'lists'
       ? tr.explore.search.list
@@ -59,6 +62,33 @@ export function ExploreHeaderControls({
         : activeTab === 'photos'
           ? tr.explore.search.photo
           : tr.explore.search.person;
+
+  const keepActiveTabVisible = React.useCallback(() => {
+    const layout = tabLayoutsRef.current[activeTab];
+    if (!layout || tabRailWidth <= 0) {
+      return;
+    }
+
+    tabScrollRef.current?.scrollTo({
+      animated: true,
+      x: Math.max(0, layout.x + layout.width / 2 - tabRailWidth / 2),
+      y: 0,
+    });
+  }, [activeTab, tabRailWidth]);
+
+  React.useEffect(() => {
+    keepActiveTabVisible();
+  }, [keepActiveTabVisible]);
+
+  const handleTabLayout = React.useCallback(
+    (tab: ExploreTabType, event: LayoutChangeEvent) => {
+      tabLayoutsRef.current[tab] = event.nativeEvent.layout;
+      if (tab === activeTab) {
+        keepActiveTabVisible();
+      }
+    },
+    [activeTab, keepActiveTabVisible],
+  );
 
   return (
     <View style={[styles.headerRail, { paddingHorizontal: screenPadding }]}>
@@ -86,6 +116,7 @@ export function ExploreHeaderControls({
               accessibilityLabel={tr.common.clear}
               accessibilityRole="button"
               hapticFeedback="selection"
+              hitSlop={10}
               onPress={() => onSearchQueryChange('')}
               style={styles.searchClearButton}
             >
@@ -94,8 +125,12 @@ export function ExploreHeaderControls({
           ) : null}
         </View>
 
-        <View style={styles.tabRail}>
+        <View
+          style={styles.tabRail}
+          onLayout={(event) => setTabRailWidth(Math.round(event.nativeEvent.layout.width))}
+        >
           <ScrollView
+            ref={tabScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabRow}
@@ -108,6 +143,7 @@ export function ExploreHeaderControls({
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   key={tab.key}
+                  onLayout={(event) => handleTabLayout(tab.key, event)}
                   onPress={() => onTabChange(tab.key)}
                   hapticFeedback="selection"
                   style={[styles.tabButton, active ? styles.tabButtonActive : null]}

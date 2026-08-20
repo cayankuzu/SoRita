@@ -202,6 +202,27 @@ export async function toggleLikePlace(placeId: string, _userId: string) {
   }
 }
 
+export async function setPlaceLikeState(
+  placeId: string,
+  userId: string,
+  liked: boolean,
+) {
+  const result = liked
+    ? await supabase.from('list_place_likes').upsert(
+        { list_place_id: placeId, user_id: userId },
+        { onConflict: 'list_place_id,user_id', ignoreDuplicates: true },
+      )
+    : await supabase
+        .from('list_place_likes')
+        .delete()
+        .eq('list_place_id', placeId)
+        .eq('user_id', userId);
+
+  if (result.error) {
+    throw result.error;
+  }
+}
+
 export async function createPlaceComment(
   placeId: string,
   userId: string,

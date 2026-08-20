@@ -1,29 +1,16 @@
 import { useCallback } from 'react';
-import { Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 type HapticStyle = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
-let Haptics: any = null;
-
-try {
-  // Graceful: expo-haptics is optional; if not installed, haptic calls are no-ops
-  Haptics = require('expo-haptics');
-} catch {
-  Haptics = null;
-}
-
 export function triggerHaptic(style: HapticStyle = 'light') {
-  if (!Haptics || Platform.OS === 'web') {
-    return;
-  }
-
-  const impactStyles: Record<string, number | undefined> = {
+  const impactStyles: Partial<Record<HapticStyle, Haptics.ImpactFeedbackStyle>> = {
     light: Haptics.ImpactFeedbackStyle?.Light,
     medium: Haptics.ImpactFeedbackStyle?.Medium,
     heavy: Haptics.ImpactFeedbackStyle?.Heavy,
   };
 
-  const notificationTypes: Record<string, number | undefined> = {
+  const notificationTypes: Partial<Record<HapticStyle, Haptics.NotificationFeedbackType>> = {
     success: Haptics.NotificationFeedbackType?.Success,
     warning: Haptics.NotificationFeedbackType?.Warning,
     error: Haptics.NotificationFeedbackType?.Error,

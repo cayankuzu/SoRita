@@ -41,7 +41,7 @@ export function SettingsBlockedUsersView({
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} variant="settings">
       <FlatList
         {...listProps}
         data={blockedUsers}

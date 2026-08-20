@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ArrowLeft, CheckCheck, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
@@ -13,6 +13,7 @@ import {
   type NotificationCategory,
   useNotificationsScreenState,
 } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
+import { resolveNotificationTarget } from '@/mobile/app/features/notifications/application/notificationTarget';
 import { notificationUiConfig } from '@/mobile/app/features/notifications/ui/notificationUiConfig';
 import { NotificationCategoryTabs } from '@/mobile/app/features/notifications/ui/components/NotificationCategoryTabs';
 import { NotificationListItem } from '@/mobile/app/features/notifications/ui/components/NotificationListItem';
@@ -27,7 +28,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -55,6 +56,7 @@ export function NotificationsScreen() {
     markAllItemsRead,
     markItemRead,
     onRefresh,
+    pendingFollowRequestIds,
     refreshing,
     respondToFollowRequest,
     retry,
@@ -75,6 +77,41 @@ export function NotificationsScreen() {
         viewportWidth: width,
       }),
     [filteredItems.length, height, width],
+  );
+  const handleNotificationPress = React.useCallback(
+    (notification: MobileNotification) => {
+      openNotificationTarget(notification, navigation);
+      if (!notification.read) {
+        void markItemRead(notification);
+      }
+    },
+    [markItemRead, navigation],
+  );
+  const handleFollowRequestDecision = React.useCallback(
+    (notification: MobileNotification, decision: 'accept' | 'reject') => {
+      void respondToFollowRequest(notification, decision)
+        .then(() => {
+          showToast(
+            decision === 'accept'
+              ? notificationUiConfig.toast.followRequestAccepted
+              : notificationUiConfig.toast.followRequestRejected,
+            'success',
+          );
+        })
+        .catch(() => showToast(tr.common.unexpectedError, 'error'));
+    },
+    [respondToFollowRequest],
+  );
+  const renderNotification = React.useCallback(
+    ({ item: notification }: { item: MobileNotification }) => (
+      <NotificationListItem
+        notification={notification}
+        followRequestPending={pendingFollowRequestIds.has(notification.id)}
+        onPress={handleNotificationPress}
+        onFollowRequestDecision={handleFollowRequestDecision}
+      />
+    ),
+    [handleFollowRequestDecision, handleNotificationPress, pendingFollowRequestIds],
   );
 
   if (isInitialLoading) {
@@ -112,9 +149,7 @@ export function NotificationsScreen() {
           accessibilityLabel={notificationUiConfig.markAllReadLabel}
           accessibilityRole="button"
           disabled={unreadCount === 0 || isMarkingAllRead}
-          onPress={() => {
-            void markAllItemsRead();
-          }}
+          onPress={markAllItemsRead}
           style={({ pressed }) => [
             styles.markAllButton,
             unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonDisabled : null,
@@ -123,16 +158,8 @@ export function NotificationsScreen() {
         >
           <CheckCheck
             color={unreadCount === 0 || isMarkingAllRead ? colors.textDisabled : colors.primary}
-            size={14}
+            size={18}
           />
-          <Text
-            style={[
-              styles.markAllButtonLabel,
-              unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonLabelDisabled : null,
-            ]}
-          >
-            {notificationUiConfig.markAllReadShortLabel}
-          </Text>
         </InstantPressable>
       </View>
 
@@ -146,32 +173,7 @@ export function NotificationsScreen() {
         {...listProps}
         data={filteredItems}
         keyExtractor={(item) => item.id}
-        renderItem={({ item: notification }) => (
-          <NotificationListItem
-            notification={notification}
-            onPress={() => {
-              void (async () => {
-                if (!notification.read) {
-                  await markItemRead(notification);
-                }
-
-                openNotificationTarget(notification, navigation);
-              })();
-            }}
-            onAcceptFollowRequest={() =>
-              void (async () => {
-                await respondToFollowRequest(notification, 'accept');
-                showToast(notificationUiConfig.toast.followRequestAccepted, 'success');
-              })()
-            }
-            onRejectFollowRequest={() =>
-              void (async () => {
-                await respondToFollowRequest(notification, 'reject');
-                showToast(notificationUiConfig.toast.followRequestRejected, 'success');
-              })()
-            }
-          />
-        )}
+        renderItem={renderNotification}
         contentContainerStyle={[
           styles.list,
           filteredItems.length === 0 ? styles.listEmpty : null,
@@ -235,20 +237,12 @@ function openNotificationTarget(
   notification: MobileNotification,
   navigation: AppNavigation,
 ) {
-  if (!notification.linkTo) {
-    openStackScreen(navigation, 'UserProfile', { userId: notification.userId });
-    return;
+  const target = resolveNotificationTarget(notification);
+  if (target?.screen === 'UserProfile') {
+    openStackScreen(navigation, 'UserProfile', target.params);
+  } else if (target?.screen === 'ListDetail') {
+    openStackScreen(navigation, 'ListDetail', target.params);
   }
-
-  if (notification.linkTo.type === 'profile') {
-    openStackScreen(navigation, 'UserProfile', { userId: notification.linkTo.userId });
-    return;
-  }
-
-  openStackScreen(navigation, 'ListDetail', {
-    listId: notification.linkTo.listId,
-    placeId: notification.linkTo.placeId,
-  });
 }
 
 const styles = StyleSheet.create({
@@ -289,13 +283,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBorder,
   },
   markAllButton: {
-    minHeight: 44,
-    paddingHorizontal: 8,
-    borderRadius: 999,
+    width: Platform.OS === 'ios' ? touch.ios : touch.android,
+    height: Platform.OS === 'ios' ? touch.ios : touch.android,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 4,
     backgroundColor: colors.primaryBg,
   },
   markAllButtonDisabled: {
@@ -303,14 +295,6 @@ const styles = StyleSheet.create({
   },
   markAllButtonPressed: {
     opacity: 0.82,
-  },
-  markAllButtonLabel: {
-    ...typography.metadataText,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  markAllButtonLabelDisabled: {
-    color: colors.textSoft,
   },
   title: {
     fontSize: 16,

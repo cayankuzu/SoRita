@@ -297,6 +297,50 @@ describe('platform/supabase/media', () => {
     ]);
   });
 
+  it('waits for the persisted auth session before resolving cached private media', async () => {
+    vi.useFakeTimers();
+    getSessionMock
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
+      })
+      .mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'restored-session-token',
+          },
+        },
+        error: null,
+      });
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { paths: string[] };
+        return HttpResponse.json({
+          expiresInSeconds: 300,
+          items: body.paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.example/read/${path}?token=restored-session`,
+          })),
+        });
+      }),
+    );
+
+    const { resolveStorageAssetUrl } = await import('@/mobile/app/platform/supabase/media');
+    const resolution = resolveStorageAssetUrl(
+      'sorita-storage://place-media-private/user-1/list-startup/photo.jpg',
+    );
+
+    await vi.advanceTimersByTimeAsync(150);
+
+    await expect(resolution).resolves.toBe(
+      'https://storage.example/read/user-1/list-startup/photo.jpg?token=restored-session',
+    );
+    expect(getSessionMock).toHaveBeenCalledTimes(2);
+    expect(createSignedEdgeHeadersMock).toHaveBeenCalledWith(expect.objectContaining({
+      accessToken: 'restored-session-token',
+    }));
+  });
+
   it('coalesces private media URL resolution into one batch request', async () => {
     const requestBodies: Array<{ paths: string[] }> = [];
 
@@ -376,6 +420,36 @@ describe('platform/supabase/media', () => {
     expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(2);
   });
 
+  it('retries media edge requests when the network connection changes', async () => {
+    let requestCount = 0;
+
+    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+        requestCount += 1;
+
+        if (requestCount === 1) {
+          return HttpResponse.error();
+        }
+
+        return HttpResponse.json({
+          publicUrl: 'https://cdn.example/profile-network-retried.jpg',
+        });
+      }),
+    );
+
+    const { uploadImageAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadImageAsset({
+      bucket: 'profile-media',
+      prefix: 'profile',
+      uri: 'file:///tmp/avatar.jpg',
+      userId: 'user-1',
+    })).resolves.toBe('https://cdn.example/profile-network-retried.jpg');
+
+    expect(requestCount).toBe(2);
+    expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(2);
+  });
+
   it('refreshes the auth session and retries after a 401 response', async () => {
     const authorizationHeaders: string[] = [];
     let requestCount = 0;
@@ -406,12 +480,51 @@ describe('platform/supabase/media', () => {
 
     expect(refreshSessionMock).toHaveBeenCalledTimes(1);
     expect(createSignedEdgeHeadersMock.mock.calls).toEqual([
-      [{ accessToken: 'session-token', bodyText: expect.any(String) }],
-      [{ accessToken: 'refreshed-session-token', bodyText: expect.any(String) }],
+      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
+      [{ accessToken: 'refreshed-session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
     ]);
     expect(authorizationHeaders).toEqual([
       'Bearer session-token',
       'Bearer refreshed-session-token',
+    ]);
+  });
+
+  it('retries with the legacy signing protocol when the deployed function rejects v2', async () => {
+    let requestCount = 0;
+
+    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+        requestCount += 1;
+
+        if (requestCount === 1) {
+          return HttpResponse.json(
+            {
+              code: 'invalid_signature',
+              error: 'Request signature verification failed',
+            },
+            { status: 401 },
+          );
+        }
+
+        return HttpResponse.json({
+          publicUrl: 'https://cdn.example/profile-legacy-signature.jpg',
+        });
+      }),
+    );
+
+    const { uploadImageAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadImageAsset({
+      bucket: 'profile-media',
+      prefix: 'profile',
+      uri: 'file:///tmp/avatar.jpg',
+      userId: 'user-1',
+    })).resolves.toBe('https://cdn.example/profile-legacy-signature.jpg');
+
+    expect(refreshSessionMock).not.toHaveBeenCalled();
+    expect(createSignedEdgeHeadersMock.mock.calls).toEqual([
+      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
+      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', legacy: true, method: 'POST' }],
     ]);
   });
 
@@ -506,8 +619,48 @@ describe('platform/supabase/media', () => {
       uri: 'file:///tmp/video.mp4',
       userId: 'user-1',
     })).rejects.toThrow(
-      'Seçtiğin içeriklerden biri 47 MB limitini aşıyor. Bu kartı kapatmadan içeriği değiştirip tekrar deneyebilirsin.',
+      'Seçtiğin içeriklerden biri 134 MB limitini aşıyor. Bu kartı kapatmadan içeriği değiştirip tekrar deneyebilirsin.',
     );
+  });
+
+  it('restarts a signed storage upload after a temporary network failure', async () => {
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { action: string; objectPath?: string };
+
+        if (body.action === 'complete-upload') {
+          return HttpResponse.json({
+            objectPath: body.objectPath,
+            storageUri: 'sorita-storage://place-media-private/user-1/places/retried.jpg',
+            verified: true,
+          });
+        }
+
+        return HttpResponse.json({
+          objectPath: 'user-1/places/retried.jpg',
+          storageUri: 'sorita-storage://place-media-private/user-1/places/retried.jpg',
+          signedUrl: 'https://storage.example/upload',
+        });
+      }),
+    );
+    uploadAsyncMock
+      .mockRejectedValueOnce(new Error('Network request failed'))
+      .mockResolvedValueOnce({ body: '', status: 200 });
+
+    const { uploadPlaceMediaAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadPlaceMediaAsset({
+      extension: 'jpg',
+      mediaType: 'photo',
+      mimeType: 'image/jpeg',
+      prefix: 'places/retried',
+      uri: 'file:///tmp/retried.jpg',
+      userId: 'user-1',
+    })).resolves.toBe(
+      'sorita-storage://place-media-private/user-1/places/retried.jpg',
+    );
+
+    expect(createUploadTaskMock).toHaveBeenCalledTimes(2);
+    expect(uploadAsyncMock).toHaveBeenCalledTimes(2);
   });
 
   it('fails closed when the media function is unavailable for deletes', async () => {

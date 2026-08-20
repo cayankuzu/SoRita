@@ -1,4 +1,4 @@
-import { onlineManager, useMutation, useQueryClient } from '@tanstack/react-query';
+import { onlineManager, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import {
   applyOptimisticCommentCreate,
@@ -7,6 +7,7 @@ import {
   applyOptimisticCommentUpdate,
   applyOptimisticPlaceDelete,
   applyOptimisticPlaceLike,
+  inferOptimisticPlaceLikeState,
 } from '@/mobile/app/data/query/optimisticSocialCache';
 import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
 import {
@@ -26,7 +27,43 @@ import {
   updatePlaceComment,
 } from '@/mobile/app/data/repositories/placesRepository';
 import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
-import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { shouldQueueOfflineOperation } from '@/mobile/app/data/outbox/shouldQueueOfflineOperation';
+
+type PlaceLikeInput = { placeId: string; userId: string };
+
+async function togglePlaceLikeOrQueue(
+  queryClient: QueryClient,
+  input: PlaceLikeInput,
+) {
+  const liked = inferOptimisticPlaceLikeState(queryClient, input);
+
+  if (shouldQueueOfflineOperation()) {
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `place-like-state:${input.userId}:${input.placeId}`,
+      kind: 'place-like-state',
+      payloadRef: { liked, placeId: input.placeId },
+      userId: input.userId,
+    });
+    return;
+  }
+
+  try {
+    await toggleLikePlace(input.placeId, input.userId);
+  } catch (error) {
+    if (!shouldQueueOfflineOperation(error)) {
+      throw error;
+    }
+
+    await enqueueDurableOutboxEntry({
+      idempotencyKey: `place-like-state:${input.userId}:${input.placeId}`,
+      kind: 'place-like-state',
+      payloadRef: { liked, placeId: input.placeId },
+      userId: input.userId,
+    });
+  }
+}
+
+export const placeMutationInternals = { togglePlaceLikeOrQueue };
 
 export function useDeletePlaceMutation() {
   const queryClient = useQueryClient();
@@ -47,9 +84,9 @@ export function useToggleLikePlaceMutation() {
 
   return useMutation({
     mutationKey: ['place', 'like-toggle'],
+    networkMode: 'always',
     scope: mutationScope,
-    mutationFn: (input: { placeId: string; userId: string }) =>
-      toggleLikePlace(input.placeId, input.userId),
+    mutationFn: (input: PlaceLikeInput) => togglePlaceLikeOrQueue(queryClient, input),
     ...buildOptimisticMutation(queryClient, applyOptimisticPlaceLike),
     onSettled: invalidateVisibleData,
   });
@@ -63,6 +100,7 @@ export function useCreatePlaceCommentMutation() {
 
   return useMutation({
     mutationKey: ['place-comment', 'create'],
+    networkMode: 'always',
     scope: mutationScope,
     mutationFn: (input: {
       commentId: string;
@@ -82,9 +120,7 @@ export function useCreatePlaceCommentMutation() {
             placeId: input.placeId,
           },
           userId: input.userId,
-        }).then(() => {
-          trackEvent({ name: 'outbox_enqueued', params: { operation: 'comment-create' } });
-        });
+        }).then(() => undefined);
       }
 
       return createPlaceComment(
@@ -178,6 +214,7 @@ export function useToggleLikePlaceCommentMutation() {
 export function useReportPlaceMutation() {
   return useMutation({
     mutationKey: ['place', 'report'],
+    networkMode: 'always',
     mutationFn: (input: { reporterUserId: string; placeId: string; reason: string; details?: string }) =>
       reportPlace(input.reporterUserId, input.placeId, input.reason, input.details),
   });
@@ -186,6 +223,7 @@ export function useReportPlaceMutation() {
 export function useReportPlaceCommentMutation() {
   return useMutation({
     mutationKey: ['place-comment', 'report'],
+    networkMode: 'always',
     mutationFn: (input: { commentId: string; reporterUserId: string; reason: string; details?: string }) =>
       reportPlaceComment(input.commentId, input.reporterUserId, input.reason, input.details),
   });

@@ -364,7 +364,7 @@ describe('useNotificationsQuery', () => {
       payloadRef: { notificationId: 'notification-1' },
       userId: 'user-1',
     });
-    expect(trackEventMock).toHaveBeenCalled();
+    expect(trackEventMock).not.toHaveBeenCalled();
     expect(queryClient.getQueryData(queryKeys.notifications.unreadCount('user-1'))).toBe(1);
     expect(markNotificationReadMock).not.toHaveBeenCalled();
   });

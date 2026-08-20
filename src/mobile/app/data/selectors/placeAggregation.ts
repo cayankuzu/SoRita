@@ -21,6 +21,8 @@ export type PlaceFeedCardItem = {
   listIsPublic: boolean;
   listCoverImage?: string;
   memberships: PlaceListMembership[];
+  /** Authoritative number of matching cards at this owner/location. */
+  locationPlaceCardsCount?: number;
   sortTime: number;
 };
 
@@ -85,9 +87,19 @@ export function buildPlaceFeedCardItems(
     );
   }
 
-  return flattenedItems.map((item) => ({
-    ...item,
-    memberships:
-      membershipsByPlaceKey.get(buildMembershipKey(item.ownerId, item.place)) || [],
-  }));
+  return flattenedItems.map((item) => {
+    const memberships = membershipsByPlaceKey.get(
+      buildMembershipKey(item.ownerId, item.place),
+    )!;
+
+    return {
+      ...item,
+      memberships,
+      locationPlaceCardsCount: memberships.length,
+    };
+  });
+}
+
+export function getPlaceFeedLocationCardCount(item: PlaceFeedCardItem) {
+  return item.locationPlaceCardsCount ?? item.memberships.length;
 }

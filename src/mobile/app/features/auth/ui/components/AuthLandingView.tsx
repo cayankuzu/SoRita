@@ -9,6 +9,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import type { LegalDocumentId } from '@/mobile/app/features/auth/ui/content/legalDocuments';
+import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type AuthLandingViewProps = {
   hasAcceptedLegal: boolean;
@@ -25,11 +26,19 @@ export function AuthLandingView({
   onRegisterPress,
   onToggleLegalConsent,
 }: AuthLandingViewProps) {
+  const compact = useAuthLayoutMode();
+
   return (
-    <Screen variant="form" contentContainerStyle={styles.landingScreen}>
+    <Screen
+      variant="form"
+      contentContainerStyle={[
+        styles.landingScreen,
+        compact ? styles.landingScreenCompact : styles.landingScreenRegular,
+      ]}
+    >
       <View style={styles.landingContent}>
         <View style={styles.logoWrap}>
-          <SoRitaLogo size="xl" />
+          <SoRitaLogo size={compact ? 'lg' : 'xl'} />
         </View>
         <Text style={styles.landingSubtitle}>{tr.auth.landing.subtitle}</Text>
 
@@ -43,7 +52,6 @@ export function AuthLandingView({
           title={tr.auth.landing.login}
           variant="secondary"
           onPress={onLoginPress}
-          disabled={!hasAcceptedLegal}
         />
         <PrimaryButton
           title={tr.auth.landing.register}

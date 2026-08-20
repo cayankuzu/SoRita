@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,7 +8,11 @@ import {
 } from 'react-native';
 import { Star, StarHalf } from 'lucide-react-native';
 
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 import { compareLocalizedText } from '@/mobile/app/shared/utils/textSort';
 
 type OptionRailProps = {
@@ -37,7 +41,11 @@ export function OptionRail({ options, selectedValues, onToggle }: OptionRailProp
             const selected = selectedValues.includes(item);
 
             return (
-              <Pressable
+              <InstantPressable
+                accessibilityLabel={item}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
+                hapticFeedback="selection"
                 key={item}
                 onPress={() => onToggle(item)}
                 style={[styles.railChip, selected ? styles.railChipSelected : null]}
@@ -45,7 +53,7 @@ export function OptionRail({ options, selectedValues, onToggle }: OptionRailProp
                 <Text style={[styles.railChipText, selected ? styles.railChipTextSelected : null]}>
                   {item}
                 </Text>
-              </Pressable>
+              </InstantPressable>
             );
           })}
         </View>
@@ -69,7 +77,10 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
           const isHalf = starValue >= 0.5 && starValue < 1;
 
           return (
-            <Pressable
+            <InstantPressable
+              accessibilityLabel={`${index + 1}. ${tr.placeEditor.rating}`}
+              accessibilityHint={tr.placeEditor.ratingHelper}
+              accessibilityRole="button"
               key={index}
               onPress={() => {
                 if (starValue <= 0) {
@@ -93,7 +104,7 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
               ) : (
                 <Star color={colors.cardBorder} size={24} />
               )}
-            </Pressable>
+            </InstantPressable>
           );
         })}
       </View>
@@ -112,7 +123,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   railChip: {
-    minHeight: 38,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -123,7 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   railChipSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryBg,
     borderColor: colors.primary,
   },
   railChipText: {
@@ -132,7 +143,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   railChipTextSelected: {
-    color: colors.onPrimary,
+    color: colors.primaryDark,
   },
   ratingSelector: {
     flexDirection: 'row',
@@ -146,7 +157,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   starButton: {
-    paddingVertical: 2,
+    minWidth: MIN_TOUCH_SIZE,
+    minHeight: MIN_TOUCH_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ratingValue: {
     minWidth: 50,

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { PlaceMedia } from '@/mobile/app/data/contracts/entities';
@@ -102,9 +102,10 @@ export function usePlaceEditorMediaController({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
   const [editingVideoThumbnailIndex, setEditingVideoThumbnailIndex] = useState<number | null>(null);
   const [isAddingMedia, setIsAddingMedia] = useState(false);
+  const isAddingMediaRef = useRef(false);
 
   const handleAddMedia = useCallback(async () => {
-    if (isAddingMedia) {
+    if (isAddingMediaRef.current) {
       return;
     }
 
@@ -116,11 +117,15 @@ export function usePlaceEditorMediaController({
       return;
     }
 
+    isAddingMediaRef.current = true;
     setIsAddingMedia(true);
 
     try {
       await waitForMediaPickerTransition();
       const selection = await pickPlaceMediaFromPrompt({
+        allowMultiple: true,
+        maxSelection: remainingSlots,
+        remainingPhotos: Math.max(MAX_PLACE_PHOTOS - currentCounts.photos, 0),
         remainingVideos: Math.max(MAX_PLACE_VIDEOS - currentCounts.videos, 0),
       });
 
@@ -147,9 +152,10 @@ export function usePlaceEditorMediaController({
       }
     } finally {
       await waitForMediaPickerTransition();
+      isAddingMediaRef.current = false;
       setIsAddingMedia(false);
     }
-  }, [isAddingMedia, media, setMedia, showSelectionFeedback]);
+  }, [media, setMedia, showSelectionFeedback]);
 
   const handleRemoveMedia = useCallback(
     (index: number) => {

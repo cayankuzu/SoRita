@@ -46,10 +46,6 @@ vi.mock('@/mobile/app/platform/media/mediaPickerTransition', () => ({
   waitForMediaPickerTransition: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/mobile/app/features/map/application/usePreparedPlaceMediaUploads', () => ({
-  usePreparedPlaceMediaUploads: vi.fn(),
-}));
-
 vi.mock('@/mobile/app/app-shell/feedback/AppProgressBanner', () => ({
   useAppProgressBanner: () => ({
     beginProgress: beginProgressMock,
@@ -478,7 +474,7 @@ describe('usePlaceEditorState', () => {
     hook.unmount();
   });
 
-  it('limits new target list selections to one at a time', async () => {
+  it('limits new target list selections to three at a time', async () => {
     const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
     const lists = Array.from({ length: 4 }, (_, index) => ({
       id: `list-${index + 1}`,
@@ -506,7 +502,7 @@ describe('usePlaceEditorState', () => {
       hook.result.current.toggleList('list-4');
     });
 
-    expect(hook.result.current.selectedLists).toEqual(['list-1']);
+    expect(hook.result.current.selectedLists).toEqual(['list-1', 'list-2', 'list-3']);
 
     hook.unmount();
   });
@@ -663,6 +659,12 @@ describe('usePlaceEditorState', () => {
     await act(async () => {
       await hook.result.current.handleAddMedia();
     });
+    expect(pickPlaceMediaFromPromptMock).toHaveBeenCalledWith({
+      allowMultiple: true,
+      maxSelection: 6,
+      remainingPhotos: 6,
+      remainingVideos: 2,
+    });
     expect(hook.result.current.media).toHaveLength(6);
     expect(showToastMock).toHaveBeenCalled();
 
@@ -740,7 +742,11 @@ describe('usePlaceEditorState', () => {
     act(() => hook.result.current.toggleList('list-1'));
     await act(async () => hook.result.current.handleSave());
     expect(onSaveError).toHaveBeenCalledWith(expect.objectContaining({ selectedLists: ['list-1'] }));
-    expect(beginProgressMock).toHaveBeenCalledWith({ onCancel: onBannerCancel, onOpen: onBannerOpen });
+    expect(beginProgressMock).toHaveBeenCalledWith({
+      detail: '1 listeye ekleniyor',
+      onCancel: onBannerCancel,
+      onOpen: onBannerOpen,
+    });
     expect(failProgressMock).toHaveBeenCalledWith({
       onCancel: onBannerCancel, onOpen: onBannerOpen, onRetry: onBannerRetry,
     });

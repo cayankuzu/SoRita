@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
@@ -13,19 +13,24 @@ type AppConfigErrorScreenProps = {
 export function AppConfigErrorScreen({ missingEnvVars }: AppConfigErrorScreenProps) {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <View style={styles.card}>
-        <SoRitaLogo size="lg" showIcon />
-        <Text style={styles.title}>{tr.system.configErrorTitle}</Text>
-        <Text style={styles.body}>{tr.system.configErrorDescription}</Text>
-        <View style={styles.list}>
-          {missingEnvVars.map((item) => (
-            <Text key={item} style={styles.listItem}>
-              {item}
-            </Text>
-          ))}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          <SoRitaLogo size="lg" showIcon />
+          <Text style={styles.title}>{tr.system.configErrorTitle}</Text>
+          <Text style={styles.body}>{tr.system.configErrorDescription}</Text>
+          <View style={styles.list}>
+            {missingEnvVars.map((item) => (
+              <Text key={item} style={styles.listItem}>
+                {item}
+              </Text>
+            ))}
+          </View>
+          <Text style={styles.hint}>{tr.system.configErrorHint}</Text>
         </View>
-        <Text style={styles.hint}>{tr.system.configErrorHint}</Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -33,11 +38,18 @@ export function AppConfigErrorScreen({ missingEnvVars }: AppConfigErrorScreenPro
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.screen,
     backgroundColor: colors.background,
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.lg,
+  },
   card: {
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     gap: 10,
     padding: 18,
     borderRadius: radius.xl,

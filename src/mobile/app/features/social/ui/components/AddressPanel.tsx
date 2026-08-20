@@ -10,7 +10,6 @@ import * as Clipboard from 'expo-clipboard';
 import {
   ChevronRight,
   Copy,
-  ExternalLink,
 } from 'lucide-react-native';
 
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
@@ -85,10 +84,6 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
         >
           <Copy color={colors.textMuted} size={12} />
           <Text style={styles.secondaryPanelText}>{tr.cards.copy}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="link" style={styles.primaryPanelButton} onPress={openInMaps}>
-          <ExternalLink color={colors.primary} size={12} />
-          <Text style={styles.primaryPanelText}>{tr.cards.openInMaps}</Text>
         </Pressable>
       </View>
     </View>
@@ -168,20 +163,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.textMuted,
-  },
-  primaryPanelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-  },
-  primaryPanelText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
   },
 });

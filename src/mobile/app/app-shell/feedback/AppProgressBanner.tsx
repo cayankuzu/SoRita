@@ -25,6 +25,7 @@ type ProgressBannerFailureOptions = {
 };
 
 type ProgressBannerState = {
+  detail?: string;
   onCancel?: () => void;
   onOpen?: () => void;
   onRetry?: () => void;
@@ -36,6 +37,7 @@ type ProgressBannerState = {
 type AppProgressBannerContextType = {
   banner: ProgressBannerState | null;
   beginProgress: (options?: {
+    detail?: string;
     onCancel?: () => void;
     onOpen?: () => void;
   }) => ProgressBannerSession;
@@ -60,7 +62,11 @@ export function AppProgressBannerProvider({ children }: { children: React.ReactN
     setProgressState(null);
   }, []);
 
-  const beginProgress = useCallback((options?: { onCancel?: () => void; onOpen?: () => void }) => {
+  const beginProgress = useCallback((options?: {
+    detail?: string;
+    onCancel?: () => void;
+    onOpen?: () => void;
+  }) => {
     const sessionId = nextSessionIdRef.current + 1;
     nextSessionIdRef.current = sessionId;
 
@@ -81,6 +87,7 @@ export function AppProgressBannerProvider({ children }: { children: React.ReactN
     };
 
     setProgressState({
+      detail: options?.detail,
       onCancel: options?.onCancel,
       onOpen: options?.onOpen,
       progress: 0,
@@ -197,6 +204,7 @@ export function AppProgressBannerHost() {
       <View pointerEvents="box-none" style={[styles.host, { paddingTop: insets.top }]}>
         <View style={styles.bannerWrap}>
           <PlaceEditorSaveProgressBanner
+            detail={banner.detail}
             progress={banner.progress}
             status={banner.status}
             onMenuPress={menuItems.length > 0 ? () => setMenuVisible(true) : undefined}

@@ -16,6 +16,7 @@ import {
   resolveImmediateAuthUser,
   syncAuthenticatedUser,
 } from '@/mobile/app/app-shell/auth/session/authSessionSupport';
+import { isPasswordRecoverySessionExchangeActive } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { t } from '@/mobile/app/shared/i18n';
@@ -123,6 +124,17 @@ export function useAuthSessionLifecycle({
 
     const handleAuthStateChange = async (event: AuthChangeEvent, session: Session | null) => {
       if (event === 'INITIAL_SESSION' || isBootstrapping) {
+        return;
+      }
+
+      // exchangeCodeForSession emits SIGNED_IN even for a PKCE password-reset
+      // code. Recovery sessions stay scoped to the reset screen so the root
+      // navigator is not remounted into MainTabs before a password is chosen.
+      if (
+        event === 'PASSWORD_RECOVERY'
+        || (event === 'SIGNED_IN' && isPasswordRecoverySessionExchangeActive())
+      ) {
+        setBootedIfMounted();
         return;
       }
 

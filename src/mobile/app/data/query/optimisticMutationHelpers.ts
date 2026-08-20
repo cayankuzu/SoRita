@@ -7,12 +7,33 @@ import {
 } from '@/mobile/app/data/query/optimisticSocialCache';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 
+const visibleReadModelRoots = [
+  queryKeys.visibleData.all,
+  queryKeys.feed.all,
+  queryKeys.explore.all,
+  queryKeys.profile.all,
+  queryKeys.list.all,
+  queryKeys.map.all,
+] as const;
+
+function snapshotVisibleReadModels(queryClient: QueryClient) {
+  return visibleReadModelRoots.flatMap((queryKey) => snapshotQueries(queryClient, queryKey));
+}
+
+function cancelVisibleReadModels(queryClient: QueryClient) {
+  return Promise.all(
+    visibleReadModelRoots.map((queryKey) => queryClient.cancelQueries({ queryKey })),
+  );
+}
+
 /**
  * Shared hook for invalidating the visible data cache after mutations.
  */
 export function useInvalidateVisibleData() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.visibleData.all });
+  return () => Promise.all(
+    visibleReadModelRoots.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
 }
 
 /**
@@ -33,8 +54,8 @@ export function buildOptimisticMutation<TInput>(
 ) {
   return {
     onMutate: async (input: TInput) => {
-      const cancellation = queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all });
-      const snapshot = snapshotQueries(queryClient, queryKeys.visibleData.all);
+      const cancellation = cancelVisibleReadModels(queryClient);
+      const snapshot = snapshotVisibleReadModels(queryClient);
       applyOptimistic(queryClient, input);
       await cancellation;
       return { snapshot };
@@ -56,10 +77,10 @@ export function buildDualOptimisticMutation<TInput>(
   return {
     onMutate: async (input: TInput) => {
       const cancellation = Promise.all([
-        queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all }),
+        cancelVisibleReadModels(queryClient),
         queryClient.cancelQueries({ queryKey: queryKeys.placeComments.all }),
       ]);
-      const visibleSnapshot = snapshotQueries(queryClient, queryKeys.visibleData.all);
+      const visibleSnapshot = snapshotVisibleReadModels(queryClient);
       const commentsSnapshot = snapshotQueries(queryClient, queryKeys.placeComments.all);
       applyOptimistic(queryClient, input);
       await cancellation;

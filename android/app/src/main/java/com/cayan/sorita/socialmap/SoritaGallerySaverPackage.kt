@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
 
 class SoritaGallerySaverPackage : ReactPackage {
+  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     return listOf(
       SoritaGallerySaverModule(reactContext),
@@ -13,6 +14,7 @@ class SoritaGallerySaverPackage : ReactPackage {
     )
   }
 
+  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
   override fun createViewManagers(
     reactContext: ReactApplicationContext
   ): List<ViewManager<*, *>> = emptyList()

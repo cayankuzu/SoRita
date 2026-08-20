@@ -120,4 +120,51 @@ describe('useSettingsAccountState', () => {
     expect(refreshUserMock).not.toHaveBeenCalled();
     expect(deleteCurrentUserAsync).toHaveBeenCalled();
   });
+
+  it('falls back to the session snapshot when visible data is sparse or refresh fails', async () => {
+    const user = {
+      id: 'viewer',
+      email: 'viewer@example.com',
+      name: 'Viewer',
+      username: 'viewer',
+      blockedUsers: ['missing-user'],
+    };
+    const refetchMock = vi.fn().mockResolvedValue({ data: undefined });
+    const refreshUserMock = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('background refresh failed'));
+    const updateUserAsync = vi.fn().mockResolvedValue(user);
+
+    useVisibleDataQueryMock.mockReturnValue({ data: undefined, refetch: refetchMock });
+    useUpdateUserMutationMock.mockReturnValue({ mutateAsync: updateUserAsync });
+    useDeleteCurrentUserMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    usePullToRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: false,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/settings/application/useSettingsAccountState');
+    const hook = renderHook(() =>
+      hooks.useSettingsAccountState({
+        refreshUser: refreshUserMock,
+        user,
+      }),
+    );
+
+    expect(hook.result.current.freshUser).toEqual(user);
+    expect(hook.result.current.blockedUsers).toEqual([]);
+    const noBlocksHook = renderHook(() =>
+      hooks.useSettingsAccountState({
+        refreshUser: refreshUserMock,
+        user: { ...user, blockedUsers: undefined },
+      }),
+    );
+    expect(noBlocksHook.result.current.blockedUsers).toEqual([]);
+    await expect(hook.result.current.refreshCurrentUserState()).resolves.toEqual(user);
+    await expect(hook.result.current.saveUserProfile(user)).resolves.toEqual(user);
+    await Promise.resolve();
+
+    expect(refreshUserMock).toHaveBeenCalledTimes(2);
+  });
 });

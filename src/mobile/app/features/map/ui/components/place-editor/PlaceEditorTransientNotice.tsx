@@ -16,13 +16,20 @@ export function PlaceEditorTransientNotice({
   onClose,
 }: PlaceEditorTransientNoticeProps) {
   return (
-    <Pressable style={styles.overlay} onPress={onClose}>
+    <Pressable
+      accessibilityLabel={`${title}. ${description}`}
+      accessibilityLiveRegion="assertive"
+      accessibilityRole="button"
+      accessibilityViewIsModal
+      style={styles.overlay}
+      onPress={onClose}
+    >
       <View style={styles.card}>
         <View style={styles.iconWrap}>
           <AlertTriangle color={colors.danger} size={18} />
         </View>
         <View style={styles.copy}>
-          <Text style={styles.title}>{title}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
         </View>
       </View>

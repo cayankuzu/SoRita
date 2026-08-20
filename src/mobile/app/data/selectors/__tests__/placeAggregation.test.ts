@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildPlaceFeedCardItems } from '@/mobile/app/data/selectors/placeAggregation';
+import {
+  buildPlaceFeedCardItems,
+  getPlaceFeedLocationCardCount,
+} from '@/mobile/app/data/selectors/placeAggregation';
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
 
 describe('buildPlaceFeedCardItems', () => {
@@ -187,5 +190,33 @@ describe('buildPlaceFeedCardItems', () => {
     expect(items.find((item) => item.place.id === 'place-a1')?.memberships).toHaveLength(2);
     expect(items.find((item) => item.place.id === 'place-a2')?.memberships).toHaveLength(2);
     expect(items.find((item) => item.place.id === 'place-b1')?.memberships).toHaveLength(1);
+  });
+
+  it('uses a null owner fallback and derives legacy location counts from memberships', () => {
+    const [item] = buildPlaceFeedCardItems([
+      {
+        id: 'list',
+        userId: 'missing-owner',
+        name: 'List',
+        isPublic: true,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        places: [{
+          id: 'place',
+          name: 'Place',
+          lat: 1,
+          lng: 2,
+          addedAt: '2025-01-01T00:00:00.000Z',
+        }],
+      },
+    ]);
+
+    expect(item?.owner).toBeNull();
+    expect(getPlaceFeedLocationCardCount(item!)).toBe(1);
+    expect(getPlaceFeedLocationCardCount({
+      ...item!,
+      locationPlaceCardsCount: undefined,
+      memberships: [...item!.memberships, item!.memberships[0]!],
+    })).toBe(2);
   });
 });

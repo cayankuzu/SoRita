@@ -473,6 +473,57 @@ describe('useSettingsScreenState', () => {
     expect(logoutBlock).toContain('throw error;');
   });
 
+  it('locks privacy and password-reset mutations against rapid duplicate taps', async () => {
+    const privacyDeferred = createDeferred<void>();
+    const passwordDeferred = createDeferred<{ success: boolean }>();
+    const persistAccountPrivacy = vi.fn().mockReturnValue(privacyDeferred.promise);
+    const requestPasswordReset = vi.fn().mockReturnValue(passwordDeferred.promise);
+    const freshUser = createFreshUser();
+    const hooks = await import('@/mobile/app/features/settings/application/useSettingsScreenState');
+    const hook = renderHook(() => hooks.useSettingsScreenState({
+      deleteCurrentUser: vi.fn().mockResolvedValue(undefined),
+      freshUser,
+      logout: vi.fn().mockResolvedValue(undefined),
+      persistAccountPrivacy,
+      refreshCurrentUserState: vi.fn().mockResolvedValue(null),
+      requestPasswordReset,
+      saveUserProfile: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    let privacyRequest!: Promise<void>;
+    act(() => {
+      privacyRequest = hook.result.current.saveAccountPrivacy(false);
+      void hook.result.current.saveAccountPrivacy(true);
+    });
+    expect(persistAccountPrivacy).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.isSavingPrivacy).toBe(true);
+    expect(hook.result.current.isPublicAccount).toBe(false);
+
+    await act(async () => {
+      privacyDeferred.resolve();
+      await privacyRequest;
+    });
+    expect(hook.result.current.isSavingPrivacy).toBe(false);
+
+    act(() => hook.result.current.setCurrentPassword('password'));
+    let resetRequest!: Promise<void>;
+    act(() => {
+      resetRequest = hook.result.current.sendPasswordResetMail();
+      void hook.result.current.sendPasswordResetMail();
+    });
+    expect(requestPasswordReset).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.isSendingPasswordReset).toBe(true);
+
+    await act(async () => {
+      passwordDeferred.resolve({ success: true });
+      await resetRequest;
+    });
+    expect(hook.result.current.isSendingPasswordReset).toBe(false);
+    expect(hook.result.current.isPasswordResetCoolingDown).toBe(true);
+
+    hook.unmount();
+  });
+
   it('supports null-user early returns safely', async () => {
     const hooks = await import('@/mobile/app/features/settings/application/useSettingsScreenState');
     const hook = renderHook(() =>
@@ -534,9 +585,9 @@ describe('useSettingsScreenState', () => {
       hook.result.current.openEditProfile();
       await Promise.resolve();
     });
-    expect(hook.result.current.editName).toBe('');
-    expect(hook.result.current.editUsername).toBe('');
-    expect(hook.result.current.isPublicAccount).toBe(true);
+    expect(hook.result.current.editName).toBe('Viewer');
+    expect(hook.result.current.editUsername).toBe('viewer');
+    expect(hook.result.current.isPublicAccount).toBe(false);
 
     act(() => {
       hook.result.current.setEditName('Ada');

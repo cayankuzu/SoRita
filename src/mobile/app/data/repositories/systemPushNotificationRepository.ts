@@ -71,20 +71,17 @@ export async function syncSystemPushNotifications() {
 
   await ensureAndroidPushChannel();
 
-  const firebaseMessaging = (await loadFirebaseMessagingModule())();
-
-  if (typeof firebaseMessaging.registerDeviceForRemoteMessages === 'function') {
-    await firebaseMessaging.registerDeviceForRemoteMessages();
-  }
-
-  const token = await firebaseMessaging.getToken();
+  const firebaseMessaging = await loadFirebaseMessagingModule();
+  const messaging = firebaseMessaging.getMessaging();
+  await firebaseMessaging.registerDeviceForRemoteMessages(messaging);
+  const token = await firebaseMessaging.getToken(messaging);
 
   if (!token) {
     logger.warn('push', 'FCM token could not be resolved.');
     return null;
   }
 
-  await firebaseMessaging.subscribeToTopic(topic);
+  await firebaseMessaging.subscribeToTopic(messaging, topic);
   logger.info('push', `FCM system topic subscribed: ${topic}`);
 
   return token;
@@ -101,8 +98,9 @@ export async function unregisterSystemPushNotifications() {
     return;
   }
 
-  const firebaseMessaging = (await loadFirebaseMessagingModule())();
-  await firebaseMessaging.unsubscribeFromTopic(topic);
+  const firebaseMessaging = await loadFirebaseMessagingModule();
+  const messaging = firebaseMessaging.getMessaging();
+  await firebaseMessaging.unsubscribeFromTopic(messaging, topic);
   logger.info('push', `FCM system topic unsubscribed: ${topic}`);
 }
 

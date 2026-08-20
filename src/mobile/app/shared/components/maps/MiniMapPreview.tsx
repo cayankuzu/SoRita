@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
@@ -17,6 +17,7 @@ type MiniMapPreviewProps = {
   interactive?: boolean;
   instanceId?: number;
   liteMode?: boolean;
+  loadStaticPreview?: boolean;
   onMapGesture?: () => void;
   onMarkerPress?: (index: number) => void;
   highlightedIndex?: number | null;
@@ -34,7 +35,34 @@ function DeferredAppMapView(props: SharedMapProps) {
   return <AppMapView {...props} />;
 }
 
-const STATIC_MAP_URL_CACHE = new Map<string, string | null>();
+const STATIC_MAP_URL_CACHE = new Map<string, string>();
+const MAX_STATIC_MAP_URL_CACHE_ENTRIES = 128;
+
+function getCachedStaticMapUrl(cacheKey: string) {
+  if (!STATIC_MAP_URL_CACHE.has(cacheKey)) {
+    return undefined;
+  }
+
+  const cachedUrl = STATIC_MAP_URL_CACHE.get(cacheKey);
+  if (!cachedUrl) {
+    return undefined;
+  }
+  STATIC_MAP_URL_CACHE.delete(cacheKey);
+  STATIC_MAP_URL_CACHE.set(cacheKey, cachedUrl);
+  return cachedUrl;
+}
+
+function rememberStaticMapUrl(cacheKey: string, url: string) {
+  STATIC_MAP_URL_CACHE.set(cacheKey, url);
+  if (STATIC_MAP_URL_CACHE.size <= MAX_STATIC_MAP_URL_CACHE_ENTRIES) {
+    return;
+  }
+
+  const oldestKey = STATIC_MAP_URL_CACHE.keys().next().value;
+  if (oldestKey) {
+    STATIC_MAP_URL_CACHE.delete(oldestKey);
+  }
+}
 
 function toStaticMapColor(color?: string) {
   if (!color) {
@@ -48,9 +76,9 @@ function toStaticMapColor(color?: string) {
   return color;
 }
 
-function buildStaticMapUrl(places: MapMarkerItem[], height: number) {
-  // This key is intentionally public and restricted to map rendering use cases only.
-  if (!env.googleMapsApiKey || places.length === 0) {
+function buildStaticMapUrl(places: MapMarkerItem[], height: number, width: number) {
+  // Keep the native Maps SDK keys isolated from the quota-limited Static Maps key.
+  if (!env.googleMapsStaticApiKey || places.length === 0) {
     return null;
   }
 
@@ -63,21 +91,23 @@ function buildStaticMapUrl(places: MapMarkerItem[], height: number) {
     );
   const cacheKey = [
     Math.round(height),
+    Math.round(width),
     ...normalizedPlaces.map(
       (place) =>
         `${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${toStaticMapColor(place.markerColor)}`,
     ),
   ].join('|');
 
-  if (STATIC_MAP_URL_CACHE.has(cacheKey)) {
-    return STATIC_MAP_URL_CACHE.get(cacheKey) || null;
+  const cachedUrl = getCachedStaticMapUrl(cacheKey);
+  if (cachedUrl !== undefined) {
+    return cachedUrl;
   }
 
   const params = new URLSearchParams();
-  params.set('size', `640x${Math.max(240, Math.round(height * 2.6))}`);
+  params.set('size', `${Math.round(width)}x${Math.round(height)}`);
   params.set('scale', '2');
   params.set('maptype', 'roadmap');
-  params.set('key', env.googleMapsApiKey);
+  params.set('key', env.googleMapsStaticApiKey);
 
   if (normalizedPlaces.length === 1) {
     params.set('center', `${normalizedPlaces[0].lat},${normalizedPlaces[0].lng}`);
@@ -94,8 +124,17 @@ function buildStaticMapUrl(places: MapMarkerItem[], height: number) {
   });
 
   const url = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
-  STATIC_MAP_URL_CACHE.set(cacheKey, url);
+  rememberStaticMapUrl(cacheKey, url);
   return url;
+}
+
+function buildPlacesSignature(places: MapMarkerItem[]) {
+  return places
+    .map(
+      (place, index) =>
+        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
+    )
+    .join('|');
 }
 
 function MiniMapFallback({ places }: MiniMapFallbackProps) {
@@ -125,6 +164,7 @@ function MiniMapPreviewComponent({
   interactive = false,
   instanceId = 0,
   liteMode,
+  loadStaticPreview = true,
   onMapGesture,
   onMarkerPress,
   highlightedIndex = null,
@@ -132,17 +172,17 @@ function MiniMapPreviewComponent({
   focusTrigger = 0,
 }: MiniMapPreviewProps) {
   const isFocused = useIsFocused();
+  const { width: viewportWidth } = useWindowDimensions();
   const [staticPreviewReady, setStaticPreviewReady] = useState(false);
   const [staticPreviewFailed, setStaticPreviewFailed] = useState(false);
   const [focusRecoveryInstanceId, setFocusRecoveryInstanceId] = useState(0);
   const wasInteractiveMapVisibleRef = React.useRef(false);
-  const placesSignature = places
-    .map(
-      (place, index) =>
-        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
-    )
-    .join('|');
-  const staticMapUrl = useMemo(() => buildStaticMapUrl(places, height), [height, places]);
+  const placesSignature = buildPlacesSignature(places);
+  const previewWidth = Math.min(480, Math.max(240, viewportWidth - 24));
+  const staticMapUrl = useMemo(
+    () => loadStaticPreview ? buildStaticMapUrl(places, height, previewWidth) : null,
+    [height, loadStaticPreview, places, previewWidth],
+  );
   const shouldRenderInteractiveMap = interactive && isFocused;
   const shouldRenderNativePreview = shouldRenderInteractiveMap;
   const staticPreviewUri =
@@ -221,18 +261,8 @@ function areMiniMapPreviewPropsEqual(
   previous: MiniMapPreviewProps,
   next: MiniMapPreviewProps,
 ) {
-  const previousSignature = previous.places
-    .map(
-      (place, index) =>
-        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
-    )
-    .join('|');
-  const nextSignature = next.places
-    .map(
-      (place, index) =>
-        `${index}:${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${place.markerColor ?? ''}`,
-    )
-    .join('|');
+  const previousSignature = buildPlacesSignature(previous.places);
+  const nextSignature = buildPlacesSignature(next.places);
 
   return (
     previousSignature === nextSignature &&
@@ -240,6 +270,7 @@ function areMiniMapPreviewPropsEqual(
     previous.interactive === next.interactive &&
     previous.instanceId === next.instanceId &&
     previous.liteMode === next.liteMode &&
+    previous.loadStaticPreview === next.loadStaticPreview &&
     previous.highlightedIndex === next.highlightedIndex &&
     previous.focusIndex === next.focusIndex &&
     previous.focusTrigger === next.focusTrigger &&

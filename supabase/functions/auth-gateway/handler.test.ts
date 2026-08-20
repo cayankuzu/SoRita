@@ -114,6 +114,10 @@ function createDeps(options?: {
       error: null,
     };
   });
+  const adminRpcMock = vi.fn((functionName: string, args: Record<string, unknown>) =>
+    rpcMock(functionName, args));
+  const anonymousRpcMock = vi.fn((functionName: string, args: Record<string, unknown>) =>
+    rpcMock(functionName, args));
   const signInWithPasswordMock = vi.fn().mockResolvedValue(options?.signInResult ?? {
     data: {
       session: {
@@ -149,16 +153,17 @@ function createDeps(options?: {
   const handler = createAuthGatewayHandler({
     config: {
       allowedOrigins: ['http://localhost:5173'],
-      allowedRedirectOrigins: ['https://cayankuzu.github.io/SoRita_web', 'http://localhost:8081'],
+      allowedRedirectOrigins: ['sorita://auth/callback', 'sorita://reset-password'],
       supabasePublishableKey: 'anon-key',
       supabaseServiceRoleKey: 'service-role',
       supabaseUrl: 'https://example.supabase.co',
       ...options?.configOverrides,
     },
     createAdminClient: () => ({
-      rpc: rpcMock,
+      rpc: adminRpcMock,
     }),
     createAnonymousAuthClient: () => ({
+      rpc: anonymousRpcMock,
       auth: {
         getUser: getUserMock,
         resend: resendMock,
@@ -168,6 +173,7 @@ function createDeps(options?: {
       },
     }),
     createAuthenticatedAuthClient: () => ({
+      rpc: rpcMock,
       auth: {
         getUser: getUserMock,
         resend: resendMock,
@@ -179,6 +185,8 @@ function createDeps(options?: {
   });
 
   return {
+    adminRpcMock,
+    anonymousRpcMock,
     getUserMock,
     handler,
     resendMock,
@@ -219,7 +227,7 @@ const validRegistration = {
   },
   name: 'Yeni Kullanici',
   password: 'Strong!Pass123',
-  redirectUrl: 'http://localhost:8081/auth/callback',
+  redirectUrl: 'sorita://auth/callback',
   username: 'yeni_kullanici',
 } as const;
 
@@ -348,7 +356,7 @@ describe('auth-gateway handler', () => {
   });
 
   it('sends password reset mail only for registered email addresses', async () => {
-    const { handler, resetPasswordForEmailMock } = createDeps({
+    const { adminRpcMock, anonymousRpcMock, handler, resetPasswordForEmailMock } = createDeps({
       availabilityRow: {
         email_available: false,
         username_available: true,
@@ -364,7 +372,7 @@ describe('auth-gateway handler', () => {
         body: JSON.stringify({
           action: 'request-password-reset',
           email: 'user@example.com',
-          redirectUrl: 'https://cayankuzu.github.io/SoRita_web/reset-password',
+          redirectUrl: 'sorita://reset-password',
         }),
       }),
     );
@@ -374,8 +382,17 @@ describe('auth-gateway handler', () => {
       success: true,
     });
     expect(resetPasswordForEmailMock).toHaveBeenCalledWith('user@example.com', {
-      redirectTo: 'https://cayankuzu.github.io/SoRita_web/reset-password',
+      redirectTo: 'sorita://reset-password',
     });
+    expect(anonymousRpcMock).toHaveBeenCalledWith('check_account_availability', {
+      input_email: 'user@example.com',
+      input_exclude_user_id: null,
+      input_username: null,
+    });
+    expect(adminRpcMock).not.toHaveBeenCalledWith(
+      'check_account_availability',
+      expect.anything(),
+    );
   });
 
   it('rejects password reset requests for unknown email addresses', async () => {
@@ -395,7 +412,7 @@ describe('auth-gateway handler', () => {
         body: JSON.stringify({
           action: 'request-password-reset',
           email: 'missing@example.com',
-          redirectUrl: 'https://cayankuzu.github.io/SoRita_web/reset-password',
+          redirectUrl: 'sorita://reset-password',
         }),
       }),
     );
@@ -404,6 +421,29 @@ describe('auth-gateway handler', () => {
     await expect(response.json()).resolves.toMatchObject({
       code: 'email_not_found',
       error: 'Bu e-posta adresiyle kayitli bir hesap bulunamadi.',
+    });
+    expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('preflights password reset without sending mail from the edge runtime', async () => {
+    const { anonymousRpcMock, handler, resetPasswordForEmailMock } = createDeps({
+      availabilityRow: {
+        email_available: false,
+        username_available: true,
+      },
+    });
+
+    const response = await handler(authRequest({
+      action: 'prepare-password-reset',
+      email: 'user@example.com',
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(anonymousRpcMock).toHaveBeenCalledWith('check_account_availability', {
+      input_email: 'user@example.com',
+      input_exclude_user_id: null,
+      input_username: null,
     });
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
@@ -449,7 +489,9 @@ describe('auth-gateway handler', () => {
       { ...validRegistration, interests: Array.from({ length: 21 }, (_, index) => `i${index}`) },
       { ...validRegistration, legalConsent: { ...validRegistration.legalConsent, documentsAccepted: [] } },
       { action: 'request-password-reset', email: 'bad', redirectUrl: 'bad' },
+      { action: 'prepare-password-reset', email: 'bad' },
       { action: 'request-password-reset-authenticated', currentPassword: '', redirectUrl: 'bad' },
+      { action: 'prepare-password-reset-authenticated', currentPassword: '' },
     ];
 
     for (const payload of invalidPayloads) {
@@ -605,13 +647,13 @@ describe('auth-gateway handler', () => {
     const payload = {
       action: 'resend-confirmation',
       email: 'user@example.com',
-      redirectUrl: 'http://localhost:8081/auth/callback',
+      redirectUrl: 'sorita://auth/callback',
     };
     const success = createDeps();
     expect((await success.handler(authRequest(payload))).status).toBe(200);
     expect(success.resendMock).toHaveBeenCalledWith({
       email: 'user@example.com',
-      options: { emailRedirectTo: 'http://localhost:8081/auth/callback' },
+      options: { emailRedirectTo: 'sorita://auth/callback' },
       type: 'signup',
     });
 
@@ -629,7 +671,7 @@ describe('auth-gateway handler', () => {
     const response = await handler(authRequest({
       action: 'request-password-reset',
       email: 'user@example.com',
-      redirectUrl: 'http://localhost:8081/reset-password',
+      redirectUrl: 'sorita://reset-password',
     }));
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: 'unexpected' });
@@ -639,7 +681,7 @@ describe('auth-gateway handler', () => {
     const payload = {
       action: 'request-password-reset-authenticated',
       currentPassword: 'Current!123',
-      redirectUrl: 'http://localhost:8081/reset-password',
+      redirectUrl: 'sorita://reset-password',
     };
     const missing = createDeps();
     const missingResponse = await missing.handler(authRequest(payload));
@@ -672,19 +714,35 @@ describe('auth-gateway handler', () => {
     const payload = {
       action: 'request-password-reset-authenticated',
       currentPassword: 'Current!123',
-      redirectUrl: 'http://localhost:8081/reset-password',
+      redirectUrl: 'sorita://reset-password',
     };
     const success = createDeps();
     const successResponse = await success.handler(authRequest(payload, { authorization: 'Bearer access' }));
     expect(successResponse.status).toBe(200);
     expect(success.resetPasswordForEmailMock).toHaveBeenCalledWith('user@example.com', {
-      redirectTo: 'http://localhost:8081/reset-password',
+      redirectTo: 'sorita://reset-password',
     });
 
     const failed = createDeps({ resetPasswordErrors: [{ message: 'Provider unavailable' }] });
     const failedResponse = await failed.handler(authRequest(payload, { authorization: 'Bearer access' }));
     expect(failedResponse.status).toBe(400);
     await expect(failedResponse.json()).resolves.toMatchObject({ code: 'unexpected' });
+  });
+
+  it('verifies an authenticated password reset without sending mail from the edge runtime', async () => {
+    const { handler, resetPasswordForEmailMock, signInWithPasswordMock } = createDeps();
+    const response = await handler(authRequest({
+      action: 'prepare-password-reset-authenticated',
+      currentPassword: 'Current!123',
+    }, { authorization: 'Bearer access' }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(signInWithPasswordMock).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      password: 'Current!123',
+    });
+    expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
 
   it('fails closed when a required authorization RPC fails', async () => {

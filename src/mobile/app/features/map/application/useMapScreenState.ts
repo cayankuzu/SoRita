@@ -8,8 +8,6 @@ import {
   useUpdateListsMutation,
 } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
-import { useMapMarkersQuery } from '@/mobile/app/data/hooks/useMapMarkersQuery';
-import { useVisibleDataQuery } from '@/mobile/app/data/hooks/useVisibleDataQuery';
 import type {
   ExistingPlaceSelection,
   MapViewport,
@@ -29,6 +27,7 @@ import {
 } from '@/mobile/app/features/map/application/useMapMarkerModel';
 import { useMapSearchController } from '@/mobile/app/features/map/application/useMapSearchController';
 import { useMapLocation } from '@/mobile/app/features/map/application/useMapLocation';
+import { useMapScreenData } from '@/mobile/app/features/map/application/useMapScreenData';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 import type {
   PlaceEditorSaveOptions,
@@ -42,11 +41,9 @@ import {
   getPersistedMapScreenState,
   savePersistedMapScreenState,
 } from '@/mobile/app/platform/storage/mapScreenState';
-import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getMarkerAggregationKey } from '@/mobile/app/shared/utils/markerColors';
 import { isAbortError } from '@/mobile/app/shared/utils/abort';
-import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 
 type UseMapScreenStateParams = {
   user: { id: string; name: string } | null;
@@ -83,7 +80,6 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   const [manualViewport, setManualViewport] = useState<MapViewport | null>(null);
   const [markerFilter, setMarkerFilter] = useState<MarkerFilterOption>('all');
   const [editorFocusTrigger, setEditorFocusTrigger] = useState(0);
-  const [shouldLoadFullMapData, setShouldLoadFullMapData] = useState(false);
   const {
     isLocating,
     locate,
@@ -101,61 +97,23 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
   const userId = user?.id;
   const {
-    data: markerSnapshots,
-    error: markerError,
-    isLoading: areMarkersLoading,
-    refetch: refetchMarkers,
-  } = useMapMarkersQuery(userId);
-  const visibleDataQuery = useVisibleDataQuery(userId, {
-    enabled: Boolean(userId) && shouldLoadFullMapData,
-    listPageSize: 100,
-    ownerId: userId || undefined,
-  });
+    areMarkersLoading,
+    fullDataLoading,
+    fullDataRequested,
+    hasVisibleDataPartialError,
+    lists,
+    markerError,
+    markerSnapshots,
+    onRefresh,
+    prepareFullData,
+    refreshing,
+    retry: retryLists,
+    visibleDataErrorMessage,
+  } = useMapScreenData(userId);
   const createListMutation = useCreateListMutation();
   const updateListsMutation = useUpdateListsMutation();
   const deletePlaceMutation = useDeletePlaceMutation();
-  const { refetch } = visibleDataQuery;
-  const visibleLists = useMemo(
-    () => visibleDataQuery.data?.lists || [],
-    [visibleDataQuery.data?.lists],
-  );
-  const mapDataError = visibleDataQuery.error || markerError;
-  const visibleDataErrorMessage = mapDataError
-    ? getUserFacingErrorMessage(
-        mapDataError,
-        tr.map.dataErrorDescription,
-      )
-    : null;
-
-  useEffect(() => {
-    setShouldLoadFullMapData(false);
-    return runAfterNextPaint(() => {
-      setShouldLoadFullMapData(true);
-    });
-  }, [userId]);
-
-  const loadLists = useCallback(async () => {
-    if (!userId) {
-      return;
-    }
-
-    setShouldLoadFullMapData(true);
-    await Promise.allSettled([refetch(), refetchMarkers()]);
-  }, [refetch, refetchMarkers, userId]);
-
-  const refreshVisibleData = useCallback(async () => {
-    await loadLists();
-  }, [loadLists]);
-
-  const { refreshing, onRefresh } = useFocusRefresh(refreshVisibleData, {
-    refreshOnFocus: false,
-    skipInitialFocus: true,
-  });
-
-  const lists = useMemo(
-    () => (userId ? visibleLists.filter((list) => list.userId === userId) : []),
-    [userId, visibleLists],
-  );
+  const prepareFullMapData = prepareFullData;
 
   const {
     allPlaces,
@@ -164,35 +122,43 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     selectedExistingEntry,
   } = useOwnedMapPlaceIndex(lists, selectedExistingPlace);
 
-  const openEditorPanel = useCallback((data: PanelData) => {
-    if (isEditorInteractionLocked) {
-      return;
-    }
+  const openEditorPanel = useCallback(
+    (data: PanelData) => {
+      if (isEditorInteractionLocked) {
+        return;
+      }
 
-    setSelectedExistingPlace(null);
-    setMinimizedExistingPlace(null);
-    setMinimizedEditor(null);
-    setEditorDraft(null);
-    setIsEditorInteractionLocked(false);
-    setEditorData(data);
-    setEditorFocusTrigger((current) => current + 1);
-  }, [isEditorInteractionLocked]);
+      prepareFullMapData();
+      setSelectedExistingPlace(null);
+      setMinimizedExistingPlace(null);
+      setMinimizedEditor(null);
+      setEditorDraft(null);
+      setIsEditorInteractionLocked(false);
+      setEditorData(data);
+      setEditorFocusTrigger((current) => current + 1);
+    },
+    [isEditorInteractionLocked, prepareFullMapData],
+  );
 
-  const openExistingPlacePanel = useCallback((target: { lat: number; lng: number }) => {
-    if (isEditorInteractionLocked) {
-      return;
-    }
+  const openExistingPlacePanel = useCallback(
+    (target: { lat: number; lng: number }) => {
+      if (isEditorInteractionLocked) {
+        return;
+      }
 
-    setSelectedSearchResult(null);
-    setEditorData(null);
-    setEditorDraft(null);
-    setIsEditorInteractionLocked(false);
-    setMinimizedEditor(null);
-    setMinimizedExistingPlace(null);
-    setSelectedExistingPlace({
-      markerKey: getMarkerAggregationKey(target),
-    });
-  }, [isEditorInteractionLocked]);
+      prepareFullMapData();
+      setSelectedSearchResult(null);
+      setEditorData(null);
+      setEditorDraft(null);
+      setIsEditorInteractionLocked(false);
+      setMinimizedEditor(null);
+      setMinimizedExistingPlace(null);
+      setSelectedExistingPlace({
+        markerKey: getMarkerAggregationKey(target),
+      });
+    },
+    [isEditorInteractionLocked, prepareFullMapData],
+  );
 
   const resetManualViewport = useCallback(() => {
     setManualViewport(null);
@@ -211,6 +177,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     searchResults,
   } = useMapSearchController({
     allPlaces,
+    onSearchIntent: prepareFullMapData,
     openEditorPanel,
     openExistingPlacePanel,
     setManualViewport,
@@ -246,9 +213,8 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     if (
       selectedExistingPlace &&
       selectedExistingEntries.length === 0 &&
-      shouldLoadFullMapData &&
-      !visibleDataQuery.isLoading &&
-      !visibleDataQuery.isFetching
+      fullDataRequested &&
+      !fullDataLoading
     ) {
       setSelectedExistingPlace(null);
       setManualViewport(null);
@@ -256,9 +222,8 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   }, [
     selectedExistingEntries.length,
     selectedExistingPlace,
-    shouldLoadFullMapData,
-    visibleDataQuery.isFetching,
-    visibleDataQuery.isLoading,
+    fullDataLoading,
+    fullDataRequested,
   ]);
 
   useEffect(() => {
@@ -428,6 +393,9 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     setIsEditorInteractionLocked(true);
 
     const progressSession = beginProgress({
+      detail: tr.placeEditor.saveProgressLists(
+        new Set(pendingRequest.targetListIds).size,
+      ),
       onCancel: cancelActiveSave,
       onOpen: openPendingSaveTarget,
     });
@@ -657,7 +625,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
   const handleMarkerPress = useCallback(
     (index: number) => {
-      setShouldLoadFullMapData(true);
+      prepareFullMapData();
       if (activeEditorMarkerIndex != null && index === activeEditorMarkerIndex && minimizedEditor) {
         setEditorData(minimizedEditor.panel);
         setMinimizedEditor(null);
@@ -709,6 +677,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       interactiveMapMarkers,
       minimizedEditor,
       openEditorPanel,
+      prepareFullMapData,
       isEditorInteractionLocked,
       selectedSearchMarkerIndex,
       selectedSearchResult,
@@ -842,7 +811,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     handleSearchQueryChange,
     handleSearchResultPress,
     hasMapDataPartialError:
-      visibleDataQuery.hasPartialDataError ||
+      hasVisibleDataPartialError ||
       Boolean(markerError && mapPlaces.length > 0),
     hasSearched,
     isSearching,
@@ -864,7 +833,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     refreshing,
     reopenMinimizedEditor,
     reopenMinimizedExistingPlace,
-    retryLists: refreshVisibleData,
+    retryLists,
     retryLocation: handleLocateUser,
     setMarkerFilter: handleMarkerFilterChange,
     unlockEditorAfterSaveFailure,

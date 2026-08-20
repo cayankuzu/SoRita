@@ -10,19 +10,14 @@ import {
 function createAdminClient(options?: {
   insertError?: { code?: string; message: string } | null;
 }) {
-  const deleteExpiredMock = vi.fn().mockResolvedValue({ error: null });
   const insertMock = vi.fn().mockResolvedValue({ error: options?.insertError ?? null });
 
   return {
     adminClient: {
       from: () => ({
-        delete: () => ({
-          lt: deleteExpiredMock,
-        }),
         insert: insertMock,
       }),
     },
-    deleteExpiredMock,
     insertMock,
   };
 }
@@ -34,6 +29,8 @@ async function createSignedRequest(body: string) {
   const payloadHash = await sha256Hex(body);
   const signature = await createRequestSignature('token-1', {
     deviceId,
+    functionName: 'media-assets',
+    method: 'POST',
     nonce,
     payloadHash,
     timestamp,
@@ -57,18 +54,20 @@ describe('requestSecurity', () => {
     expect(
       buildRequestSigningMessage({
         deviceId: 'device-1',
+        functionName: 'media-assets',
+        method: 'POST',
         nonce: 'nonce-1',
         payloadHash: 'hash-1',
         timestamp: '100',
       }),
-    ).toBe('device-1:100:nonce-1:hash-1');
+    ).toBe('POST:media-assets:device-1:100:nonce-1:hash-1');
     await expect(sha256Hex('hello')).resolves.toBe(
       '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
     );
   });
 
   it('verifies valid requests and persists the nonce', async () => {
-    const { adminClient, deleteExpiredMock, insertMock } = createAdminClient();
+    const { adminClient, insertMock } = createAdminClient();
     const request = await createSignedRequest(JSON.stringify({ hello: 'world' }));
 
     const result = await verifySignedRequest({
@@ -83,7 +82,6 @@ describe('requestSecurity', () => {
       bodyText: JSON.stringify({ hello: 'world' }),
       ok: true,
     });
-    expect(deleteExpiredMock).toHaveBeenCalled();
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
         device_id: 'device-1234',
@@ -115,6 +113,8 @@ describe('requestSecurity', () => {
     const expiredPayloadHash = await sha256Hex(expiredBody);
     const expiredSignature = await createRequestSignature('token-1', {
       deviceId: 'device-1234',
+      functionName: 'media-assets',
+      method: 'POST',
       nonce: 'nonce-1234-5678-90ab',
       payloadHash: expiredPayloadHash,
       timestamp: '1',
@@ -214,5 +214,41 @@ describe('requestSecurity', () => {
       token: 'token-1',
       userId: 'user-1',
     })).resolves.toMatchObject({ error: 'nonce store unavailable', ok: false, status: 500 });
+  });
+
+  it('binds signatures to the HTTP method and Edge Function identity', async () => {
+    const signedRequest = await createSignedRequest('{}');
+
+    await expect(
+      verifySignedRequest({
+        adminClient: createAdminClient().adminClient,
+        functionName: 'moderation-reports',
+        request: signedRequest,
+        token: 'token-1',
+        userId: 'user-1',
+      }),
+    ).resolves.toMatchObject({
+      error: 'Request signature verification failed',
+      ok: false,
+      status: 401,
+    });
+
+    await expect(
+      verifySignedRequest({
+        adminClient: createAdminClient().adminClient,
+        functionName: 'media-assets',
+        request: new Request(signedRequest.url, {
+          method: 'PUT',
+          headers: signedRequest.headers,
+          body: '{}',
+        }),
+        token: 'token-1',
+        userId: 'user-1',
+      }),
+    ).resolves.toMatchObject({
+      error: 'Request signature verification failed',
+      ok: false,
+      status: 401,
+    });
   });
 });

@@ -1,13 +1,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { createAdminBroadcastNotificationHandler } from './handler.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { sha256Hex } from '../_shared/requestSecurity.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const adminToken = Deno.env.get('SYSTEM_BROADCAST_ADMIN_TOKEN') ?? '';
+const adminTokenFingerprint = sha256Hex(adminToken);
 const allowedOrigins = (
-  Deno.env.get('SYSTEM_BROADCAST_ALLOWED_ORIGINS') ??
-  'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000'
+  Deno.env.get('SYSTEM_BROADCAST_ALLOWED_ORIGINS') ?? ''
 )
   .split(',')
   .map((origin) => origin.trim())
@@ -80,6 +82,7 @@ const repository = {
   },
 
   async insertNotifications(params: {
+    idempotencyKey: string;
     message: string;
     pushTitle: string;
     recipientUserIds: string[];
@@ -87,22 +90,24 @@ const repository = {
     let insertedCount = 0;
 
     for (const recipientChunk of chunkArray(params.recipientUserIds, 500)) {
-      const payload = recipientChunk.map((recipientUserId) => ({
-        actor_user_id: null,
-        message: params.message,
-        push_title: params.pushTitle,
-        read: false,
-        recipient_user_id: recipientUserId,
-        type: 'system_announcement',
-      }));
-
-      const { error } = await adminClient.from('notifications').insert(payload);
+      const { data, error } = await adminClient.rpc('insert_system_broadcast_notifications', {
+        p_idempotency_key: params.idempotencyKey,
+        p_message: params.message,
+        p_push_title: params.pushTitle,
+        p_recipient_user_ids: recipientChunk,
+      });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      insertedCount += payload.length;
+      const chunkInsertedCount = Number(data);
+
+      if (!Number.isSafeInteger(chunkInsertedCount) || chunkInsertedCount < 0) {
+        throw new Error('Broadcast insertion returned an invalid count');
+      }
+
+      insertedCount += chunkInsertedCount;
     }
 
     return insertedCount;
@@ -116,6 +121,14 @@ const handleAdminBroadcastNotificationRequest = createAdminBroadcastNotification
     supabaseServiceRoleKey,
     supabaseUrl,
   },
+  enforceAdminRateLimit: async () =>
+    enforceRateLimit({
+      adminClient,
+      identifier: await adminTokenFingerprint,
+      maxRequests: 5,
+      scope: 'admin-broadcast-notification',
+      windowMs: 60_000,
+    }),
   repository,
 });
 

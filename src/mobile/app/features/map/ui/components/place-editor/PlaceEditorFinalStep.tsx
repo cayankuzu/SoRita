@@ -92,6 +92,8 @@ function MediaThumb({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
       delayLongPress={500}
       onLongPress={() => {
         ignoreNextPressRef.current = true;
@@ -250,6 +252,7 @@ export function PlaceEditorFinalStep({
 
         {media.length === 0 ? (
           <Pressable
+            accessibilityRole="button"
             style={[styles.mediaEmptyCard, isAddingMedia ? styles.mediaBusy : null]}
             onPress={() => {
               void onAddMedia();
@@ -299,6 +302,7 @@ export function PlaceEditorFinalStep({
 
               {mediaCounts.total < MAX_PLACE_MEDIA_ITEMS ? (
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.mediaAddTile, isAddingMedia ? styles.mediaBusy : null]}
                   onPress={() => {
                     void onAddMedia();

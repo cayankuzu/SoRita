@@ -1,5 +1,13 @@
 import React, { type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import {
   ChevronRight,
   ChevronDown,
@@ -39,7 +47,13 @@ export function PlaceOwnerHeader({
   }
 
   return (
-    <Pressable style={styles.userHeader} onPress={onPress}>
+    <Pressable
+      accessibilityLabel={`${owner.name}, @${owner.username}`}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      style={styles.userHeader}
+      onPress={onPress}
+    >
       <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
       <View style={styles.userBody}>
         <Text style={styles.userName}>{owner.name}</Text>
@@ -65,7 +79,13 @@ export function PlaceSourceBar({
   const name = sourceUser?.name || attribution.userName;
 
   return (
-    <Pressable style={styles.sourceBar} disabled={!onPress} onPress={onPress}>
+    <Pressable
+      accessibilityLabel={`${name}, ${tr.cards.quotedFromPlaceCard}`}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={styles.sourceBar}
+      disabled={!onPress}
+      onPress={onPress}
+    >
       <View style={styles.sourceAvatarWrap}>
         <AvatarView
           uri={sourceUser?.profilePhoto || attribution.userAvatar}
@@ -114,7 +134,14 @@ export function PlaceListBar({
   }
 
   return (
-    <Pressable style={styles.linkBar} onPress={onPress} onPressIn={onPressIn}>
+    <Pressable
+      accessibilityLabel={`${name}, ${isPublic ? tr.listDetail.public : tr.listDetail.private}`}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      style={styles.linkBar}
+      onPress={onPress}
+      onPressIn={onPressIn}
+    >
       {coverImage ? (
         <AppImage
           uri={coverImage}
@@ -157,7 +184,7 @@ export function PlaceListBar({
   );
 }
 
-export function PlaceMediaStrip({
+export function PlacePrimaryMedia({
   media,
   onPress,
   placeName,
@@ -166,37 +193,71 @@ export function PlaceMediaStrip({
   onPress: (index: number) => void;
   placeName: string;
 }) {
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const [carouselWidth, setCarouselWidth] = React.useState(1);
+
+  React.useEffect(() => {
+    setActiveIndex(0);
+  }, [media]);
+
   if (media.length === 0) {
     return null;
   }
 
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const nextWidth = Math.max(1, Math.round(event.nativeEvent.layout.width));
+    setCarouselWidth((current) => current === nextWidth ? current : nextWidth);
+  };
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nextIndex = Math.max(
+      0,
+      Math.min(media.length - 1, Math.round(event.nativeEvent.contentOffset.x / carouselWidth)),
+    );
+    setActiveIndex(nextIndex);
+  };
+
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      alwaysBounceVertical={false}
-      keyboardShouldPersistTaps="handled"
-      overScrollMode="never"
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.thumbRow}
+    <View
+      onLayout={handleLayout}
+      style={styles.mediaCarouselWrap}
     >
-      {media.map((item, index) => (
-        <Pressable
-          key={`${item.url}-${item.type}-${index}`}
-          onPress={() => onPress(index)}
-          style={styles.thumbPressable}
-        >
-          <MediaThumbnailView
-            item={item}
-            priority={index === 0 ? 'high' : 'normal'}
-            style={styles.thumb}
+      <ScrollView
+        horizontal
+        decelerationRate="fast"
+        directionalLockEnabled
+        disableIntervalMomentum
+        nestedScrollEnabled
+        onMomentumScrollEnd={handleScrollEnd}
+        overScrollMode="never"
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        style={styles.mediaCarousel}
+      >
+        {media.map((item, index) => (
+          <Pressable
             accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
-            fallbackToVideoPreview={false}
-            showDuration
-          />
-        </Pressable>
-      ))}
-    </ScrollView>
+            accessibilityRole="button"
+            key={item.id ?? `${item.url}:${index}`}
+            onPress={() => onPress(index)}
+            style={[styles.mediaCarouselPage, { width: carouselWidth }]}
+          >
+            <MediaThumbnailView
+              item={item}
+              priority={index === 0 ? 'high' : 'normal'}
+              style={styles.mediaCarouselMedia}
+              accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
+              fallbackToVideoPreview={false}
+              showDuration
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
+      {media.length > 1 ? (
+        <View pointerEvents="none" style={styles.mediaCarouselCounter}>
+          <Text style={styles.mediaCarouselCounterText}>{activeIndex + 1}/{media.length}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 

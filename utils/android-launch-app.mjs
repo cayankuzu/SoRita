@@ -12,6 +12,7 @@ import {
 
 const DEVICE_METRO_PORT = METRO_PORT;
 const REVERSED_PORTS = [DEVICE_METRO_PORT];
+const LEGACY_METRO_PORTS = [8081];
 const WAIT_TIMEOUT_MS = 120000;
 const POLL_INTERVAL_MS = 1000;
 
@@ -150,6 +151,20 @@ function isPackageInstalled(adbPath, deviceSerial) {
   return (result.stdout ?? '').includes(`package:${PACKAGE_NAME}`);
 }
 
+function isDebugPackageInstalled(adbPath, deviceSerial) {
+  if (!isPackageInstalled(adbPath, deviceSerial)) {
+    return false;
+  }
+
+  const result = runAdb(
+    adbPath,
+    ['shell', 'dumpsys', 'package', PACKAGE_NAME],
+    deviceSerial,
+  );
+
+  return /\bDEBUGGABLE\b/.test(result.stdout ?? '');
+}
+
 function reversePort(adbPath, deviceSerial, devicePort, hostPort) {
   const result = runAdb(
     adbPath,
@@ -165,7 +180,29 @@ function reversePort(adbPath, deviceSerial, devicePort, hostPort) {
   }
 }
 
+function removeReversePort(adbPath, deviceSerial, devicePort) {
+  const result = runAdb(
+    adbPath,
+    ['reverse', '--remove', `tcp:${devicePort}`],
+    deviceSerial,
+  );
+
+  // A missing reverse rule is already the desired state.
+  if (result.status !== 0 && !/listener .* not found/i.test(result.stderr ?? '')) {
+    throw new Error(
+      result.stderr?.trim() ||
+        `Eski adb reverse kaldirilamadi (tcp:${devicePort}).`,
+    );
+  }
+}
+
 function configureDevNetworking(adbPath, deviceSerial) {
+  for (const port of LEGACY_METRO_PORTS) {
+    if (port !== METRO_PORT) {
+      removeReversePort(adbPath, deviceSerial, port);
+    }
+  }
+
   for (const port of REVERSED_PORTS) {
     reversePort(adbPath, deviceSerial, port, METRO_PORT);
   }
@@ -180,6 +217,24 @@ function ensurePackageInstalled(adbPath, deviceSerial) {
     throw new Error(
       `Native SoRita uygulamasi yuklu degil (${PACKAGE_NAME}). Ilk kurulum icin once "npm run android:rebuild" calistir.`,
     );
+  }
+
+  if (!isDebugPackageInstalled(adbPath, deviceSerial)) {
+    throw new Error(
+      'Kurulu SoRita APK canli yenilemeyi destekleyen debug varyanti degil. "npm run android:rebuild" ile debug APK kur.',
+    );
+  }
+}
+
+function forceStopApp(adbPath, deviceSerial) {
+  const result = runAdb(
+    adbPath,
+    ['shell', 'am', 'force-stop', PACKAGE_NAME],
+    deviceSerial,
+  );
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'Android uygulamasi durdurulamadi.');
   }
 }
 
@@ -226,6 +281,7 @@ async function main() {
 
   configureDevNetworking(adbPath, deviceSerial);
   ensurePackageInstalled(adbPath, deviceSerial);
+  forceStopApp(adbPath, deviceSerial);
   launchApp(adbPath, deviceSerial);
 }
 

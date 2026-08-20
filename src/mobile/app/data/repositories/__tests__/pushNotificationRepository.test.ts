@@ -323,4 +323,19 @@ describe('pushNotificationRepository', () => {
 
     await expect(repository.unregisterPushNotifications('provided-token')).rejects.toThrow('remove failed');
   });
+
+  it('removes every push token for the authenticated user during logout', async () => {
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await repository.unregisterAllPushNotifications();
+
+    expect(rpcMock).toHaveBeenCalledWith('remove_all_user_push_tokens');
+  });
+
+  it('propagates remove-all push token rpc errors', async () => {
+    rpcMock.mockResolvedValue({ error: new Error('remove all failed') });
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(repository.unregisterAllPushNotifications()).rejects.toThrow('remove all failed');
+  });
 });

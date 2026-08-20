@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -10,12 +10,17 @@ type PrivacyOptionProps = {
   icon: React.ReactNode;
   title: string;
   description: string;
+  disabled?: boolean;
   onPress: () => void;
 };
 
-export function PrivacyOption({ active, icon, title, description, onPress }: PrivacyOptionProps) {
+export function PrivacyOption({ active, icon, title, description, disabled = false, onPress }: PrivacyOptionProps) {
   return (
     <InstantPressable
+      accessibilityLabel={title}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active, disabled }}
+      disabled={disabled}
       hapticFeedback="selection"
       style={[styles.privacyCard, active ? styles.privacyCardActive : null]}
       onPress={onPress}
@@ -27,7 +32,11 @@ export function PrivacyOption({ active, icon, title, description, onPress }: Pri
       </View>
       {active ? (
         <View style={styles.activeCheck}>
-          <Check color={colors.onPrimary} size={12} strokeWidth={2.5} />
+          {disabled ? (
+            <ActivityIndicator color={colors.onPrimary} size="small" />
+          ) : (
+            <Check color={colors.onPrimary} size={12} strokeWidth={2.5} />
+          )}
         </View>
       ) : null}
     </InstantPressable>
@@ -76,9 +85,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   activeCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,

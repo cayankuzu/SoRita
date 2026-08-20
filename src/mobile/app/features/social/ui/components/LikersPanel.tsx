@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -13,8 +14,9 @@ import { Search, Users, X } from 'lucide-react-native';
 
 import type { FeedActionLiker } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
 import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
@@ -26,6 +28,8 @@ type LikersPanelProps = {
   onRefresh?: () => void;
   onUserPress?: (userId: string) => void;
 };
+
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 function matchesLiker(liker: FeedActionLiker, query: string) {
   return (
@@ -71,6 +75,8 @@ export function LikersPanel({
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <Pressable
+          accessibilityLabel={`${item.name}, @${item.username}`}
+          accessibilityRole={onUserPress ? 'button' : undefined}
           style={styles.likerRow}
           onPress={() => onUserPress?.(item.id)}
           disabled={!onUserPress}
@@ -98,9 +104,13 @@ export function LikersPanel({
                 {likeCount > 0 ? ` (${likeCount})` : ''}
               </Text>
             </View>
-            <Pressable onPress={onClose} accessibilityLabel={tr.common.close} accessibilityRole="button">
+            <IconButton
+              accessibilityLabel={tr.common.close}
+              onPress={onClose}
+              variant="ghost"
+            >
               <X color={colors.textSoft} size={14} />
-            </Pressable>
+            </IconButton>
           </View>
 
           {likers.length > 0 ? (
@@ -168,7 +178,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   searchWrap: {
-    minHeight: 40,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,

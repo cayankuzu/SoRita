@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Platform,
   StyleProp,
   StyleSheet,
   Text,
@@ -19,8 +20,11 @@ import {
   fontWeight,
   opacity,
   radius,
+  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
+
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 type PrimaryButtonProps = {
   title: string;
@@ -79,22 +83,22 @@ export function PrimaryButton({
         const showProgress = loading || busy;
 
         return (
-        <View style={styles.content}>
-          <View
-            accessibilityElementsHidden={showProgress}
-            importantForAccessibility={showProgress ? 'no-hide-descendants' : 'auto'}
-            style={[styles.labelRow, showProgress ? styles.hiddenContent : null]}
-          >
-            {icon && iconPosition === 'start' ? icon : null}
-            <Text style={[styles.label, { color: palette.color }, textStyle]}>{title}</Text>
-            {icon && iconPosition === 'end' ? icon : null}
-          </View>
-          {showProgress ? (
-            <View pointerEvents="none" style={styles.progressOverlay}>
-              <ActivityIndicator color={palette.color} size="small" />
+          <View style={styles.content}>
+            <View
+              accessibilityElementsHidden={showProgress}
+              importantForAccessibility={showProgress ? 'no-hide-descendants' : 'auto'}
+              style={[styles.labelRow, showProgress ? styles.hiddenContent : null]}
+            >
+              {icon && iconPosition === 'start' ? icon : null}
+              <Text style={[styles.label, { color: palette.color }, textStyle]}>{title}</Text>
+              {icon && iconPosition === 'end' ? icon : null}
             </View>
-          ) : null}
-        </View>
+            {showProgress ? (
+              <View pointerEvents="none" style={styles.progressOverlay}>
+                <ActivityIndicator color={palette.color} size="small" />
+              </View>
+            ) : null}
+          </View>
         );
       }}
     </InstantPressable>
@@ -111,7 +115,7 @@ const palettes = {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: controlSize.default,
+    minHeight: Math.max(controlSize.default, MIN_TOUCH_SIZE),
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',

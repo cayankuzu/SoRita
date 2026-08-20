@@ -2,26 +2,30 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
   env: {
-    authWebOrigin: 'https://cayankuzu.github.io/SoRita_web/',
+    appScheme: 'sorita',
   },
 }));
 
 import { buildDownloadUrl, buildListContentUrl } from '@/mobile/app/shared/utils/contentLinks';
 
 describe('contentLinks', () => {
-  it('builds the download page url from the configured web origin', () => {
-    expect(buildDownloadUrl()).toBe('https://cayankuzu.github.io/SoRita_web/download/');
+  it('builds the app root url from the configured mobile scheme', () => {
+    expect(buildDownloadUrl()).toBe('sorita://');
   });
 
-  it('builds list share urls against the static lists page with query params', () => {
+  it('builds list share urls that route directly into the mobile app', () => {
     expect(buildListContentUrl('list-42', 'place-7')).toBe(
-      'https://cayankuzu.github.io/SoRita_web/lists/?listId=list-42&placeId=place-7',
+      'sorita://lists/list-42?placeId=place-7',
     );
   });
 
-  it('falls back to the download page when no list id is available', () => {
-    expect(buildListContentUrl(null, 'place-7')).toBe(
-      'https://cayankuzu.github.io/SoRita_web/download/',
+  it('falls back to the app root when no list id is available', () => {
+    expect(buildListContentUrl(null, 'place-7')).toBe('sorita://');
+  });
+
+  it('encodes route and query values', () => {
+    expect(buildListContentUrl('list/42', 'place & 7')).toBe(
+      'sorita://lists/list%2F42?placeId=place%20%26%207',
     );
   });
 });

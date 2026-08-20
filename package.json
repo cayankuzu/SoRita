@@ -1,7 +1,7 @@
 {
   "name": "sorita",
   "private": true,
-  "version": "1.0.92",
+  "version": "1.0.100",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -12,10 +12,13 @@
     "android:profile:verify": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location android; .\\gradlew.bat :app:mergeReleaseArtProfile --console=plain\"",
     "android:profile:generate": "node utils/android-benchmark.mjs generate",
     "android:performance:test": "node utils/android-benchmark.mjs measure",
+    "accessibility:check": "node utils/guards/check-pressable-accessibility.mjs",
     "architecture:check": "node utils/guards/check-architecture-boundaries.cjs",
-    "bundle:android:check": "npx expo export --platform android --output-dir .expo/bundle-budget --clear && node utils/guards/check-bundle-size.mjs .expo/bundle-budget",
+    "bundle:android:check": "npm run security:assets && npx expo export --platform android --output-dir .expo/bundle-budget --clear && node utils/guards/check-bundle-size.mjs .expo/bundle-budget",
     "dead-code:check": "knip --include files,dependencies,unlisted,binaries --no-progress",
     "e2e:evidence": "node utils/guards/check-critical-flow-evidence.mjs",
+    "e2e:device:guest": "maestro test e2e/maestro/auth-guest.yaml e2e/maestro/ui-catalog.yaml",
+    "e2e:device:small": "powershell -NoProfile -ExecutionPolicy Bypass -File utils/run-small-screen-maestro.ps1",
     "check": "npm run lint && npm run typecheck && npm run test",
     "check:release": "npm run expo:check && npm run lint && npm run typecheck && npm run dead-code:check && npm run e2e:evidence && npm run performance:test && npm run security:audit:prod && npm run security:licenses && npm run security:provenance && npm run test && npm run security:verify && npm run test:coverage",
     "clean:metro": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (Test-Path .expo) { Remove-Item .expo -Recurse -Force }; if (Test-Path \\\"$env:LOCALAPPDATA\\\\Temp\\\\metro-cache\\\") { Remove-Item \\\"$env:LOCALAPPDATA\\\\Temp\\\\metro-cache\\\" -Recurse -Force }\"",
@@ -25,14 +28,16 @@
     "logs:android": "node utils/android-logcat.mjs --clear",
     "logs:android:all": "node utils/android-logcat.mjs --clear --all",
     "load:test": "k6 run tests/load/read-models.k6.js",
-    "lint": "eslint App.tsx app.config.ts index.js src supabase/functions utils --max-warnings=0 && npm run architecture:check && npm run source-health:check && npm run ui-copy:check && npm run ui-tokens:check",
+    "lint": "eslint App.tsx app.config.ts index.js src supabase/functions utils --max-warnings=0 && npm run architecture:check && npm run source-health:check && npm run ui-copy:check && npm run ui-tokens:check && npm run accessibility:check",
     "mobile:live": "node utils/android-metro.mjs",
     "notify:broadcast": "node utils/send-system-notification.mjs",
     "open:android": "node utils/android-launch-app.mjs",
     "performance:test": "vitest run src/mobile/app/shared/performance src/mobile/app/app-shell/startup src/mobile/app/platform/network",
-    "start": "expo start",
-    "run:android": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; expo run:android --no-bundler\"",
-    "security:audit:prod": "npm audit --omit=dev --audit-level=high",
+    "start": "npm run mobile:live",
+    "run:android": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }; $platformTools = Join-Path $sdk 'platform-tools'; if (Test-Path $platformTools) { $env:Path = \\\"$platformTools;$env:Path\\\" }; $metroPort = if ($env:SORITA_METRO_PORT) { $env:SORITA_METRO_PORT } elseif ($env:EXPO_PACKAGER_PORT) { $env:EXPO_PACKAGER_PORT } else { '18083' }; Set-Location android; .\\gradlew.bat :app:installDebug --console=plain \\\"-PreactNativeDevServerPort=$metroPort\\\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location ..; node utils/android-launch-app.mjs\"",
+    "security:assets": "node utils/guards/check-metro-assets.mjs",
+    "security:audit:prod": "node utils/guards/check-production-audit.mjs",
+    "security:audit:raw": "npm audit --omit=dev --audit-level=high",
     "security:licenses": "node utils/guards/check-production-licenses.mjs",
     "security:provenance": "npm audit signatures",
     "security:verify": "vitest run src/mobile/app/platform/supabase/__tests__/media.test.ts supabase/functions/_shared/requestSecurity.test.ts supabase/functions/auth-gateway/handler.test.ts supabase/functions/delete-user/handler.test.ts supabase/functions/maps-geocoding/handler.test.ts supabase/functions/media-assets/handler.test.ts",
@@ -97,7 +102,7 @@
     "expo-video-thumbnails": "~55.0.17",
     "lucide-react-native": "^1.8.0",
     "react": "19.2.0",
-    "react-native": "0.83.6",
+    "react-native": "0.83.10",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-maps": "1.27.2",
     "react-native-pager-view": "8.0.0",
@@ -105,7 +110,6 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-webview": "13.16.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -127,6 +131,12 @@
   },
   "overrides": {
     "@babel/core": "7.29.7",
+    "@expo/xcpretty": {
+      "js-yaml": "4.3.1"
+    },
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "3.15.1"
+    },
     "@react-native/dev-middleware": {
       "ws": "7.5.11"
     },
@@ -140,7 +150,8 @@
     "axios": "1.18.1",
     "form-data": "4.0.6",
     "joi": "18.2.3",
-    "js-yaml": "3.15.0",
+    "nanoid": "3.3.18",
+    "postcss": "8.5.23",
     "metro": {
       "ws": "7.5.11"
     },

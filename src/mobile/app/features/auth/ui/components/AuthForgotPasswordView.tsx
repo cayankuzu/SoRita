@@ -12,12 +12,13 @@ import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type AuthForgotPasswordViewProps = {
   email: string;
   onBack: () => void;
   onChangeEmail: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
 };
 
 export function AuthForgotPasswordView({
@@ -26,17 +27,19 @@ export function AuthForgotPasswordView({
   onChangeEmail,
   onSubmit,
 }: AuthForgotPasswordViewProps) {
+  const compact = useAuthLayoutMode();
+
   return (
     <Screen variant="form" contentContainerStyle={styles.authScreen}>
-      <View style={styles.authBrandRow}>
-        <SoRitaLogo size="xl" />
+      <View style={[styles.authBrandRow, compact ? styles.authBrandRowCompact : null]}>
+        <SoRitaLogo size={compact ? 'lg' : 'xl'} />
       </View>
 
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
         <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
 
-      <View style={styles.headerBlock}>
+      <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
         <Text style={styles.screenTitle}>{tr.auth.forgotPassword.title}</Text>
         <Text style={styles.screenSubtitle}>{tr.auth.forgotPassword.subtitle}</Text>
       </View>
@@ -49,6 +52,8 @@ export function AuthForgotPasswordView({
           onChangeText={onChangeEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={() => onSubmit()}
           icon={<Mail color={colors.textMuted} size={14} />}
         />
         <PrimaryButton title={tr.auth.forgotPassword.sendAction} onPress={onSubmit} />

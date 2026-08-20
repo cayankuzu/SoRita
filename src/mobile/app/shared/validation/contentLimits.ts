@@ -12,7 +12,7 @@ export const USER_BIO_MAX_LENGTH = 150;
 export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 8;
 export const COMMENT_EDIT_WINDOW_MS = 3 * 60 * 1000;
-export const MAX_SELECTED_LISTS_PER_PLACE_SAVE = 1;
+export const MAX_SELECTED_LISTS_PER_PLACE_SAVE = 3;
 const PERSISTED_LINE_BREAK_SENTINEL = '\u2028';
 
 export function normalizeLineBreaks(value: string | undefined | null) {

@@ -20,6 +20,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import {
@@ -57,6 +58,7 @@ export function ProfileConnectionsModal({
   onClose,
   onUserPress,
 }: ProfileConnectionsModalProps) {
+  const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
@@ -103,16 +105,20 @@ export function ProfileConnectionsModal({
       })}
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
         <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
           <View accessibilityElementsHidden style={styles.handle} />
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
             <IconButton
               accessibilityLabel={tr.common.close}
               onPress={onClose}

@@ -23,6 +23,7 @@ import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview'
 import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, typography } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -113,6 +114,7 @@ export function MediaLightbox({
   onClose,
   onRemoveItem,
 }: MediaLightboxProps) {
+  const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const flatListRef = React.useRef<FlatList<VisibleMediaEntry> | null>(null);
@@ -250,13 +252,17 @@ export function MediaLightbox({
         statusBarTranslucent: true,
       })}
       visible={visibleItems.length > 0}
-      animationType="fade"
+      animationType={animationType}
       transparent
       hardwareAccelerated
       onRequestClose={handleClose}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
         <View style={[styles.topBar, { width: pageWidth }]}>
           <IconButton
             accessibilityLabel={tr.common.close}
@@ -268,7 +274,9 @@ export function MediaLightbox({
           </IconButton>
 
           <View style={styles.topBarCopy}>
-            <Text style={styles.topBarTitle}>{tr.common.previewTitle}</Text>
+            <Text accessibilityRole="header" style={styles.topBarTitle}>
+              {tr.common.previewTitle}
+            </Text>
             <Text style={styles.topBarSubtitle}>
               {currentIndex + 1}/{visibleItems.length} {currentItemTypeLabel}
             </Text>

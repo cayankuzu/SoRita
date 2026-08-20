@@ -29,7 +29,6 @@ describe('CommentComposer', () => {
         <CommentComposer
           commentText=""
           composerInset={10}
-          composerKeyboardOffset={0}
           onCancelEdit={vi.fn()}
           onCancelReply={vi.fn()}
           onCommentTextChange={onCommentTextChange}

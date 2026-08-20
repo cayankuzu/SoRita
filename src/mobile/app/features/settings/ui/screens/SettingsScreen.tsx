@@ -84,7 +84,10 @@ export function SettingsScreen() {
     goToPreviousEditStep,
     handleLogout,
     isPublicAccount,
+    isPasswordResetCoolingDown,
+    isSavingPrivacy,
     isSavingProfile,
+    isSendingPasswordReset,
     openBlocked,
     openEditProfile,
     openPassword,
@@ -296,6 +299,7 @@ export function SettingsScreen() {
     return (
       <SettingsPrivacyView
         isPublicAccount={isPublicAccount}
+        isSavingPrivacy={isSavingPrivacy}
         onBack={goBack}
         onRefresh={onRefresh}
         onSavePrivacy={(value) => {
@@ -311,6 +315,8 @@ export function SettingsScreen() {
       <SettingsPasswordView
         currentPassword={currentPassword}
         email={freshUser.email}
+        isPasswordResetCoolingDown={isPasswordResetCoolingDown}
+        isSendingPasswordReset={isSendingPasswordReset}
         onBack={goBack}
         onChangeCurrentPassword={setCurrentPassword}
         onRefresh={onRefresh}

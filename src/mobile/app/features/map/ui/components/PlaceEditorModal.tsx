@@ -35,6 +35,7 @@ import { PlaceEditorWizardHeader } from '@/mobile/app/features/map/ui/components
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { MediaLightbox } from '@/mobile/app/shared/components/feedback/MediaLightbox';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import {
   getAndroidModalWindowProps,
@@ -144,6 +145,7 @@ export function PlaceEditorModal({
   draft,
   onMinimize,
 }: PlaceEditorModalProps) {
+  const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { banner } = useAppProgressBanner();
@@ -237,10 +239,9 @@ export function PlaceEditorModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
   const isCloseLocked = isCreatingList;
-  const footerPaddingBottom =
-    Platform.OS === 'android'
-      ? Math.max(insets.bottom + 18, 44)
-      : Math.max(insets.bottom + 6, 18);
+  // The modal overlay already reserves the bottom safe area. Reapplying the
+  // navigation inset in the footer left a large empty block below the action.
+  const footerPaddingBottom = 12;
   const isProgressBannerVisible = banner != null;
   const progressBannerReserve = isProgressBannerVisible
     ? Platform.OS === 'android'
@@ -472,16 +473,23 @@ export function PlaceEditorModal({
       })}
       visible={visible && (Platform.OS !== 'ios' || (!isAddingMedia && !isPickingListCover))}
       transparent
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={handleModalBack}
       presentationStyle="overFullScreen"
     >
       <KeyboardAvoidingView
+        accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        importantForAccessibility="yes"
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable disabled={isCloseLocked} style={styles.backdrop} onPress={handleDismissEditor} />
+        <Pressable
+          accessible={false}
+          disabled={isCloseLocked}
+          style={styles.backdrop}
+          onPress={handleDismissEditor}
+        />
         <View
           style={[
             styles.panel,

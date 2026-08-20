@@ -56,6 +56,38 @@ describe('outboxRuntime', () => {
     await expect(readOutboxEntries('user-1')).resolves.toEqual([]);
   });
 
+  it('continues with dependent work in the same synchronization window', async () => {
+    await enqueueOutboxEntry({
+      id: 'notification-1',
+      kind: 'notification-read',
+      payloadRef: { notificationId: 'notification-1' },
+      userId: 'user-1',
+    });
+    await enqueueOutboxEntry({
+      dependencies: ['notification-1'],
+      id: 'notification-2',
+      kind: 'notification-read',
+      payloadRef: { notificationId: 'notification-2' },
+      userId: 'user-1',
+    });
+    const markNotificationRead = vi.fn().mockResolvedValue(undefined);
+
+    await expect(synchronizeOutbox('user-1', {
+      blockUser: vi.fn(),
+      createPlaceComment: vi.fn(),
+      deleteStorageAssetsByUrls: vi.fn(),
+      markNotificationRead,
+      now: afterEnqueue,
+      submitModerationReport: vi.fn(),
+      unblockUser: vi.fn(),
+    })).resolves.toBe(2);
+
+    expect(markNotificationRead.mock.calls).toEqual([
+      ['notification-1'],
+      ['notification-2'],
+    ]);
+  });
+
   it('persists a bounded retry after a replay failure', async () => {
     await enqueueOutboxEntry({
       kind: 'notification-read',
@@ -101,6 +133,38 @@ describe('outboxRuntime', () => {
     })).resolves.toBe(1);
 
     expect(updateLists).toHaveBeenCalledWith(lists);
+  });
+
+  it('replays the latest explicit place-like and follow states idempotently', async () => {
+    await enqueueOutboxEntry({
+      idempotencyKey: 'place-like-state:user-1:place-1',
+      kind: 'place-like-state',
+      payloadRef: { liked: true, placeId: 'place-1' },
+      userId: 'user-1',
+    });
+    await enqueueOutboxEntry({
+      idempotencyKey: 'user-follow-state:user-1:target-1',
+      kind: 'user-follow-state',
+      payloadRef: { desiredState: 'requested', targetUserId: 'target-1' },
+      userId: 'user-1',
+    });
+    const setPlaceLikeState = vi.fn().mockResolvedValue(undefined);
+    const setFollowState = vi.fn().mockResolvedValue('requested');
+
+    await expect(synchronizeOutbox('user-1', {
+      blockUser: vi.fn(),
+      createPlaceComment: vi.fn(),
+      deleteStorageAssetsByUrls: vi.fn(),
+      markNotificationRead: vi.fn(),
+      now: afterEnqueue,
+      setFollowState,
+      setPlaceLikeState,
+      submitModerationReport: vi.fn(),
+      unblockUser: vi.fn(),
+    })).resolves.toBe(2);
+
+    expect(setPlaceLikeState).toHaveBeenCalledWith('place-1', 'user-1', true);
+    expect(setFollowState).toHaveBeenCalledWith('user-1', 'target-1', 'requested');
   });
 
   it('replays the latest block state and privacy-safe moderation report', async () => {

@@ -40,6 +40,7 @@ export const tr = {
     ready: 'Hazır',
     remove: 'Kaldır',
     retry: 'Tekrar dene',
+    scrollToTop: 'Başa dön',
     returnToEditing: 'Düzenlemeye dön',
     save: 'Kaydet',
     send: 'Gönder',
@@ -59,11 +60,11 @@ export const tr = {
     profile: 'Profil',
   },
   brand: {
-    copyright: (year: number) => `Copyright © ${year} SoRita. All rights reserved.`,
+    copyright: (year: number) => `Copyright © ${year} SoRita. Tüm hakları saklıdır.`,
     developer: 'MeMoDe',
     first: 'So',
     second: 'Rita',
-    poweredBy: 'Powered by',
+    poweredBy: 'tarafından',
     taglineFirst: 'Sosyal',
     taglineSecond: ' Harita',
   },
@@ -77,7 +78,7 @@ export const tr = {
     cameraPhotoDescription: 'Kamerayla yeni bir fotoğraf çek.',
     cameraVideo: 'Video çek',
     cameraVideoDescription:
-      'Sesiyle birlikte 720p video kaydet. Kayıt 1:00 olduğunda otomatik tamamlanır.',
+      'Sesiyle birlikte 720p video kaydet. Kayıt 3:00 olduğunda otomatik tamamlanır.',
     description: 'Fotoğrafı kameradan çekebilir veya galeriden seçebilirsin.',
     mediaDescription: 'Fotoğraf çekebilir, video kaydedebilir veya galerinden medya seçebilirsin.',
     footerNote:
@@ -111,13 +112,14 @@ export const tr = {
     videoRecorderAutoStop: (max: string, remaining: string) =>
       `Kayıt ${max} sonunda otomatik tamamlanır. Kalan süre ${remaining}.`,
     videoRecorderGrantPermissions: 'İzinleri ver',
-    videoRecorderHint: '720p video kaydını başlat. Kayıt 1:00 olduğunda otomatik durur.',
+    videoRecorderHint: '720p video kaydını başlat. Kayıt 3:00 olduğunda otomatik durur.',
     videoRecorderPermissionDescription:
       'Video çekebilmek için kamera ve mikrofon izni gerekiyor.',
     videoRecorderPermissionTitle: 'Video kaydı için izin gerekli',
     videoRecorderPreparing: 'Kamera hazırlanıyor',
     videoRecorderStart: 'Video kaydını başlat',
     videoRecorderStop: 'Video kaydını durdur',
+    videoRecorderSwitchCamera: 'Ön ve arka kamera arasında geçiş yap',
     videoTooLongBadge: '3 dk+',
     videos: 'Videolar',
     title: 'Fotoğraf ekle',
@@ -148,6 +150,11 @@ export const tr = {
       'Devam eden yükleme durdurulacak. Kaydedilmemiş ilerleme korunmayabilir.',
     uploadCancelTitle: 'Yükleme iptal edilsin mi?',
     offlineMessage: 'İnternet bağlantısı yok',
+    offlinePendingChanges: (count: number) =>
+      `İnternet bağlantısı yok. ${count} değişiklik bağlantı gelince gönderilecek.`,
+    syncingChanges: 'Değişiklikler senkronize ediliyor…',
+    syncFailed: (count: number) =>
+      `${count} değişiklik gönderilemedi. Otomatik olarak tekrar denenecek.`,
   },
   moderation: {
     commentField: 'Yorum',
@@ -563,21 +570,21 @@ export const tr = {
     },
     legal: {
       consentRequired:
-        'Devam etmek için Kullanım Koşulları, Topluluk Kuralları, Gizlilik ve KVKK onayını vermelisin.',
+        "Kayıt olmak için Kullanım Koşulları ve Topluluk Kuralları'nı kabul etmelisin.",
       openWebsiteFailed: 'Detaylı bilgi sayfası açılamadı. Lütfen daha sonra tekrar dene.',
     },
     legalConsent: {
       community: 'Topluluk Kuralları',
       consentLabel:
-        'Yukarıdaki metinleri okudum, kabul ediyorum ve uygulamaya bu onayla devam ediyorum.',
-      descriptionPrefix: 'Devam ederek',
-      descriptionSuffix: "'ni kabul edersin.",
+        "Kullanım Koşulları ve Topluluk Kuralları'nı kabul ediyorum.",
+      descriptionPrefix: 'Sözleşmeler:',
+      descriptionSuffix: '',
       kvkk: 'KVKK Aydınlatma Metni',
+      noticePrefix: 'Bilgilendirme:',
+      noticeSuffix: '',
       privacy: 'Gizlilik Politikası',
-      subtitle:
-        'Uygunsuz içerik ve kötüye kullanım için sıfır tolerans uygulanır. Raporlar en geç 24 saat içinde incelenir.',
       terms: 'Kullanım Koşulları',
-      title: 'Güvenli topluluk onayı gerekli',
+      title: 'Kayıt koşulları ve gizlilik',
       websiteLink: 'web sitesi',
       websitePrefix: 'Detaylı bilgi için',
     },
@@ -679,9 +686,11 @@ export const tr = {
       failed: 'Doğrulama tamamlanamadı.',
       loadingDescription: 'SoRita birazdan açılacak.',
       loadingTitle: 'Hesabın doğrulanıyor',
+      retry: 'Tekrar dene',
+      timeout: 'Doğrulama beklenenden uzun sürdü. Bağlantını kontrol edip tekrar dene.',
       missingCode: 'Doğrulama kodu bulunamadı.',
       passwordResetLinkInvalid:
-        'Bu sıfırlama bağlantısı geçersiz veya süresi dolmuş.',
+        'Bu sıfırlama bağlantısı kullanılmış veya süresi dolmuş. Yeni bir sıfırlama e-postası iste.',
       sessionValidationFailed: 'Oturum doğrulanamadı.',
       signupLinkInvalid:
         'Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.',
@@ -812,10 +821,10 @@ export const tr = {
     mediaAddTileSubtitle: 'Fotoğraf veya video',
     mediaCounterLabel: (count: number, max: number) => `${count}/${max} içerik`,
     mediaEmptyDescription:
-      'Fotoğraflar yükleme öncesinde 720p seviyesine optimize edilir. Videolar en fazla 1 dakika sürer, 720p olarak hazırlanır ve en fazla 47 MB olarak kabul edilir.',
+      'Fotoğraflar yükleme öncesinde 720p seviyesine optimize edilir. Videolar en fazla 3 dakika sürer, 720p olarak hazırlanır ve en fazla 134 MB olarak kabul edilir.',
     mediaEmptyTitle: 'Fotoğraf veya video ekle',
     mediaHint:
-      'İlk fotoğraf kapak olarak öne çıkar. En fazla toplam 6 içerik ekleyebilirsin. Fotoğraflar otomatik optimize edilir; videolar 1 dakikayı aşamaz ve 720p / 47 MB sınırında tutulur.',
+      'İlk fotoğraf kapak olarak öne çıkar. En fazla toplam 6 içerik ekleyebilirsin. Fotoğraflar otomatik optimize edilir; videolar 3 dakikayı aşamaz ve 720p / 134 MB sınırında tutulur.',
     mediaLimitNotice: (max: number) => `Bir mekân kartına en fazla ${max} içerik ekleyebilirsin.`,
     mediaSizeLimitNotice: (max: number) => `Her bir içerik en fazla ${max} MB olabilir.`,
     mediaSizeLimitPopupDescription:
@@ -876,6 +885,7 @@ export const tr = {
       'Kullanıcılar bu mekânı kaydettikten sonra kartı yaklaşık olarak bu şekilde görür.',
     previewTitle: 'Kart ön izlemesi',
     saveProgressTitle: 'Mekân kartı yükleniyor',
+    saveProgressLists: (count: number) => `${count} listeye ekleniyor`,
     saveFailedTitle: 'Mekân kartı yüklenemedi',
     saveFailedWarning:
       'Kart korundu. Gönderiye gidip tekrar deneyebilir veya işlemi iptal edebilirsin.',
@@ -912,7 +922,7 @@ export const tr = {
     update: 'Güncelle',
     videoCounterLabel: (count: number, max: number) => `${count}/${max} video`,
     videoDurationLimitExceeded:
-      '1 dakikadan uzun videolar seçilemez. Lütfen 1 dakika veya daha kısa videolar yükle.',
+      '3 dakikadan uzun videolar seçilemez. Lütfen 3 dakika veya daha kısa videolar yükle.',
     videoLimitNotice: (max: number) => `En fazla ${max} video ekleyebilirsin.`,
     videoPreviewDescription:
       (duration: string) => `Süre ${duration}. Ses desteklenir ve yükleme sırasında korunur.`,
@@ -962,6 +972,7 @@ export const tr = {
     follow: 'Takip et',
     following: 'Takiptesin',
     focusMiniMap: 'Mini haritayı odakla',
+    hideMiniMap: 'Mini haritayı gizle',
     hideReplies: 'Yanıtları gizle',
     likeAction: 'Beğen',
     likeComment: 'Yorumu beğen',
@@ -977,6 +988,7 @@ export const tr = {
     listNotFound: 'Liste bulunamadı',
     loadMoreComments: 'Daha fazla yorum göster',
     listCoverImageLabel: (name: string) => `${name} kapak görseli`,
+    locationAccessibilityLabel: (location: string) => `Konum: ${location}`,
     loginRequiredForComment: 'Yorum için giriş yapmalısın',
     loginRequiredForLike: 'Beğeni için giriş yapmalısın',
     loginRequiredForReport: 'Mekânı bildirmek için giriş yapmalısın',

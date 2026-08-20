@@ -1,0 +1,24 @@
+appId: com.cayan.sorita.socialmap
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Kayıt koşulları ve gizlilik"
+    timeout: 30000
+- assertVisible: "Giriş yap"
+- assertVisible: "Kayıt ol"
+- tapOn: "Giriş yap"
+- assertVisible: "Tekrar hoş geldin"
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifreni sıfırla"
+- tapOn: "Geri"
+- assertVisible: "Tekrar hoş geldin"
+- back
+- assertVisible: "Kayıt koşulları ve gizlilik"
+- tapOn: "Kullanım Koşulları ve Topluluk Kuralları'nı kabul ediyorum."
+- tapOn: "Kayıt ol"
+- assertVisible: "Temel bilgiler"
+- assertVisible: "İsim soyisim"
+- assertVisible: "Kullanıcı adı"
+- back
+- assertVisible: "Kayıt koşulları ve gizlilik"
+- tapOn: "Kullanım Koşulları ve Topluluk Kuralları'nı kabul ediyorum."

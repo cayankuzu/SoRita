@@ -3,30 +3,33 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { ChevronUp, LocateFixed, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
+import type { MarkerFilterOption } from '@/mobile/app/contracts/mapScreenState';
+import { getMapOverlayLayout } from '@/mobile/app/features/map/application/mapScreenUtils';
 import { useMapScreenState } from '@/mobile/app/features/map/application/useMapScreenState';
+import { mapScreenStyles as styles } from '@/mobile/app/features/map/ui/screens/mapScreenStyles';
 import {
   MapAddHint,
   MapPriorityNotice,
   MapVisibilityLegend,
 } from '@/mobile/app/features/map/ui/components/MapScreenOverlays';
 import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
+import { env } from '@/mobile/app/platform/config/env';
 import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type PlaceEditorModalProps = React.ComponentProps<
@@ -48,12 +51,65 @@ function DeferredPlacePreviewModal(props: PlacePreviewModalProps) {
   return <PlacePreviewModal {...props} />;
 }
 
+const MARKER_FILTER_OPTIONS = [
+  { value: 'all', label: tr.map.filterAll, color: colors.textSoft },
+  { value: 'public', label: tr.map.filterPublic, color: colors.visibilityPublic },
+  { value: 'private', label: tr.map.filterPrivate, color: colors.visibilityPrivate },
+  { value: 'mixed', label: tr.map.filterMixed, color: colors.visibilityMixed },
+  { value: 'none', label: tr.map.filterNone, color: colors.textSoft },
+] as const;
+
+function MapFilterMenu({
+  markerFilter,
+  onClose,
+  onFilterChange,
+}: {
+  markerFilter: MarkerFilterOption;
+  onClose: () => void;
+  onFilterChange: (filter: MarkerFilterOption) => void;
+}) {
+  return (
+    <View style={styles.filterMenu}>
+      <Text style={styles.filterMenuTitle}>{tr.map.filterTitle}</Text>
+      {MARKER_FILTER_OPTIONS.map((option) => {
+        const isActive = markerFilter === option.value;
+
+        return (
+          <InstantPressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isActive }}
+            key={option.value}
+            style={[styles.filterOption, isActive ? styles.filterOptionActive : null]}
+            onPress={() => {
+              onFilterChange(option.value);
+              onClose();
+            }}
+          >
+            <View
+              style={[
+                styles.filterOptionDot,
+                option.value === 'none'
+                  ? styles.filterOptionDotNone
+                  : { backgroundColor: option.color },
+              ]}
+            />
+            <Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
+              {option.label}
+            </Text>
+          </InstantPressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function MapScreen() {
   const navigation = useAppNavigation();
   const { user } = useAuth();
   const isFocused = useIsFocused();
-  const insets = useSafeAreaInsets();
   const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false);
+  const [mapSceneHeight, setMapSceneHeight] = React.useState(0);
+  const [searchChromeHeight, setSearchChromeHeight] = React.useState(0);
   const [showMapAddHint, setShowMapAddHint] = React.useState(false);
   const {
     activeEditorMarkerIndex,
@@ -115,18 +171,28 @@ export function MapScreen() {
     isLoading: isMapInitialLoading,
     screen: 'map',
   });
-  const locateButtonBottomOffset = Math.max(insets.bottom, 8) + 8;
-  const searchLayerTopOffset = Platform.OS === 'ios' ? 10 : 12;
-  const markerFilterOptions = React.useMemo(
-    () => [
-      { value: 'all', label: tr.map.filterAll, color: colors.textSoft },
-      { value: 'public', label: tr.map.filterPublic, color: colors.visibilityPublic },
-      { value: 'private', label: tr.map.filterPrivate, color: colors.visibilityPrivate },
-      { value: 'mixed', label: tr.map.filterMixed, color: colors.visibilityMixed },
-      { value: 'none', label: tr.map.filterNone, color: colors.textSoft },
-    ] as const,
-    [],
+  const mapOverlayLayout = React.useMemo(
+    () => getMapOverlayLayout(mapSceneHeight, searchChromeHeight),
+    [mapSceneHeight, searchChromeHeight],
   );
+  const locateButtonBottomOffset = mapOverlayLayout.controlBottom;
+  const searchLayerTopOffset = Platform.select({
+    ios: mapOverlayLayout.searchTop,
+    android: 12,
+    default: 12,
+  });
+  const hasPriorityNotice = Boolean(
+    visibleDataErrorMessage || searchErrorMessage || locationErrorMessage || env.isExpoGo,
+  );
+  const showSearchFeedback = !isFilterMenuOpen && !hasPriorityNotice && !isSearching && hasSearched;
+  const handleMapSceneLayout = React.useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = Math.round(event.nativeEvent.layout.height);
+    setMapSceneHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
+  }, []);
+  const handleSearchChromeLayout = React.useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = Math.round(event.nativeEvent.layout.height);
+    setSearchChromeHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
+  }, []);
   React.useEffect(() => {
     let cancelled = false;
 
@@ -176,8 +242,12 @@ export function MapScreen() {
   return (
     <>
       <Screen padded={false} scroll={false} safeTop={false}>
-        <View style={styles.container}>
-          <View style={[styles.searchLayer, { top: searchLayerTopOffset }]} pointerEvents="box-none">
+        <View style={styles.container} onLayout={handleMapSceneLayout}>
+          <View
+            style={[styles.searchLayer, { top: searchLayerTopOffset }]}
+            pointerEvents="box-none"
+            onLayout={handleSearchChromeLayout}
+          >
             <MapPriorityNotice
               hasMapDataPartialError={hasMapDataPartialError}
               locationErrorMessage={locationErrorMessage}
@@ -229,19 +299,19 @@ export function MapScreen() {
                 {isSearching ? (
                   <ActivityIndicator color={colors.primary} size="small" />
                 ) : searchQuery ? (
-                  <Pressable
+                  <InstantPressable
                     accessibilityLabel={tr.common.close}
                     accessibilityRole="button"
                     onPress={clearSearch}
                     style={styles.clearButton}
                   >
                     <X color={colors.textSoft} size={14} />
-                  </Pressable>
+                  </InstantPressable>
                 ) : null}
               </View>
               </View>
               <View style={styles.searchActionGroup}>
-                <Pressable
+                <InstantPressable
                   accessibilityLabel={tr.map.refreshButton}
                   accessibilityRole="button"
                   disabled={refreshing}
@@ -253,8 +323,8 @@ export function MapScreen() {
                   ) : (
                     <RefreshCw color={colors.textMuted} size={16} />
                   )}
-                </Pressable>
-                <Pressable
+                </InstantPressable>
+                <InstantPressable
                   accessibilityLabel={tr.map.filterButton}
                   accessibilityRole="button"
                   style={[
@@ -267,96 +337,81 @@ export function MapScreen() {
                     color={markerFilter !== 'all' ? colors.primary : colors.textMuted}
                     size={16}
                   />
-                </Pressable>
+                </InstantPressable>
               </View>
             </View>
 
             {isFilterMenuOpen ? (
-              <View style={styles.filterMenu}>
-                <Text style={styles.filterMenuTitle}>{tr.map.filterTitle}</Text>
-                {markerFilterOptions.map((option) => {
-                  const isActive = markerFilter === option.value;
-
-                  return (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.filterOption,
-                        isActive ? styles.filterOptionActive : null,
-                      ]}
-                      onPress={() => {
-                        setMarkerFilter(option.value);
-                        setIsFilterMenuOpen(false);
-                      }}
-                    >
-                      <View
-                        style={[
-                          styles.filterOptionDot,
-                          option.value === 'none'
-                            ? styles.filterOptionDotNone
-                            : { backgroundColor: option.color },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.filterOptionText,
-                          isActive ? styles.filterOptionTextActive : null,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <MapFilterMenu
+                markerFilter={markerFilter}
+                onClose={() => setIsFilterMenuOpen(false)}
+                onFilterChange={setMarkerFilter}
+              />
             ) : null}
 
-            {searchResults.length > 0 ? (
-              <View style={styles.resultsCard}>
-                <View style={styles.resultsHeader}>
-                  <Text style={styles.resultsHeaderText}>
-                    {tr.map.searchResultCount(searchResults.length)}
-                  </Text>
-                </View>
-                <ScrollView
-                  nestedScrollEnabled
-                  keyboardShouldPersistTaps="handled"
-                  style={styles.resultsScroll}
-                  contentContainerStyle={styles.resultsScrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {searchResults.map((item, index) => (
-                    <Pressable
-                      key={item.placeId}
-                      style={[
-                        styles.resultRow,
-                        index === searchResults.length - 1 ? styles.resultRowLast : null,
-                      ]}
-                      onPress={() => handleSearchResultPress(item)}
-                    >
-                      <ExpandableText
-                        text={item.name}
-                        collapsedLines={1}
-                        textStyle={styles.resultTitle}
-                        showIndicator={false}
-                      />
-                      <ExpandableText
-                        text={item.address}
-                        collapsedLines={2}
-                        textStyle={styles.resultAddress}
-                        showIndicator={false}
-                      />
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            ) : hasSearched && !isSearching ? (
-              <View style={styles.emptyResultsCard}>
-                <Text style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</Text>
-                <Text style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</Text>
-              </View>
-            ) : null}
           </View>
+
+          {showSearchFeedback ? (
+            <View
+              pointerEvents="box-none"
+              style={[
+                styles.resultsLayer,
+                mapOverlayLayout.isShort ? styles.resultsLayerShort : null,
+                mapOverlayLayout.resultsTop == null ? null : { top: mapOverlayLayout.resultsTop },
+                mapOverlayLayout.resultsBottom == null
+                  ? null
+                  : { bottom: mapOverlayLayout.resultsBottom },
+              ]}
+            >
+              {searchResults.length > 0 ? (
+                <View style={[styles.resultsCard, { maxHeight: mapOverlayLayout.resultsMaxHeight }]}>
+                  <View style={styles.resultsHeader}>
+                    <Text style={styles.resultsHeaderText}>
+                      {tr.map.searchResultCount(searchResults.length)}
+                    </Text>
+                  </View>
+                  <ScrollView
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.resultsScroll}
+                    contentContainerStyle={styles.resultsScrollContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {searchResults.map((item, index) => (
+                      <InstantPressable
+                        accessibilityLabel={`${item.name}. ${item.address}`}
+                        accessibilityRole="button"
+                        key={item.placeId}
+                        style={[
+                          styles.resultRow,
+                          index === searchResults.length - 1 ? styles.resultRowLast : null,
+                        ]}
+                        onPress={() => handleSearchResultPress(item)}
+                      >
+                        <ExpandableText
+                          text={item.name}
+                          collapsedLines={1}
+                          textStyle={styles.resultTitle}
+                          showIndicator={false}
+                        />
+                        <ExpandableText
+                          text={item.address}
+                          collapsedLines={2}
+                          textStyle={styles.resultAddress}
+                          showIndicator={false}
+                        />
+                      </InstantPressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : (
+                <View style={styles.emptyResultsCard}>
+                  <Text style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</Text>
+                  <Text style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           <View style={styles.map}>
             {isFocused ? (
@@ -380,11 +435,11 @@ export function MapScreen() {
 
           <MapVisibilityLegend bottom={locateButtonBottomOffset + 58} />
 
-          {showMapAddHint && !editorData && !minimizedEditor ? (
+          {showMapAddHint && !editorData && !minimizedEditor && !minimizedExistingPlace ? (
             <MapAddHint bottom={locateButtonBottomOffset + 8} onClose={dismissMapAddHint} />
           ) : null}
 
-          <Pressable
+          <InstantPressable
             accessibilityLabel={tr.map.locateMe}
             accessibilityRole="button"
             accessibilityState={{ disabled: isLocating }}
@@ -394,19 +449,17 @@ export function MapScreen() {
               isLocating ? styles.locateButtonDisabled : null,
               { bottom: locateButtonBottomOffset },
             ]}
-            onPress={() => {
-              void handleLocateUser();
-            }}
+            onPress={handleLocateUser}
           >
             {isLocating ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
               <LocateFixed color={colors.text} size={18} />
             )}
-          </Pressable>
+          </InstantPressable>
 
           {minimizedEditor ? (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={tr.map.reopenPanel}
               accessibilityRole="button"
               style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
@@ -424,11 +477,11 @@ export function MapScreen() {
                 </Text>
               </View>
               <ChevronUp color={colors.onPrimary} size={16} />
-            </Pressable>
+            </InstantPressable>
           ) : null}
 
           {!minimizedEditor && minimizedExistingPlace ? (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={tr.map.reopenPreview}
               accessibilityRole="button"
               style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
@@ -444,7 +497,7 @@ export function MapScreen() {
                 <Text style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</Text>
               </View>
               <ChevronUp color={colors.onPrimary} size={16} />
-            </Pressable>
+            </InstantPressable>
           ) : null}
         </View>
       </Screen>
@@ -489,259 +542,3 @@ export function MapScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  searchLayer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    gap: 6,
-    elevation: 8,
-    paddingHorizontal: 10,
-  },
-  searchControlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingLeft: 10,
-    paddingRight: 4,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    shadowColor: colors.text,
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  searchInputWrap: {
-    flex: 1,
-    minHeight: 44,
-    paddingRight: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  searchInput: {
-    flex: 1,
-    minHeight: 40,
-    height: 34,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.text,
-    backgroundColor: 'transparent',
-    includeFontPadding: false,
-    paddingVertical: 0,
-    textAlignVertical: 'center',
-  },
-  clearButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchActionGroup: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  floatingSearchAction: {
-    width: 44,
-    height: 44,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    elevation: 4,
-  },
-  refreshButtonActive: {
-    backgroundColor: colors.primaryBg,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primaryBg,
-  },
-  filterMenu: {
-    width: 190,
-    alignSelf: 'flex-end',
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 8,
-    gap: 4,
-    shadowColor: colors.text,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  filterMenuTitle: {
-    paddingHorizontal: 4,
-    paddingBottom: 4,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSoft,
-  },
-  filterOption: {
-    minHeight: 42,
-    borderRadius: radius.md,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filterOptionActive: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  filterOptionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  filterOptionDotNone: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.textSoft,
-  },
-  filterOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  filterOptionTextActive: {
-    color: colors.text,
-  },
-  resultsCard: {
-    maxHeight: 324,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    overflow: 'hidden',
-    elevation: 6,
-  },
-  resultsScroll: {
-    flexGrow: 0,
-  },
-  resultsScrollContent: {
-    paddingBottom: 4,
-  },
-  resultsHeader: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surfaceMuted,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-  },
-  resultsHeaderText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSoft,
-  },
-  resultRow: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-  },
-  resultRowLast: {
-    borderBottomWidth: 0,
-  },
-  resultTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  resultAddress: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textMuted,
-  },
-  emptyResultsCard: {
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  emptyResultsTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  emptyResultsDescription: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textMuted,
-  },
-  map: {
-    flex: 1,
-    backgroundColor: colors.mapBackground,
-  },
-  mapPlaceholder: {
-    flex: 1,
-    backgroundColor: colors.mapBackground,
-  },
-  locateButton: {
-    position: 'absolute',
-    right: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  locateButtonDisabled: {
-    opacity: 0.72,
-  },
-  reopenEditorButton: {
-    position: 'absolute',
-    left: 12,
-    right: 60,
-    minHeight: 46,
-    borderRadius: radius.lg,
-    backgroundColor: colors.text,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    shadowColor: colors.text,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  reopenEditorBody: {
-    flex: 1,
-    gap: 2,
-  },
-  reopenEditorTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
-  reopenEditorSubtitle: {
-    ...typography.metadataText,
-    color: colors.onDarkSubtle,
-  },
-});

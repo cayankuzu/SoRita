@@ -72,7 +72,12 @@ export function PlaceEditorNewListForm({
     <View style={styles.createListCard}>
       <View style={styles.createListHeader}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.newList}</Text>
-        <InstantPressable disabled={isCreatingList} onPress={() => onShowNewListFormChange(false)}>
+        <InstantPressable
+          accessibilityLabel={tr.common.close}
+          accessibilityState={{ disabled: isCreatingList }}
+          disabled={isCreatingList}
+          onPress={() => onShowNewListFormChange(false)}
+        >
           <X color={colors.textSoft} size={16} />
         </InstantPressable>
       </View>
@@ -127,6 +132,8 @@ export function PlaceEditorNewListForm({
 
         {newListCoverImage ? (
           <InstantPressable
+            accessibilityLabel={tr.listEditor.removeCover}
+            accessibilityState={{ disabled: isCreatingList || isPickingListCover }}
             disabled={isCreatingList || isPickingListCover}
             onPress={() => onNewListCoverImageChange('')}
             style={styles.coverClearInline}

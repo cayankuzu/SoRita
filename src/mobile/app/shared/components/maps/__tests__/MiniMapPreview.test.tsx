@@ -15,7 +15,7 @@ vi.mock('lucide-react-native', () => ({
 }));
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
-  env: { googleMapsApiKey: 'public-map-key' },
+  env: { googleMapsStaticApiKey: 'public-static-map-key' },
 }));
 
 vi.mock('@/mobile/app/shared/components/maps/AppMapView', () => ({
@@ -61,5 +61,23 @@ describe('MiniMapPreview', () => {
 
     act(() => renderer.unmount());
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not schedule static-map work for a card outside the visible window', () => {
+    runAfterNextPaintMock.mockClear();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <MiniMapPreview
+          loadStaticPreview={false}
+          places={[{ lat: 41.0082, lng: 28.9784, name: 'Galata' }]}
+        />,
+      );
+    });
+
+    const appImage = renderer.root.find((node) => String(node.type) === 'AppImage');
+    expect(appImage.props.uri).toBeNull();
+    expect(runAfterNextPaintMock).not.toHaveBeenCalled();
   });
 });

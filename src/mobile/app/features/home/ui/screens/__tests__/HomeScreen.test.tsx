@@ -154,10 +154,6 @@ describe('HomeScreen', () => {
     }).not.toThrow();
 
     expect(buildAdaptiveFlatListPropsMock).toHaveBeenCalledTimes(2);
-    expect(prefetchAppImagesMock).toHaveBeenLastCalledWith([
-      'https://cdn.example/thumb.jpg',
-      'https://cdn.example/list.jpg',
-      'https://cdn.example/avatar.jpg',
-    ], { priority: 'high' });
+    expect(prefetchAppImagesMock).not.toHaveBeenCalled();
   });
 });

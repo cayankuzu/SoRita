@@ -24,7 +24,7 @@ export function SettingsMainMenuView({
   sections,
 }: SettingsMainMenuViewProps) {
   return (
-    <Screen refreshing={refreshing} onRefresh={onRefresh}>
+    <Screen refreshing={refreshing} onRefresh={onRefresh} variant="settings">
       <SettingsHeader title={tr.settings.title} onBack={onBack} />
       <View style={styles.sectionStack}>
         {sections.map((section) => (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_SELECTED_LISTS_PER_PLACE_SAVE,
   PLACE_NOTES_MAX_LENGTH,
   PLACE_TITLE_MAX_LENGTH,
   clampMultilineTextLength,
@@ -13,6 +14,10 @@ describe('contentLimits', () => {
   it('uses the updated place title and notes limits', () => {
     expect(PLACE_TITLE_MAX_LENGTH).toBe(200);
     expect(PLACE_NOTES_MAX_LENGTH).toBe(500);
+  });
+
+  it('allows a place to be added to three lists per save', () => {
+    expect(MAX_SELECTED_LISTS_PER_PLACE_SAVE).toBe(3);
   });
 
   it('normalizes and trims multiline text without collapsing inner line breaks', () => {

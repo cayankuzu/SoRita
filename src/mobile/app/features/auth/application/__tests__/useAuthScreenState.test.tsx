@@ -70,7 +70,6 @@ describe('useAuthScreenState', () => {
     );
 
     act(() => {
-      hook.result.current.toggleLegalConsent();
       hook.result.current.setLoginEmail('user@example.com');
       hook.result.current.setLoginPassword('secret123');
     });
@@ -109,11 +108,15 @@ describe('useAuthScreenState', () => {
       hook.result.current.goToLogin();
     });
 
+    expect(hook.result.current.view).toBe('login');
+
+    act(() => {
+      hook.result.current.goToLanding();
+      hook.result.current.openRegister();
+    });
+
     expect(hook.result.current.view).toBe('landing');
-    expect(showToastMock).toHaveBeenCalledWith(
-      'Devam etmek için Kullanım Koşulları, Topluluk Kuralları, Gizlilik ve KVKK onayını vermelisin.',
-      'error',
-    );
+    expect(showToastMock).toHaveBeenCalledWith(tr.auth.legal.consentRequired, 'error');
 
     act(() => {
       hook.result.current.toggleLegalConsent();
@@ -235,8 +238,8 @@ describe('useAuthScreenState', () => {
       interests: ['coffee'],
       legalConsent: {
         acceptedAt: expect.any(String),
-        documentsAccepted: ['terms', 'community', 'privacy', 'kvkk'],
-        version: '2026-04-16',
+        documentsAccepted: ['terms', 'community'],
+        version: '2026-08-17-terms-community',
       },
       name: 'Ada Lovelace',
       password: 'Str0ng#2026',
@@ -664,8 +667,8 @@ describe('useAuthScreenState', () => {
     expect(hook.result.current.coverPhoto).toBeUndefined();
   });
 
-  it('blocks login and registration flows until legal consent is accepted', async () => {
-    const loginMock = vi.fn();
+  it('allows existing-user login while registration still requires terms acceptance', async () => {
+    const loginMock = vi.fn().mockResolvedValue({ success: true });
     const registerMock = vi.fn();
     const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
     const hook = renderHook(() =>
@@ -686,16 +689,16 @@ describe('useAuthScreenState', () => {
       await hook.result.current.handleRegister();
     });
 
-    expect(loginMock).not.toHaveBeenCalled();
+    expect(loginMock).toHaveBeenCalledWith('user@example.com', 'secret123');
     expect(registerMock).not.toHaveBeenCalled();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Devam etmek için Kullanım Koşulları, Topluluk Kuralları, Gizlilik ve KVKK onayını vermelisin.',
+      tr.auth.legal.consentRequired,
       'error',
     );
   });
 
   it('restores persisted legal consent and keeps it synced when toggled', async () => {
-    getPersistedLegalConsentVersionMock.mockResolvedValue('2026-04-16');
+    getPersistedLegalConsentVersionMock.mockResolvedValue('2026-08-17-terms-community');
     const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
     const hook = renderHook(() =>
       hooks.useAuthScreenState({
@@ -722,7 +725,7 @@ describe('useAuthScreenState', () => {
       hook.result.current.toggleLegalConsent();
     });
 
-    expect(savePersistedLegalConsentVersionMock).toHaveBeenCalledWith('2026-04-16');
+    expect(savePersistedLegalConsentVersionMock).toHaveBeenCalledWith('2026-08-17-terms-community');
     expect(hook.result.current.hasAcceptedLegal).toBe(true);
   });
 

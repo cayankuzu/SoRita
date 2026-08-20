@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -10,6 +11,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,14 +20,25 @@ import { X } from 'lucide-react-native';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { CommentComposer } from '@/mobile/app/features/social/ui/components/comment-panel/CommentComposer';
 import { CommentActionSheet } from '@/mobile/app/features/social/ui/components/comment-panel/CommentActionSheet';
+import {
+  resolveAndroidKeyboardLift,
+  type KeyboardFrame,
+} from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelKeyboardLayout';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
 import type { ReplyTarget } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelTypes';
 import { CommentThread } from '@/mobile/app/features/social/ui/components/comment-panel/CommentThread';
+import {
+  DEFAULT_VISIBLE_REPLY_COUNT,
+  countCommentTree,
+  flattenVisibleComments,
+} from '@/mobile/app/features/social/ui/components/comment-panel/commentTree';
 import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPanel';
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -33,8 +46,88 @@ import {
 } from '@/mobile/app/shared/utils/modalLayout';
 
 const ANDROID_MODAL_BASE_INSET = 22;
-const ANDROID_KEYBOARD_EXTRA_LIFT = 10;
 const COMPOSER_DOCK_BOTTOM_PADDING = 10;
+
+function buildUserIdByMention(comments: FeedActionComment[]) {
+  const result = new Map<string, string>();
+  const pending = [...comments];
+
+  while (pending.length > 0) {
+    const comment = pending.pop();
+    if (!comment) {
+      continue;
+    }
+    if (comment.username && comment.userId) {
+      result.set(comment.username.toLowerCase(), comment.userId);
+    }
+    if (comment.replies?.length) {
+      pending.push(...comment.replies);
+    }
+  }
+
+  return result;
+}
+
+function CommentLikersModal({
+  animationType,
+  bottomPadding,
+  comment,
+  onClose,
+  onRefresh,
+  onUserPress,
+  refreshing,
+  topPadding,
+}: {
+  animationType: React.ComponentProps<typeof Modal>['animationType'];
+  bottomPadding: number;
+  comment: FeedActionComment | null;
+  onClose: () => void;
+  onRefresh?: () => void;
+  onUserPress?: (userId: string) => void;
+  refreshing: boolean;
+  topPadding: number;
+}) {
+  return (
+    <Modal
+      {...getAndroidModalWindowProps({
+        navigationBarTranslucent: true,
+        statusBarTranslucent: true,
+      })}
+      visible={Boolean(comment)}
+      transparent
+      animationType={animationType}
+      hardwareAccelerated
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+    >
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.sheetOverlay, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
+      >
+        <Pressable accessible={false} style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <View
+          style={[
+            styles.innerSheetCard,
+            { paddingBottom: Platform.OS === 'android' ? 20 : 16 },
+          ]}
+        >
+          <LikersPanel
+            likeCount={comment?.likes || 0}
+            likers={comment?.likers || []}
+            onClose={onClose}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onUserPress={(userId) => {
+              onClose();
+              onUserPress?.(userId);
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 type CommentPanelProps = {
   visible: boolean;
@@ -62,7 +155,7 @@ type CommentPanelProps = {
   onCloseReport: () => void;
   onReportDetailsChange: (value: string) => void;
   onReportReasonChange: (value: string) => void;
-  onReportSubmit: (commentId: string) => void;
+  onReportSubmit: (commentId: string) => void | Promise<void>;
   refreshing?: boolean;
   onRefreshComments?: () => void;
   onRefreshLikers?: () => void;
@@ -105,6 +198,8 @@ export function CommentPanel({
   hasNextPage = false,
   isFetchingNextPage = false,
 }: CommentPanelProps) {
+  const sheetAnimationType = useModalAnimationType('slide');
+  const fadeAnimationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { paddingTop: overlayTopPadding, paddingBottom: overlayBottomPadding } =
@@ -116,22 +211,29 @@ export function CommentPanel({
       minBottomPadding: Platform.OS === 'android' ? ANDROID_MODAL_BASE_INSET : 8,
     });
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [visibleReplyCounts, setVisibleReplyCounts] = useState<Record<string, number>>({});
   const [activeLikedComment, setActiveLikedComment] = useState<FeedActionComment | null>(null);
   const [activeMenuComment, setActiveMenuComment] = useState<FeedActionComment | null>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const composerDockRef = React.useRef<View | null>(null);
+  const keyboardLiftRef = React.useRef(0);
+  const keyboardMeasureFrameRef = React.useRef<number | null>(null);
+  const [keyboardLift, setKeyboardLift] = useState(0);
 
-  const totalComments = useMemo(() => {
-    const countTree = (items: FeedActionComment[]): number =>
-      items.reduce((total, item) => total + 1 + countTree(item.replies || []), 0);
-
-    return countTree(comments);
-  }, [comments]);
+  const totalComments = useMemo(() => countCommentTree(comments), [comments]);
+  const visibleComments = useMemo(
+    () => flattenVisibleComments(comments, expandedReplies, visibleReplyCounts),
+    [comments, expandedReplies, visibleReplyCounts],
+  );
+  const userIdByMention = useMemo(() => buildUserIdByMention(comments), [comments]);
 
   useEffect(() => {
     if (!visible) {
       setActiveLikedComment(null);
       setActiveMenuComment(null);
-      setKeyboardHeight(0);
+      setExpandedReplies({});
+      setVisibleReplyCounts({});
+      keyboardLiftRef.current = 0;
+      setKeyboardLift(0);
     }
   }, [visible]);
 
@@ -154,23 +256,66 @@ export function CommentPanel({
       return;
     }
 
-    const handleKeyboardShow = (event: { endCoordinates?: { height?: number } }) => {
-      setKeyboardHeight(event.endCoordinates?.height ?? 0);
+    const commitKeyboardLift = (frame: KeyboardFrame, composerBottom: number) => {
+      const nextLift = resolveAndroidKeyboardLift({
+        composerBottom,
+        keyboardTop: frame.screenY,
+      });
+      keyboardLiftRef.current = nextLift;
+      setKeyboardLift(nextLift);
+    };
+    const handleKeyboardShow = (event: KeyboardEvent) => {
+      const keyboardFrame = {
+        height: event.endCoordinates.height,
+        screenY: event.endCoordinates.screenY,
+      };
+      const fallbackComposerBottom =
+        Dimensions.get('screen').height - overlayBottomPadding;
+
+      if (keyboardMeasureFrameRef.current != null) {
+        cancelAnimationFrame(keyboardMeasureFrameRef.current);
+      }
+      keyboardMeasureFrameRef.current = requestAnimationFrame(() => {
+        keyboardMeasureFrameRef.current = null;
+        const composerDock = composerDockRef.current;
+        if (!composerDock) {
+          commitKeyboardLift(keyboardFrame, fallbackComposerBottom);
+          return;
+        }
+
+        composerDock.measureInWindow((_x, y, _width, height) => {
+          // Add the existing lift back to recover the dock's unshifted screen
+          // position when the keyboard changes height while already visible.
+          const unshiftedComposerBottom =
+            y + height + keyboardLiftRef.current;
+          commitKeyboardLift(keyboardFrame, unshiftedComposerBottom);
+        });
+      });
     };
     const handleKeyboardHide = () => {
-      setKeyboardHeight(0);
+      keyboardLiftRef.current = 0;
+      setKeyboardLift(0);
     };
+
+    const currentFrame = Keyboard.metrics?.();
+    if (currentFrame) {
+      handleKeyboardShow({ endCoordinates: currentFrame } as KeyboardEvent);
+    }
 
     const showSubscription = Keyboard.addListener('keyboardDidShow', handleKeyboardShow);
     const frameSubscription = Keyboard.addListener('keyboardDidChangeFrame', handleKeyboardShow);
     const hideSubscription = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
 
     return () => {
+      if (keyboardMeasureFrameRef.current != null) {
+        cancelAnimationFrame(keyboardMeasureFrameRef.current);
+        keyboardMeasureFrameRef.current = null;
+      }
       showSubscription.remove();
       frameSubscription.remove();
       hideSubscription.remove();
     };
-  }, [visible]);
+  }, [overlayBottomPadding, visible]);
 
   const toggleReplies = (commentId: string) => {
     setExpandedReplies((current) => ({
@@ -178,19 +323,32 @@ export function CommentPanel({
       [commentId]: !(current[commentId] ?? true),
     }));
   };
+  const loadMoreReplies = (commentId: string) => {
+    setVisibleReplyCounts((current) => ({
+      ...current,
+      [commentId]:
+        (current[commentId] ?? DEFAULT_VISIBLE_REPLY_COUNT) +
+        DEFAULT_VISIBLE_REPLY_COUNT,
+    }));
+  };
+  const handleMentionPress = React.useCallback(
+    (mention: string) => {
+      const userId = userIdByMention.get(mention.replace(/^@/, '').toLowerCase());
+      if (userId) {
+        onUserPress?.(userId);
+      }
+    },
+    [onUserPress, userIdByMention],
+  );
 
   // The modal overlay already reserves the device safe area. Keeping a second
   // system inset inside the composer created a large empty block below the input.
   const composerInset = COMPOSER_DOCK_BOTTOM_PADDING;
   const modalBottomInset = overlayBottomPadding;
-  const composerKeyboardOffset =
-    Platform.OS === 'android'
-      ? Math.max(keyboardHeight - modalBottomInset + ANDROID_KEYBOARD_EXTRA_LIFT, 0)
-      : 0;
   const commentSheetMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
     paddingTop: overlayTopPadding,
-    paddingBottom: modalBottomInset,
+    paddingBottom: modalBottomInset + keyboardLift,
     maxHeightRatio: 0.92,
     minHeight: 310,
   });
@@ -207,21 +365,28 @@ export function CommentPanel({
         })}
         visible={visible}
         transparent
-        animationType="slide"
+        animationType={sheetAnimationType}
         hardwareAccelerated
         onRequestClose={handleClose}
         presentationStyle="overFullScreen"
       >
         <View
+          accessibilityViewIsModal
+          importantForAccessibility="yes"
           style={[
             styles.sheetOverlay,
             { paddingTop: overlayTopPadding, paddingBottom: modalBottomInset },
           ]}
         >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+          <Pressable accessible={false} style={StyleSheet.absoluteFillObject} onPress={handleClose} />
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.sheetKeyboard}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={[
+              styles.sheetKeyboard,
+              Platform.OS === 'android' && keyboardLift > 0
+                ? { marginBottom: keyboardLift }
+                : null,
+            ]}
           >
             <View
               style={[
@@ -237,23 +402,34 @@ export function CommentPanel({
 
               <View style={styles.sheetHeader}>
                 <View>
-                  <Text style={styles.sheetTitle}>{tr.cards.commentsTitle}</Text>
+                  <Text accessibilityRole="header" style={styles.sheetTitle}>
+                    {tr.cards.commentsTitle}
+                  </Text>
                   <Text style={styles.sheetSubtitle}>{tr.cards.commentCount(totalComments)}</Text>
                 </View>
-                <Pressable onPress={handleClose} style={styles.sheetCloseButton} accessibilityLabel={tr.common.close} accessibilityRole="button">
+                <IconButton
+                  accessibilityLabel={tr.common.close}
+                  onPress={handleClose}
+                  variant="surface"
+                >
                   <X color={colors.textSoft} size={16} />
-                </Pressable>
+                </IconButton>
               </View>
 
               <View style={styles.sheetBody}>
                 <FlatList
-                  data={comments}
-                  keyExtractor={(item) => item.id}
+                  data={visibleComments}
+                  keyExtractor={(item) => item.comment.id}
                   renderItem={({ item }) => (
                     <CommentThread
-                      comments={[item]}
+                      comment={item.comment}
+                      depth={item.depth}
                       editingCommentId={editingCommentId}
-                      expandedReplies={expandedReplies}
+                      hiddenReplyCount={item.hiddenReplyCount}
+                      repliesExpanded={item.repliesExpanded}
+                      replyCount={item.replyCount}
+                      onLoadMoreReplies={loadMoreReplies}
+                      onMentionPress={onUserPress ? handleMentionPress : undefined}
                       onOpenCommentMenu={setActiveMenuComment}
                       onShowCommentLikers={setActiveLikedComment}
                       onStartReply={onStartReply}
@@ -265,7 +441,7 @@ export function CommentPanel({
                   style={styles.commentScroll}
                   contentContainerStyle={[
                     styles.commentScrollContent,
-                    comments.length === 0 ? styles.commentScrollContentEmpty : null,
+                    visibleComments.length === 0 ? styles.commentScrollContentEmpty : null,
                     { paddingBottom: 14 },
                   ]}
                   initialNumToRender={8}
@@ -286,6 +462,7 @@ export function CommentPanel({
                   ListFooterComponent={
                     hasNextPage ? (
                         <Pressable
+                          accessibilityRole="button"
                           disabled={isFetchingNextPage}
                           style={[styles.loadMoreButton, isFetchingNextPage ? styles.disabledAction : null]}
                           onPress={onLoadMoreComments}
@@ -298,20 +475,21 @@ export function CommentPanel({
                   }
                 />
 
-                <CommentComposer
-                  commentText={commentText}
-                  currentUserName={currentUserName}
-                  currentUserPhoto={currentUserPhoto}
-                  editingCommentId={editingCommentId}
-                  replyingTo={replyingTo}
-                  submitting={submitting}
-                  composerInset={composerInset}
-                  composerKeyboardOffset={composerKeyboardOffset}
-                  onCancelEdit={onCancelEdit}
-                  onCancelReply={onCancelReply}
-                  onCommentTextChange={onCommentTextChange}
-                  onSubmit={onSubmit}
-                />
+                <View ref={composerDockRef} collapsable={false}>
+                  <CommentComposer
+                    commentText={commentText}
+                    currentUserName={currentUserName}
+                    currentUserPhoto={currentUserPhoto}
+                    editingCommentId={editingCommentId}
+                    replyingTo={replyingTo}
+                    submitting={submitting}
+                    composerInset={composerInset}
+                    onCancelEdit={onCancelEdit}
+                    onCancelReply={onCancelReply}
+                    onCommentTextChange={onCommentTextChange}
+                    onSubmit={onSubmit}
+                  />
+                </View>
               </View>
             </View>
           </KeyboardAvoidingView>
@@ -329,7 +507,7 @@ export function CommentPanel({
         onClose={onCloseReport}
         onSubmit={() => {
           if (activeReportCommentId) {
-            onReportSubmit(activeReportCommentId);
+            return onReportSubmit(activeReportCommentId);
           }
         }}
       />
@@ -356,50 +534,16 @@ export function CommentPanel({
         }}
       />
 
-      <Modal
-        {...getAndroidModalWindowProps({
-          navigationBarTranslucent: true,
-          statusBarTranslucent: true,
-        })}
-        visible={Boolean(activeLikedComment)}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        onRequestClose={() => setActiveLikedComment(null)}
-        presentationStyle="overFullScreen"
-      >
-        <View
-          style={[
-            styles.sheetOverlay,
-            { paddingTop: overlayTopPadding, paddingBottom: modalBottomInset },
-          ]}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => setActiveLikedComment(null)}
-          />
-          <View
-            style={[
-              styles.innerSheetCard,
-              {
-                paddingBottom: Platform.OS === 'android' ? 20 : 16,
-              },
-            ]}
-          >
-            <LikersPanel
-              likeCount={activeLikedComment?.likes || 0}
-              likers={activeLikedComment?.likers || []}
-              onClose={() => setActiveLikedComment(null)}
-              refreshing={refreshing}
-              onRefresh={onRefreshLikers}
-              onUserPress={(userId) => {
-                setActiveLikedComment(null);
-                onUserPress?.(userId);
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
+      <CommentLikersModal
+        animationType={fadeAnimationType}
+        bottomPadding={modalBottomInset}
+        comment={activeLikedComment}
+        onClose={() => setActiveLikedComment(null)}
+        onRefresh={onRefreshLikers}
+        onUserPress={onUserPress}
+        refreshing={refreshing}
+        topPadding={overlayTopPadding}
+      />
     </>
   );
 }

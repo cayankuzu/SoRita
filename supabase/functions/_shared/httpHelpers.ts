@@ -39,7 +39,7 @@ export function getCorsHeaders(request: Request, allowedOrigins: string[], reque
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers':
-      'authorization, x-client-info, apikey, content-type, x-device-id, x-nonce, x-signature, x-timestamp, x-request-id',
+      'authorization, x-client-info, apikey, content-type, x-admin-token, x-device-id, x-nonce, x-signature, x-timestamp, x-request-id',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json',
     ...getSecurityHeaders(),

@@ -9,11 +9,18 @@ import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/u
 type OwnerHeaderProps = {
   owner: User;
   onPress?: () => void;
+  onPressIn?: () => void;
 };
 
-export function OwnerHeader({ owner, onPress }: OwnerHeaderProps) {
+export function OwnerHeader({ owner, onPress, onPressIn }: OwnerHeaderProps) {
   return (
-    <Pressable onPress={onPress} style={styles.ownerHeader}>
+    <Pressable
+      accessibilityLabel={`${owner.name}, @${owner.username}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      onPressIn={onPressIn}
+      style={styles.ownerHeader}
+    >
       <AvatarView uri={owner.profilePhoto} name={owner.name} size={16} />
       <View style={styles.ownerBody}>
         <ExpandableText text={owner.name} collapsedLines={1} textStyle={styles.ownerName} showIndicator={false} />

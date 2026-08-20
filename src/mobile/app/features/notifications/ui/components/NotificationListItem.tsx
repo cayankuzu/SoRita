@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -9,16 +9,19 @@ import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationListItemProps = {
   notification: MobileNotification;
-  onPress: () => void;
-  onAcceptFollowRequest?: () => void;
-  onRejectFollowRequest?: () => void;
+  followRequestPending?: boolean;
+  onPress: (notification: MobileNotification) => void;
+  onFollowRequestDecision?: (
+    notification: MobileNotification,
+    decision: 'accept' | 'reject',
+  ) => void;
 };
 
 function NotificationListItemComponent({
   notification,
+  followRequestPending = false,
   onPress,
-  onAcceptFollowRequest,
-  onRejectFollowRequest,
+  onFollowRequestDecision,
 }: NotificationListItemProps) {
   const isPendingFollowRequest =
     notification.type === 'follow_request' && notification.followRequest?.status === 'pending';
@@ -29,7 +32,8 @@ function NotificationListItemComponent({
 
   return (
     <InstantPressable
-      onPress={onPress}
+      accessibilityRole="button"
+      onPress={() => onPress(notification)}
       style={[styles.row, !notification.read ? styles.rowUnread : null]}
     >
       <View style={styles.avatarWrap}>
@@ -45,22 +49,42 @@ function NotificationListItemComponent({
         {isPendingFollowRequest ? (
           <View style={styles.actionsRow}>
             <InstantPressable
+              accessibilityLabel={tr.notifications.reject}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: followRequestPending }}
+              disabled={followRequestPending}
               onPress={(event) => {
                 event.stopPropagation();
-                onRejectFollowRequest?.();
+                onFollowRequestDecision?.(notification, 'reject');
               }}
-              style={[styles.actionButton, styles.rejectButton]}
+              style={[
+                styles.actionButton,
+                styles.rejectButton,
+                followRequestPending ? styles.actionButtonDisabled : null,
+              ]}
             >
               <Text style={[styles.actionLabel, styles.rejectLabel]}>{tr.notifications.reject}</Text>
             </InstantPressable>
             <InstantPressable
+              accessibilityLabel={tr.notifications.accept}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: followRequestPending }}
+              disabled={followRequestPending}
               onPress={(event) => {
                 event.stopPropagation();
-                onAcceptFollowRequest?.();
+                onFollowRequestDecision?.(notification, 'accept');
               }}
-              style={[styles.actionButton, styles.acceptButton]}
+              style={[
+                styles.actionButton,
+                styles.acceptButton,
+                followRequestPending ? styles.actionButtonDisabled : null,
+              ]}
             >
-              <Text style={[styles.actionLabel, styles.acceptLabel]}>{tr.notifications.accept}</Text>
+              {followRequestPending ? (
+                <ActivityIndicator color={colors.onPrimary} size="small" />
+              ) : (
+                <Text style={[styles.actionLabel, styles.acceptLabel]}>{tr.notifications.accept}</Text>
+              )}
             </InstantPressable>
           </View>
         ) : null}
@@ -80,17 +104,7 @@ function NotificationListItemComponent({
   );
 }
 
-function areNotificationListItemPropsEqual(
-  previous: NotificationListItemProps,
-  next: NotificationListItemProps,
-) {
-  return previous.notification === next.notification;
-}
-
-export const NotificationListItem = React.memo(
-  NotificationListItemComponent,
-  areNotificationListItemPropsEqual,
-);
+export const NotificationListItem = React.memo(NotificationListItemComponent);
 
 const styles = StyleSheet.create({
   row: {
@@ -139,12 +153,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     minWidth: 70,
+    minHeight: Platform.OS === 'ios' ? 44 : 48,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+  },
+  actionButtonDisabled: {
+    opacity: 0.62,
   },
   acceptButton: {
     backgroundColor: colors.primary,

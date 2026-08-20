@@ -34,7 +34,6 @@ type CommentComposerProps = {
   replyingTo?: ReplyTarget | null;
   submitting?: boolean;
   composerInset: number;
-  composerKeyboardOffset: number;
   onCancelEdit: () => void;
   onCancelReply: () => void;
   onCommentTextChange: (value: string) => void;
@@ -49,7 +48,6 @@ export function CommentComposer({
   replyingTo = null,
   submitting = false,
   composerInset,
-  composerKeyboardOffset,
   onCancelEdit,
   onCancelReply,
   onCommentTextChange,
@@ -100,7 +98,6 @@ export function CommentComposer({
         styles.composerDock,
         {
           paddingBottom: composerInset,
-          marginBottom: composerKeyboardOffset,
         },
       ]}
     >

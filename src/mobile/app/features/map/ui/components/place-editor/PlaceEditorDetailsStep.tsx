@@ -44,6 +44,8 @@ export function PlaceEditorDetailsStep({
         <Text style={styles.sectionTitle}>{tr.placeEditor.studentDiscount}</Text>
         <View style={styles.segmentedRow}>
           <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: studentFriendly }}
             style={[styles.segmentButton, studentFriendly ? styles.segmentButtonActive : null]}
             onPress={() => onSetStudentFriendly(true)}
           >
@@ -52,6 +54,8 @@ export function PlaceEditorDetailsStep({
             </Text>
           </Pressable>
           <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: !studentFriendly }}
             style={[styles.segmentButton, !studentFriendly ? styles.segmentButtonDark : null]}
             onPress={() => onSetStudentFriendly(false)}
           >

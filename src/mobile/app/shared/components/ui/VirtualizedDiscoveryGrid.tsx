@@ -1,5 +1,4 @@
-import React from "react";
-import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
+import React from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -8,13 +7,15 @@ import {
   type NativeSyntheticEvent,
   type StyleProp,
   type ViewStyle,
-} from "react-native";
+} from 'react-native';
 
-import { useAppLayout } from "@/mobile/app/shared/hooks/useAppLayout";
-import { layout } from "@/mobile/app/shared/theme/tokens";
-import { buildAdaptiveFlatListProps } from "@/mobile/app/shared/utils/flatList";
+import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { spacing } from '@/mobile/app/shared/theme/tokens';
+import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import { getResponsiveGalleryColumnCount } from '@/mobile/app/shared/utils/layout';
 
 type VirtualizedDiscoveryGridRenderInfo<ItemT> = {
+  columnCount: number;
   item: ItemT;
   index: number;
 };
@@ -26,6 +27,7 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
     info: VirtualizedDiscoveryGridRenderInfo<ItemT>,
   ) => React.ReactElement | null;
   listKey?: string;
+  columnStrategy?: 'discovery' | 'gallery';
   listRef?: React.Ref<FlatList<ItemT>>;
   ListEmptyComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
@@ -39,6 +41,7 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
   onEndReachedThreshold?: number;
   onScrollOffsetChange?: (offset: number) => void;
   refreshing?: boolean;
+  scrollEnabled?: boolean;
 };
 
 export function VirtualizedDiscoveryGrid<ItemT>({
@@ -46,6 +49,7 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   keyExtractor,
   renderItem,
   listKey,
+  columnStrategy = 'discovery',
   listRef,
   ListEmptyComponent = null,
   ListFooterComponent = null,
@@ -59,16 +63,23 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   onRefresh,
   onScrollOffsetChange,
   refreshing = false,
+  scrollEnabled = true,
 }: VirtualizedDiscoveryGridProps<ItemT>) {
-  const bottomTabBarHeight = React.useContext(BottomTabBarHeightContext);
   const appLayout = useAppLayout();
-  const { columnCount, columnGap, height, screenPadding, width } = appLayout;
-  const bottomPadding =
-    24 +
-    Math.max(
-      typeof bottomTabBarHeight === "number" ? bottomTabBarHeight : 0,
-      layout.tabBarHeight,
-    );
+  const { columnCount: discoveryColumnCount, columnGap, height, screenPadding, width } = appLayout;
+  const columnCount = columnStrategy === 'gallery'
+    ? getResponsiveGalleryColumnCount(width, height)
+    : discoveryColumnCount;
+  const visibleAnchorIndexRef = React.useRef(0);
+  const pendingAnchorIndexRef = React.useRef<number | null>(null);
+  const previousColumnCountRef = React.useRef(columnCount);
+  const internalListRef = React.useRef<FlatList<ItemT> | null>(null);
+  const viewabilityConfig = React.useRef({ itemVisiblePercentThreshold: 20 }).current;
+
+  if (previousColumnCountRef.current !== columnCount) {
+    pendingAnchorIndexRef.current = visibleAnchorIndexRef.current;
+    previousColumnCountRef.current = columnCount;
+  }
   const columnWidth = Math.max(
     120,
     Math.floor(
@@ -91,37 +102,91 @@ export function VirtualizedDiscoveryGrid<ItemT>({
     },
     [onScrollOffsetChange],
   );
+  const cellWidthStyle = React.useMemo(() => ({ width: columnWidth }), [columnWidth]);
+  const bottomClearanceStyle = React.useMemo(
+    () => ({ paddingBottom: spacing['2xl'] }),
+    [],
+  );
+  const singleColumnCellStyle = React.useMemo(
+    () => columnCount === 1 ? { marginHorizontal: screenPadding } : null,
+    [columnCount, screenPadding],
+  );
+  const rowStyle = React.useMemo(
+    () => columnCount > 1
+      ? [styles.row, { gap: columnGap, paddingHorizontal: screenPadding }]
+      : undefined,
+    [columnCount, columnGap, screenPadding],
+  );
+  const renderCell = React.useCallback(
+    ({ item, index }: { item: ItemT; index: number }) => (
+      <View style={[styles.cell, cellWidthStyle, singleColumnCellStyle]}>
+        {renderItem({ columnCount, item, index })}
+      </View>
+    ),
+    [cellWidthStyle, columnCount, renderItem, singleColumnCellStyle],
+  );
+  const handleListRef = React.useCallback(
+    (node: FlatList<ItemT> | null) => {
+      internalListRef.current = node;
+
+      if (typeof listRef === 'function') {
+        listRef(node);
+      } else if (listRef) {
+        listRef.current = node;
+      }
+
+      if (!node || pendingAnchorIndexRef.current == null) {
+        return;
+      }
+
+      const anchorIndex = Math.floor(pendingAnchorIndexRef.current / columnCount) * columnCount;
+      pendingAnchorIndexRef.current = null;
+      requestAnimationFrame(() => {
+        node.scrollToIndex({
+          animated: false,
+          index: Math.min(anchorIndex, Math.max(data.length - 1, 0)),
+        });
+      });
+    },
+    [columnCount, data.length, listRef],
+  );
+  const handleScrollToIndexFailed = React.useCallback(
+    ({ averageItemLength, index }: { averageItemLength: number; index: number }) => {
+      const rowIndex = Math.floor(index / columnCount);
+      internalListRef.current?.scrollToOffset({
+        animated: false,
+        offset: Math.max(0, averageItemLength * rowIndex),
+      });
+    },
+    [columnCount],
+  );
+  const handleViewableItemsChanged = React.useRef(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null; isViewable: boolean }> }) => {
+      const firstVisible = viewableItems.find((item) => item.isViewable && item.index != null);
+      if (firstVisible?.index != null) {
+        visibleAnchorIndexRef.current = firstVisible.index;
+      }
+    },
+  ).current;
 
   return (
     <FlatList
       {...listProps}
-      ref={listRef}
-      key={`${listKey ?? "discovery-grid"}:${columnCount}`}
+      ref={handleListRef}
+      key={`${listKey ?? 'discovery-grid'}:${columnCount}`}
       data={data}
       extraData={extraData}
+      nestedScrollEnabled
       numColumns={columnCount}
       keyExtractor={keyExtractor}
-      renderItem={({ item, index }) => (
-        <View
-          style={[
-            styles.cell,
-            { width: columnWidth },
-            columnCount === 1 ? { marginHorizontal: screenPadding } : null,
-          ]}
-        >
-          {renderItem({ item, index })}
-        </View>
-      )}
-      columnWrapperStyle={
-        columnCount > 1
-          ? [styles.row, { gap: columnGap, paddingHorizontal: screenPadding }]
-          : undefined
-      }
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      renderItem={renderCell}
+      columnWrapperStyle={rowStyle}
       contentContainerStyle={[
-        styles.content,
-        { paddingBottom: bottomPadding },
         data.length === 0 ? styles.contentEmpty : null,
         contentContainerStyle,
+        bottomClearanceStyle,
       ]}
       refreshing={refreshing}
       onRefresh={onRefresh}
@@ -129,24 +194,30 @@ export function VirtualizedDiscoveryGrid<ItemT>({
       onEndReachedThreshold={onEndReachedThreshold}
       onContentSizeChange={onContentSizeChange}
       onScroll={onScrollOffsetChange ? handleScroll : undefined}
+      onScrollToIndexFailed={handleScrollToIndexFailed}
+      onViewableItemsChanged={handleViewableItemsChanged}
+      viewabilityConfig={viewabilityConfig}
+      maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+      scrollEnabled={scrollEnabled}
       scrollEventThrottle={onScrollOffsetChange ? 16 : undefined}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={ListFooterComponent}
       showsVerticalScrollIndicator={false}
+      style={styles.list}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 16,
+  list: {
+    flex: 1,
   },
   contentEmpty: {
     flexGrow: 1,
   },
   row: {
-    justifyContent: "flex-start",
+    justifyContent: 'flex-start',
   },
   cell: {
     marginBottom: 8,

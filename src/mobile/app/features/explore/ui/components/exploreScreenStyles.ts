@@ -113,4 +113,7 @@ export const exploreScreenStyles = StyleSheet.create({
     paddingVertical: 10,
     gap: 12,
   },
+  feedList: {
+    flex: 1,
+  },
 });

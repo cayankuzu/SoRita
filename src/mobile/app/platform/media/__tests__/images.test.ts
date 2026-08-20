@@ -237,7 +237,7 @@ describe('platform/media/images', () => {
       source: 'camera',
     });
     openVideoCameraCaptureMock.mockResolvedValue({
-      durationMs: 60000,
+      durationMs: 180000,
       uri: 'file:///cache/camera-video.mp4',
     });
     generateVideoThumbnailUriMock.mockResolvedValue('file:///cache/camera-video-thumb.jpg');
@@ -251,13 +251,13 @@ describe('platform/media/images', () => {
         cameraCaptureModes: ['photo', 'video'],
       }),
     );
-    expect(openVideoCameraCaptureMock).toHaveBeenCalledWith({ maxDurationSeconds: 60 });
+    expect(openVideoCameraCaptureMock).toHaveBeenCalledWith({ maxDurationSeconds: 180 });
     expect(launchCameraAsyncMock).not.toHaveBeenCalled();
     expect(requestCameraPermissionsAsyncMock).not.toHaveBeenCalled();
     expect(result).toEqual({
       items: [
         expect.objectContaining({
-          durationMs: 60000,
+          durationMs: 180000,
           thumbnailTimeMs: 0,
           thumbnailUrl: 'file:///cache/camera-video-thumb.jpg',
           type: 'video',
@@ -458,6 +458,43 @@ describe('platform/media/images', () => {
       rejectedOversizeCount: 0,
       rejectedVideoCount: 0,
     });
+  });
+
+  it('accepts the three-second duration tolerance and rejects anything longer', async () => {
+    openMediaPickerPromptMock.mockResolvedValue({
+      saveToGallery: false,
+      source: 'library',
+    });
+    openMediaLibrarySelectionMock.mockResolvedValue([
+      {
+        duration: 183,
+        filename: 'within-tolerance.mp4',
+        height: 720,
+        id: 'asset-within-tolerance',
+        mediaType: 'video',
+        uri: 'content://media/external/video/media/1',
+        width: 1280,
+      },
+      {
+        duration: 183.1,
+        filename: 'outside-tolerance.mp4',
+        height: 720,
+        id: 'asset-outside-tolerance',
+        mediaType: 'video',
+        uri: 'content://media/external/video/media/2',
+        width: 1280,
+      },
+    ]);
+
+    const { pickPlaceMediaFromPrompt } = await import('@/mobile/app/platform/media/images');
+    const result = await pickPlaceMediaFromPrompt();
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      durationMs: 183000,
+      type: 'video',
+    }));
+    expect(result.rejectedVideoCount).toBe(1);
   });
 
   it('rejects oversized place media before it reaches the editor', async () => {

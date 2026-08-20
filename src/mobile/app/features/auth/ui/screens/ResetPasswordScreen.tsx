@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
 
@@ -41,6 +41,7 @@ export function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [formError, setFormError] = useState('');
+  const passwordConfirmRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
     let active = true;
@@ -89,12 +90,14 @@ export function ResetPasswordScreen() {
     }
 
     await refreshUser();
-    navigation.navigate('Auth', { initialView: 'login' });
-  }, [navigation, password, passwordConfirm, refreshUser]);
+  }, [password, passwordConfirm, refreshUser]);
 
   if (screenState.status === 'loading') {
     return (
-      <Screen variant="form" scroll={false}>
+      <Screen
+        variant="form"
+        contentContainerStyle={styles.content}
+      >
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.title}>{tr.auth.resetPassword.checkingLink}</Text>
@@ -105,7 +108,7 @@ export function ResetPasswordScreen() {
 
   if (screenState.status === 'error') {
     return (
-      <Screen variant="form" scroll={false}>
+      <Screen variant="form" contentContainerStyle={styles.content}>
         <View style={styles.centered}>
           <View style={styles.card}>
             <Text style={styles.title}>{tr.auth.resetPassword.errorTitle}</Text>
@@ -133,15 +136,22 @@ export function ResetPasswordScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoCapitalize="none"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordConfirmRef.current?.focus()}
           icon={<Lock color={colors.textMuted} size={14} />}
         />
         <AuthField
+          ref={passwordConfirmRef}
           label={tr.auth.resetPassword.newPasswordConfirmLabel}
           placeholder={tr.auth.resetPassword.newPasswordConfirmPlaceholder}
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry
           autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            void submitPassword();
+          }}
           icon={<Lock color={colors.textMuted} size={14} />}
         />
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}

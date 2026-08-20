@@ -7,8 +7,7 @@ const supabasePublishableKey =
   Deno.env.get('SB_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const allowedOrigins = (
-  Deno.env.get('DELETE_USER_ALLOWED_ORIGINS') ??
-  'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000'
+  Deno.env.get('DELETE_USER_ALLOWED_ORIGINS') ?? ''
 )
   .split(',')
   .map((origin) => origin.trim())

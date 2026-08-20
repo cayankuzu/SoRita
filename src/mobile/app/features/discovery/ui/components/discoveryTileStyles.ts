@@ -14,6 +14,9 @@ export const discoveryTileStyles = StyleSheet.create({
   tileFullWidth: {
     width: '100%',
   },
+  tileCompact: {
+    minHeight: 0,
+  },
   userTile: {
     minHeight: 0,
   },
@@ -129,6 +132,10 @@ export const discoveryTileStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 6,
     paddingBottom: 7,
+  },
+  tileBodyCompact: {
+    minHeight: 0,
+    paddingBottom: 6,
   },
   tileTitleRow: {
     flexDirection: 'row',

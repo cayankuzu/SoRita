@@ -30,14 +30,6 @@ apply plugin: "com.facebook.react.rootproject"
 
 def isWindowsHost = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
 
-if (isWindowsHost) {
-  subprojects {
-    if (project.path == ":app") {
-      layout.buildDirectory.set(file("C:/t/sorita-gradle-build/app"))
-    }
-  }
-}
-
 def normalizePath = { File file ->
   file.absolutePath.replace("\\", "/")
 }

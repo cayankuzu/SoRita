@@ -21,6 +21,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type UseMapSearchControllerParams = {
   allPlaces: MapPlaceEntry[];
+  onSearchIntent?: () => void;
   openEditorPanel: (data: PanelData) => void;
   openExistingPlacePanel: (target: { lat: number; lng: number }) => void;
   setManualViewport: Dispatch<SetStateAction<MapViewport | null>>;
@@ -30,6 +31,7 @@ type UseMapSearchControllerParams = {
 
 export function useMapSearchController({
   allPlaces,
+  onSearchIntent,
   openEditorPanel,
   openExistingPlacePanel,
   setManualViewport,
@@ -95,8 +97,9 @@ export function useMapSearchController({
   }, []);
 
   const runSearch = useCallback(() => {
+    onSearchIntent?.();
     void performSearch(searchQuery, true);
-  }, [performSearch, searchQuery]);
+  }, [onSearchIntent, performSearch, searchQuery]);
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -124,6 +127,10 @@ export function useMapSearchController({
 
   const handleSearchQueryChange = useCallback(
     (value: string) => {
+      if (value.trim()) {
+        onSearchIntent?.();
+      }
+
       setSearchQuery(value);
       setSearchErrorMessage(null);
 
@@ -131,7 +138,7 @@ export function useMapSearchController({
         setSelectedSearchResult(null);
       }
     },
-    [selectedSearchResult, setSelectedSearchResult],
+    [onSearchIntent, selectedSearchResult, setSelectedSearchResult],
   );
 
   const clearSearch = useCallback(() => {

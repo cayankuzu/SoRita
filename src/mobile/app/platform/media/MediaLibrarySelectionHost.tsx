@@ -15,6 +15,7 @@ import { Image as ImageIcon, RefreshCcw, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import {
   resolveMediaLibrarySelection,
   useMediaLibrarySelectionState,
@@ -23,85 +24,35 @@ import type {
   MediaLibraryPickerAsset,
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
-import { PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS } from '@/mobile/app/platform/media/mediaConstants';
+import { PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_SECONDS } from '@/mobile/app/platform/media/mediaConstants';
 import {
   buildMediaTypeFilter,
   buildPickerAssetsPage,
   buildSelectionCounts,
+  hydratePickerAssetFromNetwork,
 } from '@/mobile/app/platform/media/mediaLibraryAssetPreparation';
-import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
+import { MediaLibraryAssetTile } from '@/mobile/app/platform/media/MediaLibraryAssetTile';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
-import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 const PAGE_SIZE = 33;
 const GRID_GAP = 10;
-
-type MediaAssetTileProps = {
-  asset: MediaLibraryPickerAsset;
-  disabled?: boolean;
-  onPress: () => void;
-  orderIndex: number;
-  size: number;
-};
-
-function MediaAssetTile({ asset, disabled = false, onPress, orderIndex, size }: MediaAssetTileProps) {
-  const isVideo = asset.mediaType === 'video';
-  const isSelected = orderIndex >= 0;
-  const durationLabel =
-    isVideo && asset.duration > 0 ? formatPlaceMediaDuration(asset.duration * 1000) : null;
-
-  return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.assetTile,
-        { height: size, width: size },
-        isSelected ? styles.assetTileSelected : null,
-        disabled ? styles.assetTileDisabled : null,
-      ]}
-    >
-      <MediaThumbnailView
-        backgroundColor="transparent"
-        item={{
-          durationMs: isVideo && asset.duration > 0 ? Math.round(asset.duration * 1000) : undefined,
-          thumbnailTimeMs: isVideo ? 0 : undefined,
-          thumbnailUrl: asset.previewUri,
-          type: isVideo ? 'video' : 'photo',
-          url: asset.uri,
-        }}
-        durationLabel={durationLabel ?? undefined}
-        fallbackToVideoPreview
-        style={styles.assetPreview}
-      />
-
-      {isSelected ? (
-        <View style={styles.orderBadge}>
-          <Text style={styles.orderBadgeText}>{orderIndex + 1}</Text>
-        </View>
-      ) : null}
-
-      {disabled ? (
-        <View style={styles.disabledOverlay}>
-          <Text style={styles.disabledLabel}>{tr.mediaPicker.videoTooLongBadge}</Text>
-        </View>
-      ) : null}
-    </Pressable>
-  );
-}
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 export function MediaLibrarySelectionHost() {
+  const animationType = useModalAnimationType('slide');
   const { options, requestId, visible } = useMediaLibrarySelectionState();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const assetCacheRef = React.useRef(new Map<string, MediaLibraryPickerAsset>());
   const loadRequestIdRef = React.useRef(0);
   const loadMoreInFlightRef = React.useRef(false);
+  const previewRecoveryIdsRef = React.useRef(new Set<string>());
   const [filter, setFilter] = React.useState<MediaLibrarySelectionFilter>(
     options.initialFilter ?? 'all',
   );
@@ -156,8 +107,19 @@ export function MediaLibrarySelectionHost() {
   );
 
   const ensureMediaLibraryPermission = React.useCallback(async () => {
-    const permission = await MediaLibrary.requestPermissionsAsync(false, requestedPermissions);
-    return permission.granted;
+    const available = await MediaLibrary.isAvailableAsync();
+
+    if (!available) {
+      return false;
+    }
+
+    const currentPermission = await MediaLibrary.getPermissionsAsync(false, requestedPermissions);
+    const permission =
+      currentPermission.granted || currentPermission.accessPrivileges === 'limited'
+      ? currentPermission
+      : await MediaLibrary.requestPermissionsAsync(false, requestedPermissions);
+
+    return permission.granted || permission.accessPrivileges === 'limited';
   }, [requestedPermissions]);
 
   const loadAssetsPage = React.useCallback(
@@ -214,7 +176,10 @@ export function MediaLibrarySelectionHost() {
           assetCacheRef.current.set(asset.id, asset);
         });
 
-        setAssets((current) => (reset ? nextAssets : [...current, ...nextAssets]));
+        setAssets((current) => {
+          const combined = reset ? nextAssets : [...current, ...nextAssets];
+          return Array.from(new Map(combined.map((asset) => [asset.id, asset])).values());
+        });
         setEndCursor(response.endCursor || null);
         setHasNextPage(response.hasNextPage);
       } catch {
@@ -241,6 +206,7 @@ export function MediaLibrarySelectionHost() {
     }
 
     assetCacheRef.current.clear();
+    previewRecoveryIdsRef.current.clear();
     loadRequestIdRef.current += 1;
     loadMoreInFlightRef.current = false;
     setFilter(options.initialFilter ?? 'all');
@@ -259,6 +225,28 @@ export function MediaLibrarySelectionHost() {
     void loadAssetsPage(true);
   }, [filter, loadAssetsPage, requestId, visible]);
 
+  const handlePreviewError = React.useCallback((asset: MediaLibraryPickerAsset) => {
+    if (Platform.OS !== 'ios' || previewRecoveryIdsRef.current.has(asset.id)) {
+      return;
+    }
+
+    previewRecoveryIdsRef.current.add(asset.id);
+    const recoveryRequestId = loadRequestIdRef.current;
+    void hydratePickerAssetFromNetwork(asset).then((hydratedAsset) => {
+      if (
+        hydratedAsset === asset ||
+        loadRequestIdRef.current !== recoveryRequestId
+      ) {
+        return;
+      }
+
+      assetCacheRef.current.set(asset.id, hydratedAsset);
+      setAssets((current) =>
+        current.map((item) => (item.id === hydratedAsset.id ? hydratedAsset : item)),
+      );
+    });
+  }, []);
+
   const handleAssetToggle = React.useCallback(
     (asset: MediaLibraryPickerAsset) => {
       setSelectedIds((current) => {
@@ -270,7 +258,7 @@ export function MediaLibrarySelectionHost() {
 
         if (
           asset.mediaType === 'video' &&
-          asset.duration > PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS
+          asset.duration > PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_SECONDS
         ) {
           showToast(tr.placeEditor.videoDurationLimitExceeded, 'error');
           return current;
@@ -311,18 +299,19 @@ export function MediaLibrarySelectionHost() {
 
   const renderTile = React.useCallback(
     ({ item }: { item: MediaLibraryPickerAsset }) => (
-      <MediaAssetTile
+      <MediaLibraryAssetTile
         asset={item}
         disabled={
           item.mediaType === 'video' &&
-          item.duration > PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS
+          item.duration > PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_SECONDS
         }
         orderIndex={selectedIds.indexOf(item.id)}
         size={tileSize}
         onPress={() => handleAssetToggle(item)}
+        onPreviewError={() => handlePreviewError(item)}
       />
     ),
-    [handleAssetToggle, selectedIds, tileSize],
+    [handleAssetToggle, handlePreviewError, selectedIds, tileSize],
   );
 
   return (
@@ -332,26 +321,29 @@ export function MediaLibrarySelectionHost() {
       })}
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={() => resolveMediaLibrarySelection(null)}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>{title}</Text>
+              <Text accessibilityRole="header" style={styles.title}>{title}</Text>
               <Text style={styles.description}>{description}</Text>
             </View>
-            <Pressable
+            <IconButton
               accessibilityLabel={tr.common.close}
-              accessibilityRole="button"
-              style={styles.closeButton}
               onPress={() => resolveMediaLibrarySelection(null)}
+              variant="surface"
             >
               <X color={colors.textSoft} size={16} />
-            </Pressable>
+            </IconButton>
           </View>
 
           <View style={styles.counterRow}>
@@ -390,6 +382,8 @@ export function MediaLibrarySelectionHost() {
 
               return (
                 <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active, disabled }}
                   key={item.key}
                   disabled={disabled}
                   onPress={() => setFilter(item.key)}
@@ -423,7 +417,11 @@ export function MediaLibrarySelectionHost() {
               <ImageIcon color={colors.textSoft} size={20} />
               <Text style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</Text>
               <Text style={styles.stateText}>{tr.system.connectionUnavailable}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void loadAssetsPage(true)}>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.retryButton}
+                onPress={() => void loadAssetsPage(true)}
+              >
                 <RefreshCcw color={colors.primary} size={12} />
                 <Text style={styles.retryButtonText}>{tr.common.retry}</Text>
               </Pressable>
@@ -433,7 +431,11 @@ export function MediaLibrarySelectionHost() {
               <ImageIcon color={colors.textSoft} size={20} />
               <Text style={styles.stateTitle}>{tr.mediaPicker.permissionTitle}</Text>
               <Text style={styles.stateText}>{tr.mediaPicker.permissionDescription}</Text>
-              <Pressable style={styles.retryButton} onPress={() => void loadAssetsPage(true)}>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.retryButton}
+                onPress={() => void loadAssetsPage(true)}
+              >
                 <RefreshCcw color={colors.primary} size={12} />
                 <Text style={styles.retryButtonText}>{tr.common.retry}</Text>
               </Pressable>
@@ -449,7 +451,7 @@ export function MediaLibrarySelectionHost() {
               columnWrapperStyle={styles.gridRow}
               contentContainerStyle={styles.gridContent}
               nestedScrollEnabled
-              removeClippedSubviews={Platform.OS === 'android'}
+              removeClippedSubviews={false}
               showsVerticalScrollIndicator={false}
               updateCellsBatchingPeriod={80}
               windowSize={5}
@@ -484,12 +486,15 @@ export function MediaLibrarySelectionHost() {
             ]}
           >
             <Pressable
+              accessibilityRole="button"
               style={styles.footerSecondaryButton}
               onPress={() => resolveMediaLibrarySelection(null)}
             >
               <Text style={styles.footerSecondaryButtonText}>{tr.common.cancel}</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: selectedIds.length === 0 }}
               disabled={selectedIds.length === 0}
               onPress={handleConfirm}
               style={[
@@ -541,14 +546,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.textMuted,
   },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
   counterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -584,7 +581,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   filterChip: {
-    minHeight: 34,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
     paddingHorizontal: 10,
     alignItems: 'center',
@@ -619,60 +616,6 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
     marginBottom: GRID_GAP,
   },
-  assetTile: {
-    position: 'relative',
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  assetTileSelected: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  assetTileDisabled: {
-    borderColor: colors.cardBorder,
-  },
-  assetPreview: {
-    width: '100%',
-    height: '100%',
-  },
-  assetPreviewFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
-  orderBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 4,
-  },
-  orderBadgeText: {
-    ...typography.metadataText,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
-  disabledOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.mediaPickerOverlay,
-    zIndex: 2,
-  },
-  disabledLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
   stateWrap: {
     flex: 1,
     alignItems: 'center',
@@ -696,7 +639,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minHeight: 38,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
     paddingHorizontal: 10,
     backgroundColor: colors.primaryBg,
@@ -723,7 +666,7 @@ const styles = StyleSheet.create({
   },
   footerSecondaryButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -736,7 +679,7 @@ const styles = StyleSheet.create({
   },
   footerPrimaryButton: {
     flex: 1.3,
-    minHeight: 44,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

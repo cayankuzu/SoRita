@@ -4,9 +4,6 @@ type ErrorLike = {
 };
 
 type NonceStoreLike = {
-  delete: () => {
-    lt: (column: string, value: string) => Promise<{ error?: ErrorLike | null }>;
-  };
   insert: (payload: Record<string, unknown>) => Promise<{ error?: ErrorLike | null }>;
 };
 
@@ -47,11 +44,15 @@ function timingSafeEqual(left: string, right: string) {
 
 export function buildRequestSigningMessage(params: {
   deviceId: string;
+  functionName: string;
+  method: string;
   nonce: string;
   payloadHash: string;
   timestamp: string;
 }) {
   return [
+    params.method.toUpperCase(),
+    params.functionName,
     params.deviceId,
     params.timestamp,
     params.nonce,
@@ -68,6 +69,8 @@ export async function createRequestSignature(
   secret: string,
   params: {
     deviceId: string;
+    functionName: string;
+    method: string;
     nonce: string;
     payloadHash: string;
     timestamp: string;
@@ -134,6 +137,8 @@ export async function verifySignedRequest(params: {
   const payloadHash = await sha256Hex(rawBody);
   const expectedSignature = await createRequestSignature(params.token, {
     deviceId,
+    functionName: params.functionName,
+    method: params.request.method,
     nonce,
     payloadHash,
     timestamp,
@@ -146,11 +151,6 @@ export async function verifySignedRequest(params: {
       status: 401,
     };
   }
-
-  await params.adminClient
-    .from(REQUEST_NONCES_TABLE)
-    .delete()
-    .lt('expires_at', new Date().toISOString());
 
   const { error: nonceError } = await params.adminClient.from(REQUEST_NONCES_TABLE).insert({
     device_id: deviceId,

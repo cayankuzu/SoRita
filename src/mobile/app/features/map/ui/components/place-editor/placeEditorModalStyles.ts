@@ -1,6 +1,8 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+
+const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 export const placeEditorModalStyles = StyleSheet.create({
   overlay: {
@@ -55,7 +57,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     gap: 6,
   },
   cancelButton: {
-    minHeight: 34,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
@@ -112,6 +114,11 @@ export const placeEditorModalStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
+  },
+  saveProgressDetail: {
+    ...typography.metadataText,
+    lineHeight: 15,
+    color: colors.textMuted,
   },
   saveProgressPercent: {
     fontSize: 12,
@@ -236,7 +243,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     flexShrink: 0,
   },
   backButton: {
-    minHeight: 40,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     paddingHorizontal: 10,
     backgroundColor: colors.surfaceMuted,
@@ -251,7 +258,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     color: colors.textMuted,
   },
   deleteButton: {
-    minHeight: 40,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     paddingHorizontal: 10,
     backgroundColor: colors.dangerBg,
@@ -267,7 +274,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    minHeight: 40,
+    minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     flexDirection: 'row',

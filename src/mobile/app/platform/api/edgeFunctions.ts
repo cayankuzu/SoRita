@@ -118,10 +118,12 @@ async function createUnsignedHeaders() {
   };
 }
 
-async function createSignedHeaders(accessToken: string, bodyText: string) {
+async function createSignedHeaders(accessToken: string, bodyText: string, functionName: string) {
   const signedHeaders = await createSignedEdgeHeaders({
     accessToken,
     bodyText,
+    functionName,
+    method: 'POST',
   });
 
   return {
@@ -142,7 +144,7 @@ export async function callJsonEdgeFunction<TResponse>(
 ): Promise<TResponse> {
   const bodyText = JSON.stringify(payload);
   const headers = options?.accessToken
-    ? await createSignedHeaders(options.accessToken, bodyText)
+    ? await createSignedHeaders(options.accessToken, bodyText, functionName)
     : await createUnsignedHeaders();
   const response = await fetch(getFunctionUrl(functionName), {
     method: 'POST',

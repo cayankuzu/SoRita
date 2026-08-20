@@ -3,7 +3,6 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { onlineManager } from '@tanstack/react-query';
 
 import { env } from '@/mobile/app/platform/config/env';
-import { showToast } from '@/mobile/app/platform/feedback/toast';
 import {
   getConnectivityStatusFromHttpProbe,
   getConnectivityStatusFromProbeFailure,
@@ -15,7 +14,6 @@ import {
   subscribeToNetInfo,
   type NetworkReachabilityState,
 } from '@/mobile/app/platform/network/netInfoAdapter';
-import { tr } from '@/mobile/app/shared/i18n/tr';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 
 const CONNECTIVITY_CHECK_PATH = '/auth/v1/health';
@@ -32,11 +30,11 @@ function getConnectivityCheckUrl() {
  * Lightweight connectivity monitor.
  * - Checks on app foreground
  * - Integrates with TanStack Query's onlineManager
- * - Shows user-friendly toast on status change
+ * - Leaves persistent status feedback to OfflineIndicator
  */
 export function useNetworkStatus() {
   const [status, setStatus] = useState<ConnectionStatus>('unknown');
-  const lastToastRef = useRef<ConnectionStatus>('unknown');
+  const previousStatusRef = useRef<ConnectionStatus>('unknown');
 
   useEffect(() => {
     let disposed = false;
@@ -51,19 +49,11 @@ export function useNetworkStatus() {
       setCurrentConnectionStatus(nextStatus);
       onlineManager.setOnline(nextStatus !== 'offline');
 
-      if (
-        nextStatus === 'constrained' &&
-        lastToastRef.current !== 'constrained'
-      ) {
-        showToast(tr.system.connectionSlow, 'info');
-      }
-
-      if (nextStatus === 'offline' && lastToastRef.current !== 'offline') {
-        showToast(tr.system.connectionUnavailable, 'error');
+      if (nextStatus === 'offline' && previousStatusRef.current !== 'offline') {
         trackEvent({ name: 'offline_entered', params: { source: 'connectivity-monitor' } });
       }
 
-      lastToastRef.current = nextStatus;
+      previousStatusRef.current = nextStatus;
     }
 
     async function checkConnectivity() {

@@ -16,6 +16,13 @@ type RpcRowResult<T> = {
   error?: ErrorLike | null;
 };
 
+type RpcClientLike = {
+  rpc: <TRow = unknown>(
+    functionName: string,
+    args: Record<string, unknown>,
+  ) => Promise<RpcRowResult<TRow>>;
+};
+
 type AuthErrorLike = ErrorLike & {
   status?: number;
 };
@@ -30,7 +37,7 @@ type AuthUserLike = {
   id?: string;
 };
 
-type AuthClientLike = {
+type AuthClientLike = RpcClientLike & {
   auth: {
     getUser: (token?: string) => Promise<{ data?: { user?: AuthUserLike | null } | null; error?: AuthErrorLike | null }>;
     resend: (params: {
@@ -74,12 +81,7 @@ type AuthLoginGuardRpcRow = {
   retry_after_seconds: number;
 };
 
-type AuthGatewayAdminClientLike = RateLimitAdminClientLike & {
-  rpc: <TRow = unknown>(
-    functionName: string,
-    args: Record<string, unknown>,
-  ) => Promise<RpcRowResult<TRow>>;
-};
+type AuthGatewayAdminClientLike = RateLimitAdminClientLike & RpcClientLike;
 
 export type AuthGatewayHandlerConfig = {
   allowedOrigins: string[];
@@ -169,9 +171,17 @@ const authGatewayPayloadSchema = z.discriminatedUnion('action', [
     redirectUrl: redirectUrlSchema,
   }),
   z.object({
+    action: z.literal('prepare-password-reset'),
+    email: emailSchema,
+  }),
+  z.object({
     action: z.literal('request-password-reset-authenticated'),
     currentPassword: z.string().min(1).max(PASSWORD_MAX_LENGTH),
     redirectUrl: redirectUrlSchema,
+  }),
+  z.object({
+    action: z.literal('prepare-password-reset-authenticated'),
+    currentPassword: z.string().min(1).max(PASSWORD_MAX_LENGTH),
   }),
 ]);
 
@@ -245,11 +255,11 @@ function isAllowedRedirectUrl(url: string, allowedOrigins: string[]) {
 }
 
 async function readRpcRow<TRow>(
-  adminClient: AuthGatewayAdminClientLike,
+  client: RpcClientLike,
   functionName: string,
   args: Record<string, unknown>,
 ) {
-  const { data, error } = await adminClient.rpc<TRow>(functionName, args);
+  const { data, error } = await client.rpc<TRow>(functionName, args);
 
   if (error) {
     throw new Error(error.message);
@@ -378,7 +388,8 @@ export function createAuthGatewayHandler({
       }
 
       if (payload.action === 'check-availability') {
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(adminClient, 'check_account_availability', {
+        const authClient = createAnonymousAuthClient();
+        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
           input_email: payload.email ?? null,
           input_exclude_user_id: payload.excludeUserId ?? null,
           input_username: payload.username ?? null,
@@ -549,7 +560,8 @@ export function createAuthGatewayHandler({
       }
 
       if (payload.action === 'register') {
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(adminClient, 'check_account_availability', {
+        const authClient = createAnonymousAuthClient();
+        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
           input_email: payload.email,
           input_exclude_user_id: null,
           input_username: payload.username,
@@ -575,7 +587,6 @@ export function createAuthGatewayHandler({
           );
         }
 
-        const authClient = createAnonymousAuthClient();
         const { error } = await authClient.auth.signUp({
           email: payload.email,
           password: payload.password,
@@ -657,8 +668,12 @@ export function createAuthGatewayHandler({
         );
       }
 
-      if (payload.action === 'request-password-reset') {
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(adminClient, 'check_account_availability', {
+      if (
+        payload.action === 'request-password-reset' ||
+        payload.action === 'prepare-password-reset'
+      ) {
+        const authClient = createAnonymousAuthClient();
+        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
           input_email: payload.email,
           input_exclude_user_id: null,
           input_username: null,
@@ -674,19 +689,20 @@ export function createAuthGatewayHandler({
           );
         }
 
-        const authClient = createAnonymousAuthClient();
-        const { error } = await authClient.auth.resetPasswordForEmail(payload.email, {
-          redirectTo: payload.redirectUrl,
-        });
+        if (payload.action === 'request-password-reset') {
+          const { error } = await authClient.auth.resetPasswordForEmail(payload.email, {
+            redirectTo: payload.redirectUrl,
+          });
 
-        if (error) {
-          return jsonResponse(
-            request,
-            allowedOrigins,
-            400,
-            { code: inferAuthErrorCode(error.message), error: 'Sifre sifirlama e-postasi gonderilemedi.' },
-            { requestId: requestContext.requestId },
-          );
+          if (error) {
+            return jsonResponse(
+              request,
+              allowedOrigins,
+              400,
+              { code: inferAuthErrorCode(error.message), error: 'Sifre sifirlama e-postasi gonderilemedi.' },
+              { requestId: requestContext.requestId },
+            );
+          }
         }
 
         return jsonResponse(
@@ -748,18 +764,20 @@ export function createAuthGatewayHandler({
         );
       }
 
-      const resetPasswordResult = await anonymousAuthClient.auth.resetPasswordForEmail(authenticatedUser.email, {
-        redirectTo: payload.redirectUrl,
-      });
+      if (payload.action === 'request-password-reset-authenticated') {
+        const resetPasswordResult = await anonymousAuthClient.auth.resetPasswordForEmail(authenticatedUser.email, {
+          redirectTo: payload.redirectUrl,
+        });
 
-      if (resetPasswordResult.error) {
-        return jsonResponse(
-          request,
-          allowedOrigins,
-          400,
-          { code: inferAuthErrorCode(resetPasswordResult.error.message), error: 'Sifre sifirlama e-postasi gonderilemedi.' },
-          { requestId: requestContext.requestId },
-        );
+        if (resetPasswordResult.error) {
+          return jsonResponse(
+            request,
+            allowedOrigins,
+            400,
+            { code: inferAuthErrorCode(resetPasswordResult.error.message), error: 'Sifre sifirlama e-postasi gonderilemedi.' },
+            { requestId: requestContext.requestId },
+          );
+        }
       }
 
       return jsonResponse(

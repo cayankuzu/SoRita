@@ -13,9 +13,11 @@ import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { MainTabs } from '@/mobile/app/app-shell/navigation/MainTabs';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
+  AppHeaderScreen,
   AuthCallbackRouteScreen,
   AuthRouteScreen,
   getWarmupStageForRoute,
+  HomeRouteScreen,
   ListDetailRouteScreen,
   LocationPlaceCardsRouteScreen,
   NotificationsRouteScreen,
@@ -23,6 +25,7 @@ import {
   SettingsRouteScreen,
   UICatalogRouteScreen,
   UserProfileRouteScreen,
+  preloadRouteScreen,
 } from '@/mobile/app/app-shell/navigation/routes';
 import type { RootStackParamList } from '@/mobile/app/app-shell/navigation/types';
 import {
@@ -34,21 +37,20 @@ import { sanitizePersistedNavigationState } from '@/mobile/app/app-shell/navigat
 import { env } from '@/mobile/app/platform/config/env';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { registerSentryNavigationContainer } from '@/mobile/app/platform/observability/sentry';
-import { AppProgressBannerHost } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
+import { AppFeedbackStack } from '@/mobile/app/app-shell/feedback/AppFeedbackStack';
 import { prioritizeStartupWarmupStage } from '@/mobile/app/app-shell/startup/startupDataWarmup';
-import { StartupSplashScreen } from '@/mobile/app/app-shell/startup/StartupSplashScreen';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { scheduleDeferredTask } from '@/mobile/app/shared/utils/deferredTask';
 import { NAVIGATION_STATE_RESTORE_BUDGET_MS } from '@/mobile/app/shared/performance/budgets';
 import { markScreenVisible } from '@/mobile/app/shared/performance/navigationPerformance';
+import { useMarkStartupShellReady } from '@/mobile/app/app-shell/startup/StartupShellReadyContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const APP_EXIT_DOUBLE_PRESS_WINDOW_MS = 1800;
 const NAVIGATION_STATE_PERSIST_DEBOUNCE_MS = 700;
-const authWebOrigin = env.authWebOrigin.trim().replace(/\/+$/, '');
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['sorita://', authWebOrigin],
+  prefixes: [`${env.appScheme}://`],
   config: {
     screens: {
       AuthCallback: 'auth/callback',
@@ -71,22 +73,48 @@ const navigationTheme = {
   },
 };
 
+type NestedRouteState = {
+  index?: number;
+  routes?: ReadonlyArray<{
+    name?: string;
+    state?: NestedRouteState;
+  }>;
+};
+
+function getActiveRouteName(state?: InitialState) {
+  let currentState = state as NestedRouteState | undefined;
+  let routeName: string | undefined;
+
+  while (currentState?.routes?.length) {
+    const route = currentState.routes[currentState.index ?? 0];
+
+    if (!route) {
+      break;
+    }
+
+    routeName = route.name ?? routeName;
+    currentState = route.state;
+  }
+
+  return routeName;
+}
+
 
 export function RootNavigator() {
   const { booted, user } = useAuth();
+  const markStartupShellReady = useMarkStartupShellReady();
   const lastExitAttemptAtRef = useRef(0);
   const pendingNavigationStateRef = useRef<InitialState | undefined>(undefined);
-  const pendingNavigationStateJsonRef = useRef<string | null>(null);
   const lastSavedNavigationStateJsonRef = useRef<string | null>(null);
   const navigationPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigationPersistTaskRef = useRef<ReturnType<typeof scheduleDeferredTask> | null>(null);
   const [initialNavigationState, setInitialNavigationState] = useState<InitialState | undefined>();
   const [navigationStateReady, setNavigationStateReady] = useState(false);
+  const [initialScreenReady, setInitialScreenReady] = useState(false);
   const sanitizedInitialNavigationState = React.useMemo(
     () => sanitizePersistedNavigationState(initialNavigationState, Boolean(user)),
     [initialNavigationState, user],
   );
-  const effectiveInitialNavigationState = sanitizedInitialNavigationState;
 
   const prioritizeActiveRoute = React.useCallback(() => {
     if (!user?.id || !rootNavigationRef.isReady()) {
@@ -119,7 +147,7 @@ export function RootNavigator() {
 
   const persistLatestNavigationState = React.useCallback(() => {
     const nextState = pendingNavigationStateRef.current;
-    const nextStateJson = pendingNavigationStateJsonRef.current;
+    const nextStateJson = nextState ? JSON.stringify(nextState) : null;
 
     if (nextStateJson === lastSavedNavigationStateJsonRef.current) {
       return;
@@ -136,14 +164,7 @@ export function RootNavigator() {
 
   const scheduleNavigationStatePersist = React.useCallback(
     (state: InitialState | undefined) => {
-      const serializedState = state ? JSON.stringify(state) : null;
-
       pendingNavigationStateRef.current = state;
-      pendingNavigationStateJsonRef.current = serializedState;
-
-      if (serializedState === lastSavedNavigationStateJsonRef.current) {
-        return;
-      }
 
       cancelPendingNavigationStatePersist();
       navigationPersistTimeoutRef.current = setTimeout(() => {
@@ -187,6 +208,27 @@ export function RootNavigator() {
       subscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!booted || !navigationStateReady) {
+      return;
+    }
+
+    if (user) {
+      AppHeaderScreen.preload();
+      const activeRoutePrepared = preloadRouteScreen(
+        getActiveRouteName(sanitizedInitialNavigationState),
+      );
+
+      if (!activeRoutePrepared) {
+        HomeRouteScreen.preload();
+      }
+    } else if (!preloadRouteScreen(getActiveRouteName(sanitizedInitialNavigationState))) {
+      AuthRouteScreen.preload();
+    }
+
+    setInitialScreenReady(true);
+  }, [booted, navigationStateReady, sanitizedInitialNavigationState, user]);
 
   useEffect(() => {
     let active = true;
@@ -237,7 +279,6 @@ export function RootNavigator() {
 
     cancelPendingNavigationStatePersist();
     pendingNavigationStateRef.current = undefined;
-    pendingNavigationStateJsonRef.current = null;
     lastSavedNavigationStateJsonRef.current = null;
     void clearPersistedNavigationState();
   }, [booted, cancelPendingNavigationStatePersist, user]);
@@ -258,14 +299,14 @@ export function RootNavigator() {
     };
   }, [flushPendingNavigationStatePersist, prioritizeActiveRoute]);
 
-  const canRenderNavigation = navigationStateReady;
+  const canRenderNavigation = booted && navigationStateReady && initialScreenReady;
 
   return (
     <View style={styles.container}>
       {canRenderNavigation ? (
         <NavigationContainer
-          key={`${user ? 'auth' : 'guest'}-${effectiveInitialNavigationState ? 'persisted' : 'fresh'}`}
-          initialState={effectiveInitialNavigationState}
+          key={`${user ? 'auth' : 'guest'}-${sanitizedInitialNavigationState ? 'persisted' : 'fresh'}`}
+          initialState={sanitizedInitialNavigationState}
           linking={linking}
           ref={rootNavigationRef}
           theme={navigationTheme}
@@ -275,6 +316,7 @@ export function RootNavigator() {
             }
 
             prioritizeActiveRoute();
+            markStartupShellReady();
           }}
           onStateChange={(state) => {
             prioritizeActiveRoute();
@@ -287,7 +329,7 @@ export function RootNavigator() {
           }}
         >
           <View style={styles.navigationShell}>
-            <AppProgressBannerHost />
+            <AppFeedbackStack />
             <View style={styles.stackShell}>
               <Stack.Navigator id="root-stack" screenOptions={{ headerShown: false }}>
                 {user ? (
@@ -314,9 +356,7 @@ export function RootNavigator() {
             </View>
           </View>
         </NavigationContainer>
-      ) : (
-        <StartupSplashScreen />
-      )}
+      ) : null}
     </View>
   );
 }
@@ -335,5 +375,6 @@ const styles = StyleSheet.create({
 });
 
 export const rootNavigatorInternals = {
+  getActiveRouteName,
   getWarmupStageForRoute,
 };

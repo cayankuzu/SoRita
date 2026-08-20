@@ -18,7 +18,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
-import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
+import {
+  getPlaceFeedLocationCardCount,
+  type PlaceFeedCardItem,
+} from '@/mobile/app/data/selectors/placeAggregation';
 
 type ProfileFeedScreenProps = {
   title: string;
@@ -116,7 +119,7 @@ export function ProfileFeedScreen({
               listEmoji={item.listEmoji}
               listIsPublic={item.listIsPublic}
               listCoverImage={item.listCoverImage}
-              locationPlaceCardsCount={item.memberships.length}
+              locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
               locationOriginalPlaceName={item.place.name}
               markerColor={getMarkerColorForMemberships(
                 item.memberships,

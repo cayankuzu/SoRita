@@ -47,9 +47,14 @@ type HomeFeedRow = {
   added_at: string;
   updated_at: string;
   media?: PlaceMedia[] | string | null;
+  location_place_cards_count?: number | string | null;
   like_count?: number | string | null;
   comment_count?: number | string | null;
   viewer_has_liked?: boolean | null;
+};
+
+type CompleteHomeFeedRow = {
+  item?: HomeFeedRow | string | null;
 };
 
 const HOME_FEED_PAGE_SIZE = 20;
@@ -82,6 +87,26 @@ function parseMedia(value: HomeFeedRow['media']) {
   } catch {
     return [];
   }
+}
+
+function parseFeedRow(value: CompleteHomeFeedRow | HomeFeedRow): HomeFeedRow | null {
+  const payload = Object.prototype.hasOwnProperty.call(value, 'item')
+    ? (value as CompleteHomeFeedRow).item
+    : value as HomeFeedRow;
+
+  if (!payload) {
+    return null;
+  }
+
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload) as HomeFeedRow;
+    } catch {
+      return null;
+    }
+  }
+
+  return payload;
 }
 
 function mapFeedRow(row: HomeFeedRow, viewerId: string): PlaceFeedCardItem {
@@ -149,6 +174,7 @@ function mapFeedRow(row: HomeFeedRow, viewerId: string): PlaceFeedCardItem {
         updatedAt: row.updated_at,
       },
     ],
+    locationPlaceCardsCount: toNumber(row.location_place_cards_count) || 1,
     sortTime: new Date(row.published_at || row.updated_at).getTime(),
   };
 }
@@ -159,7 +185,7 @@ export async function fetchHomeFeedPage(params: {
   signal?: AbortSignal;
   viewerId: string;
 }): Promise<HomeFeedPage> {
-  let request = supabase.rpc('feed_page', {
+  let request = supabase.rpc('feed_page_complete', {
     p_cursor_id: params.cursor?.id ?? null,
     p_cursor_published_at: params.cursor?.publishedAt ?? null,
     p_limit: params.limit ?? HOME_FEED_PAGE_SIZE,
@@ -175,7 +201,9 @@ export async function fetchHomeFeedPage(params: {
     throw error;
   }
 
-  const rows = ((data || []) as unknown) as HomeFeedRow[];
+  const rows = (((data || []) as unknown) as Array<CompleteHomeFeedRow | HomeFeedRow>)
+    .map(parseFeedRow)
+    .filter((row): row is HomeFeedRow => Boolean(row));
   const items = rows.map((row) => mapFeedRow(row, params.viewerId));
   const lastRow = rows[rows.length - 1];
 

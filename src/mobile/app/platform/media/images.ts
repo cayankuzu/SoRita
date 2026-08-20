@@ -16,6 +16,7 @@ import {
 } from '@/mobile/app/platform/media/placeMediaSize';
 import { openMediaLibrarySelection } from '@/mobile/app/platform/media/mediaLibrarySelectionController';
 import {
+  PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_MS,
   PLACE_MEDIA_MAX_VIDEO_DURATION_MS,
   PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS,
 } from '@/mobile/app/platform/media/mediaConstants';
@@ -400,7 +401,7 @@ function isInAppVideoCameraCapture(
   source: PickedImageSource,
   options: PickImagesOptions,
 ) {
-  return Platform.OS !== 'web' && source === 'camera' && options.cameraCaptureMode === 'video';
+  return source === 'camera' && options.cameraCaptureMode === 'video';
 }
 
 async function normalizePickedImage(params: {
@@ -638,7 +639,11 @@ export async function pickPlaceMedia(
         });
         const durationMs = selectedAsset.duration ?? undefined;
 
-        if (type === 'video' && durationMs && durationMs > PLACE_MEDIA_MAX_VIDEO_DURATION_MS) {
+        if (
+          type === 'video' &&
+          durationMs &&
+          durationMs > PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_MS
+        ) {
           rejectedVideoCount += 1;
           return null;
         }
@@ -739,7 +744,11 @@ export async function pickPlaceMediaFromPrompt(options: MediaPickerPromptOptions
           const durationMs =
             type === 'video' && asset.duration > 0 ? Math.round(asset.duration * 1000) : undefined;
 
-          if (type === 'video' && durationMs && durationMs > PLACE_MEDIA_MAX_VIDEO_DURATION_MS) {
+          if (
+            type === 'video' &&
+            durationMs &&
+            durationMs > PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_MS
+          ) {
             rejectedVideoCount += 1;
             return null;
           }

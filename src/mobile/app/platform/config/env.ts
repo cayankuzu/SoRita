@@ -6,7 +6,7 @@ type ExpoExtraConfig = {
   googleMapsApiKey?: string;
   googleMapsAndroidApiKey?: string;
   googleMapsIosApiKey?: string;
-  googleMapsServicesApiKey?: string;
+  googleMapsStaticApiKey?: string;
   supabaseUrl?: string;
   supabasePublishableKey?: string;
   supabaseDeleteUserFunctionName?: string;
@@ -14,7 +14,7 @@ type ExpoExtraConfig = {
   supabaseAuthGatewayFunctionName?: string;
   supabaseModerationReportsFunctionName?: string;
   supabaseMapsFunctionName?: string;
-  authWebOrigin?: string;
+  appScheme?: string;
   facebookAppId?: string;
   expoProjectId?: string;
   enablePushNotifications?: boolean | string;
@@ -61,7 +61,7 @@ function resolveGoogleMapsApiKey() {
 export const env = {
   isExpoGo: Constants.appOwnership === 'expo',
   googleMapsApiKey: resolveGoogleMapsApiKey(),
-  googleMapsServicesApiKey: expoExtra.googleMapsServicesApiKey ?? '',
+  googleMapsStaticApiKey: expoExtra.googleMapsStaticApiKey ?? '',
   supabaseUrl: expoExtra.supabaseUrl ?? '',
   supabasePublishableKey: expoExtra.supabasePublishableKey ?? '',
   supabaseDeleteUserFunctionName: expoExtra.supabaseDeleteUserFunctionName ?? 'delete-user',
@@ -70,7 +70,7 @@ export const env = {
   supabaseModerationReportsFunctionName:
     expoExtra.supabaseModerationReportsFunctionName ?? 'moderation-reports',
   supabaseMapsFunctionName: expoExtra.supabaseMapsFunctionName ?? 'maps-geocoding',
-  authWebOrigin: expoExtra.authWebOrigin ?? 'https://cayankuzu.github.io/SoRita_web',
+  appScheme: expoExtra.appScheme ?? 'sorita',
   facebookAppId: expoExtra.facebookAppId ?? '',
   pushNotificationsEnabledOverride,
   expoProjectId:

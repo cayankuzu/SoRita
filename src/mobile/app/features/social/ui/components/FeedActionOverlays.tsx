@@ -81,7 +81,7 @@ export function FeedActionOverlays({
           reportDetails={state.reportDetails}
           onReportReasonChange={state.setReportReason}
           onReportDetailsChange={state.setReportDetails}
-          onReportSubmit={(commentId) => void state.handleCommentReport(commentId)}
+          onReportSubmit={state.handleCommentReport}
           refreshing={state.commentsRefreshing}
           onRefreshComments={() => void state.handleRefreshComments()}
           onRefreshLikers={() => void state.handleRefreshLikers()}
@@ -120,7 +120,7 @@ export function FeedActionOverlays({
             state.setItemReportDetails('');
             state.setItemReportReason('');
           }}
-          onSubmit={() => void state.handleItemReport()}
+          onSubmit={state.handleItemReport}
         />
       ) : null}
 

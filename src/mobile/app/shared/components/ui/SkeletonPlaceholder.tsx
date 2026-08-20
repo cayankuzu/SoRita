@@ -14,7 +14,8 @@ import { tr } from "@/mobile/app/shared/i18n/tr";
 
 type SkeletonProps = {
   width: DimensionValue;
-  height: number;
+  height?: number;
+  aspectRatio?: number;
   borderRadius?: number;
   style?: ViewStyle;
 };
@@ -24,6 +25,7 @@ const SHIMMER_DURATION_MS = 1200;
 export function SkeletonPlaceholder({
   width,
   height,
+  aspectRatio,
   borderRadius = 8,
   style,
 }: SkeletonProps) {
@@ -60,7 +62,12 @@ export function SkeletonPlaceholder({
 
   return (
     <Animated.View
-      style={[styles.skeleton, { width, height, borderRadius, opacity }, style]}
+      style={[
+        styles.skeleton,
+        { width, borderRadius, opacity },
+        aspectRatio ? { aspectRatio } : { height },
+        style,
+      ]}
     />
   );
 }
@@ -88,15 +95,17 @@ export function PlaceCardSkeleton() {
           <SkeletonPlaceholder width="28%" height={12} />
         </View>
       </View>
-      <SkeletonPlaceholder width="100%" height={224} borderRadius={radius.md} />
+      <View style={styles.cardMediaSkeleton}>
+        <SkeletonPlaceholder width="100%" aspectRatio={1.28} borderRadius={radius.md} />
+      </View>
       <View style={styles.cardContent}>
         <SkeletonPlaceholder width="64%" height={18} />
         <SkeletonPlaceholder width="92%" height={13} />
         <SkeletonPlaceholder width="76%" height={13} />
         <View style={styles.cardActionsSkeleton}>
-          <SkeletonPlaceholder width={72} height={32} borderRadius={radius.pill} />
-          <SkeletonPlaceholder width={72} height={32} borderRadius={radius.pill} />
-          <SkeletonPlaceholder width={44} height={32} borderRadius={radius.pill} />
+          <SkeletonPlaceholder width={64} height={48} borderRadius={radius.md} />
+          <SkeletonPlaceholder width={64} height={48} borderRadius={radius.md} />
+          <SkeletonPlaceholder width={48} height={48} borderRadius={radius.md} />
         </View>
       </View>
     </SkeletonGroup>
@@ -192,32 +201,39 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardSkeleton: {
-    marginHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    padding: spacing.md,
-    gap: spacing.md,
+    gap: 0,
     overflow: "hidden",
   },
   cardHeaderSkeleton: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+    minHeight: 60,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   cardHeaderTextSkeleton: {
     flex: 1,
     gap: spacing.xs,
   },
+  cardMediaSkeleton: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
   cardContent: {
     gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    padding: spacing.md,
   },
   cardActionsSkeleton: {
     flexDirection: "row",
     gap: spacing.sm,
-    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.cardBorder,
+    paddingTop: spacing.sm,
   },
   tileSkeleton: {
     gap: 6,

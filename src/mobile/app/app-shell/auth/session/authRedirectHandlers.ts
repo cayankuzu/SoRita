@@ -7,8 +7,10 @@ import {
 import {
   clearPendingAuthRedirectStates,
   consumePendingAuthRedirectState,
+  discardPendingAuthRedirectState,
   type AuthRedirectParams,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
+import { runWithPasswordRecoverySessionExchange } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -25,42 +27,38 @@ async function failAuthRedirect(message: string): Promise<never> {
   throw new Error(message);
 }
 
-async function resolveSessionFromPayload(payload: AuthRedirectParams): Promise<Session> {
+async function failPasswordResetRedirect(
+  payload: AuthRedirectParams,
+  message: string,
+): Promise<never> {
+  await discardPendingAuthRedirectState(payload.state);
+  throw new Error(message);
+}
+
+async function resolveSessionFromPayload(
+  payload: AuthRedirectParams,
+  fail: (message: string) => Promise<never> = failAuthRedirect,
+): Promise<Session> {
   if (payload.code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(payload.code);
 
     if (error || !data.session) {
-      return failAuthRedirect(error?.message || tr.auth.callback.sessionValidationFailed);
+      return fail(error?.message || tr.auth.callback.sessionValidationFailed);
     }
 
     return data.session;
   }
 
-  if (payload.accessToken && payload.refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: payload.accessToken,
-      refresh_token: payload.refreshToken,
-    });
-
-    if (error || !data.session) {
-      return failAuthRedirect(error?.message || tr.auth.callback.sessionValidationFailed);
-    }
-
-    return data.session;
-  }
-
-  return failAuthRedirect(tr.auth.callback.missingCode);
+  return fail(tr.auth.callback.missingCode);
 }
 
-function getProviderErrorMessage(payload: AuthRedirectParams) {
-  return payload.error ? (payload.errorCode ? `${payload.errorCode}: ${payload.error}` : payload.error) : null;
+function hasProviderError(payload: AuthRedirectParams) {
+  return Boolean(payload.error || payload.errorCode);
 }
 
 export async function completeSignupRedirect(payload: AuthRedirectParams) {
-  const providerError = getProviderErrorMessage(payload);
-
-  if (providerError) {
-    await failAuthRedirect(providerError);
+  if (hasProviderError(payload)) {
+    await failAuthRedirect(tr.auth.callback.signupLinkInvalid);
   }
 
   const validation = await consumePendingAuthRedirectState({
@@ -78,10 +76,8 @@ export async function completeSignupRedirect(payload: AuthRedirectParams) {
 }
 
 export async function preparePasswordResetRedirect(payload: AuthRedirectParams) {
-  const providerError = getProviderErrorMessage(payload);
-
-  if (providerError) {
-    await failAuthRedirect(providerError);
+  if (hasProviderError(payload)) {
+    await failPasswordResetRedirect(payload, tr.auth.callback.passwordResetLinkInvalid);
   }
 
   const validation = await consumePendingAuthRedirectState({
@@ -91,11 +87,15 @@ export async function preparePasswordResetRedirect(payload: AuthRedirectParams) 
   });
 
   if (!validation.success || payload.flow !== 'password-reset') {
-    await failAuthRedirect(tr.auth.callback.passwordResetLinkInvalid);
+    await failPasswordResetRedirect(payload, tr.auth.callback.passwordResetLinkInvalid);
   }
 
-  const session = await resolveSessionFromPayload(payload);
-  await persistAuthSession(session);
+  await runWithPasswordRecoverySessionExchange(() =>
+    resolveSessionFromPayload(
+      payload,
+      (message) => failPasswordResetRedirect(payload, message),
+    ),
+  );
 }
 
 export async function updateRecoveredPassword(password: string) {
@@ -105,7 +105,15 @@ export async function updateRecoveredPassword(password: string) {
     throw error;
   }
 
-  await persistAuthSession(null);
-  await supabase.auth.signOut().catch((err) => { logger.debug('auth', 'Failed to sign out after updating recovered password', err); });
-  clearCurrentUserState();
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw sessionError ?? new Error(tr.auth.callback.sessionValidationFailed);
+  }
+
+  await persistAuthSession(session);
+  return session;
 }

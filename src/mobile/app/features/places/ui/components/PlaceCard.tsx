@@ -1,17 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Flag, Pencil, Share2, Trash2 } from 'lucide-react-native';
+import { Copy, Share2 } from 'lucide-react-native';
 
-import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
-import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
+import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { useUpdateListsMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/public/types';
 import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
-import { CompactPlaceCard } from '@/mobile/app/features/places/ui/components/place-card/CompactPlaceCard';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
+import { shouldShowPlaceCardMiniMap } from '@/mobile/app/features/places/ui/components/place-card/placeCardMapVisibility';
+import {
+  buildPlaceActionItems,
+  createFallbackOwnedList,
+  getPlaceCardMetadata,
+  includeFallbackList,
+  resolveOptionalPressHandler,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardModel';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
@@ -32,12 +38,11 @@ type PlaceCardProps = {
   listEmoji?: string;
   listIsPublic?: boolean;
   listCoverImage?: string;
-  compact?: boolean;
   allowAddToList?: boolean;
   markerColor?: string;
-  markerContext?: 'feed' | 'list';
   locationPlaceCardsCount?: number;
   locationOriginalPlaceName?: string;
+  isVisible?: boolean;
   onPress?: () => void;
   onPressIn?: () => void;
   onOwnerPress?: () => void;
@@ -62,116 +67,22 @@ type ReportActionSheetProps = React.ComponentProps<
 type SourcePlaceCardModalProps = React.ComponentProps<
   typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal')['SourcePlaceCardModal']
 >;
-type ActionMenuItem = React.ComponentProps<typeof DeferredActionMenuSheet>['items'][number];
+type PlaceCardOverlay =
+  | { type: 'none' }
+  | { type: 'action-menu' }
+  | { type: 'add-to-list' }
+  | { type: 'lightbox'; index: number }
+  | { type: 'owned-delete' }
+  | { type: 'owned-editor' }
+  | { type: 'report' }
+  | { type: 'share-menu' }
+  | { type: 'source-place' };
 
 function renderWhen(
   visible: boolean,
   render: () => React.ReactNode,
 ) {
   return visible ? render() : null;
-}
-
-function uniqueValues(values?: string[], fallback?: string) {
-  if (values?.length) {
-    return Array.from(new Set(values));
-  }
-
-  return fallback ? [fallback] : [];
-}
-
-function getPlaceCardMetadata(place: Place) {
-  const features = uniqueValues(place.specialFeatures);
-
-  return {
-    bestTimes: uniqueValues(place.bestTimes, place.bestTime),
-    categories: uniqueValues(place.categories, place.category),
-    dietaryOptions: features.filter((item) => PLACE_DIETARY_OPTIONS.includes(item)),
-    specialFeatures: features.filter((item) => !PLACE_DIETARY_OPTIONS.includes(item)),
-  };
-}
-
-function createFallbackOwnedList(params: {
-  canManage: boolean;
-  listCoverImage?: string;
-  listEmoji?: string;
-  listId?: string;
-  listIsPublic?: boolean;
-  listName?: string;
-  place: Place;
-  user: User | null;
-}): PlaceList | null {
-  if (!params.canManage || !params.user || !params.listId) {
-    return null;
-  }
-
-  return {
-    id: params.listId,
-    userId: params.user.id,
-    name: params.listName || tr.cards.savedPlaceFallback,
-    description: undefined,
-    emoji: params.listEmoji,
-    coverImage: params.listCoverImage,
-    places: [params.place],
-    isPublic: params.listIsPublic !== false,
-    createdAt: params.place.addedAt,
-    updatedAt: params.place.updatedAt || params.place.addedAt,
-  };
-}
-
-function includeFallbackList(lists: PlaceList[], fallback: PlaceList | null) {
-  if (!fallback || lists.some((item) => item.id === fallback.id)) {
-    return lists;
-  }
-
-  return [fallback, ...lists];
-}
-
-function buildPlaceActionItems(params: {
-  canManageOwnedPlace: boolean;
-  canReportPlace: boolean;
-  onDelete?: () => void;
-  onDeletePress: () => void;
-  onEdit?: () => void;
-  onEditPress: () => void;
-  onReportPress: () => void;
-  onSharePress: () => void;
-}) {
-  const items: Array<ActionMenuItem | null> = [
-    {
-      key: 'share',
-      label: tr.cards.share,
-      renderIcon: (color) => <Share2 color={color} size={14} />,
-      onPress: params.onSharePress,
-    },
-    params.onEdit || params.canManageOwnedPlace
-      ? {
-          key: 'edit',
-          label: tr.common.edit,
-          renderIcon: (color) => <Pencil color={color} size={14} />,
-          onPress: params.onEditPress,
-        }
-      : null,
-    params.onDelete || params.canManageOwnedPlace
-      ? {
-          key: 'delete',
-          label: tr.common.delete,
-          renderIcon: (color) => <Trash2 color={color} size={14} />,
-          tone: 'danger',
-          onPress: params.onDeletePress,
-        }
-      : null,
-    params.canReportPlace
-      ? {
-          key: 'report',
-          label: tr.profile.actions.report,
-          renderIcon: (color) => <Flag color={color} size={14} />,
-          tone: 'danger',
-          onPress: params.onReportPress,
-        }
-      : null,
-  ];
-
-  return items.filter((item): item is ActionMenuItem => Boolean(item));
 }
 
 function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
@@ -214,12 +125,11 @@ function PlaceCardComponent({
   listEmoji,
   listIsPublic,
   listCoverImage,
-  compact = false,
   allowAddToList = true,
   markerColor,
-  markerContext = 'feed',
   locationPlaceCardsCount,
   locationOriginalPlaceName,
+  isVisible = true,
   onPress,
   onPressIn,
   onOwnerPress,
@@ -232,20 +142,23 @@ function PlaceCardComponent({
   const { user } = useAuth();
   const { mutateAsync: deletePlaceAsync } = useDeletePlaceMutation();
   const { mutateAsync: updateListsAsync } = useUpdateListsMutation();
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [showAddToList, setShowAddToList] = useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const [showShareMenu, setShowShareMenu] = useState(false);
-  const [showOwnedPlaceDeleteConfirm, setShowOwnedPlaceDeleteConfirm] = useState(false);
-  const [showOwnedPlaceEditor, setShowOwnedPlaceEditor] = useState(false);
-  const [showReportSheet, setShowReportSheet] = useState(false);
-  const [showSourcePlaceCard, setShowSourcePlaceCard] = useState(false);
+  const [activeOverlay, setActiveOverlay] = useState<PlaceCardOverlay>({ type: 'none' });
   const [isSharingLink, setIsSharingLink] = useState(false);
   const [addToListDraft, setAddToListDraft] = useState<PlaceEditorDraft | null>(null);
   const [commentsActivated, setCommentsActivated] = useState(false);
+  const [isMapManuallyHidden, setIsMapManuallyHidden] = useState(false);
   const [likersActivated, setLikersActivated] = useState(false);
   const [reportDetails, setReportDetails] = useState('');
   const [reportReason, setReportReason] = useState('');
+  const lightboxIndex = activeOverlay.type === 'lightbox' ? activeOverlay.index : null;
+  const showAddToList = activeOverlay.type === 'add-to-list';
+  const showActionMenu = activeOverlay.type === 'action-menu';
+  const showOwnedPlaceDeleteConfirm = activeOverlay.type === 'owned-delete';
+  const showOwnedPlaceEditor = activeOverlay.type === 'owned-editor';
+  const showReportSheet = activeOverlay.type === 'report';
+  const showShareMenu = activeOverlay.type === 'share-menu';
+  const showSourcePlaceCard = activeOverlay.type === 'source-place';
+  const closeOverlay = () => setActiveOverlay({ type: 'none' });
   const media = useMemo(() => getPlaceMedia(place), [place]);
   const { bestTimes, categories, dietaryOptions, specialFeatures } = useMemo(
     () => getPlaceCardMetadata(place),
@@ -260,6 +173,11 @@ function PlaceCardComponent({
     mapFocusKey,
     showInteractionHint,
   } = useMiniMapInteraction(place.id);
+  const isMapVisible = shouldShowPlaceCardMiniMap({
+    hasMedia: media.length > 0,
+    interactive: isMapInteractive,
+    manuallyHidden: isMapManuallyHidden,
+  });
 
   const priceLabel = formatPrice(place) ?? undefined;
   const shareUrl = useMemo(() => buildListContentUrl(listId, place.id), [listId, place.id]);
@@ -277,22 +195,16 @@ function PlaceCardComponent({
   );
 
   const placeTimestampLabels = useMemo(
-    () => getCreatedUpdatedLabels(place.addedAt, place.updatedAt || place.addedAt),
+    () => getCreatedUpdatedLabels(place.addedAt, place.updatedAt),
     [place.addedAt, place.updatedAt],
   );
 
   useEffect(() => {
-    setLightboxIndex(null);
+    setActiveOverlay({ type: 'none' });
     setAddToListDraft(null);
-    setShowAddToList(false);
-    setShowActionMenu(false);
-    setShowShareMenu(false);
-    setShowOwnedPlaceDeleteConfirm(false);
-    setShowOwnedPlaceEditor(false);
-    setShowReportSheet(false);
-    setShowSourcePlaceCard(false);
     setIsSharingLink(false);
     setCommentsActivated(false);
+    setIsMapManuallyHidden(false);
     setLikersActivated(false);
     setReportDetails('');
     setReportReason('');
@@ -358,9 +270,10 @@ function PlaceCardComponent({
     });
   };
 
-  const resolvedPlaceNamePress = onPlaceNamePress === undefined
-    ? handleOpenLocationPlaceCards
-    : onPlaceNamePress || undefined;
+  const resolvedPlaceNamePress = resolveOptionalPressHandler(
+    onPlaceNamePress,
+    handleOpenLocationPlaceCards,
+  );
   const canManageOwnedPlace = Boolean(
     user && listId && (resolvedOwnerId || initialResolvedOwnerId) === user.id,
   );
@@ -390,30 +303,19 @@ function PlaceCardComponent({
   const ownedCurrentList =
     ownedEditableLists.find((item) => item.id === listId) || fallbackOwnedList;
 
-  if (compact) {
-    return (
-      <CompactPlaceCard
-        media={media}
-        mapMarkers={mapMarkers}
-        locationPlaceCardsCount={locationPlaceCardsCount}
-        place={place}
-        placeTimestampLabels={placeTimestampLabels}
-        onPlaceNamePress={resolvedPlaceNamePress}
-        onPress={onPress}
-        onPressIn={onPressIn}
-      />
-    );
-  }
-
-  void markerContext;
-
   const focusMapPreview = () => {
+    setIsMapManuallyHidden(false);
     activateMap();
+  };
+
+  const hideMapPreview = () => {
+    setIsMapManuallyHidden(true);
+    deactivateMap();
   };
 
   const handleSourcePress = () => {
     if (canOpenSourcePlaceCard && place.sourceAttribution?.listId) {
-      setShowSourcePlaceCard(true);
+      setActiveOverlay({ type: 'source-place' });
       return;
     }
 
@@ -427,7 +329,7 @@ function PlaceCardComponent({
       return;
     }
 
-    setShowSourcePlaceCard(false);
+    closeOverlay();
     openStackScreen(navigation, 'ListDetail', {
       listId: sourceAttributionList.id,
       placeId: sourceAttributionPlace.id,
@@ -441,7 +343,7 @@ function PlaceCardComponent({
 
     try {
       await handleReportPlace(reportReason, reportDetails.trim() || undefined);
-      setShowReportSheet(false);
+      closeOverlay();
       setReportDetails('');
       setReportReason('');
       showToast(tr.cards.reportSent, 'success');
@@ -477,7 +379,7 @@ function PlaceCardComponent({
 
     try {
       await updateListsAsync(changedLists);
-      setShowOwnedPlaceEditor(false);
+      closeOverlay();
       showToast(tr.profile.toast.placeUpdated, 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : tr.map.savePlaceUnexpected, 'error');
@@ -487,8 +389,7 @@ function PlaceCardComponent({
   const handleOwnedPlaceDelete = async () => {
     try {
       await deletePlaceAsync(place.id);
-      setShowOwnedPlaceDeleteConfirm(false);
-      setShowOwnedPlaceEditor(false);
+      closeOverlay();
       showToast(tr.profile.toast.placeDeleted, 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : tr.map.deletePlaceUnexpected, 'error');
@@ -496,12 +397,11 @@ function PlaceCardComponent({
   };
 
   const openShareMenu = () => {
-    setShowActionMenu(false);
-    setShowShareMenu(true);
+    setActiveOverlay({ type: 'share-menu' });
   };
 
   const handleCopyAddressPress = async () => {
-    setShowShareMenu(false);
+    closeOverlay();
 
     try {
       const { setStringAsync } = await import('expo-clipboard');
@@ -520,7 +420,7 @@ function PlaceCardComponent({
       return;
     }
 
-    setShowShareMenu(false);
+    closeOverlay();
     setIsSharingLink(true);
 
     try {
@@ -540,29 +440,27 @@ function PlaceCardComponent({
     canReportPlace,
     onDelete,
     onDeletePress: () => {
-      setShowActionMenu(false);
       if (onDelete) {
+        closeOverlay();
         onDelete();
         return;
       }
 
-      setShowOwnedPlaceDeleteConfirm(true);
+      setActiveOverlay({ type: 'owned-delete' });
     },
     onEdit,
     onEditPress: () => {
-      setShowActionMenu(false);
       if (onEdit) {
+        closeOverlay();
         onEdit();
         return;
       }
 
-      setShowOwnedPlaceEditor(true);
+      setActiveOverlay({ type: 'owned-editor' });
     },
     onReportPress: () => {
-      setShowActionMenu(false);
-      setShowReportSheet(true);
+      setActiveOverlay({ type: 'report' });
     },
-    onSharePress: openShareMenu,
   });
   const shareActionItems = [
     {
@@ -583,73 +481,82 @@ function PlaceCardComponent({
     },
   ];
   const placeCardFullProps: React.ComponentProps<typeof PlaceCardFull> = {
-    allowAddToList: allowAddToList && Boolean(user),
-    bestTimes,
-    canReportPlace,
-    categories,
-    comments,
-    context,
-    currentUserName: user?.name,
-    currentUserPhoto: user?.profilePhoto,
-    dietaryOptions,
-    isLiked,
-    isFetchingNextCommentsPage,
-    likers,
-    listCoverImage,
-    listEmoji,
-    listIsPublic,
-    listName,
-    isMapInteractive,
-    locationPlaceCardsCount,
-    mapFocusKey,
-    mapMarkers,
-    showMapInteractionHint: showInteractionHint,
-    onAddToListPress: () => setShowAddToList(true),
-    onAddressCopied: () => showToast(tr.cards.addressCopied, 'success'),
-    onCommentDelete: handleDeleteComment,
-    onCommentsLoadMore: async () => {
-      await fetchNextCommentsPage?.();
+    actions: {
+      onAddToListPress: () => setActiveOverlay({ type: 'add-to-list' }),
+      onAddressCopied: () => showToast(tr.cards.addressCopied, 'success'),
+      onCommentDelete: handleDeleteComment,
+      onCommentsLoadMore: async () => {
+        await fetchNextCommentsPage?.();
+      },
+      onCommentLikeToggle: handleToggleCommentLike,
+      onCommentReport: handleReportComment,
+      onCommentSubmit: handleCreateComment,
+      onCommentUpdate: handleUpdateComment,
+      onFocusPress: focusMapPreview,
+      onFocusLongPress: hideMapPreview,
+      onLikePress: handleLikePress,
+      onSharePress: openShareMenu,
+      onOpenActionMenu: actionItems.length > 0
+        ? () => setActiveOverlay({ type: 'action-menu' })
+        : undefined,
+      onOwnerPress,
+      onMediaPress: (index) => setActiveOverlay({ type: 'lightbox', index }),
+      onPlaceNamePress: resolvedPlaceNamePress,
+      onPress,
+      onPressIn,
+      onRefresh,
+      onReportPlace: handleReportPlace,
+      onUserPress: openUserProfile,
+      onCommentsVisibilityChange: (visible) => {
+        if (visible) {
+          setCommentsActivated(true);
+        }
+      },
+      onLikersVisibilityChange: (visible) => {
+        if (visible) {
+          setLikersActivated(true);
+        }
+      },
+      onSourcePress: handleSourcePress,
+      showActionMenu: actionItems.length > 0,
     },
-    onCommentLikeToggle: handleToggleCommentLike,
-    onCommentReport: handleReportComment,
-    onCommentSubmit: handleCreateComment,
-    onCommentUpdate: handleUpdateComment,
-    onFocusPress: focusMapPreview,
-    onFocusLongPress: deactivateMap,
-    onLikePress: handleLikePress,
-    onSharePress: () => {
-      openShareMenu();
+    content: {
+      bestTimes,
+      categories,
+      context,
+      dietaryOptions,
+      listCoverImage,
+      listEmoji,
+      listIsPublic,
+      listName,
+      locationPlaceCardsCount,
+      owner,
+      media,
+      place,
+      placeTimestampLabels,
+      priceLabel,
+      sourceAttribution: place.sourceAttribution,
+      sourceUser: sourceAttributionUser,
+      specialFeatures,
     },
-    onOpenActionMenu: actionItems.length > 0 ? () => setShowActionMenu(true) : undefined,
-    onOwnerPress,
-    onMediaPress: setLightboxIndex,
-    onPlaceNamePress: resolvedPlaceNamePress,
-    onPress,
-    onPressIn,
-    onRefresh,
-    onReportPlace: handleReportPlace,
-    onUserPress: openUserProfile,
-    onCommentsVisibilityChange: (visible) => {
-      if (visible) {
-        setCommentsActivated(true);
-      }
+    map: {
+      focusKey: mapFocusKey,
+      interactive: isMapInteractive,
+      markers: mapMarkers,
+      previewEnabled: isVisible,
+      showInteractionHint,
+      visible: isMapVisible,
     },
-    onLikersVisibilityChange: (visible) => {
-      if (visible) {
-        setLikersActivated(true);
-      }
+    social: {
+      allowAddToList: allowAddToList && Boolean(user),
+      comments,
+      currentUserName: user?.name,
+      currentUserPhoto: user?.profilePhoto,
+      hasNextCommentsPage,
+      isFetchingNextCommentsPage,
+      isLiked,
+      likers,
     },
-    owner,
-    media,
-    place,
-    placeTimestampLabels,
-    priceLabel,
-    sourceAttribution: place.sourceAttribution,
-    sourceUser: sourceAttributionUser,
-    specialFeatures,
-    onSourcePress: handleSourcePress,
-    showActionMenu: actionItems.length > 0,
-    hasNextCommentsPage,
   };
 
   return (
@@ -661,7 +568,7 @@ function PlaceCardComponent({
           visible
           title={place.name}
           items={actionItems}
-          onClose={() => setShowActionMenu(false)}
+          onClose={closeOverlay}
         />
       ))}
 
@@ -670,7 +577,7 @@ function PlaceCardComponent({
           visible
           title={tr.cards.share}
           items={shareActionItems}
-          onClose={() => setShowShareMenu(false)}
+          onClose={closeOverlay}
         />
       ))}
 
@@ -681,7 +588,7 @@ function PlaceCardComponent({
           description={tr.listDetail.deletePlaceDescription}
           confirmLabel={tr.common.delete}
           confirmVariant="danger"
-          onClose={() => setShowOwnedPlaceDeleteConfirm(false)}
+          onClose={closeOverlay}
           onConfirm={handleOwnedPlaceDelete}
         />
       ))}
@@ -697,18 +604,18 @@ function PlaceCardComponent({
           draft={addToListDraft}
           onClose={() => {
             setAddToListDraft(null);
-            setShowAddToList(false);
+            closeOverlay();
           }}
           onMinimize={(draft) => {
             setAddToListDraft(draft);
-            setShowAddToList(false);
+            closeOverlay();
           }}
           onSave={async (placeData, targetListIds) => {
             const saved = await savePlaceToLists(placeData, targetListIds);
 
             if (saved) {
               setAddToListDraft(null);
-              setShowAddToList(false);
+              closeOverlay();
             }
           }}
           onCreateList={async (list) => {
@@ -727,7 +634,7 @@ function PlaceCardComponent({
           lists={ownedEditableLists}
           existingPlace={place}
           existingPlaceListName={ownedCurrentList?.name || ''}
-          onClose={() => setShowOwnedPlaceEditor(false)}
+          onClose={closeOverlay}
           onDelete={async () => {
             await handleOwnedPlaceDelete();
           }}
@@ -742,7 +649,7 @@ function PlaceCardComponent({
 
       {renderWhen(showSourcePlaceCard, () => (
         <DeferredSourcePlaceCardModal
-          onClose={() => setShowSourcePlaceCard(false)}
+          onClose={closeOverlay}
           visible
         >
           {sourceAttributionPlace && sourceAttributionList ? (
@@ -758,7 +665,7 @@ function PlaceCardComponent({
               onOwnerPress={
                 sourceAttributionOwner?.id
                   ? () => {
-                      setShowSourcePlaceCard(false);
+                      closeOverlay();
                       openUserProfile(sourceAttributionOwner.id);
                     }
                   : undefined
@@ -776,7 +683,7 @@ function PlaceCardComponent({
           allowDownload={canDownloadOwnedPlaceMedia}
           items={media}
           initialIndex={lightboxIndex ?? 0}
-          onClose={() => setLightboxIndex(null)}
+          onClose={closeOverlay}
         />
       ))}
 
@@ -790,13 +697,11 @@ function PlaceCardComponent({
           onReportDetailsChange={setReportDetails}
           onReportReasonChange={setReportReason}
           onClose={() => {
-            setShowReportSheet(false);
+            closeOverlay();
             setReportDetails('');
             setReportReason('');
           }}
-          onSubmit={() => {
-            void handleReportPlaceSubmit();
-          }}
+          onSubmit={handleReportPlaceSubmit}
         />
       ))}
     </>

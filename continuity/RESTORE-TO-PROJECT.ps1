@@ -23,9 +23,21 @@ $managedFiles = @(
     'credentials\ios\profile.mobileprovision'
 )
 
+$mappedFiles = @(
+    @{
+        Source = 'supabase\linked-project.json'
+        Destination = 'supabase\.temp\linked-project.json'
+    },
+    @{
+        Source = 'supabase\project-ref.txt'
+        Destination = 'supabase\.temp\project-ref'
+    }
+)
+
 function Copy-ManagedFileToProject {
     param(
-        [string]$RelativePath
+        [string]$RelativePath,
+        [string]$DestinationRelativePath = $RelativePath
     )
 
     $sourcePath = Join-Path $backupRoot $RelativePath
@@ -34,7 +46,7 @@ function Copy-ManagedFileToProject {
         throw "Required continuity file is missing in backup bundle: $RelativePath"
     }
 
-    $destinationPath = Join-Path $projectRootPath $RelativePath
+    $destinationPath = Join-Path $projectRootPath $DestinationRelativePath
     $destinationDirectory = Split-Path -Path $destinationPath -Parent
     New-Item -ItemType Directory -Force -Path $destinationDirectory | Out-Null
 
@@ -43,7 +55,7 @@ function Copy-ManagedFileToProject {
         $destinationHash = (Get-FileHash -LiteralPath $destinationPath -Algorithm SHA256).Hash
 
         if ($sourceHash -ne $destinationHash) {
-            throw "Destination file already exists with different content: $RelativePath. Re-run with -Force to overwrite."
+            throw "Destination file already exists with different content: $DestinationRelativePath. Re-run with -Force to overwrite."
         }
 
         return
@@ -54,6 +66,10 @@ function Copy-ManagedFileToProject {
 
 foreach ($relativePath in $managedFiles) {
     Copy-ManagedFileToProject -RelativePath $relativePath
+}
+
+foreach ($entry in $mappedFiles) {
+    Copy-ManagedFileToProject -RelativePath $entry.Source -DestinationRelativePath $entry.Destination
 }
 
 Get-ChildItem -LiteralPath $backupRoot -Filter 'AuthKey_*.p8' -File -ErrorAction SilentlyContinue |

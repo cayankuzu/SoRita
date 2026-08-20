@@ -1,4 +1,4 @@
-export const LEGAL_CONSENT_VERSION = '2026-04-16';
+export const LEGAL_CONSENT_VERSION = '2026-08-17-terms-community';
 
 export type LegalDocumentId = 'terms' | 'community' | 'privacy' | 'kvkk';
 

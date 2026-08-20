@@ -28,7 +28,7 @@ type NonceStoreLike = {
 };
 
 type StorageBucketLike = {
-  createSignedUploadUrl: (path: string) => Promise<{
+  createSignedUploadUrl: (path: string, options?: { upsert: boolean }) => Promise<{
     data?: SignedUploadUrlData | null;
     error?: ErrorLike | null;
   }>;
@@ -127,18 +127,21 @@ const bytesInMb = 1024 * 1024;
 const placeMediaTargetVideoBitrate = 5_000_000;
 const placeMediaAudioBitrateHeadroom = 192_000;
 const placeMediaContainerHeadroomRatio = 1.15;
-const placeMediaMaxVideoDurationSeconds = 60;
+const placeMediaMaxVideoDurationSeconds = 180;
+const placeMediaVideoDurationToleranceSeconds = 3;
+const placeMediaMaxAcceptedVideoDurationSeconds =
+  placeMediaMaxVideoDurationSeconds + placeMediaVideoDurationToleranceSeconds;
 const placeMediaUploadSizeHeadroomSeconds = 5;
 const placeMediaUploadBytes = Math.ceil(
   ((placeMediaTargetVideoBitrate + placeMediaAudioBitrateHeadroom) *
-    (placeMediaMaxVideoDurationSeconds + placeMediaUploadSizeHeadroomSeconds) *
+    (placeMediaMaxAcceptedVideoDurationSeconds + placeMediaUploadSizeHeadroomSeconds) *
     placeMediaContainerHeadroomRatio) /
     8,
 );
 const placeMediaUploadMegabytes = Math.ceil(placeMediaUploadBytes / bytesInMb);
 const maxDeleteRequestsPerMinute = 160;
 // Worst-case place save:
-// 6 media items * (file + optional thumbnail) * 1 target list = 12 requests.
+// 6 media items * (file + optional thumbnail) * 3 target lists = 36 requests.
 // Keep enough retry headroom without allowing a single client to flood Storage URL creation.
 const maxPlaceMediaCreateUploadRequestsPerMinute = 72;
 const maxProfileMediaRequestsPerMinute = 120;
@@ -183,7 +186,11 @@ const completeUploadPayloadSchema = z.object({
   action: z.literal('complete-upload'),
   bucket: z.literal('place-media-private'),
   contentType: z.enum(signedUploadContentTypeValues),
-  durationSeconds: z.number().nonnegative().max(placeMediaMaxVideoDurationSeconds).optional(),
+  durationSeconds: z
+    .number()
+    .nonnegative()
+    .max(placeMediaMaxAcceptedVideoDurationSeconds)
+    .optional(),
   fileSizeBytes: z.number().int().positive(),
   height: z.number().int().positive().max(8192).optional(),
   mediaType: z.enum(['photo', 'video']),
@@ -748,7 +755,10 @@ function assertActualMediaMetadata(
   }
 
   if (payload.mediaType === 'video') {
-    if (!actual.durationSeconds || actual.durationSeconds > placeMediaMaxVideoDurationSeconds) {
+    if (
+      !actual.durationSeconds ||
+      actual.durationSeconds > placeMediaMaxAcceptedVideoDurationSeconds
+    ) {
       throw new HttpRequestError(422, 'upload_verification_failed', 'Video duration could not be verified');
     }
 
@@ -1200,7 +1210,8 @@ export function createMediaAssetsHandler({
         const extension = normalizeExtension(payload.extension, payload.contentType);
         const fileName = `${userId}/${prefix}-${createRequestId()}.${extension}`;
         const bucket = adminClient.storage.from(payload.bucket);
-        const { data: signedUploadData, error: signedUploadError } = await bucket.createSignedUploadUrl(fileName);
+        const { data: signedUploadData, error: signedUploadError } =
+          await bucket.createSignedUploadUrl(fileName, { upsert: true });
 
         if (signedUploadError || !signedUploadData?.signedUrl) {
           logEdgeEvent('error', 'Signed upload URL creation failed', requestContext, {

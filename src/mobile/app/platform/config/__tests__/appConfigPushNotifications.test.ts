@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { androidNotificationChannelId } from '@/mobile/app/platform/notifications/channels';
+
 const originalEnv = { ...process.env };
 
 async function loadAppConfig() {
@@ -37,6 +39,21 @@ describe('app.config push notification extras', () => {
     const config = await loadAppConfig();
 
     expect(config.extra?.enablePushNotifications).toBe('true');
+    warnSpy.mockRestore();
+  });
+
+  it('keeps the native default notification channel aligned with the app channel', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const config = await loadAppConfig();
+    const notificationsPlugin = config.plugins?.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
+    );
+
+    expect(notificationsPlugin).toEqual([
+      'expo-notifications',
+      { defaultChannel: androidNotificationChannelId },
+    ]);
     warnSpy.mockRestore();
   });
 });

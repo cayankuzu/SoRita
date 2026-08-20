@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera } from 'lucide-react-native';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 
 import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests';
 import { AuthImagePicker, AuthStepDots } from '@/mobile/app/features/auth/public/components';
@@ -84,9 +84,11 @@ export function SettingsEditProfileFlow({
 }: SettingsEditProfileFlowProps) {
   const currentEditStep = steps[editStep];
   const isLastEditStep = editStep === steps.length - 1;
+  const usernameInputRef = React.useRef<TextInput>(null);
+  const bioInputRef = React.useRef<TextInput>(null);
 
   return (
-    <Screen refreshing={refreshing} onRefresh={onRefresh}>
+    <Screen refreshing={refreshing} onRefresh={onRefresh} variant="settings">
       <SettingsHeader
         title={tr.settings.editProfile.title}
         onBack={onBack}
@@ -114,8 +116,11 @@ export function SettingsEditProfileFlow({
             value={editName}
             onChangeText={onChangeName}
             maxLength={USER_NAME_MAX_LENGTH}
+            returnKeyType="next"
+            onSubmitEditing={() => usernameInputRef.current?.focus()}
           />
           <TextField
+            ref={usernameInputRef}
             label={tr.settings.editProfile.usernameLabel}
             value={editUsername}
             onChangeText={onChangeUsername}
@@ -123,8 +128,11 @@ export function SettingsEditProfileFlow({
             helper={usernameHelper}
             helperTone={usernameHelperTone}
             maxLength={USERNAME_MAX_LENGTH}
+            returnKeyType="next"
+            onSubmitEditing={() => bioInputRef.current?.focus()}
           />
           <TextField
+            ref={bioInputRef}
             label={tr.settings.editProfile.bioLabel}
             value={editBio}
             onChangeText={onChangeBio}

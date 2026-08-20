@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateAppLayout,
   getResponsiveDiscoveryColumnCount,
+  getResponsiveGalleryColumnCount,
   getResponsiveDiscoveryTileWidth,
   getResponsiveScreenPadding,
 } from '@/mobile/app/shared/utils/layout';
@@ -18,6 +19,14 @@ describe('responsive layout helpers', () => {
     expect(getResponsiveScreenPadding(840, 1180)).toBe(32);
     expect(getResponsiveDiscoveryColumnCount(840, 1180)).toBe(3);
     expect(getResponsiveDiscoveryTileWidth(840, 1180, 12)).toBe(250);
+  });
+
+  it('keeps rich cards usable and scales media-first gallery columns separately', () => {
+    expect(getResponsiveDiscoveryColumnCount(360, 800)).toBe(1);
+    expect(getResponsiveDiscoveryColumnCount(480, 900)).toBe(2);
+    expect(getResponsiveDiscoveryColumnCount(600, 900)).toBe(3);
+    expect(getResponsiveGalleryColumnCount(320, 720)).toBe(3);
+    expect(getResponsiveGalleryColumnCount(840, 1180)).toBe(6);
   });
 
   it('reports constrained content width and safe-area adjusted height', () => {

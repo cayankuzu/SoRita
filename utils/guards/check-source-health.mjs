@@ -1,9 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = path.join(ROOT, 'src', 'mobile', 'app');
 const DEFAULT_MAX_LINES = 700;
+const DEFAULT_MAX_FUNCTION_LINES = 300;
 const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/shared/i18n/tr.ts': 1_100,
   'src/mobile/app/data/repositories/listsRepository.ts': 980,
@@ -18,6 +20,26 @@ const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/features/map/ui/screens/MapScreen.tsx': 790,
   'src/mobile/app/platform/media/MediaLibrarySelectionHost.tsx': 770,
   'src/mobile/app/features/auth/application/useAuthScreenState.ts': 730,
+}));
+const FUNCTION_HOTSPOT_LIMITS = new Map(Object.entries({
+  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 860,
+  'src/mobile/app/features/map/application/useMapScreenState.ts': 800,
+  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 700,
+  'src/mobile/app/features/auth/application/useAuthScreenState.ts': 620,
+  'src/mobile/app/features/places/ui/components/PlaceCard.tsx': 630,
+  'src/mobile/app/features/profile/ui/screens/ProfileScreen.tsx': 590,
+  'src/mobile/app/features/lists/ui/screens/ListDetailScreen.tsx': 560,
+  'src/mobile/app/platform/media/MediaLibrarySelectionHost.tsx': 480,
+  'src/mobile/app/features/map/ui/components/PlaceEditorModal.tsx': 480,
+  'src/mobile/app/features/lists/ui/components/ListEditorModal.tsx': 470,
+  'src/mobile/app/features/map/ui/screens/MapScreen.tsx': 460,
+  'src/mobile/app/features/settings/application/useSettingsScreenState.ts': 390,
+  'src/mobile/app/app-shell/notifications/PushNotificationsController.tsx': 380,
+  'src/mobile/app/app-shell/auth/session/useAuthActions.ts': 370,
+  'src/mobile/app/features/places/application/usePlaceCardState.ts': 360,
+  'src/mobile/app/features/social/ui/components/CommentPanel.tsx': 350,
+  'src/mobile/app/features/settings/ui/screens/SettingsScreen.tsx': 345,
+  'src/mobile/app/platform/media/VideoCameraCaptureHost.tsx': 330,
 }));
 
 function walk(directory) {
@@ -38,9 +60,43 @@ const violations = [];
 
 for (const filePath of files) {
   const relativePath = portable(filePath);
-  const lineCount = fs.readFileSync(filePath, 'utf8').split(/\r?\n/).length;
+  const sourceText = fs.readFileSync(filePath, 'utf8');
+  const lineCount = sourceText.split(/\r?\n/).length;
   const limit = HOTSPOT_LIMITS.get(relativePath) ?? DEFAULT_MAX_LINES;
   if (lineCount > limit) violations.push(`${relativePath}: ${lineCount} lines (limit ${limit})`);
+
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    filePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const functionLimit = FUNCTION_HOTSPOT_LIMITS.get(relativePath) ?? DEFAULT_MAX_FUNCTION_LINES;
+
+  function inspectFunctionSize(node) {
+    const isFunction =
+      ts.isArrowFunction(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isMethodDeclaration(node);
+
+    if (isFunction) {
+      const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+      const end = sourceFile.getLineAndCharacterOfPosition(node.end).line + 1;
+      const functionLines = end - start + 1;
+
+      if (functionLines > functionLimit) {
+        violations.push(
+          `${relativePath}:${start}: ${functionLines} function lines (limit ${functionLimit})`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, inspectFunctionSize);
+  }
+
+  inspectFunctionSize(sourceFile);
 }
 
 function resolveModule(fromFile, request) {
@@ -100,4 +156,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log(`[source-health] OK (${files.length} files, no cycles, complexity budgets respected)`);
+console.log(`[source-health] OK (${files.length} files, no cycles, file/function budgets respected)`);

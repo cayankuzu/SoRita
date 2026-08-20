@@ -21,8 +21,10 @@ import {
 } from '@/mobile/app/data/repositories/listsRepository';
 import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
 import type { JsonValue } from '@/mobile/app/data/outbox/outboxStorage';
-import { getCurrentConnectionStatus } from '@/mobile/app/platform/network/connectivityStatus';
-import { isAbortError } from '@/mobile/app/shared/utils/abort';
+import {
+  readOperationErrorStatus,
+  shouldQueueOfflineOperation,
+} from '@/mobile/app/data/outbox/shouldQueueOfflineOperation';
 import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
 
 type UpdateListsMutationInput = {
@@ -47,31 +49,8 @@ function normalizeUpdateListsMutationInput(
   return Array.isArray(input) ? { lists: input } : input;
 }
 
-function readMutationStatus(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return undefined;
-  }
-
-  if ('status' in error && typeof error.status === 'number') {
-    return error.status;
-  }
-
-  return undefined;
-}
-
-function shouldQueueListsUpdate(error: unknown) {
-  if (isAbortError(error)) {
-    return false;
-  }
-
-  const status = readMutationStatus(error);
-  return (
-    getCurrentConnectionStatus() !== 'online' ||
-    error instanceof TypeError ||
-    status === 429 ||
-    (status != null && status >= 500)
-  );
-}
+const readMutationStatus = readOperationErrorStatus;
+const shouldQueueListsUpdate = shouldQueueOfflineOperation;
 
 async function updateListsOrQueue(input: UpdateListsMutationInput) {
   try {
@@ -146,6 +125,7 @@ export function useUpdateListsMutation() {
 
   const mutation = useMutation({
     mutationKey: ['lists', 'update-many'],
+    networkMode: 'always',
     scope: mutationScope,
     mutationFn: updateListsOrQueue,
     ...buildOptimisticMutation<UpdateListsMutationInput>(queryClient, (qc, input) =>
@@ -186,6 +166,7 @@ export function useDeleteListMutation() {
 export function useReportListMutation() {
   return useMutation({
     mutationKey: ['lists', 'report'],
+    networkMode: 'always',
     mutationFn: (input: { reporterUserId: string; listId: string; reason: string; details?: string }) =>
       reportList(input.reporterUserId, input.listId, input.reason, input.details),
   });

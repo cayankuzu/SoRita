@@ -16,11 +16,15 @@ import { scheduleDeferredTask } from '@/mobile/app/shared/utils/deferredTask';
 export type { StartupWarmupStage } from '@/mobile/app/app-shell/startup/startupWarmupData';
 
 const IDLE_WARMUP_DELAY_MS = 1_200;
-const MIN_TRANSITIONS_FOR_PREDICTION = 2;
-const MIN_PREDICTION_CONFIDENCE = 0.6;
 const inFlightWarmups = new Map<string, Promise<void>>();
 const warmupControllers = new Map<string, AbortController>();
-const transitionCounts = new Map<StartupWarmupStage, Map<StartupWarmupStage, number>>();
+const adjacentStageByStage: Record<StartupWarmupStage, StartupWarmupStage | null> = {
+  explore: 'map',
+  home: 'explore',
+  map: 'explore',
+  notifications: 'home',
+  profile: 'home',
+};
 let activeContext: { queryClient: QueryClient; userId: string } | null = null;
 let activeWarmupStage: StartupWarmupStage | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -119,46 +123,15 @@ export function prioritizeStartupWarmupStage(stage: StartupWarmupStage) {
   }
 }
 
-export function recordStartupWarmupTransition(
-  previous: StartupWarmupStage | null,
-  next: StartupWarmupStage,
-) {
-  if (!previous || previous === next) {
-    return;
-  }
-
-  const targets = transitionCounts.get(previous) ?? new Map();
-  targets.set(next, (targets.get(next) ?? 0) + 1);
-  transitionCounts.set(previous, targets);
+export function getAdjacentStartupWarmupStage(current: StartupWarmupStage) {
+  return adjacentStageByStage[current];
 }
 
-function getPredictedStage(current: StartupWarmupStage) {
-  const targets = transitionCounts.get(current);
-
-  if (!targets) {
-    return null;
-  }
-
-  const ranked = [...targets.entries()].sort((left, right) => right[1] - left[1]);
-  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
-  const winner = ranked[0];
-
-  if (
-    !winner ||
-    total < MIN_TRANSITIONS_FOR_PREDICTION ||
-    winner[1] / total < MIN_PREDICTION_CONFIDENCE
-  ) {
-    return null;
-  }
-
-  return winner[0];
-}
-
-export function schedulePredictedStartupWarmup(current: StartupWarmupStage) {
+export function scheduleAdjacentStartupWarmup(current: StartupWarmupStage) {
   cancelIdleWarmup();
-  const predicted = getPredictedStage(current);
+  const adjacentStage = getAdjacentStartupWarmupStage(current);
 
-  if (!predicted || !activeContext) {
+  if (!adjacentStage || !activeContext) {
     return;
   }
 
@@ -168,7 +141,7 @@ export function schedulePredictedStartupWarmup(current: StartupWarmupStage) {
       idleTask = null;
 
       if (activeContext && canRunBackgroundWarmup()) {
-        void warmScreenData({ ...activeContext, stage: predicted });
+        void warmScreenData({ ...activeContext, stage: adjacentStage });
       }
     });
   }, IDLE_WARMUP_DELAY_MS);
@@ -255,9 +228,8 @@ export const startupDataWarmupInternals = {
   STARTUP_MEDIA_PREFETCH_LIMIT,
   canRunBackgroundWarmup,
   cancelIdleWarmup,
-  getPredictedStage,
+  getAdjacentStartupWarmupStage,
   getWarmupKey,
   inFlightWarmups,
   warmupControllers,
-  transitionCounts,
 };

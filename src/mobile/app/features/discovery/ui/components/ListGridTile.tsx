@@ -35,11 +35,119 @@ export type ListGridTileProps = {
   showOwner?: boolean;
   showPrivacyBadge?: boolean;
   allListsForMarkerColor?: PlaceList[];
+  compact?: boolean;
   onPress: () => void;
+  onPressIn?: () => void;
   onOwnerPress?: () => void;
+  onOwnerPressIn?: () => void;
   menuActions?: ActionMenuSheetItem[];
   searchQuery?: string;
 };
+
+type ListTileMediaProps = {
+  compact: boolean;
+  coverLoadFailed: boolean;
+  coverPhoto: string | null;
+  hasMenuActions: boolean;
+  hasMiniMap: boolean;
+  isMapInteractive: boolean;
+  list: PlaceList;
+  mapFocusKey: number;
+  markers: React.ComponentProps<typeof MiniMapPreview>['places'];
+  onCoverLoadError: () => void;
+  onMapGesture: () => void;
+  onOpenMenu: () => void;
+  placeCount: number;
+  showInteractionHint: boolean;
+  showPrivacyBadge: boolean;
+};
+
+function ListTileMedia({
+  compact,
+  coverLoadFailed,
+  coverPhoto,
+  hasMenuActions,
+  hasMiniMap,
+  isMapInteractive,
+  list,
+  mapFocusKey,
+  markers,
+  onCoverLoadError,
+  onMapGesture,
+  onOpenMenu,
+  placeCount,
+  showInteractionHint,
+  showPrivacyBadge,
+}: ListTileMediaProps) {
+  return (
+    <View style={styles.mediaSquare}>
+      {coverPhoto && !coverLoadFailed ? (
+        <AppImage
+          uri={coverPhoto}
+          style={styles.mediaSquare}
+          accessibilityLabel={tr.cards.listCoverImageLabel(list.name)}
+          onError={onCoverLoadError}
+        />
+      ) : placeCount > 0 && list.places.length > 0 ? (
+        <MiniMapPreview
+          places={markers}
+          height={layout.discoveryTileHeight}
+          interactive={isMapInteractive}
+          instanceId={mapFocusKey}
+          focusTrigger={mapFocusKey}
+          onMapGesture={onMapGesture}
+        />
+      ) : (
+        <View style={styles.placeholderSquare}>
+          <Text style={styles.placeholderEmoji}>
+            {list.emoji || tr.placeEditor.defaultEmoji}
+          </Text>
+        </View>
+      )}
+
+      {hasMiniMap ? <MiniMapInteractionHint visible={showInteractionHint} /> : null}
+
+      {showPrivacyBadge ? (
+        <View style={styles.visibilityBadge}>
+          {list.isPublic ? (
+            <Globe color={colors.onPrimary} size={10} />
+          ) : (
+            <Lock color={colors.onPrimary} size={10} />
+          )}
+          {!compact ? (
+            <Text style={styles.visibilityBadgeText}>
+              {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {hasMenuActions ? (
+        <Pressable
+          accessibilityLabel={tr.common.contentActionsTitle}
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={(event) => {
+            event.stopPropagation();
+            onOpenMenu();
+          }}
+          style={styles.singleActionBadge}
+        >
+          <Ellipsis color={colors.onPrimary} size={10} />
+        </Pressable>
+      ) : null}
+
+      {(list.likes || 0) > 0 ? (
+        <View style={styles.mediaFooterRow}>
+          <View style={styles.mediaFooterBadge}>
+            <Heart color={colors.onPrimary} size={10} fill={colors.onPrimary} />
+            <Text style={styles.mediaFooterBadgeText}>{list.likes}</Text>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 function ListGridTileComponent({
   list,
@@ -48,13 +156,17 @@ function ListGridTileComponent({
   showOwner = false,
   showPrivacyBadge = false,
   allListsForMarkerColor,
+  compact = false,
   onPress,
+  onPressIn,
   onOwnerPress,
+  onOwnerPressIn,
   menuActions,
   searchQuery,
 }: ListGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
   const coverPhoto = list.coverImage || null;
+  const placeCount = list.placeCount ?? list.places.length;
   const timestampText = formatCreatedUpdatedInline(
     list.createdAt,
     list.updatedAt,
@@ -105,84 +217,41 @@ function ListGridTileComponent({
     <View
       style={[
         styles.tile,
+        compact ? styles.tileCompact : null,
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
-      {showOwner && owner ? (
-        <OwnerHeader owner={owner} onPress={onOwnerPress} />
+      {showOwner && owner && !compact ? (
+        <OwnerHeader owner={owner} onPress={onOwnerPress} onPressIn={onOwnerPressIn} />
       ) : null}
-      <Pressable onPress={handleTilePress} style={styles.tilePressable}>
-        <View style={styles.mediaSquare}>
-          {coverPhoto && !coverLoadFailed ? (
-            <AppImage
-              uri={coverPhoto}
-              style={styles.mediaSquare}
-              accessibilityLabel={tr.cards.listCoverImageLabel(list.name)}
-              onError={() => setCoverLoadFailed(true)}
-            />
-          ) : list.places.length > 0 ? (
-            <MiniMapPreview
-              places={miniMapMarkers}
-              height={layout.discoveryTileHeight}
-              interactive={isMapInteractive}
-              instanceId={mapFocusKey}
-              focusTrigger={mapFocusKey}
-              onMapGesture={() => {
-                lastMapGestureAtRef.current = Date.now();
-              }}
-            />
-          ) : (
-            <View style={styles.placeholderSquare}>
-              <Text style={styles.placeholderEmoji}>
-                {list.emoji || tr.placeEditor.defaultEmoji}
-              </Text>
-            </View>
-          )}
-          {hasMiniMap ? (
-            <MiniMapInteractionHint visible={showInteractionHint} />
-          ) : null}
+      <Pressable
+        accessibilityLabel={list.name}
+        accessibilityRole="button"
+        onPress={handleTilePress}
+        onPressIn={onPressIn}
+        style={styles.tilePressable}
+      >
+        <ListTileMedia
+          compact={compact}
+          coverLoadFailed={coverLoadFailed}
+          coverPhoto={coverPhoto}
+          hasMenuActions={Boolean(menuActions?.length)}
+          hasMiniMap={hasMiniMap}
+          isMapInteractive={isMapInteractive}
+          list={list}
+          mapFocusKey={mapFocusKey}
+          markers={miniMapMarkers}
+          onCoverLoadError={() => setCoverLoadFailed(true)}
+          onMapGesture={() => {
+            lastMapGestureAtRef.current = Date.now();
+          }}
+          onOpenMenu={() => setMenuVisible(true)}
+          placeCount={placeCount}
+          showInteractionHint={showInteractionHint}
+          showPrivacyBadge={showPrivacyBadge}
+        />
 
-          {showPrivacyBadge ? (
-            <View style={styles.visibilityBadge}>
-              {list.isPublic ? (
-                <Globe color={colors.onPrimary} size={10} />
-              ) : (
-                <Lock color={colors.onPrimary} size={10} />
-              )}
-              <Text style={styles.visibilityBadgeText}>
-                {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
-              </Text>
-            </View>
-          ) : null}
-
-          {menuActions?.length ? (
-            <Pressable
-              hitSlop={10}
-              onPress={(event) => {
-                event.stopPropagation();
-                setMenuVisible(true);
-              }}
-              style={styles.singleActionBadge}
-            >
-              <Ellipsis color={colors.onPrimary} size={10} />
-            </Pressable>
-          ) : null}
-
-          {(list.likes || 0) > 0 ? (
-            <View style={styles.mediaFooterRow}>
-              <View style={styles.mediaFooterBadge}>
-                <Heart
-                  color={colors.onPrimary}
-                  size={10}
-                  fill={colors.onPrimary}
-                />
-                <Text style={styles.mediaFooterBadgeText}>{list.likes}</Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.tileBody}>
+        <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
           <View style={styles.tileTitleRow}>
             <View style={styles.tileTitleContent}>
               <ExpandableText
@@ -198,9 +267,10 @@ function ListGridTileComponent({
                 )}
               />
             </View>
-            {hasMiniMap ? (
+            {hasMiniMap && !compact ? (
               <Pressable
                 accessibilityLabel={tr.cards.focusMiniMap}
+                accessibilityRole="button"
                 delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
                 hitSlop={8}
                 onPressIn={() => {
@@ -230,8 +300,8 @@ function ListGridTileComponent({
             ) : null}
           </View>
           <Text numberOfLines={2} style={styles.tileMetaSummary}>
-            {tr.cards.placesCount(list.places.length)}
-            {timestampText ? ` · ${timestampText}` : ''}
+            {tr.cards.placesCount(placeCount)}
+            {!compact && timestampText ? ` · ${timestampText}` : ''}
           </Text>
         </View>
       </Pressable>

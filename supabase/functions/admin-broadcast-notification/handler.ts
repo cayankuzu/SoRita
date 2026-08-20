@@ -10,6 +10,7 @@ import {
 
 type BroadcastRequestPayload = {
   dryRun?: boolean;
+  idempotencyKey?: string;
   message: string;
   title: string;
   userIds?: string[];
@@ -18,6 +19,7 @@ type BroadcastRequestPayload = {
 type BroadcastNotificationRepository = {
   fetchRecipientUserIds: (userIds?: string[]) => Promise<string[]>;
   insertNotifications: (params: {
+    idempotencyKey: string;
     message: string;
     pushTitle: string;
     recipientUserIds: string[];
@@ -34,14 +36,19 @@ type AdminBroadcastNotificationHandlerConfig = {
 type AdminBroadcastNotificationHandlerDeps = {
   config: AdminBroadcastNotificationHandlerConfig;
   createRequestId?: () => string;
+  enforceAdminRateLimit: () => Promise<{
+    allowed: boolean;
+    remaining: number;
+    retryAfterMs?: number;
+  }>;
   repository: BroadcastNotificationRepository;
 };
 
-const allowedOriginsFallback =
-  'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000';
+const allowedOriginsFallback = '';
 
 const requestBodySchema = z.object({
   dryRun: z.boolean().optional(),
+  idempotencyKey: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(500),
   title: z.string().trim().min(1).max(80),
   userIds: z.array(z.string().uuid()).max(5000).optional(),
@@ -58,10 +65,22 @@ function assertConfigured(config: AdminBroadcastNotificationHandlerConfig) {
 function normalizePayload(payload: BroadcastRequestPayload) {
   return {
     dryRun: payload.dryRun ?? false,
+    idempotencyKey: payload.idempotencyKey,
     message: payload.message.trim(),
     title: payload.title.trim(),
     userIds: payload.userIds ? Array.from(new Set(payload.userIds)) : undefined,
   };
+}
+
+function timingSafeEqual(left: string, right: string) {
+  const maxLength = Math.max(left.length, right.length);
+  let diff = left.length ^ right.length;
+
+  for (let index = 0; index < maxLength; index += 1) {
+    diff |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+
+  return diff === 0;
 }
 
 export function createAdminBroadcastNotificationHandler({
@@ -70,6 +89,7 @@ export function createAdminBroadcastNotificationHandler({
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
       : `admin-broadcast-${Date.now()}`,
+  enforceAdminRateLimit,
   repository,
 }: AdminBroadcastNotificationHandlerDeps) {
   const normalizedAllowedOrigins = (config.allowedOrigins.length
@@ -108,7 +128,7 @@ export function createAdminBroadcastNotificationHandler({
 
     const token = request.headers.get('x-admin-token')?.trim() ?? '';
 
-    if (!token || token !== config.adminToken) {
+    if (!token || !timingSafeEqual(token, config.adminToken)) {
       return jsonResponse(
         request,
         normalizedAllowedOrigins,
@@ -119,6 +139,27 @@ export function createAdminBroadcastNotificationHandler({
     }
 
     try {
+      const rateLimit = await enforceAdminRateLimit();
+
+      if (!rateLimit.allowed) {
+        return jsonResponse(
+          request,
+          normalizedAllowedOrigins,
+          429,
+          { code: 'rate_limited', error: 'Too many broadcast requests' },
+          {
+            requestId,
+            extraHeaders: {
+              'Retry-After': Math.max(
+                1,
+                Math.ceil((rateLimit.retryAfterMs ?? 60_000) / 1000),
+              ).toString(),
+              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            },
+          },
+        );
+      }
+
       const parsedPayload = requestBodySchema.safeParse(parseJsonBody(await request.text(), {}));
 
       if (!parsedPayload.success) {
@@ -135,6 +176,20 @@ export function createAdminBroadcastNotificationHandler({
       }
 
       const payload = normalizePayload(parsedPayload.data);
+
+      if (!payload.dryRun && !payload.idempotencyKey) {
+        return jsonResponse(
+          request,
+          normalizedAllowedOrigins,
+          400,
+          {
+            code: 'idempotency_key_required',
+            error: 'A UUID idempotencyKey is required for live broadcasts',
+          },
+          { requestId },
+        );
+      }
+
       const recipientUserIds = await repository.fetchRecipientUserIds(payload.userIds);
 
       if (payload.dryRun) {
@@ -168,6 +223,7 @@ export function createAdminBroadcastNotificationHandler({
       }
 
       const insertedCount = await repository.insertNotifications({
+        idempotencyKey: payload.idempotencyKey as string,
         message: payload.message,
         pushTitle: payload.title,
         recipientUserIds,
@@ -179,6 +235,7 @@ export function createAdminBroadcastNotificationHandler({
         200,
         {
           dryRun: false,
+          duplicateCount: Math.max(0, recipientUserIds.length - insertedCount),
           insertedCount,
           recipientCount: recipientUserIds.length,
           success: true,
@@ -206,7 +263,7 @@ export function createAdminBroadcastNotificationHandler({
         500,
         {
           code: 'internal_error',
-          error: error instanceof Error ? error.message : 'Internal server error',
+          error: 'Internal server error',
         },
         { requestId },
       );

@@ -11,15 +11,11 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
-import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
-import {
-  warmListDetailData,
-  warmUserProfileData,
-} from '@/mobile/app/app-shell/startup/startupDataWarmup';
-import { queryClient } from '@/mobile/app/data/query/queryClient';
+import { useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useHomeFeedScreenState } from '@/mobile/app/features/home/application/useHomeFeedScreenState';
+import { createFeedVisibilityStore } from '@/mobile/app/features/home/application/feedVisibilityStore';
+import { HomeFeedCardRow } from '@/mobile/app/features/home/ui/components/HomeFeedCardRow';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
-import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -27,14 +23,15 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
-  MEDIA_INITIAL_PREFETCH_CARD_COUNT,
+  HOME_FEED_INITIAL_RENDER_COUNT,
+  HOME_FEED_RENDER_BATCH_SIZE,
+  HOME_FEED_WINDOW_SIZE,
   MEDIA_PREFETCH_AHEAD_CARD_COUNT,
   MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
 } from '@/mobile/app/shared/performance/budgets';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
 
 function getFeedMediaPreviewUris(item: PlaceFeedCardItem) {
@@ -45,6 +42,31 @@ function getFeedMediaPreviewUris(item: PlaceFeedCardItem) {
   return [...mediaUris, item.listCoverImage, item.owner?.profilePhoto];
 }
 
+type PaginationState = {
+  fetchNextPage?: () => Promise<unknown>;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  lastIndex: number;
+  lastSeenAt: number;
+  requestInFlight: boolean;
+};
+
+function requestNextPage(pagination: PaginationState) {
+  if (
+    !pagination.hasNextPage ||
+    pagination.isFetchingNextPage ||
+    pagination.requestInFlight ||
+    !pagination.fetchNextPage
+  ) {
+    return;
+  }
+
+  pagination.requestInFlight = true;
+  void pagination.fetchNextPage().finally(() => {
+    pagination.requestInFlight = false;
+  });
+}
+
 export function HomeScreen() {
   const navigation = useAppNavigation();
   const { height, width } = useWindowDimensions();
@@ -52,7 +74,8 @@ export function HomeScreen() {
   const userId = user?.id;
   const listRef = React.useRef<FlatList<PlaceFeedCardItem> | null>(null);
   const feedItemsRef = React.useRef<PlaceFeedCardItem[]>([]);
-  const paginationRef = React.useRef({
+  const visibilityStoreRef = React.useRef(createFeedVisibilityStore());
+  const paginationRef = React.useRef<PaginationState>({
     fetchNextPage: undefined as (() => Promise<unknown>) | undefined,
     hasNextPage: false,
     isFetchingNextPage: false,
@@ -121,14 +144,6 @@ export function HomeScreen() {
     return () => cancelAnimationFrame(frameId);
   }, [feedItems.length, isInitialLoading, isShowingStartupCache]);
 
-  React.useEffect(() => {
-    const initialMediaUris = feedItems
-      .slice(0, MEDIA_INITIAL_PREFETCH_CARD_COUNT)
-      .flatMap(getFeedMediaPreviewUris);
-
-    void prefetchAppImages(initialMediaUris, { priority: 'high' });
-  }, [feedItems]);
-
   useScrollToTop(listRef as React.RefObject<FlatList>);
 
   const listProps = React.useMemo(
@@ -177,6 +192,14 @@ export function HomeScreen() {
         .filter((index): index is number => typeof index === 'number')
         .sort((left, right) => left - right)[0];
 
+      const nextVisibleKeys = new Set(
+        viewableItems.flatMap(({ index }) => {
+          const item = typeof index === 'number' ? feedItemsRef.current[index] : undefined;
+          return item ? [item.key] : [];
+        }),
+      );
+      visibilityStoreRef.current.replace(nextVisibleKeys);
+
       if (visibleIndex == null) {
         return;
       }
@@ -191,89 +214,33 @@ export function HomeScreen() {
       pagination.lastIndex = visibleIndex;
       pagination.lastSeenAt = now;
 
-      if (
-        remainingItems <= dynamicAheadCount &&
-        pagination.hasNextPage &&
-        !pagination.isFetchingNextPage &&
-        !pagination.requestInFlight &&
-        pagination.fetchNextPage
-      ) {
-        pagination.requestInFlight = true;
-        void pagination.fetchNextPage().finally(() => {
-          pagination.requestInFlight = false;
-        });
+      if (remainingItems <= dynamicAheadCount) {
+        requestNextPage(pagination);
       }
 
       const nextUris = feedItemsRef.current
-        .slice(visibleIndex, visibleIndex + MEDIA_PREFETCH_AHEAD_CARD_COUNT + 1)
+        .slice(visibleIndex + 1, visibleIndex + MEDIA_PREFETCH_AHEAD_CARD_COUNT + 1)
         .flatMap(getFeedMediaPreviewUris);
 
-      void prefetchAppImages(nextUris, { priority: 'high' });
+      void prefetchAppImages(nextUris, { priority: 'normal' });
     },
   );
 
   const renderFeedItem = React.useCallback(
-    ({ item }: { item: PlaceFeedCardItem }) => (
-      <View style={styles.cardRow}>
-        <PlaceCard
-          place={item.place}
-          owner={item.owner}
-          ownerId={item.ownerId}
-          listId={item.listId}
-          listName={item.listName}
-          listEmoji={item.listEmoji}
-          listIsPublic={item.listIsPublic}
-          listCoverImage={item.listCoverImage}
-          locationPlaceCardsCount={item.memberships.length}
-          locationOriginalPlaceName={item.place.name}
-          markerColor={getMarkerColorForMemberships(item.memberships, item.listIsPublic)}
-          onPressIn={() => {
-            if (userId) {
-              void warmListDetailData({
-                listId: item.listId,
-                queryClient,
-                viewerId: userId,
-              });
-            }
-          }}
-          onPress={() =>
-            {
-              openStackScreen(navigation, 'ListDetail', {
-              listId: item.listId,
-              placeId: item.place.id,
-              });
-            }
-          }
-          onOwnerPress={() => {
-            if (!item.owner || !userId) {
-              return;
-            }
-
-            if (item.owner.id === userId) {
-              navigation.navigate('MainTabs', { screen: 'Profile' });
-              return;
-            }
-
-            void warmUserProfileData({
-              queryClient,
-              targetUserId: item.owner.id,
-              viewerId: userId,
-            });
-            openStackScreen(navigation, 'UserProfile', { userId: item.owner.id });
-          }}
+    ({ item }: { item: PlaceFeedCardItem }) =>
+      userId ? (
+        <HomeFeedCardRow
+          item={item}
+          userId={userId}
+          visibilityStore={visibilityStoreRef.current}
         />
-      </View>
-    ),
-    [navigation, userId],
+      ) : null,
+    [userId],
   );
 
   const handleEndReached = React.useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage || !fetchNextPage) {
-      return;
-    }
-
-    void fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+    requestNextPage(paginationRef.current);
+  }, []);
 
   if (!user) {
     return null;
@@ -281,7 +248,7 @@ export function HomeScreen() {
 
   if (isInitialLoading) {
     return (
-      <Screen safeTop={false} padded={false} scroll={false}>
+      <Screen safeTop={false} scroll={false} variant="feed">
         <SkeletonGroup style={styles.skeletonWrap}>
           <PlaceCardSkeleton />
           <PlaceCardSkeleton />
@@ -293,7 +260,7 @@ export function HomeScreen() {
 
   if (errorMessage && feedItems.length === 0) {
     return (
-      <Screen safeTop={false}>
+      <Screen safeTop={false} variant="feed">
         <EmptyState
           icon={<MapPin color={colors.danger} size={32} />}
           title={tr.home.errorTitle}
@@ -339,9 +306,15 @@ export function HomeScreen() {
   };
 
   return (
-    <Screen safeTop={false} padded={false} scroll={false}>
+    <Screen safeTop={false} scroll={false} variant="feed">
       <FlatList
         {...listProps}
+        initialNumToRender={Math.min(
+          Math.max(feedItems.length, 1),
+          HOME_FEED_INITIAL_RENDER_COUNT,
+        )}
+        maxToRenderPerBatch={HOME_FEED_RENDER_BATCH_SIZE}
+        windowSize={HOME_FEED_WINDOW_SIZE}
         ref={listRef}
         data={feedItems}
         keyExtractor={(item) => item.key}
@@ -406,9 +379,6 @@ const styles = StyleSheet.create({
   },
   feedListContentEmpty: {
     flexGrow: 1,
-  },
-  cardRow: {
-    marginBottom: 12,
   },
   listFooter: {
     alignItems: 'center',

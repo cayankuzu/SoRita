@@ -1,3 +1,4 @@
+import { onlineManager } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
@@ -12,6 +13,11 @@ const deletePlaceCommentMock = vi.fn();
 const toggleLikePlaceCommentMock = vi.fn();
 const reportPlaceMock = vi.fn();
 const reportPlaceCommentMock = vi.fn();
+const enqueueDurableOutboxEntryMock = vi.fn();
+
+vi.mock('@/mobile/app/data/outbox/enqueueDurableOutboxEntry', () => ({
+  enqueueDurableOutboxEntry: enqueueDurableOutboxEntryMock,
+}));
 
 vi.mock('@/mobile/app/data/repositories/placesRepository', () => ({
   createPlaceComment: createPlaceCommentMock,
@@ -34,6 +40,9 @@ describe('usePlaceMutations', () => {
     toggleLikePlaceCommentMock.mockReset();
     reportPlaceMock.mockReset();
     reportPlaceCommentMock.mockReset();
+    enqueueDurableOutboxEntryMock.mockReset();
+    enqueueDurableOutboxEntryMock.mockResolvedValue(undefined);
+    onlineManager.setOnline(true);
   });
 
   it('invalidates visible data for mutating place state', async () => {
@@ -138,6 +147,105 @@ describe('usePlaceMutations', () => {
       resolveLike?.();
       await Promise.resolve();
     });
+  });
+
+  it('queues the explicit optimistic place-like state while offline', async () => {
+    const queryClient = createTestQueryClient();
+    const wrapper = createQueryClientWrapper(queryClient);
+    queryClient.setQueryData(queryKeys.feed.page('viewer-1'), {
+      pageParams: [null],
+      pages: [{
+        items: [{
+          key: 'list-1:place-1',
+          listId: 'list-1',
+          listIsPublic: true,
+          listName: 'List',
+          memberships: [],
+          ownerId: 'owner-1',
+          place: {
+            addedAt: '2026-04-16T10:00:00.000Z',
+            id: 'place-1',
+            lat: 41,
+            likes: 0,
+            lng: 29,
+            name: 'Cafe',
+          },
+          sortTime: 1,
+        }],
+      }],
+    });
+    onlineManager.setOnline(false);
+    const hooks = await import('@/mobile/app/data/hooks/usePlaceMutations');
+    const likeHook = renderHook(() => hooks.useToggleLikePlaceMutation(), { wrapper });
+
+    await act(async () => {
+      await likeHook.result.current.mutateAsync({ placeId: 'place-1', userId: 'viewer-1' });
+    });
+
+    expect(toggleLikePlaceMock).not.toHaveBeenCalled();
+    expect(enqueueDurableOutboxEntryMock).toHaveBeenCalledWith({
+      idempotencyKey: 'place-like-state:viewer-1:place-1',
+      kind: 'place-like-state',
+      payloadRef: { liked: true, placeId: 'place-1' },
+      userId: 'viewer-1',
+    });
+  });
+
+  it('queues transient place-like failures and rejects permanent failures', async () => {
+    const queryClient = createTestQueryClient();
+    const hooks = await import('@/mobile/app/data/hooks/usePlaceMutations');
+    const input = { placeId: 'place-1', userId: 'viewer-1' };
+
+    toggleLikePlaceMock.mockRejectedValueOnce(new TypeError('network'));
+    await expect(
+      hooks.placeMutationInternals.togglePlaceLikeOrQueue(queryClient, input),
+    ).resolves.toBeUndefined();
+    expect(enqueueDurableOutboxEntryMock).toHaveBeenCalledOnce();
+
+    enqueueDurableOutboxEntryMock.mockClear();
+    toggleLikePlaceMock.mockRejectedValueOnce({ status: 400 });
+    await expect(
+      hooks.placeMutationInternals.togglePlaceLikeOrQueue(queryClient, input),
+    ).rejects.toEqual({ status: 400 });
+    expect(enqueueDurableOutboxEntryMock).not.toHaveBeenCalled();
+  });
+
+  it('queues offline comments with explicit and implicit parent state', async () => {
+    onlineManager.setOnline(false);
+    const queryClient = createTestQueryClient();
+    const wrapper = createQueryClientWrapper(queryClient);
+    const hooks = await import('@/mobile/app/data/hooks/usePlaceMutations');
+    const mutation = renderHook(() => hooks.useCreatePlaceCommentMutation(), { wrapper });
+
+    await act(async () => {
+      await mutation.result.current.mutateAsync({
+        commentId: 'root-comment',
+        content: 'Root',
+        placeId: 'place-1',
+        userId: 'viewer-1',
+      });
+      await mutation.result.current.mutateAsync({
+        commentId: 'reply-comment',
+        content: 'Reply',
+        parentCommentId: 'root-comment',
+        placeId: 'place-1',
+        userId: 'viewer-1',
+      });
+    });
+
+    expect(createPlaceCommentMock).not.toHaveBeenCalled();
+    expect(enqueueDurableOutboxEntryMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        payloadRef: expect.objectContaining({ parentCommentId: null }),
+      }),
+    );
+    expect(enqueueDurableOutboxEntryMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        payloadRef: expect.objectContaining({ parentCommentId: 'root-comment' }),
+      }),
+    );
   });
 
   it('reports places and comments without invalidating visible data', async () => {

@@ -35,6 +35,7 @@ export function ActionMenuSheet({
 }: ActionMenuSheetProps) {
   return (
     <ModalScaffold
+      accessibilityLabel={title}
       visible={visible}
       onClose={onClose}
       variant="sheet"

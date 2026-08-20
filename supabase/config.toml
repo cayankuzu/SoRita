@@ -109,7 +109,7 @@ port = 54324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "50MiB"
+file_size_limit = "134MiB"
 
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
@@ -149,14 +149,15 @@ max_indexes = 5
 
 [auth]
 enabled = true
-# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
-site_url = "https://cayankuzu.github.io/SoRita_web"
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
+# Public fallback used when an explicit auth redirect is not provided or rejected.
+site_url = "https://cayankuzu.github.io/SoRita_web/"
+# Exact web/mobile callbacks plus the app-scheme wildcard required for stateful deep links.
 additional_redirect_urls = [
-  "https://cayankuzu.github.io/SoRita_web",
-  "http://127.0.0.1:3000",
-  "http://localhost:3000",
+  "https://cayankuzu.github.io/SoRita_web/auth/callback/",
+  "https://cayankuzu.github.io/SoRita_web/reset-password/",
+  "sorita://auth/callback",
+  "sorita://reset-password",
+  "sorita://**",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -377,6 +378,9 @@ inspector_port = 8083
 deno_version = 2
 
 [functions.admin-broadcast-notification]
+verify_jwt = false
+
+[functions.auth-gateway]
 verify_jwt = false
 
 # [edge_runtime.secrets]

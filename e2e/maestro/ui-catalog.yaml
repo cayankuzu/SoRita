@@ -1,0 +1,23 @@
+appId: com.cayan.sorita.socialmap
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Kayıt koşulları ve gizlilik"
+    timeout: 30000
+- openLink: "sorita://dev/ui-catalog"
+- extendedWaitUntil:
+    visible: "UI Kataloğu"
+    timeout: 30000
+- assertVisible: "Buton durumları"
+- assertVisible: "Birincil işlem"
+- scrollUntilVisible:
+    element:
+      text: "Modalı göster"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Modalı göster"
+- assertVisible: "Ortak modal örneği"
+- assertVisible: "Devam et"
+- tapOn: "Devam et"
+- assertNotVisible: "Ortak modal örneği"

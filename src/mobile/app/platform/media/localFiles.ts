@@ -66,6 +66,6 @@ export async function persistLocalUriToFile(params: {
     }
   } catch {
     await FileSystem.deleteAsync(targetPath, { idempotent: true }).catch(() => undefined);
-    return uri;
+    return undefined;
   }
 }

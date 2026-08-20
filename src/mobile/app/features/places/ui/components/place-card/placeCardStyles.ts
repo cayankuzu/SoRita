@@ -1,68 +1,8 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
-import { colors, layout, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const placeCardStyles = StyleSheet.create({
-  compactCard: {
-    width: '48%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  compactImageWrap: {
-    aspectRatio: 1,
-    backgroundColor: colors.surfaceMuted,
-  },
-  compactBody: {
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  compactTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  compactTitleContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  compactTitle: {
-    ...typography.captionText,
-    fontWeight: '700',
-    color: colors.text,
-    flexShrink: 1,
-  },
-  compactTitleLink: {
-    color: colors.text,
-  },
-  compactTitleMeta: {
-    ...typography.metadataText,
-    fontWeight: '600',
-    color: colors.textSoft,
-  },
-  compactDescription: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
-  compactTimestampBlock: {
-    gap: 2,
-  },
-  compactTimestampText: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    ...typography.metadataText,
-    color: colors.warningText,
-    fontWeight: '600',
-  },
   feedCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -72,6 +12,7 @@ export const placeCardStyles = StyleSheet.create({
     position: 'relative',
   },
   userHeader: {
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -94,6 +35,7 @@ export const placeCardStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   sourceBar: {
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     marginHorizontal: 12,
     marginTop: 6,
     borderRadius: 14,
@@ -151,29 +93,30 @@ export const placeCardStyles = StyleSheet.create({
     color: colors.quote,
   },
   linkBar: {
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     marginHorizontal: 12,
     marginTop: 8,
-    marginBottom: 10,
+    marginBottom: 8,
     borderRadius: 14,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   linkBarCover: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: colors.surfaceMuted,
   },
   linkBarCoverFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -209,19 +152,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   mapWrap: {
     paddingHorizontal: 12,
-  },
-  thumbRow: {
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  thumbPressable: {
-    borderRadius: 12,
-  },
-  thumb: {
-    width: layout.thumbnailSize,
-    height: layout.thumbnailSize,
-    borderRadius: 12,
+    marginTop: 8,
   },
   mediaCarouselWrap: {
     marginHorizontal: 12,
@@ -257,6 +188,35 @@ export const placeCardStyles = StyleSheet.create({
     ...typography.metadataText,
     fontWeight: '700',
     color: colors.onPrimary,
+  },
+  locationBar: {
+    minHeight: 32,
+    marginHorizontal: 12,
+    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.cardBorder,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  locationIconWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  locationText: {
+    ...typography.metadataText,
+    flex: 1,
+    color: colors.textMuted,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   content: {
     paddingHorizontal: 12,
@@ -297,13 +257,6 @@ export const placeCardStyles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  contentTitleMeasureText: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    opacity: 0,
-    zIndex: -1,
-  },
   contentTitleContent: {
     flex: 1,
     minWidth: 0,
@@ -337,7 +290,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   menuAction: {
     alignSelf: 'flex-start',
-    minHeight: 36,
+    minHeight: 40,
     maxWidth: '100%',
     marginTop: 2,
     borderRadius: 10,
@@ -345,7 +298,8 @@ export const placeCardStyles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.primaryBg,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 4,
+    justifyContent: 'center',
   },
   menuActionHeader: {
     flexDirection: 'row',
@@ -403,7 +357,7 @@ export const placeCardStyles = StyleSheet.create({
     paddingTop: 8,
   },
   moreFeaturesButton: {
-    minHeight: 36,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
@@ -464,16 +418,5 @@ export const placeCardStyles = StyleSheet.create({
   },
   inlineIcon: {
     justifyContent: 'center',
-  },
-  focusActionButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
-  focusActionButtonActive: {
-    backgroundColor: colors.primaryBg,
   },
 });

@@ -265,3 +265,17 @@ export async function unregisterPushNotifications(expoPushToken: string | null |
 
   logger.info('push', 'Push token unregistered');
 }
+
+export async function unregisterAllPushNotifications() {
+  if (notificationRuntime.isExpoGo || !notificationRuntime.featureEnabled) {
+    return;
+  }
+
+  const { error } = await supabase.rpc('remove_all_user_push_tokens');
+
+  if (error) {
+    throw error;
+  }
+
+  logger.info('push', 'All push tokens unregistered for the current user');
+}

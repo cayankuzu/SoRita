@@ -12,6 +12,7 @@ import {
 
 const STATUS_TIMEOUT_MS = 2000;
 const STATUS_POLL_INTERVAL_MS = 2000;
+const LOCAL_WATCHMAN_RELEASE = 'watchman-v2025.02.24.00';
 
 function resolvePlatformToolsDir() {
   const sdkRoot =
@@ -27,13 +28,46 @@ function resolvePlatformToolsDir() {
   return existsSync(platformToolsDir) ? platformToolsDir : null;
 }
 
+function resolveWatchmanBinDir() {
+  const configuredDir = process.env.SORITA_WATCHMAN_BIN?.trim();
+  const candidates = [
+    configuredDir || null,
+    process.env.LOCALAPPDATA
+      ? join(
+          process.env.LOCALAPPDATA,
+          'SoRita',
+          'tools',
+          LOCAL_WATCHMAN_RELEASE,
+          `${LOCAL_WATCHMAN_RELEASE}-windows`,
+          'bin',
+        )
+      : null,
+  ].filter(Boolean);
+
+  return (
+    candidates.find((candidate) =>
+      existsSync(join(candidate, process.platform === 'win32' ? 'watchman.exe' : 'watchman')),
+    ) ?? null
+  );
+}
+
+function prependToPath(env, directory) {
+  const currentPath = env.Path ?? env.PATH ?? '';
+  env.Path = `${directory};${currentPath}`;
+  env.PATH = `${directory};${currentPath}`;
+}
+
 function createChildEnv() {
   const env = { ...process.env };
   const platformToolsDir = resolvePlatformToolsDir();
+  const watchmanBinDir = resolveWatchmanBinDir();
 
   if (platformToolsDir) {
-    env.Path = `${platformToolsDir};${env.Path ?? ''}`;
-    env.PATH = `${platformToolsDir};${env.PATH ?? ''}`;
+    prependToPath(env, platformToolsDir);
+  }
+
+  if (watchmanBinDir) {
+    prependToPath(env, watchmanBinDir);
   }
 
   // Expo disables file watching, reloads and Fast Refresh when CI is set.
@@ -107,6 +141,16 @@ async function monitorExistingMetro() {
 
 function startMetro() {
   const expoCliPath = join(process.cwd(), 'node_modules', 'expo', 'bin', 'cli');
+  const watchmanBinDir = resolveWatchmanBinDir();
+
+  if (watchmanBinDir) {
+    console.log(`[SoRita][metro] Watchman etkin: ${watchmanBinDir}`);
+  } else if (process.platform === 'win32') {
+    console.warn(
+      '[SoRita][metro] Watchman bulunamadi. Buyuk projelerde Windows dosya izleyicisi EMFILE hatasi verebilir.',
+    );
+  }
+
   const child = spawn(
     process.execPath,
     [expoCliPath, 'start', '--dev-client', '--host', 'lan', '--port', String(METRO_PORT)],

@@ -80,7 +80,7 @@ describe('visibleDataSnapshotCache', () => {
       snapshot: VisibleDataSnapshot;
       version: number;
     };
-    expect(payload.version).toBe(1);
+    expect(payload.version).toBe(2);
     expect(payload.savedAt).toBe('2026-07-14T12:00:00.000Z');
     expect(payload.snapshot.lists).toHaveLength(24);
     expect(payload.snapshot.lists[0]?.places).toHaveLength(32);
@@ -96,7 +96,7 @@ describe('visibleDataSnapshotCache', () => {
       JSON.stringify({
         savedAt: '2026-07-14T00:00:01.000Z',
         snapshot,
-        version: 1,
+        version: 2,
       }),
     );
     await expect(getPersistedVisibleDataSnapshot('viewer-1')).resolves.toEqual(snapshot);
@@ -106,7 +106,7 @@ describe('visibleDataSnapshotCache', () => {
       JSON.stringify({
         savedAt: '2026-07-13T23:59:59.000Z',
         snapshot,
-        version: 1,
+        version: 2,
       }),
     );
     await expect(getPersistedVisibleDataSnapshot('viewer-1')).resolves.toBeNull();

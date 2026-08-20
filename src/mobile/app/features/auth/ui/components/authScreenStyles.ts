@@ -5,7 +5,14 @@ import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 export const authScreenStyles = StyleSheet.create({
   landingScreen: {
     flex: 1,
+  },
+  landingScreenRegular: {
     justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  landingScreenCompact: {
+    justifyContent: 'flex-start',
+    paddingTop: 8,
   },
   landingContent: {
     width: '100%',
@@ -29,6 +36,9 @@ export const authScreenStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  authBrandRowCompact: {
+    marginBottom: 6,
+  },
   backButton: {
     width: 44,
     height: 44,
@@ -39,6 +49,10 @@ export const authScreenStyles = StyleSheet.create({
   headerBlock: {
     marginTop: 4,
     marginBottom: 14,
+  },
+  headerBlockCompact: {
+    marginTop: 0,
+    marginBottom: 10,
   },
   previewBackRow: {
     marginBottom: 6,
@@ -203,6 +217,9 @@ export const authScreenStyles = StyleSheet.create({
     gap: 10,
     marginTop: 18,
     paddingBottom: 10,
+  },
+  bottomActionsCompact: {
+    marginTop: 12,
   },
   stepActions: {
     flexDirection: 'row',

@@ -20,6 +20,7 @@ const signOutMock = vi.fn();
 const loggerDebugMock = vi.fn();
 const loggerErrorMock = vi.fn();
 const loggerWarnMock = vi.fn();
+const isPasswordRecoverySessionExchangeActiveMock = vi.fn();
 
 function dispatchAuthChange<TSession>(
   handler: ((event: string, session: TSession) => void) | null,
@@ -75,6 +76,10 @@ vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   },
 }));
 
+vi.mock('@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard', () => ({
+  isPasswordRecoverySessionExchangeActive: isPasswordRecoverySessionExchangeActiveMock,
+}));
+
 describe('useAuthSessionLifecycle', () => {
   beforeEach(() => {
     clearCurrentUserStateMock.mockReset();
@@ -93,6 +98,8 @@ describe('useAuthSessionLifecycle', () => {
     loggerDebugMock.mockReset();
     loggerErrorMock.mockReset();
     loggerWarnMock.mockReset();
+    isPasswordRecoverySessionExchangeActiveMock.mockReset();
+    isPasswordRecoverySessionExchangeActiveMock.mockReturnValue(false);
     refreshSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     signOutMock.mockResolvedValue(undefined);
     restorePersistedVisibleDataSnapshotMock.mockResolvedValue(null);
@@ -144,6 +151,30 @@ describe('useAuthSessionLifecycle', () => {
       expect(persistAuthSessionMock).toHaveBeenCalled();
       expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser);
     });
+
+    persistAuthSessionMock.mockClear();
+    syncAuthenticatedUserMock.mockClear();
+    setUser.mockClear();
+    dispatchAuthChange(authChangeHandler, 'PASSWORD_RECOVERY', { user: authUser });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
+
+    isPasswordRecoverySessionExchangeActiveMock.mockReturnValue(true);
+    dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: authUser });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
   });
 
   it('handles empty sessions, auth sync failures, and unmount cleanup', async () => {

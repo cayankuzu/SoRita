@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
 import type { User } from '@/mobile/app/data/contracts/entities';
@@ -16,6 +24,7 @@ import {
 export type SettingsView = 'main' | 'editProfile' | 'privacy' | 'password' | 'blocked';
 
 type HelperTone = 'muted' | 'danger' | 'success';
+const PASSWORD_RESET_COOLDOWN_MS = 30_000;
 
 type UseSettingsScreenStateParams = {
   deleteCurrentUser: () => Promise<void>;
@@ -41,6 +50,109 @@ export const settingsScreenInternals = {
   hasPendingLocalMedia,
 };
 
+type SettingsViewActionsParams = {
+  canContinueEdit: boolean;
+  freshUser: User | null;
+  refreshCurrentUserState: () => Promise<User | null>;
+  setCoverPhoto: Dispatch<SetStateAction<string | undefined>>;
+  setEditBioState: Dispatch<SetStateAction<string>>;
+  setEditInterests: Dispatch<SetStateAction<string[]>>;
+  setEditNameState: Dispatch<SetStateAction<string>>;
+  setEditStep: Dispatch<SetStateAction<number>>;
+  setEditUsernameState: Dispatch<SetStateAction<string>>;
+  setProfilePhoto: Dispatch<SetStateAction<string | undefined>>;
+  setView: Dispatch<SetStateAction<SettingsView>>;
+};
+
+function useSettingsViewActions({
+  canContinueEdit,
+  freshUser,
+  refreshCurrentUserState,
+  setCoverPhoto,
+  setEditBioState,
+  setEditInterests,
+  setEditNameState,
+  setEditStep,
+  setEditUsernameState,
+  setProfilePhoto,
+  setView,
+}: SettingsViewActionsParams) {
+  const openEditProfile = useCallback(() => {
+    if (freshUser) {
+      setEditNameState(normalizeUserNameInput(freshUser.name || ''));
+      setEditUsernameState(normalizeUsernameInput(freshUser.username || ''));
+      setEditBioState(normalizeUserBioInput(freshUser.bio || ''));
+      setEditInterests(freshUser.interests || []);
+      setProfilePhoto(freshUser.profilePhoto);
+      setCoverPhoto(freshUser.coverPhoto);
+    }
+    setEditStep(0);
+    setView('editProfile');
+    void refreshCurrentUserState().catch((error) => {
+      logger.debug('settings', 'Failed to refresh edit profile snapshot', error);
+    });
+  }, [
+    freshUser,
+    refreshCurrentUserState,
+    setCoverPhoto,
+    setEditBioState,
+    setEditInterests,
+    setEditNameState,
+    setEditStep,
+    setEditUsernameState,
+    setProfilePhoto,
+    setView,
+  ]);
+
+  const goToMain = useCallback(() => setView('main'), [setView]);
+  const goToPreviousEditStep = useCallback(
+    () => setEditStep((current) => Math.max(0, current - 1)),
+    [setEditStep],
+  );
+  const goToNextEditStep = useCallback(() => {
+    if (canContinueEdit) {
+      setEditStep((current) => current + 1);
+    }
+  }, [canContinueEdit, setEditStep]);
+  const openPrivacy = useCallback(() => setView('privacy'), [setView]);
+  const openPassword = useCallback(() => setView('password'), [setView]);
+  const openBlocked = useCallback(() => setView('blocked'), [setView]);
+
+  const selectProfilePhoto = useCallback(async () => {
+    const uri = await pickSingleImageFromPrompt({ cropAspect: [1, 1], cropShape: 'oval' });
+    if (uri) {
+      setProfilePhoto(uri);
+    }
+  }, [setProfilePhoto]);
+
+  const selectCoverPhoto = useCallback(async () => {
+    const uri = await pickSingleImageFromPrompt({
+      cropAspect: [21, 9],
+      cropShape: 'rectangle',
+    });
+    if (uri) {
+      setCoverPhoto(uri);
+    }
+  }, [setCoverPhoto]);
+
+  const clearProfilePhoto = useCallback(() => setProfilePhoto(undefined), [setProfilePhoto]);
+  const clearCoverPhoto = useCallback(() => setCoverPhoto(undefined), [setCoverPhoto]);
+
+  return {
+    clearCoverPhoto,
+    clearProfilePhoto,
+    goToMain,
+    goToNextEditStep,
+    goToPreviousEditStep,
+    openBlocked,
+    openEditProfile,
+    openPassword,
+    openPrivacy,
+    selectCoverPhoto,
+    selectProfilePhoto,
+  };
+}
+
 export function useSettingsScreenState({
   deleteCurrentUser,
   freshUser,
@@ -65,6 +177,13 @@ export function useSettingsScreenState({
   const [currentPassword, setCurrentPassword] = useState('');
   const [resetMailSent, setResetMailSent] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [isPasswordResetCoolingDown, setIsPasswordResetCoolingDown] = useState(false);
+  const privacySavingRef = useRef(false);
+  const privacyValueRef = useRef(freshUser?.isPublicAccount ?? true);
+  const passwordResetPendingRef = useRef(false);
+  const passwordResetCooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const normalizedEditName = normalizeUserNameInput(editName).trim();
   const normalizedEditUsername = normalizeUsernameInput(editUsername).trim();
   const normalizedEditBio = normalizeUserBioInput(editBio).trim();
@@ -95,26 +214,21 @@ export function useSettingsScreenState({
     setEditInterests(freshUser.interests || []);
     setProfilePhoto(freshUser.profilePhoto);
     setCoverPhoto(freshUser.coverPhoto);
-    setIsPublicAccount(freshUser.isPublicAccount ?? true);
+    if (!privacySavingRef.current) {
+      const nextPrivacyValue = freshUser.isPublicAccount ?? true;
+      privacyValueRef.current = nextPrivacyValue;
+      setIsPublicAccount(nextPrivacyValue);
+    }
   }, [freshUser, view]);
 
-  const resetSettingsState = useCallback(async () => {
-    const nextUser = await refreshCurrentUserState();
-
-    if (!nextUser) {
-      return;
-    }
-
-    setEditNameState(normalizeUserNameInput(nextUser.name));
-    setEditUsernameState(normalizeUsernameInput(nextUser.username));
-    setEditBioState(normalizeUserBioInput(nextUser.bio || ''));
-    setEditInterests(nextUser.interests || []);
-    setProfilePhoto(nextUser.profilePhoto);
-    setCoverPhoto(nextUser.coverPhoto);
-    setIsPublicAccount(nextUser.isPublicAccount ?? true);
-    setCurrentPassword('');
-    setResetMailSent(false);
-  }, [refreshCurrentUserState]);
+  useEffect(
+    () => () => {
+      if (passwordResetCooldownTimeoutRef.current) {
+        clearTimeout(passwordResetCooldownTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const saveProfile = useCallback(async () => {
     if (!freshUser) {
@@ -180,11 +294,19 @@ export function useSettingsScreenState({
         return;
       }
 
-      if (nextIsPublicAccount === (freshUser.isPublicAccount ?? true)) {
+      if (privacySavingRef.current) {
+        return;
+      }
+
+      if (nextIsPublicAccount === privacyValueRef.current) {
         setIsPublicAccount(nextIsPublicAccount);
         return;
       }
 
+      const previousPrivacyValue = privacyValueRef.current;
+      privacySavingRef.current = true;
+      privacyValueRef.current = nextIsPublicAccount;
+      setIsSavingPrivacy(true);
       setIsPublicAccount(nextIsPublicAccount);
 
       try {
@@ -195,18 +317,29 @@ export function useSettingsScreenState({
         );
       } catch (error) {
         logger.error('settings', 'Failed to update account privacy', error);
-        setIsPublicAccount(freshUser.isPublicAccount ?? true);
+        privacyValueRef.current = previousPrivacyValue;
+        setIsPublicAccount(previousPrivacyValue);
         showToast(getErrorMessage(error, tr.settings.toast.privacyFailed), 'error');
+      } finally {
+        privacySavingRef.current = false;
+        setIsSavingPrivacy(false);
       }
     },
     [freshUser, persistAccountPrivacy],
   );
 
   const sendPasswordResetMail = useCallback(async () => {
+    if (passwordResetPendingRef.current || isPasswordResetCoolingDown) {
+      return;
+    }
+
     if (!currentPassword.trim()) {
       showToast(tr.settings.password.missingFields, 'error');
       return;
     }
+
+    passwordResetPendingRef.current = true;
+    setIsSendingPasswordReset(true);
 
     try {
       const result = await requestPasswordReset(currentPassword);
@@ -218,12 +351,23 @@ export function useSettingsScreenState({
 
       setResetMailSent(true);
       setCurrentPassword('');
+      setIsPasswordResetCoolingDown(true);
+      if (passwordResetCooldownTimeoutRef.current) {
+        clearTimeout(passwordResetCooldownTimeoutRef.current);
+      }
+      passwordResetCooldownTimeoutRef.current = setTimeout(() => {
+        passwordResetCooldownTimeoutRef.current = null;
+        setIsPasswordResetCoolingDown(false);
+      }, PASSWORD_RESET_COOLDOWN_MS);
       showToast(tr.settings.password.resetSent, 'success');
     } catch (error) {
       logger.error('settings', 'Failed to send password reset email', error);
       showToast(getErrorMessage(error, tr.settings.toast.passwordResetFailed), 'error');
+    } finally {
+      passwordResetPendingRef.current = false;
+      setIsSendingPasswordReset(false);
     }
-  }, [currentPassword, requestPasswordReset]);
+  }, [currentPassword, isPasswordResetCoolingDown, requestPasswordReset]);
 
   const deleteAccount = useCallback(async () => {
     try {
@@ -297,69 +441,31 @@ export function useSettingsScreenState({
     return tr.settings.editProfile.saveInFlight;
   }, [coverPhoto, isSavingProfile, profilePhoto]);
 
-  const openEditProfile = useCallback(() => {
-    void resetSettingsState();
-    setEditStep(0);
-    setView('editProfile');
-  }, [resetSettingsState]);
-
-  const goToMain = useCallback(() => {
-    setView('main');
-  }, []);
-
-  const goToPreviousEditStep = useCallback(() => {
-    setEditStep((current) => Math.max(0, current - 1));
-  }, []);
-
-  const goToNextEditStep = useCallback(() => {
-    if (!canContinueEdit) {
-      return;
-    }
-
-    setEditStep((current) => current + 1);
-  }, [canContinueEdit]);
-
-  const openPrivacy = useCallback(() => {
-    setView('privacy');
-  }, []);
-
-  const openPassword = useCallback(() => {
-    setView('password');
-  }, []);
-
-  const openBlocked = useCallback(() => {
-    setView('blocked');
-  }, []);
-
-  const selectProfilePhoto = useCallback(async () => {
-    const uri = await pickSingleImageFromPrompt({
-      cropAspect: [1, 1],
-      cropShape: 'oval',
-    });
-
-    if (uri) {
-      setProfilePhoto(uri);
-    }
-  }, []);
-
-  const selectCoverPhoto = useCallback(async () => {
-    const uri = await pickSingleImageFromPrompt({
-      cropAspect: [21, 9],
-      cropShape: 'rectangle',
-    });
-
-    if (uri) {
-      setCoverPhoto(uri);
-    }
-  }, []);
-
-  const clearProfilePhoto = useCallback(() => {
-    setProfilePhoto(undefined);
-  }, []);
-
-  const clearCoverPhoto = useCallback(() => {
-    setCoverPhoto(undefined);
-  }, []);
+  const {
+    clearCoverPhoto,
+    clearProfilePhoto,
+    goToMain,
+    goToNextEditStep,
+    goToPreviousEditStep,
+    openBlocked,
+    openEditProfile,
+    openPassword,
+    openPrivacy,
+    selectCoverPhoto,
+    selectProfilePhoto,
+  } = useSettingsViewActions({
+    canContinueEdit,
+    freshUser,
+    refreshCurrentUserState,
+    setCoverPhoto,
+    setEditBioState,
+    setEditInterests,
+    setEditNameState,
+    setEditStep,
+    setEditUsernameState,
+    setProfilePhoto,
+    setView,
+  });
 
   const setEditName = useCallback((value: string) => {
     setEditNameState(normalizeUserNameInput(value));
@@ -390,7 +496,10 @@ export function useSettingsScreenState({
     goToPreviousEditStep,
     handleLogout,
     isPublicAccount,
+    isPasswordResetCoolingDown,
+    isSavingPrivacy,
     isSavingProfile,
+    isSendingPasswordReset,
     openBlocked,
     openEditProfile,
     openPassword,

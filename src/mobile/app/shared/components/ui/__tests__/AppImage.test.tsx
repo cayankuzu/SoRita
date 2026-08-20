@@ -107,6 +107,44 @@ describe('AppImage media cache', () => {
     });
   });
 
+  it('passes the default BlurHash as an Expo Image placeholder object', async () => {
+    const uri = 'https://image.example/cover.jpg';
+    resolveStorageAssetUrlMock.mockResolvedValue(uri);
+    const { AppImage, appImageInternals } = await import(
+      '@/mobile/app/shared/components/ui/AppImage'
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = TestRenderer.create(<AppImage uri={uri} />);
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByType('ExpoImage' as unknown as React.ElementType).props.placeholder,
+    ).toEqual({ blurhash: appImageInternals.DEFAULT_IMAGE_BLURHASH });
+  });
+
+  it('deduplicates concurrent private source resolution', async () => {
+    const storageUri = 'sorita-storage://place-media-private/user/place/shared.jpg';
+    const signedUri = 'https://storage.example/shared.jpg?token=valid';
+    resolveStorageAssetUrlMock.mockResolvedValue(signedUri);
+    const { AppImage } = await import('@/mobile/app/shared/components/ui/AppImage');
+
+    await act(async () => {
+      TestRenderer.create(
+        <>
+          <AppImage uri={storageUri} />
+          <AppImage uri={storageUri} />
+        </>,
+      );
+      await Promise.resolve();
+    });
+
+    expect(getCachePathAsyncMock).toHaveBeenCalledTimes(1);
+    expect(resolveStorageAssetUrlMock).toHaveBeenCalledTimes(1);
+  });
+
   it('bounds each speculative prefetch job', async () => {
     const uris = Array.from({ length: 40 }, (_, index) => `https://image.example/${index}.jpg`);
     resolveStorageAssetUrlsMock.mockImplementation(async (values: string[]) => values);

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import {
@@ -8,6 +8,7 @@ import {
   applyOptimisticUserProfile,
   applyOptimisticUnblock,
   inferOptimisticFollowResult,
+  readOptimisticFollowState,
   type QuerySnapshot,
 } from '@/mobile/app/data/query/optimisticSocialCache';
 import { useMutationScope } from '@/mobile/app/data/hooks/useMutationScope';
@@ -17,6 +18,8 @@ import {
 } from '@/mobile/app/data/query/optimisticMutationHelpers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import { snapshotQueries, restoreQueries } from '@/mobile/app/data/query/optimisticSocialCache';
+import { enqueueDurableOutboxEntry } from '@/mobile/app/data/outbox/enqueueDurableOutboxEntry';
+import { shouldQueueOfflineOperation } from '@/mobile/app/data/outbox/shouldQueueOfflineOperation';
 import {
   blockUser,
   deleteCurrentUser,
@@ -28,6 +31,39 @@ import {
 } from '@/mobile/app/data/repositories/usersRepository';
 
 export type { FollowStateResult };
+
+type FollowInput = { currentUserId: string; targetUserId: string };
+
+async function followUserOrQueue(
+  queryClient: QueryClient,
+  input: FollowInput,
+) {
+  const desiredState = readOptimisticFollowState(queryClient, input) ?? 'following';
+  const enqueue = () => enqueueDurableOutboxEntry({
+    idempotencyKey: `user-follow-state:${input.currentUserId}:${input.targetUserId}`,
+    kind: 'user-follow-state' as const,
+    payloadRef: { desiredState, targetUserId: input.targetUserId },
+    userId: input.currentUserId,
+  });
+
+  if (shouldQueueOfflineOperation()) {
+    await enqueue();
+    return desiredState;
+  }
+
+  try {
+    return await followUser(input.currentUserId, input.targetUserId);
+  } catch (error) {
+    if (!shouldQueueOfflineOperation(error)) {
+      throw error;
+    }
+
+    await enqueue();
+    return desiredState;
+  }
+}
+
+export const userMutationInternals = { followUserOrQueue };
 
 export function useUpdateUserMutation() {
   const queryClient = useQueryClient();
@@ -45,12 +81,10 @@ export function useFollowUserMutation() {
   const invalidateVisibleData = useInvalidateVisibleData();
   const mutationScope = useMutationScope('user-follow');
 
-  type FollowInput = { currentUserId: string; targetUserId: string };
-
   return useMutation({
     scope: mutationScope,
-    mutationFn: (input: FollowInput) =>
-      followUser(input.currentUserId, input.targetUserId),
+    networkMode: 'always',
+    mutationFn: (input: FollowInput) => followUserOrQueue(queryClient, input),
     onMutate: async (input: FollowInput) => {
       const cancellation = Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.visibleData.all }),
@@ -91,6 +125,7 @@ export function useBlockUserMutation() {
 
   return useMutation({
     scope: mutationScope,
+    networkMode: 'always',
     mutationFn: (input: { currentUserId: string; targetUserId: string }) =>
       blockUser(input.currentUserId, input.targetUserId),
     onMutate: async (input: { currentUserId: string; targetUserId: string }) => {
@@ -128,6 +163,7 @@ export function useUnblockUserMutation() {
 
   return useMutation({
     scope: mutationScope,
+    networkMode: 'always',
     mutationFn: (input: { currentUserId: string; targetUserId: string }) =>
       unblockUser(input.currentUserId, input.targetUserId),
     ...buildOptimisticMutation(queryClient, applyOptimisticUnblock),
@@ -143,6 +179,7 @@ export function useUnblockUserMutation() {
 
 export function useReportUserMutation() {
   return useMutation({
+    networkMode: 'always',
     mutationFn: (input: { reporterUserId: string; targetUserId: string; reason: string; details?: string }) =>
       reportUser(input.reporterUserId, input.targetUserId, input.reason, input.details),
   });

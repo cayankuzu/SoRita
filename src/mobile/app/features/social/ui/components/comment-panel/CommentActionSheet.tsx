@@ -10,8 +10,10 @@ import { Copy, Flag, Pencil, Trash2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -49,6 +51,7 @@ function ActionRow({
 }) {
   return (
     <InstantPressable
+      accessibilityLabel={label}
       onPress={onPress}
       style={[styles.actionRow, tone === 'danger' ? styles.actionRowDanger : null]}
     >
@@ -69,6 +72,7 @@ export function CommentActionSheet({
   onEdit,
   onReport,
 }: CommentActionSheetProps) {
+  const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
     topInset: insets.top,
@@ -128,24 +132,40 @@ export function CommentActionSheet({
       })}
       visible={Boolean(comment)}
       transparent
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
-        <InstantPressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
+        <InstantPressable
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={StyleSheet.absoluteFillObject}
+          onPress={onClose}
+        />
         <View style={styles.sheet}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text style={styles.title}>{tr.cards.commentActionsTitle}</Text>
+              <Text accessibilityRole="header" style={styles.title}>
+                {tr.cards.commentActionsTitle}
+              </Text>
               {comment ? <Text style={styles.subtitle}>{comment.userName}</Text> : null}
             </View>
-            <InstantPressable onPress={onClose} style={styles.closeButton}>
+            <IconButton
+              accessibilityLabel={tr.common.close}
+              onPress={onClose}
+              variant="surface"
+            >
               <X color={colors.textSoft} size={14} />
-            </InstantPressable>
+            </IconButton>
           </View>
 
           <View style={styles.options}>
@@ -208,14 +228,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     color: colors.textSoft,
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
   },
   options: {
     gap: 8,

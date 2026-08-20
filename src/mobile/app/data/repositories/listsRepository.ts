@@ -3,13 +3,15 @@ import {
   deleteStorageAssetsWithRetry,
   scheduleStorageAssetsCleanup,
 } from '@/mobile/app/data/outbox/mediaCleanupOutbox';
-import { uploadPreparedPlaceMediaAsset } from '@/mobile/app/data/uploads/preparedPlaceMediaUploads';
 import {
   fetchVisibleDataContext,
   fetchVisibleListsPage,
 } from '@/mobile/app/data/repositories/visibleDataRepository';
 import { submitModerationReport } from '@/mobile/app/data/repositories/moderationReports';
-import { uploadImageAsset } from '@/mobile/app/platform/supabase/media';
+import {
+  uploadImageAsset,
+  uploadPlaceMediaAsset,
+} from '@/mobile/app/platform/supabase/media';
 import { generateVideoThumbnailUri } from '@/mobile/app/platform/media/videoThumbnails';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -368,7 +370,7 @@ async function uploadPlaceMedia(
         const shouldUploadMedia = isPendingUploadUri(item.url);
         const mediaProgressKey = `${place.id}:${index}:media`;
         const mediaUpload = shouldUploadMedia
-          ? uploadPreparedPlaceMediaAsset({
+          ? uploadPlaceMediaAsset({
               durationMs: item.durationMs,
               height: item.height,
               mediaType: item.type,
@@ -407,7 +409,7 @@ async function uploadPlaceMedia(
           throwIfAborted(signal);
 
           return isPendingUploadUri(thumbnailSource)
-            ? uploadPreparedPlaceMediaAsset({
+            ? uploadPlaceMediaAsset({
                 mediaType: 'photo',
                 mimeType: 'image/jpeg',
                 onProgress: ({ sentBytes, totalBytes }) => {

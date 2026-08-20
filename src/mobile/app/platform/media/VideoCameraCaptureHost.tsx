@@ -22,8 +22,9 @@ import {
   resolveVideoCameraCapture,
   useVideoCameraCaptureState,
 } from '@/mobile/app/platform/media/videoCameraCaptureController';
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import { getAndroidModalWindowProps } from '@/mobile/app/shared/utils/modalLayout';
@@ -48,6 +49,7 @@ function clearIntervalTimer(timerRef: React.MutableRefObject<ReturnType<typeof s
 }
 
 export function VideoCameraCaptureHost() {
+  const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { options, requestId, visible } = useVideoCameraCaptureState();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -252,12 +254,12 @@ export function VideoCameraCaptureHost() {
         statusBarTranslucent: true,
       })}
       visible={visible}
-      animationType="slide"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={handleClose}
       presentationStyle="fullScreen"
     >
-      <View style={styles.screen}>
+      <View accessibilityViewIsModal importantForAccessibility="yes" style={styles.screen}>
         {permissionsGranted ? (
           <CameraView
             ref={cameraRef}
@@ -285,18 +287,21 @@ export function VideoCameraCaptureHost() {
                   ? tr.mediaPicker.videoRecorderPreparing
                   : tr.mediaPicker.videoRecorderGrantPermissions
               }
-              onPress={() => {
-                void ensurePermissions();
-              }}
+              onPress={ensurePermissions}
               loading={isPermissionRequestInFlight}
             />
           </View>
         )}
 
         <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 18) }]}>
-          <InstantPressable onPress={handleClose} style={styles.topIconButton}>
+          <IconButton
+            accessibilityLabel={tr.common.close}
+            onPress={handleClose}
+            style={styles.topIconButton}
+            variant="inverse"
+          >
             <X color={colors.onPrimary} size={16} />
-          </InstantPressable>
+          </IconButton>
 
           <View style={styles.timerStack}>
             <View style={styles.timerBadge}>
@@ -311,13 +316,15 @@ export function VideoCameraCaptureHost() {
             </Text>
           </View>
 
-          <InstantPressable
+          <IconButton
+            accessibilityLabel={tr.mediaPicker.videoRecorderSwitchCamera}
             onPress={handleToggleFacing}
             disabled={isRecording}
             style={styles.topIconButton}
+            variant="inverse"
           >
             <RefreshCcw color={colors.onPrimary} size={16} />
-          </InstantPressable>
+          </IconButton>
         </View>
 
         {permissionsGranted && !isCameraReady ? (
@@ -336,6 +343,7 @@ export function VideoCameraCaptureHost() {
                 ? tr.mediaPicker.videoRecorderStop
                 : tr.mediaPicker.videoRecorderStart
             }
+            accessibilityRole="button"
             onPress={() => {
               if (isRecording) {
                 requestStopRecording();
@@ -381,8 +389,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   topIconButton: {
-    width: 36,
-    height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',

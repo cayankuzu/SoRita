@@ -43,7 +43,8 @@
 
 - Typed analytics events and Sentry integration are wired in the repository; production provider
   dashboards, retention, alert routing, and burn-rate tests require authorized access.
-- The repository includes a 1,000-VU k6 profile with error and p95/p99 thresholds; execution requires
-  an isolated staging dataset and a dedicated authenticated load-test account.
+- The repository includes a 10,000-VU k6 profile covering the current feed, explore, profile-content,
+  and notification RPCs with error and p95/p99 thresholds. Execution requires an isolated staging
+  dataset and at least 20 authenticated load-test identities.
 - Device cold/warm start, FPS, memory, battery, and accessibility evidence must be captured on the
   release device matrix.

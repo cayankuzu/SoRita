@@ -39,7 +39,12 @@ export function ListDetailPlacesSection({
   return (
     <View style={styles.sectionStack}>
       {owner ? (
-        <Pressable style={styles.ownerCard} onPress={onOpenOwnerProfile}>
+        <Pressable
+          accessibilityLabel={`${owner.name}, @${owner.username}`}
+          accessibilityRole="button"
+          style={styles.ownerCard}
+          onPress={onOpenOwnerProfile}
+        >
           <View style={styles.ownerAvatarWrap}>
             <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
           </View>

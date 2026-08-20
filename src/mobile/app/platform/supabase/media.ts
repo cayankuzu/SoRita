@@ -11,7 +11,7 @@ import {
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { t } from '@/mobile/app/shared/i18n';
 import {
-  createAbortError,
+  isAbortError,
   throwIfAborted,
   waitWithAbort,
 } from '@/mobile/app/shared/utils/abort';
@@ -170,6 +170,8 @@ const pendingSignedReadRequests = new Map<
 let signedReadBatchScheduled = false;
 const SIGNED_READ_URL_CACHE_TTL_MS = 4 * 60 * 1000;
 const SIGNED_READ_URL_BATCH_SIZE = 64;
+const AUTH_SESSION_WAIT_TIMEOUT_MS = 5_000;
+const AUTH_SESSION_POLL_INTERVAL_MS = 150;
 const TRUSTED_MEDIA_HOSTS = new Set([
   'maps.googleapis.com',
   (() => {
@@ -270,21 +272,39 @@ function getStorageAssetRef(
   }
 }
 
-async function getAccessToken() {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+async function getAccessToken(signal?: AbortSignal) {
+  const waitDeadline = Date.now() + AUTH_SESSION_WAIT_TIMEOUT_MS;
 
-  if (error) {
-    throw new Error(error.message);
+  while (true) {
+    throwIfAborted(signal);
+
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (session?.access_token) {
+      return session.access_token;
+    }
+
+    const remainingWaitMs = waitDeadline - Date.now();
+
+    if (remainingWaitMs <= 0) {
+      throw new Error(t.settings.sessionMissing);
+    }
+
+    // Cached authenticated screens can render before the persisted Supabase
+    // session has finished restoring. Wait briefly so private media does not
+    // become a permanent fallback image during that startup window.
+    await waitWithAbort(
+      Math.min(AUTH_SESSION_POLL_INTERVAL_MS, remainingWaitMs),
+      signal,
+    );
   }
-
-  if (!session?.access_token) {
-    throw new Error(t.settings.sessionMissing);
-  }
-
-  return session.access_token;
 }
 
 async function refreshAccessToken() {
@@ -437,11 +457,15 @@ async function performMediaFunctionRequest<TPayload extends Record<string, unkno
   payload: TPayload,
   accessToken: string,
   signal?: AbortSignal,
+  legacySignature = false,
 ) {
   const bodyText = JSON.stringify(payload);
   const signedHeaders = await createSignedEdgeHeaders({
     accessToken,
     bodyText,
+    functionName: env.supabaseMediaAssetsFunctionName,
+    ...(legacySignature ? { legacy: true } : {}),
+    method: 'POST',
   });
 
   return fetch(getFunctionUrl(env.supabaseMediaAssetsFunctionName), {
@@ -457,12 +481,30 @@ async function performMediaFunctionRequest<TPayload extends Record<string, unkno
   });
 }
 
+async function isInvalidSignatureResponse(response: Response) {
+  if (response.status !== 401) {
+    return false;
+  }
+
+  const responseText = await response.clone().text().catch(() => '');
+
+  try {
+    const payload = JSON.parse(responseText) as { code?: unknown; error?: unknown };
+    return payload.code === 'invalid_signature'
+      || (typeof payload.error === 'string' && payload.error.includes('signature verification'));
+  } catch {
+    return responseText.includes('signature verification');
+  }
+}
+
 function isRetriableMediaStatus(status: number) {
-  return status === 502 || status === 503 || status === 504;
+  return status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 const MAX_MEDIA_REQUEST_ATTEMPTS = 3;
 const MAX_AUTO_RATE_LIMIT_RETRY_AFTER_SECONDS = 12;
+const MAX_STORAGE_UPLOAD_ATTEMPTS = 3;
+const MEDIA_RETRY_BASE_DELAY_MS = 500;
 
 type MediaRequestSession = {
   accessToken: string;
@@ -510,15 +552,43 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
   signal?: AbortSignal,
   requestSession?: MediaRequestSession,
 ): Promise<TResult> {
-  let accessToken = requestSession?.accessToken ?? await getAccessToken();
+  let accessToken = requestSession?.accessToken ?? await getAccessToken(signal);
   let refreshedSessionAfterUnauthorized = false;
+  let retriedWithLegacySignature = false;
+  let useLegacySignature = false;
 
   for (let attempt = 0; attempt < MAX_MEDIA_REQUEST_ATTEMPTS; attempt += 1) {
     throwIfAborted(signal);
-    const response = await performMediaFunctionRequest(payload, accessToken, signal);
+    let response: Response;
+
+    try {
+      response = await performMediaFunctionRequest(
+        payload,
+        accessToken,
+        signal,
+        useLegacySignature,
+      );
+    } catch (error) {
+      if (
+        isAbortError(error) ||
+        signal?.aborted ||
+        attempt >= MAX_MEDIA_REQUEST_ATTEMPTS - 1
+      ) {
+        throw error;
+      }
+
+      await waitWithAbort(MEDIA_RETRY_BASE_DELAY_MS * (attempt + 1), signal);
+      continue;
+    }
 
     if (response.ok) {
       return (await response.json()) as TResult;
+    }
+
+    if (!retriedWithLegacySignature && await isInvalidSignatureResponse(response)) {
+      retriedWithLegacySignature = true;
+      useLegacySignature = true;
+      continue;
     }
 
     if (response.status === 401 && !refreshedSessionAfterUnauthorized) {
@@ -544,7 +614,7 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
     }
 
     if (isRetriableMediaStatus(response.status) && attempt < MAX_MEDIA_REQUEST_ATTEMPTS - 1) {
-      await waitWithAbort(300 * (attempt + 1), signal);
+      await waitWithAbort(MEDIA_RETRY_BASE_DELAY_MS * (attempt + 1), signal);
       continue;
     }
 
@@ -620,6 +690,102 @@ export type UploadPlaceMediaAssetParams = {
   width?: number;
 };
 
+function isRetriableStorageUploadStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || isRetriableMediaStatus(status);
+}
+
+async function uploadLocalFileToSignedUrl(params: {
+  contentType: string;
+  fileSizeBytes: number;
+  onProgress?: UploadPlaceMediaAssetParams['onProgress'];
+  signal?: AbortSignal;
+  signedUrl: string;
+  uri: string;
+}) {
+  for (let attempt = 0; attempt < MAX_STORAGE_UPLOAD_ATTEMPTS; attempt += 1) {
+    throwIfAborted(params.signal);
+    const uploadTask = FileSystem.createUploadTask(
+      params.signedUrl,
+      params.uri,
+      {
+        headers: {
+          'cache-control': IMMUTABLE_MEDIA_CACHE_CONTROL,
+          'content-type': params.contentType,
+        },
+        httpMethod: 'PUT',
+        sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      },
+      params.onProgress
+        ? ({ totalBytesExpectedToSend, totalBytesSent }) => {
+            params.onProgress?.({
+              sentBytes: Math.max(0, totalBytesSent),
+              totalBytes: Math.max(params.fileSizeBytes, totalBytesExpectedToSend),
+            });
+          }
+        : undefined,
+    );
+    const abortHandler = () => {
+      void uploadTask.cancelAsync().catch(() => undefined);
+    };
+    params.signal?.addEventListener('abort', abortHandler, { once: true });
+
+    let uploadResult;
+
+    try {
+      uploadResult = await uploadTask.uploadAsync();
+    } catch (error) {
+      if (
+        isAbortError(error) ||
+        params.signal?.aborted ||
+        attempt >= MAX_STORAGE_UPLOAD_ATTEMPTS - 1
+      ) {
+        throw error;
+      }
+
+      await waitWithAbort(MEDIA_RETRY_BASE_DELAY_MS * (attempt + 1), params.signal);
+      continue;
+    } finally {
+      params.signal?.removeEventListener('abort', abortHandler);
+    }
+
+    if (!uploadResult) {
+      throwIfAborted(params.signal);
+
+      if (attempt >= MAX_STORAGE_UPLOAD_ATTEMPTS - 1) {
+        throw new Error('Media upload was interrupted');
+      }
+
+      await waitWithAbort(MEDIA_RETRY_BASE_DELAY_MS * (attempt + 1), params.signal);
+      continue;
+    }
+
+    if (uploadResult.status >= 200 && uploadResult.status < 300) {
+      return uploadResult;
+    }
+
+    const uploadError = new Error(
+      readStorageUploadError({
+        bodyText: uploadResult.body,
+        bucket: 'place-media',
+        fallbackMessage: `Media upload failed (${uploadResult.status})`,
+        status: uploadResult.status,
+      }),
+    );
+
+    if (
+      !isRetriableStorageUploadStatus(uploadResult.status) ||
+      attempt >= MAX_STORAGE_UPLOAD_ATTEMPTS - 1
+    ) {
+      throw uploadError;
+    }
+
+    await waitWithAbort(MEDIA_RETRY_BASE_DELAY_MS * (attempt + 1), params.signal);
+  }
+
+  throw new Error('Media upload failed');
+}
+
 export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams) {
   const { extension, mimeType, prefix, uri } = params;
 
@@ -664,71 +830,38 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
   let lastReportedProgressBucket = -1;
   let lastReportedProgressPercent = -1;
   trackEvent({ name: 'upload_started', params: { mediaType } });
+  try {
+    await uploadLocalFileToSignedUrl({
+      contentType,
+      fileSizeBytes,
+      onProgress: ({ sentBytes, totalBytes }) => {
+        const progressPercent = totalBytes > 0
+          ? Math.min(100, Math.floor((sentBytes / totalBytes) * 100))
+          : 0;
 
-  const uploadTask = FileSystem.createUploadTask(
-    data.signedUrl,
-    uri,
-    {
-      headers: {
-        'cache-control': IMMUTABLE_MEDIA_CACHE_CONTROL,
-        'content-type': contentType,
+        if (progressPercent > lastReportedProgressPercent) {
+          lastReportedProgressPercent = progressPercent;
+          params.onProgress?.({ sentBytes, totalBytes });
+        }
+        const progressBucket = totalBytes > 0
+          ? Math.min(4, Math.floor((sentBytes / totalBytes) * 4))
+          : 0;
+
+        if (progressBucket > lastReportedProgressBucket) {
+          lastReportedProgressBucket = progressBucket;
+          trackEvent({
+            name: 'upload_progress_bucket',
+            params: { bucket: progressBucket, mediaType },
+          });
+        }
       },
-      httpMethod: 'PUT',
-      sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-    },
-    ({ totalBytesExpectedToSend, totalBytesSent }) => {
-      const totalBytes = Math.max(fileSizeBytes, totalBytesExpectedToSend);
-      const sentBytes = Math.max(0, totalBytesSent);
-      const progressPercent = totalBytes > 0
-        ? Math.min(100, Math.floor((sentBytes / totalBytes) * 100))
-        : 0;
-
-      if (progressPercent > lastReportedProgressPercent) {
-        lastReportedProgressPercent = progressPercent;
-        params.onProgress?.({ sentBytes, totalBytes });
-      }
-      const progressBucket = totalBytes > 0
-        ? Math.min(4, Math.floor((sentBytes / totalBytes) * 4))
-        : 0;
-
-      if (progressBucket > lastReportedProgressBucket) {
-        lastReportedProgressBucket = progressBucket;
-        trackEvent({
-          name: 'upload_progress_bucket',
-          params: { bucket: progressBucket, mediaType },
-        });
-      }
-    },
-  );
-  const abortHandler = () => {
-    void uploadTask.cancelAsync().catch(() => undefined);
-  };
-  params.signal?.addEventListener('abort', abortHandler, { once: true });
-  const uploadResult = await uploadTask.uploadAsync()
-    .catch((error) => {
-      trackEvent({ name: 'upload_failed', params: { mediaType } });
-      throw error;
-    })
-    .finally(() => {
-      params.signal?.removeEventListener('abort', abortHandler);
+      signal: params.signal,
+      signedUrl: data.signedUrl,
+      uri,
     });
-
-  if (!uploadResult) {
+  } catch (error) {
     trackEvent({ name: 'upload_failed', params: { mediaType } });
-    throw createAbortError();
-  }
-
-  if (uploadResult.status < 200 || uploadResult.status >= 300) {
-    trackEvent({ name: 'upload_failed', params: { mediaType } });
-    throw new Error(
-      readStorageUploadError({
-        bodyText: uploadResult.body,
-        bucket: 'place-media',
-        fallbackMessage: `Media upload failed (${uploadResult.status})`,
-        status: uploadResult.status,
-      }),
-    );
+    throw error;
   }
 
   try {

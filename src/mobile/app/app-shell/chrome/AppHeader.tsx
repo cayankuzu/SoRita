@@ -21,28 +21,37 @@ export function AppHeader() {
   const navigation = useAppNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const userId = user?.id;
   const showNotifications = route.name === 'Home';
   const appLayout = useAppLayout();
-  const notificationsQuery = useNotificationUnreadCountQuery(user?.id, {
+  const notificationsQuery = useNotificationUnreadCountQuery(userId, {
     enabled: showNotifications,
   });
+  const {
+    data: unreadCount,
+    dataUpdatedAt,
+    isFetching,
+    refetch: refetchUnreadCount,
+  } = notificationsQuery;
   const hasFocusedOnceRef = useRef(false);
 
   const loadNotificationCount = useCallback(async () => {
-    if (!showNotifications || !user || notificationsQuery.isFetching) {
+    if (!showNotifications || !userId || isFetching) {
       return;
     }
 
     const hasFreshData =
-      notificationsQuery.dataUpdatedAt > 0 &&
-      Date.now() - notificationsQuery.dataUpdatedAt < NOTIFICATION_COUNT_REFRESH_WINDOW_MS;
+      dataUpdatedAt > 0 &&
+      Date.now() - dataUpdatedAt < NOTIFICATION_COUNT_REFRESH_WINDOW_MS;
 
     if (hasFreshData) {
       return;
     }
 
-    await notificationsQuery.refetch().catch((err) => { logger.debug('header', 'Failed to refetch notifications', err); });
-  }, [notificationsQuery, showNotifications, user]);
+    await refetchUnreadCount().catch((err) => {
+      logger.debug('header', 'Failed to refetch notifications', err);
+    });
+  }, [dataUpdatedAt, isFetching, refetchUnreadCount, showNotifications, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,7 +70,7 @@ export function AppHeader() {
   );
 
   useEffect(() => {
-    if (!showNotifications || !user) {
+    if (!showNotifications || !userId) {
       return;
     }
 
@@ -74,17 +83,17 @@ export function AppHeader() {
     return () => {
       subscription.remove();
     };
-  }, [loadNotificationCount, showNotifications, user]);
+  }, [loadNotificationCount, showNotifications, userId]);
 
-  const notificationCount = showNotifications && user ? notificationsQuery.data || 0 : 0;
+  const notificationCount = showNotifications && userId ? unreadCount || 0 : 0;
   const badgeLabel = notificationCount > 99 ? '99+' : String(notificationCount);
   const openNotifications = useCallback(() => {
-    if (user?.id) {
+    if (userId) {
       prioritizeStartupWarmupStage('notifications');
     }
 
     openStackScreen(navigation, 'Notifications');
-  }, [navigation, user?.id]);
+  }, [navigation, userId]);
 
   if (!showNotifications) {
     return <SafeAreaView edges={['top']} style={styles.safeArea} />;

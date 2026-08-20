@@ -26,7 +26,7 @@ export function ProfileInterestChips({
     return null;
   }
 
-  const visibleLabels = labels.slice(0, 5);
+  const visibleLabels = labels.slice(0, 3);
   const remainingCount = Math.max(0, labels.length - visibleLabels.length);
 
   return (
@@ -59,8 +59,6 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   row: {
-    maxHeight: 62,
-    overflow: 'hidden',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,

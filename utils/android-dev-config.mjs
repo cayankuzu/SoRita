@@ -14,7 +14,7 @@ export const METRO_PORT = readPort(
   process.env.SORITA_METRO_PORT || process.env.EXPO_PACKAGER_PORT,
 );
 
-export async function readExpoProjectSlug(port = METRO_PORT, timeoutMs = 2_000) {
+export async function readExpoProjectSlug(port = METRO_PORT, timeoutMs = 10_000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 

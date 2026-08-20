@@ -14,21 +14,17 @@ export type PendingAuthRedirectState = {
 };
 
 export type AuthRedirectParams = {
-  accessToken?: string;
   code?: string;
   error?: string;
   errorCode?: string;
   flow?: string;
-  refreshToken?: string;
   state?: string;
   target: AuthRedirectTarget;
-  type?: string;
 };
 
 const AUTH_REDIRECT_STATE_STORAGE_KEY = 'sorita.auth.redirect.state';
 const AUTH_REDIRECT_STATE_TTL_MS = 2 * 60 * 60 * 1000;
-const APP_SCHEME = 'sorita';
-const WEB_TARGETS: Record<AuthRedirectFlow, AuthRedirectTarget> = {
+const AUTH_TARGETS: Record<AuthRedirectFlow, AuthRedirectTarget> = {
   signup: 'auth/callback',
   'password-reset': 'reset-password',
 };
@@ -38,10 +34,6 @@ type RouteParams = Record<string, unknown> | undefined | null;
 
 function now() {
   return Date.now();
-}
-
-function getWebOrigin() {
-  return env.authWebOrigin.replace(/\/+$/g, '');
 }
 
 function getStringParam(value: unknown) {
@@ -90,20 +82,20 @@ function pruneExpiredStates(store: PendingAuthRedirectStateStore) {
   ) as PendingAuthRedirectStateStore;
 }
 
-function buildTrackedWebUrl(entry: PendingAuthRedirectState) {
+function buildTrackedAppUrl(entry: PendingAuthRedirectState) {
   const params = new URLSearchParams({
     flow: entry.flow,
     state: entry.state,
   });
 
-  return `${getWebOrigin()}/${entry.target}/?${params.toString()}`;
+  return `${env.appScheme}://${entry.target}?${params.toString()}`;
 }
 
 export async function createTrackedAuthRedirect(flow: AuthRedirectFlow) {
   const state = generateRandomUuid();
   const entry: PendingAuthRedirectState = {
     flow,
-    target: WEB_TARGETS[flow],
+    target: AUTH_TARGETS[flow],
     state,
     createdAt: now(),
   };
@@ -113,7 +105,7 @@ export async function createTrackedAuthRedirect(flow: AuthRedirectFlow) {
 
   return {
     ...entry,
-    url: buildTrackedWebUrl(entry),
+    url: buildTrackedAppUrl(entry),
   };
 }
 
@@ -203,7 +195,7 @@ function parseParamString(value: string) {
 export function parseAuthDeepLinkUrl(url: string): AuthRedirectParams | null {
   const match = url.match(/^([^:]+):\/\/([^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/);
 
-  if (!match || match[1] !== APP_SCHEME) {
+  if (!match || match[1] !== env.appScheme) {
     return null;
   }
 
@@ -226,14 +218,11 @@ export function parseAuthDeepLinkUrl(url: string): AuthRedirectParams | null {
 
 export function normalizeAuthRedirectParams(params: RouteParams, target: AuthRedirectTarget): AuthRedirectParams {
   return {
-    accessToken: getStringParam(params?.access_token),
     code: getStringParam(params?.code),
     error: getStringParam(params?.error),
     errorCode: getStringParam(params?.error_code),
     flow: getStringParam(params?.flow),
-    refreshToken: getStringParam(params?.refresh_token),
     state: getStringParam(params?.state),
     target,
-    type: getStringParam(params?.type),
   };
 }

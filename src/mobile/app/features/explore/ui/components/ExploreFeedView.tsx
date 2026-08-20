@@ -21,7 +21,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
-import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
+import {
+  getPlaceFeedLocationCardCount,
+  type PlaceFeedCardItem,
+} from '@/mobile/app/data/selectors/placeAggregation';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 
@@ -69,24 +72,26 @@ export function ExploreFeedView({
       }),
     [height, items.length, width],
   );
+  const listHeader = (
+    <View
+      style={[
+        styles.feedHeader,
+        { paddingHorizontal: appLayout.screenPadding },
+      ]}
+    >
+      <IconButton
+        accessibilityLabel={tr.common.back}
+        onPress={onBack}
+        style={styles.backButton}
+      >
+        <ArrowLeft color={colors.textMuted} size={18} />
+      </IconButton>
+      <Text style={styles.feedTitle}>{tr.explore.title}</Text>
+    </View>
+  );
+
   return (
     <Screen scroll={false} padded={false}>
-      <View
-        style={[
-          styles.feedHeader,
-          { paddingHorizontal: appLayout.screenPadding },
-        ]}
-      >
-        <IconButton
-          accessibilityLabel={tr.common.back}
-          onPress={onBack}
-          style={styles.backButton}
-        >
-          <ArrowLeft color={colors.textMuted} size={18} />
-        </IconButton>
-        <Text style={styles.feedTitle}>{tr.explore.title}</Text>
-      </View>
-
       <FlatList
         {...listProps}
         ref={listRef}
@@ -98,6 +103,7 @@ export function ExploreFeedView({
           safeStartIndex > 0 ? 6 : 4,
         )}
         keyExtractor={(item) => item.key}
+        ListHeaderComponent={listHeader}
         onContentSizeChange={handleContentSizeChange}
         onScrollToIndexFailed={handleScrollToIndexFailed}
         renderItem={({ item }) => (
@@ -111,7 +117,7 @@ export function ExploreFeedView({
               listEmoji={item.listEmoji}
               listIsPublic={item.listIsPublic}
               listCoverImage={item.listCoverImage}
-              locationPlaceCardsCount={item.memberships.length}
+              locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
               locationOriginalPlaceName={item.place.name}
               markerColor={getMarkerColorForMemberships(
                 item.memberships,
@@ -133,7 +139,9 @@ export function ExploreFeedView({
           </View>
         )}
         contentContainerStyle={styles.feedContent}
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
+        style={styles.feedList}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

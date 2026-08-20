@@ -31,6 +31,7 @@ type ExploreRow = {
 
 type ExploreListPayload = {
   coverImageUrl?: string | null;
+  createdAt?: string | null;
   description?: string | null;
   emoji?: string | null;
   id: string;
@@ -40,6 +41,7 @@ type ExploreListPayload = {
   ownerName?: string | null;
   ownerProfilePhotoUrl?: string | null;
   ownerUsername?: string | null;
+  placeCount?: number | string | null;
   updatedAt?: string | null;
 };
 
@@ -69,6 +71,7 @@ type ExplorePlacePayload = {
   listIsPublic?: boolean | null;
   listName: string;
   listUpdatedAt?: string | null;
+  locationPlaceCardsCount?: number | string | null;
   lng: number;
   media?: PlaceMedia[] | string | null;
   menuUrl?: string | null;
@@ -167,8 +170,9 @@ function mapListItem(payload: ExploreListPayload): ExploreListItem {
       emoji: payload.emoji || undefined,
       coverImage: payload.coverImageUrl || undefined,
       places: [],
+      placeCount: toNumber(payload.placeCount) || 0,
       isPublic: payload.isPublic !== false,
-      createdAt: payload.updatedAt || new Date(0).toISOString(),
+      createdAt: payload.createdAt || payload.updatedAt || new Date(0).toISOString(),
       updatedAt: payload.updatedAt || new Date(0).toISOString(),
     },
   };
@@ -246,6 +250,7 @@ function mapPlaceItem(payload: ExplorePlacePayload, viewerId: string): PlaceFeed
         updatedAt: payload.listUpdatedAt || payload.updatedAt,
       },
     ],
+    locationPlaceCardsCount: toNumber(payload.locationPlaceCardsCount) || 1,
     sortTime: new Date(payload.updatedAt).getTime(),
   };
 }
@@ -259,7 +264,7 @@ export async function fetchExplorePage(params: {
   viewerId: string;
 }): Promise<ExplorePage> {
   const limit = params.limit ?? EXPLORE_PAGE_SIZE;
-  let request = supabase.rpc('explore_page', {
+  let request = supabase.rpc('explore_page_complete', {
     p_cursor_id: params.cursor?.id ?? null,
     p_cursor_rank: params.cursor?.rank ?? null,
     p_kind: params.kind ?? 'all',

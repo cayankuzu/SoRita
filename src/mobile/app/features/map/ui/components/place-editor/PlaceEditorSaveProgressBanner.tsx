@@ -7,12 +7,14 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorSaveProgressBannerProps = {
+  detail?: string;
   progress: number;
   status?: 'active' | 'failed';
   onMenuPress?: () => void;
 };
 
 export function PlaceEditorSaveProgressBanner({
+  detail,
   progress,
   status = 'active',
   onMenuPress,
@@ -42,6 +44,8 @@ export function PlaceEditorSaveProgressBanner({
           ) : null}
         </View>
       </View>
+
+      {detail ? <Text style={styles.saveProgressDetail}>{detail}</Text> : null}
 
       <View
         accessibilityRole="progressbar"

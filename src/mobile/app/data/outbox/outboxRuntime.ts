@@ -20,6 +20,12 @@ type OutboxRuntimeDependencies = {
     commentId?: string,
   ) => Promise<void>;
   markNotificationRead: (notificationId: string) => Promise<void>;
+  setFollowState?: (
+    currentUserId: string,
+    targetUserId: string,
+    desiredState: 'following' | 'requested' | 'unfollowed',
+  ) => Promise<unknown>;
+  setPlaceLikeState?: (placeId: string, userId: string, liked: boolean) => Promise<void>;
   updateLists?: (lists: JsonValue[]) => Promise<void>;
   deleteStorageAssetsByUrls: (params: {
     bucket: MediaBucket;
@@ -55,6 +61,14 @@ const defaultDependencies: OutboxRuntimeDependencies = {
   markNotificationRead: async (notificationId) => {
     const repository = await import('@/mobile/app/data/repositories/notificationRepository');
     return repository.markNotificationRead(notificationId);
+  },
+  setFollowState: async (...args) => {
+    const repository = await import('@/mobile/app/data/repositories/usersRepository');
+    return repository.setFollowState(...args);
+  },
+  setPlaceLikeState: async (...args) => {
+    const repository = await import('@/mobile/app/data/repositories/placesRepository');
+    return repository.setPlaceLikeState(...args);
   },
   updateLists: async (lists) => {
     const repository = await import('@/mobile/app/data/repositories/listsRepository');
@@ -112,6 +126,36 @@ async function replayEntry(entry: OutboxEntry, dependencies: OutboxRuntimeDepend
       readRequiredString(payload, 'content'),
       typeof parentCommentId === 'string' ? parentCommentId : null,
       readRequiredString(payload, 'commentId'),
+    );
+    return;
+  }
+
+  if (entry.kind === 'place-like-state') {
+    const liked = payload.liked;
+
+    if (typeof liked !== 'boolean') {
+      throw new Error('Invalid outbox place like state.');
+    }
+
+    await (dependencies.setPlaceLikeState ?? defaultDependencies.setPlaceLikeState)!(
+      readRequiredString(payload, 'placeId'),
+      entry.userId,
+      liked,
+    );
+    return;
+  }
+
+  if (entry.kind === 'user-follow-state') {
+    const desiredState = readRequiredString(payload, 'desiredState');
+
+    if (!['following', 'requested', 'unfollowed'].includes(desiredState)) {
+      throw new Error('Invalid outbox follow state.');
+    }
+
+    await (dependencies.setFollowState ?? defaultDependencies.setFollowState)!(
+      entry.userId,
+      readRequiredString(payload, 'targetUserId'),
+      desiredState as 'following' | 'requested' | 'unfollowed',
     );
     return;
   }
@@ -206,32 +250,40 @@ export function synchronizeOutbox(
   }
 
   const operation = (async () => {
-    const dueEntries = await readDueOutboxEntries(userId, dependencies.now());
     let syncedCount = 0;
+    let failedCount = 0;
+    let dueEntries = await readDueOutboxEntries(userId, dependencies.now());
 
-    for (const entry of dueEntries) {
-      const attempt = entry.attempt + 1;
-      await updateOutboxEntry(userId, entry.id, { attempt, state: 'running' });
+    while (dueEntries.length > 0) {
+      for (const entry of dueEntries) {
+        const attempt = entry.attempt + 1;
+        await updateOutboxEntry(userId, entry.id, { attempt, state: 'running' });
 
-      try {
-        await replayEntry(entry, dependencies);
-        await removeOutboxEntry(userId, entry.id);
-        syncedCount += 1;
-      } catch (error) {
-        await updateOutboxEntry(userId, entry.id, {
-          attempt,
-          lastError: error instanceof Error ? error.message.slice(0, 300) : 'Unknown sync error',
-          nextAttemptAt: getNextAttemptAt(dependencies.now(), attempt),
-          state: 'failed',
-        });
+        try {
+          await replayEntry(entry, dependencies);
+          await removeOutboxEntry(userId, entry.id);
+          syncedCount += 1;
+        } catch (error) {
+          failedCount += 1;
+          await updateOutboxEntry(userId, entry.id, {
+            attempt,
+            lastError: error instanceof Error ? error.message.slice(0, 300) : 'Unknown sync error',
+            nextAttemptAt: getNextAttemptAt(dependencies.now(), attempt),
+            state: 'failed',
+          });
+        }
       }
+
+      // Successful entries are removed. Reading again allows newly-unblocked
+      // dependent work to complete during the same connectivity window.
+      dueEntries = await readDueOutboxEntries(userId, dependencies.now());
     }
 
     trackEvent({
       name: 'outbox_synced',
       params: {
         count: syncedCount,
-        status: syncedCount === dueEntries.length ? 'success' : 'error',
+        status: failedCount === 0 ? 'success' : 'error',
       },
     });
     return syncedCount;

@@ -5,25 +5,28 @@ import {
   preparePasswordResetRedirect,
   updateRecoveredPassword,
 } from '@/mobile/app/app-shell/auth/session/authRedirectHandlers';
+import { isPasswordRecoverySessionExchangeActive } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
 
 const {
   clearCurrentUserStateMock,
   clearPendingAuthRedirectStatesMock,
   consumePendingAuthRedirectStateMock,
+  discardPendingAuthRedirectStateMock,
   exchangeCodeForSessionMock,
+  getSessionMock,
   loggerDebugMock,
   persistAuthSessionMock,
-  setSessionMock,
   signOutMock,
   updateUserMock,
 } = vi.hoisted(() => ({
   clearCurrentUserStateMock: vi.fn(),
   clearPendingAuthRedirectStatesMock: vi.fn(),
   consumePendingAuthRedirectStateMock: vi.fn(),
+  discardPendingAuthRedirectStateMock: vi.fn(),
   exchangeCodeForSessionMock: vi.fn(),
+  getSessionMock: vi.fn(),
   loggerDebugMock: vi.fn(),
   persistAuthSessionMock: vi.fn(),
-  setSessionMock: vi.fn(),
   signOutMock: vi.fn(),
   updateUserMock: vi.fn(),
 }));
@@ -36,13 +39,14 @@ vi.mock('@/mobile/app/app-shell/auth/session/authSessionSupport', () => ({
 vi.mock('@/mobile/app/app-shell/auth/session/authRedirectState', () => ({
   clearPendingAuthRedirectStates: clearPendingAuthRedirectStatesMock,
   consumePendingAuthRedirectState: consumePendingAuthRedirectStateMock,
+  discardPendingAuthRedirectState: discardPendingAuthRedirectStateMock,
 }));
 
 vi.mock('@/mobile/app/platform/supabase/client', () => ({
   supabase: {
     auth: {
       exchangeCodeForSession: exchangeCodeForSessionMock,
-      setSession: setSessionMock,
+      getSession: getSessionMock,
       signOut: signOutMock,
       updateUser: updateUserMock,
     },
@@ -66,13 +70,15 @@ describe('authRedirectHandlers', () => {
     persistAuthSessionMock.mockReset();
     clearPendingAuthRedirectStatesMock.mockReset();
     consumePendingAuthRedirectStateMock.mockReset();
+    discardPendingAuthRedirectStateMock.mockReset();
     exchangeCodeForSessionMock.mockReset();
-    setSessionMock.mockReset();
+    getSessionMock.mockReset();
     signOutMock.mockReset();
     updateUserMock.mockReset();
     loggerDebugMock.mockReset();
 
     clearPendingAuthRedirectStatesMock.mockResolvedValue(undefined);
+    discardPendingAuthRedirectStateMock.mockResolvedValue(undefined);
     persistAuthSessionMock.mockResolvedValue(undefined);
     signOutMock.mockResolvedValue(undefined);
   });
@@ -108,7 +114,7 @@ describe('authRedirectHandlers', () => {
     expect(signOutMock).not.toHaveBeenCalled();
   });
 
-  it('prepares password reset redirects from token payloads', async () => {
+  it('prepares password reset redirects from PKCE authorization codes', async () => {
     consumePendingAuthRedirectStateMock.mockResolvedValue({
       success: true,
       entry: {
@@ -117,34 +123,31 @@ describe('authRedirectHandlers', () => {
         target: 'reset-password',
       },
     });
-    setSessionMock.mockResolvedValue({
-      data: { session },
-      error: null,
+    exchangeCodeForSessionMock.mockImplementation(async () => {
+      expect(isPasswordRecoverySessionExchangeActive()).toBe(true);
+      return { data: { session }, error: null };
     });
 
     await preparePasswordResetRedirect({
-      accessToken: 'access-token',
+      code: 'reset-code',
       flow: 'password-reset',
-      refreshToken: 'refresh-token',
       state: 'state-1',
       target: 'reset-password',
     });
 
-    expect(setSessionMock).toHaveBeenCalledWith({
-      access_token: 'access-token',
-      refresh_token: 'refresh-token',
-    });
-    expect(persistAuthSessionMock).toHaveBeenCalledWith(session);
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('reset-code');
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(isPasswordRecoverySessionExchangeActive()).toBe(false);
   });
 
-  it('clears rejected payloads for provider errors and invalid state', async () => {
+  it('clears rejected signup payloads without signing out for reset errors', async () => {
     await expect(
       completeSignupRedirect({
         error: 'access_denied',
         errorCode: 'provider',
         target: 'auth/callback',
       }),
-    ).rejects.toThrow('provider: access_denied');
+    ).rejects.toThrow('Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.');
 
     expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
     expect(clearPendingAuthRedirectStatesMock).toHaveBeenCalled();
@@ -153,10 +156,34 @@ describe('authRedirectHandlers', () => {
 
     await expect(
       completeSignupRedirect({ error: 'plain_provider_error', target: 'auth/callback' }),
-    ).rejects.toThrow('plain_provider_error');
+    ).rejects.toThrow('Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.');
 
     persistAuthSessionMock.mockClear();
     clearPendingAuthRedirectStatesMock.mockClear();
+    discardPendingAuthRedirectStateMock.mockClear();
+    signOutMock.mockClear();
+    clearCurrentUserStateMock.mockClear();
+
+    await expect(
+      preparePasswordResetRedirect({
+        error: 'access_denied',
+        errorCode: 'otp_expired',
+        state: 'reset-state',
+        target: 'reset-password',
+      }),
+    ).rejects.toThrow(
+      'Bu sıfırlama bağlantısı kullanılmış veya süresi dolmuş. Yeni bir sıfırlama e-postası iste.',
+    );
+
+    expect(discardPendingAuthRedirectStateMock).toHaveBeenCalledWith('reset-state');
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(clearPendingAuthRedirectStatesMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(clearCurrentUserStateMock).not.toHaveBeenCalled();
+
+    persistAuthSessionMock.mockClear();
+    clearPendingAuthRedirectStatesMock.mockClear();
+    discardPendingAuthRedirectStateMock.mockClear();
     signOutMock.mockClear();
     clearCurrentUserStateMock.mockClear();
     consumePendingAuthRedirectStateMock.mockResolvedValue({ success: false, reason: 'state_not_found' });
@@ -171,10 +198,11 @@ describe('authRedirectHandlers', () => {
     ).rejects.toThrow();
 
     expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
-    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
-    expect(clearPendingAuthRedirectStatesMock).toHaveBeenCalled();
-    expect(signOutMock).toHaveBeenCalled();
-    expect(clearCurrentUserStateMock).toHaveBeenCalled();
+    expect(discardPendingAuthRedirectStateMock).toHaveBeenCalledWith('missing');
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(clearPendingAuthRedirectStatesMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(clearCurrentUserStateMock).not.toHaveBeenCalled();
 
     consumePendingAuthRedirectStateMock.mockResolvedValue({
       success: true,
@@ -234,43 +262,47 @@ describe('authRedirectHandlers', () => {
       success: true,
       entry: { flow: 'password-reset', state: 'state-reset', target: 'reset-password' },
     });
-    setSessionMock
+    exchangeCodeForSessionMock
       .mockResolvedValueOnce({ data: { session: null }, error: new Error('set session failed') })
       .mockResolvedValueOnce({ data: { session: null }, error: null });
     await expect(
       preparePasswordResetRedirect({
-        accessToken: 'access', refreshToken: 'refresh', flow: 'password-reset',
+        code: 'reset-code-1', flow: 'password-reset',
         state: 'state-reset', target: 'reset-password',
       }),
     ).rejects.toThrow('set session failed');
     await expect(
       preparePasswordResetRedirect({
-        accessToken: 'access', refreshToken: 'refresh', flow: 'password-reset',
+        code: 'reset-code-2', flow: 'password-reset',
         state: 'state-reset', target: 'reset-password',
       }),
     ).rejects.toThrow();
   });
 
-  it('updates recovered passwords and clears temporary reset sessions', async () => {
+  it('updates recovered passwords and promotes the recovery session', async () => {
     updateUserMock.mockResolvedValue({ error: null });
+    getSessionMock.mockResolvedValue({
+      data: { session },
+      error: null,
+    });
 
-    await updateRecoveredPassword('new-password');
+    await expect(updateRecoveredPassword('new-password')).resolves.toBe(session);
 
     expect(updateUserMock).toHaveBeenCalledWith({ password: 'new-password' });
-    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
-    expect(signOutMock).toHaveBeenCalled();
-    expect(clearCurrentUserStateMock).toHaveBeenCalled();
+    expect(persistAuthSessionMock).toHaveBeenCalledWith(session);
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(clearCurrentUserStateMock).not.toHaveBeenCalled();
 
     updateUserMock.mockResolvedValue({ error: new Error('weak password') });
     await expect(updateRecoveredPassword('weak')).rejects.toThrow('weak password');
 
     updateUserMock.mockResolvedValue({ error: null });
-    signOutMock.mockRejectedValue(new Error('sign-out network failure'));
-    await updateRecoveredPassword('another-valid-password');
-    expect(loggerDebugMock).toHaveBeenCalledWith(
-      'auth',
-      'Failed to sign out after updating recovered password',
-      expect.any(Error),
+    getSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: new Error('session unavailable'),
+    });
+    await expect(updateRecoveredPassword('another-valid-password')).rejects.toThrow(
+      'session unavailable',
     );
   });
 });

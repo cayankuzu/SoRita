@@ -111,4 +111,22 @@ describe('moderationReports', () => {
       }),
     ]);
   });
+
+  it('builds durable ids for every offline report target', async () => {
+    onlineManager.setOnline(false);
+    const { submitModerationReport } = await import('@/mobile/app/data/repositories/moderationReports');
+
+    await submitModerationReport({
+      commentId: 'comment-1', reason: 'spam', reporterUserId: 'viewer', targetType: 'comment',
+    });
+    await submitModerationReport({
+      listId: 'list-1', reason: 'spam', reporterUserId: 'viewer', targetType: 'list',
+    });
+    await submitModerationReport({
+      reason: 'spam', reporterUserId: 'viewer', targetType: 'user', targetUserId: 'user-1',
+    });
+
+    await expect(readOutboxEntries('viewer')).resolves.toHaveLength(3);
+    expect(getSessionMock).not.toHaveBeenCalled();
+  });
 });

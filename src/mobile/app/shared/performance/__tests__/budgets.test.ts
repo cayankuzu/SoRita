@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
+  HOME_FEED_INITIAL_RENDER_COUNT,
+  HOME_FEED_RENDER_BATCH_SIZE,
+  HOME_FEED_WINDOW_SIZE,
   IMAGE_CROSSFADE_MS,
-  MEDIA_INITIAL_PREFETCH_CARD_COUNT,
   MEDIA_PREFETCH_AHEAD_CARD_COUNT,
   MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
   NAVIGATION_STATE_RESTORE_BUDGET_MS,
@@ -26,9 +28,11 @@ describe('performance budgets', () => {
     expect(NAVIGATION_STATE_RESTORE_BUDGET_MS).toBeLessThanOrEqual(150);
     expect(IMAGE_CROSSFADE_MS).toBeGreaterThan(0);
     expect(IMAGE_CROSSFADE_MS).toBeLessThanOrEqual(100);
-    expect(MEDIA_INITIAL_PREFETCH_CARD_COUNT).toBeGreaterThanOrEqual(3);
-    expect(MEDIA_PREFETCH_AHEAD_CARD_COUNT).toBeGreaterThanOrEqual(3);
-    expect(MEDIA_PREFETCH_VIEWABILITY_DELAY_MS).toBeLessThanOrEqual(75);
+    expect(HOME_FEED_INITIAL_RENDER_COUNT).toBeLessThanOrEqual(2);
+    expect(HOME_FEED_RENDER_BATCH_SIZE).toBeLessThanOrEqual(3);
+    expect(HOME_FEED_WINDOW_SIZE).toBeLessThanOrEqual(4);
+    expect(MEDIA_PREFETCH_AHEAD_CARD_COUNT).toBeLessThanOrEqual(2);
+    expect(MEDIA_PREFETCH_VIEWABILITY_DELAY_MS).toBeGreaterThanOrEqual(100);
     expect(VIDEO_START_BUFFER_SECONDS).toBeLessThanOrEqual(1);
     expect(VIDEO_FORWARD_BUFFER_SECONDS).toBeGreaterThanOrEqual(6);
     expect(VIDEO_CACHE_LOW_MEMORY_BYTES).toBeLessThan(VIDEO_CACHE_DEFAULT_BYTES);
@@ -39,7 +43,9 @@ describe('performance budgets', () => {
       authBootstrapShellFallbackMs: AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
       startupCacheRestoreMs: STARTUP_CACHE_RESTORE_BUDGET_MS,
       imageCrossfadeMs: IMAGE_CROSSFADE_MS,
-      mediaInitialPrefetchCardCount: MEDIA_INITIAL_PREFETCH_CARD_COUNT,
+      homeFeedInitialRenderCount: HOME_FEED_INITIAL_RENDER_COUNT,
+      homeFeedRenderBatchSize: HOME_FEED_RENDER_BATCH_SIZE,
+      homeFeedWindowSize: HOME_FEED_WINDOW_SIZE,
       mediaPrefetchAheadCardCount: MEDIA_PREFETCH_AHEAD_CARD_COUNT,
       mediaPrefetchViewabilityDelayMs: MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
       navigationStateRestoreMs: NAVIGATION_STATE_RESTORE_BUDGET_MS,

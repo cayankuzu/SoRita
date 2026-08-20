@@ -8,6 +8,24 @@ import type {
 import { generateVideoThumbnailUri } from '@/mobile/app/platform/media/videoThumbnails';
 
 const PREVIEW_BUILD_CONCURRENCY = 4;
+const IOS_NETWORK_PREVIEW_CONCURRENCY = 3;
+const iosNetworkPreviewQueue: Array<() => void> = [];
+let activeIosNetworkPreviews = 0;
+
+async function withIosNetworkPreviewSlot<T>(operation: () => Promise<T>) {
+  if (activeIosNetworkPreviews >= IOS_NETWORK_PREVIEW_CONCURRENCY) {
+    await new Promise<void>((resolve) => iosNetworkPreviewQueue.push(resolve));
+  }
+
+  activeIosNetworkPreviews += 1;
+
+  try {
+    return await operation();
+  } finally {
+    activeIosNetworkPreviews -= 1;
+    iosNetworkPreviewQueue.shift()?.();
+  }
+}
 
 export function buildMediaTypeFilter(
   filter: MediaLibrarySelectionFilter,
@@ -46,13 +64,9 @@ export function buildSelectionCounts(selectedAssets: MediaLibraryPickerAsset[]) 
   );
 }
 
-function buildAndroidMediaStorePreviewUri(
+export function buildAndroidMediaStoreUri(
   asset: Pick<MediaLibrary.Asset, 'id' | 'mediaType'>,
 ) {
-  if (Platform.OS !== 'android') {
-    return null;
-  }
-
   if (asset.mediaType === 'video') {
     return `content://media/external/video/media/${asset.id}`;
   }
@@ -64,6 +78,43 @@ function buildAndroidMediaStorePreviewUri(
   return null;
 }
 
+export async function hydratePickerAssetFromNetwork(
+  asset: MediaLibraryPickerAsset,
+): Promise<MediaLibraryPickerAsset> {
+  if (Platform.OS !== 'ios') {
+    return asset;
+  }
+
+  return withIosNetworkPreviewSlot(async () => {
+    try {
+      const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id, {
+        shouldDownloadFromNetwork: true,
+      });
+      const localUri = assetInfo.localUri || undefined;
+
+      if (!localUri) {
+        return asset;
+      }
+
+      const previewUri = asset.mediaType === 'video'
+        ? (await generateVideoThumbnailUri(localUri, 0)) || localUri
+        : localUri;
+
+      return {
+        ...asset,
+        duration: assetInfo.duration,
+        height: assetInfo.height,
+        localUri,
+        previewUri,
+        uri: localUri,
+        width: assetInfo.width,
+      };
+    } catch {
+      return asset;
+    }
+  });
+}
+
 async function buildPickerAssetPreview(
   asset: MediaLibrary.Asset,
 ): Promise<MediaLibraryPickerAsset | null> {
@@ -71,7 +122,8 @@ async function buildPickerAssetPreview(
     return null;
   }
 
-  const androidPreviewUri = buildAndroidMediaStorePreviewUri(asset);
+  const androidMediaStoreUri =
+    Platform.OS === 'android' ? buildAndroidMediaStoreUri(asset) : null;
   let assetInfo: Awaited<ReturnType<typeof MediaLibrary.getAssetInfoAsync>> | null = null;
 
   if (Platform.OS !== 'android') {
@@ -85,13 +137,15 @@ async function buildPickerAssetPreview(
   }
 
   const localUri = assetInfo?.localUri || undefined;
-  const resolvedAssetUri = localUri || asset.uri;
+  // Android's file:///storage/emulated/0 paths are blocked by scoped storage
+  // on several OS/vendor combinations. MediaStore content URIs retain the
+  // permission granted by expo-media-library and work in both ExpoImage and FS.
+  const resolvedAssetUri = androidMediaStoreUri || localUri || asset.uri;
   let previewUri = resolvedAssetUri;
 
   if (asset.mediaType === 'video') {
     previewUri =
       (await generateVideoThumbnailUri(resolvedAssetUri, 0)) ||
-      androidPreviewUri ||
       resolvedAssetUri;
   }
 

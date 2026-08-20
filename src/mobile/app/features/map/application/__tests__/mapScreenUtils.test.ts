@@ -7,6 +7,7 @@ import {
   EXISTING_PLACE_MAP_PRESS_MAX_DISTANCE,
   findExistingPlaceMatch,
   findExistingPlaceMatchByCoordinates,
+  getMapOverlayLayout,
   isEquivalentPlace,
   normalizePlaceLabel,
 } from '@/mobile/app/features/map/application/mapScreenUtils';
@@ -16,6 +17,28 @@ vi.mock('@/shared/utils/id', () => ({
 }));
 
 describe('mapScreenUtils', () => {
+  it('moves search results into a bounded bottom sheet on short map scenes', () => {
+    expect(getMapOverlayLayout(480, 104)).toEqual({
+      controlBottom: 12,
+      isShort: true,
+      resultsBottom: 68,
+      resultsMaxHeight: 324,
+      resultsTop: undefined,
+      searchTop: 10,
+    });
+
+    expect(getMapOverlayLayout(760, 104)).toEqual({
+      controlBottom: 12,
+      isShort: false,
+      resultsBottom: undefined,
+      resultsMaxHeight: 324,
+      resultsTop: 120,
+      searchTop: 10,
+    });
+
+    expect(getMapOverlayLayout(280, 104).resultsMaxHeight).toBe(124);
+  });
+
   it('normalizes and compares equivalent places', () => {
     expect(normalizePlaceLabel('  Kahve  Dunyasi ')).toBe('kahve dunyasi');
     expect(normalizePlaceLabel()).toBeUndefined();

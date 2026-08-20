@@ -61,7 +61,7 @@ type VisibleDataPageLimits = {
 const DEFAULT_VISIBLE_DATA_LIMITS: VisibleDataPageLimits = {
   commentsPerPlace: 8,
   lists: 60,
-  mediaPerPlace: 4,
+  mediaPerPlace: 6,
   placesPerList: 32,
   users: 200,
 };

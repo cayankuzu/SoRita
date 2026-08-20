@@ -22,13 +22,44 @@ describe('InstantPressable', () => {
     const pressable = () => renderer.root.find((node) => String(node.type) === 'Pressable');
     act(() => {
       pressable().props.onPress({ persist: vi.fn() });
+      pressable().props.onPress({ persist: vi.fn() });
     });
 
     expect(action).toHaveBeenCalledTimes(1);
     expect(pressable().props.disabled).toBe(true);
+    expect(pressable().props.accessibilityState).toEqual({
+      busy: true,
+      disabled: true,
+    });
 
     await act(async () => {
       resolveAction();
+      await Promise.resolve();
+    });
+
+    expect(pressable().props.disabled).toBe(false);
+    expect(pressable().props.accessibilityState).toEqual({
+      busy: undefined,
+      disabled: false,
+    });
+  });
+
+  it('restores interaction state when an async action rejects', async () => {
+    const action = vi.fn(() => Promise.reject(new Error('failed')));
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(<InstantPressable onPress={action}>Kaydet</InstantPressable>);
+    });
+
+    const pressable = () => renderer.root.find((node) => String(node.type) === 'Pressable');
+    act(() => {
+      pressable().props.onPress({ persist: vi.fn() });
+    });
+
+    expect(pressable().props.disabled).toBe(true);
+
+    await act(async () => {
       await Promise.resolve();
     });
 

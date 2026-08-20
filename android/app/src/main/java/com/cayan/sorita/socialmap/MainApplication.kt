@@ -3,7 +3,6 @@ package com.cayan.sorita.socialmap
 import android.app.Application
 import android.content.res.Configuration
 import android.os.Build
-import android.preference.PreferenceManager
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -23,14 +22,15 @@ class MainApplication : Application(), ReactApplication {
       packageList =
         PackageList(this).packages.apply {
           add(SoritaGallerySaverPackage())
-        }
+        },
+      useDevSupport = BuildConfig.USE_METRO
     )
   }
 
   override fun onCreate() {
     super.onCreate()
-    if (BuildConfig.DEBUG) {
-      PreferenceManager.getDefaultSharedPreferences(this)
+    if (BuildConfig.USE_METRO) {
+      getSharedPreferences("${packageName}_preferences", MODE_PRIVATE)
         .edit()
         .putString("debug_http_host", resolveDebugMetroHost())
         .putBoolean("hot_module_replacement", true)

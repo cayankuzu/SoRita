@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
 import {
-  PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS,
+  PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_SECONDS,
   PLACE_MEDIA_TARGET_VIDEO_BITRATE,
 } from '@/mobile/app/platform/media/mediaConstants';
 
@@ -13,7 +13,7 @@ const BYTES_IN_MB = 1024 * 1024;
 
 const estimated720pVideoBytes = Math.ceil(
   ((PLACE_MEDIA_TARGET_VIDEO_BITRATE + PLACE_MEDIA_AUDIO_BITRATE_HEADROOM) *
-    (PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS + PLACE_MEDIA_UPLOAD_SIZE_HEADROOM_SECONDS) *
+    (PLACE_MEDIA_MAX_ACCEPTED_VIDEO_DURATION_SECONDS + PLACE_MEDIA_UPLOAD_SIZE_HEADROOM_SECONDS) *
     PLACE_MEDIA_CONTAINER_HEADROOM_RATIO) /
     8,
 );

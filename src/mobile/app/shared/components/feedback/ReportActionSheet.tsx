@@ -23,7 +23,7 @@ type ReportActionSheetProps = {
   onReportDetailsChange?: (value: string) => void;
   onReportReasonChange: (value: string) => void;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
 };
 
 export function ReportActionSheet({
@@ -39,6 +39,7 @@ export function ReportActionSheet({
 }: ReportActionSheetProps) {
   return (
     <ModalScaffold
+      accessibilityLabel={title}
       visible={visible}
       onClose={onClose}
       variant="sheet"
@@ -110,6 +111,7 @@ export function ReportActionSheet({
       <View style={styles.detailsWrap}>
         <Text style={styles.detailsLabel}>{tr.cards.reportDetailsLabel}</Text>
         <TextInput
+          accessibilityLabel={tr.cards.reportDetailsPlaceholder}
           multiline
           maxLength={600}
           placeholder={tr.cards.reportDetailsPlaceholder}

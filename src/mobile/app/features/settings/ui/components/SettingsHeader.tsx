@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+
+const HEADER_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 type SettingsHeaderProps = {
   title: string;
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   headerAction: {
-    minHeight: 44,
+    minHeight: HEADER_TOUCH_SIZE,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -91,6 +93,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   headerSpacer: {
-    width: 44,
+    width: HEADER_TOUCH_SIZE,
   },
 });

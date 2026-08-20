@@ -186,6 +186,14 @@ describe('listsRepository', () => {
     });
 
     await vi.waitFor(() => expect(uploadPlaceMediaAssetMock).toHaveBeenCalledTimes(2));
+    expect(uploadPlaceMediaAssetMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      prefix: 'list-video/place-video/0',
+      uri: 'file:///tmp/video.mp4',
+    }));
+    expect(uploadPlaceMediaAssetMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      prefix: 'list-video/place-video/0-thumbnail',
+      uri: 'file:///tmp/video-thumb.jpg',
+    }));
     resolvers[0]?.('sorita-storage://place-media-private/user-1/video.mp4');
     resolvers[1]?.('sorita-storage://place-media-private/user-1/video-thumb.jpg');
     await expect(save).resolves.toBeUndefined();

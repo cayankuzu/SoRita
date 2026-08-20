@@ -34,6 +34,17 @@ $referenceFiles = @(
     'android\keystore.properties.example'
 )
 
+$supabaseLinkFiles = @(
+    @{
+        Source = 'supabase\.temp\linked-project.json'
+        Destination = 'supabase\linked-project.json'
+    },
+    @{
+        Source = 'supabase\.temp\project-ref'
+        Destination = 'supabase\project-ref.txt'
+    }
+)
+
 $projectAuthKeyFiles = @(Get-ChildItem -LiteralPath $projectRootPath -Filter 'AuthKey_*.p8' -File -ErrorAction SilentlyContinue)
 
 $optionalExternalFiles = @(
@@ -105,33 +116,6 @@ function Copy-OptionalExternalFile {
 
 function Reset-ManagedBackupContent {
     New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
-
-    $managedBackupPaths = @(
-        '.env',
-        'android',
-        'apple',
-        'credentials',
-        'credentials.json',
-        'ENV-KEYS.txt',
-        'EXPORT-SECRETS.ps1',
-        'FILE-INVENTORY.txt',
-        'firebase-admin',
-        'MANUAL-BACKUP-CHECKLIST.md',
-        'RECOVERY-README.md',
-        'reference',
-        'RESTORE-TO-PROJECT.ps1',
-        'SHA256SUMS.txt'
-    )
-
-    foreach ($relativePath in $managedBackupPaths) {
-        $targetPath = Join-Path $BackupRoot $relativePath
-        if (Test-Path -LiteralPath $targetPath) {
-            Remove-Item -LiteralPath $targetPath -Recurse -Force
-        }
-    }
-
-    Get-ChildItem -LiteralPath $BackupRoot -Filter 'AuthKey_*.p8' -File -ErrorAction SilentlyContinue |
-        Remove-Item -Force
 }
 
 function Write-FileInventory {
@@ -183,6 +167,7 @@ function Write-RecoveryReadme {
         '- Varsa proje kokundeki `AuthKey_*.p8` dosyalari',
         '- Varsa `apple\` altindaki local App Store Connect anahtarlari ve auth metadata dosyalari',
         '- Varsa `firebase-admin\` altindaki SoRita servis hesaplari',
+        '- `supabase\` altinda yerel proje baglanti kimligi',
         '- `reference\` altinda continuity ve mobile config kopyalari',
         '- Public cert ve reset bilgi dosyalari',
         '- `RESTORE-TO-PROJECT.ps1`',
@@ -270,6 +255,10 @@ foreach ($authKeyFile in $projectAuthKeyFiles) {
 
 foreach ($relativePath in $referenceFiles) {
     Copy-ProjectFile -RelativePath $relativePath -DestinationRelativePath (Join-Path 'reference' $relativePath)
+}
+
+foreach ($entry in $supabaseLinkFiles) {
+    Copy-ProjectFile -RelativePath $entry.Source -DestinationRelativePath $entry.Destination
 }
 
 $copiedOptionalFiles = @(foreach ($fileEntry in $optionalExternalFiles) {

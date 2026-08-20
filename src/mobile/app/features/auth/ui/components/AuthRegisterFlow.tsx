@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,6 +30,7 @@ import {
   USER_NAME_MAX_LENGTH,
   USERNAME_MAX_LENGTH,
 } from '@/mobile/app/shared/validation/contentLimits';
+import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type RegisterStepItem = {
   title: string;
@@ -160,6 +161,10 @@ export function AuthRegisterFlow({
 }: AuthRegisterFlowProps) {
   const currentStep = steps[regStep];
   const isLastStep = regStep === steps.length - 1;
+  const compact = useAuthLayoutMode();
+  const usernameRef = React.useRef<TextInput | null>(null);
+  const bioRef = React.useRef<TextInput | null>(null);
+  const passwordRef = React.useRef<TextInput | null>(null);
 
   return (
     <Screen variant="form" contentContainerStyle={styles.authScreen}>
@@ -201,11 +206,11 @@ export function AuthRegisterFlow({
             <View style={styles.spacer} />
           </View>
 
-          <View style={styles.authBrandRow}>
-            <SoRitaLogo size="xl" />
+          <View style={[styles.authBrandRow, compact ? styles.authBrandRowCompact : null]}>
+            <SoRitaLogo size={compact ? 'lg' : 'xl'} />
           </View>
 
-          <View style={styles.headerBlock}>
+          <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
             <View style={styles.stepIconWrap}>{currentStep.icon}</View>
             <Text style={styles.screenTitle}>{currentStep.title}</Text>
             <Text style={styles.screenSubtitle}>{currentStep.subtitle}</Text>
@@ -220,16 +225,23 @@ export function AuthRegisterFlow({
             placeholder={tr.auth.register.namePlaceholder}
             value={regName}
             onChangeText={setRegName}
+            blurOnSubmit={false}
+            returnKeyType="next"
+            onSubmitEditing={() => usernameRef.current?.focus()}
             icon={<User color={colors.textMuted} size={14} />}
             status={buildHelperFieldStatus(registerFieldErrors.name, 'danger')}
             maxLength={USER_NAME_MAX_LENGTH}
           />
           <AuthField
+            ref={usernameRef}
             label={tr.auth.register.usernameLabel}
             placeholder={tr.auth.register.usernamePlaceholder}
             value={regUsername}
             onChangeText={updateRegisterUsername}
             autoCapitalize="none"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => bioRef.current?.focus()}
             status={buildAvailabilityFieldStatus({
               availabilityStatus: usernameAvailabilityStatus,
               fieldError: registerFieldErrors.username,
@@ -240,11 +252,15 @@ export function AuthRegisterFlow({
             maxLength={USERNAME_MAX_LENGTH}
           />
           <TextField
+            ref={bioRef}
             label={tr.auth.register.bioLabel}
             placeholder={tr.auth.register.bioPlaceholder}
             value={regBio}
             onChangeText={setRegBio}
             multilineRows={4}
+            blurOnSubmit
+            returnKeyType="done"
+            onSubmitEditing={goToNextRegisterStep}
             maxLength={USER_BIO_MAX_LENGTH}
           />
         </View>
@@ -259,6 +275,9 @@ export function AuthRegisterFlow({
             onChangeText={setRegEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            blurOnSubmit={false}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             status={buildAvailabilityFieldStatus({
               availabilityStatus: emailAvailabilityStatus,
               fieldError: registerFieldErrors.email,
@@ -269,12 +288,15 @@ export function AuthRegisterFlow({
             maxLength={EMAIL_MAX_LENGTH}
           />
           <AuthField
+            ref={passwordRef}
             label={tr.auth.register.passwordLabel}
             placeholder={tr.auth.register.passwordPlaceholder}
             value={regPassword}
             onChangeText={setRegPassword}
             secureTextEntry
             autoCapitalize="none"
+            returnKeyType="done"
+            onSubmitEditing={goToNextRegisterStep}
             status={buildHelperFieldStatus(
               registerFieldErrors.password || passwordHint,
               registerFieldErrors.password ? 'danger' : passwordHintTone,
@@ -360,7 +382,7 @@ export function AuthRegisterFlow({
           />
         </View>
       ) : (
-        <View style={styles.bottomActions}>
+        <View style={[styles.bottomActions, compact ? styles.bottomActionsCompact : null]}>
           <PrimaryButton
             icon={<ArrowRight color={colors.onPrimary} size={14} />}
             iconPosition="end"

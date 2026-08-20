@@ -94,6 +94,8 @@ export interface PlaceList {
   emoji?: string;
   coverImage?: string;
   places: Place[];
+  /** Authoritative total returned by summary/read-model queries when places are not embedded. */
+  placeCount?: number;
   isPublic: boolean;
   likes?: number;
   likedBy?: string[];

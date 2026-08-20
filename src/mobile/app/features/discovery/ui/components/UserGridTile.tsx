@@ -15,19 +15,23 @@ import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layou
 export type UserGridTileProps = {
   user: User;
   fillWidth?: boolean;
+  compact?: boolean;
   isFollowing: boolean;
   isPending?: boolean;
   onPress: () => void;
-  onFollowPress: () => void;
+  onPressIn?: () => void;
+  onFollowPress: () => void | Promise<void>;
   searchQuery?: string;
 };
 
 function UserGridTileComponent({
   user,
   fillWidth = false,
+  compact = false,
   isFollowing,
   isPending = false,
   onPress,
+  onPressIn,
   onFollowPress,
   searchQuery,
 }: UserGridTileProps) {
@@ -36,10 +40,14 @@ function UserGridTileComponent({
 
   return (
     <Pressable
+      accessibilityLabel={`${user.name}, @${user.username}`}
+      accessibilityRole="button"
       onPress={onPress}
+      onPressIn={onPressIn}
       style={[
         styles.tile,
         styles.userTile,
+        compact ? styles.tileCompact : null,
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
@@ -74,7 +82,7 @@ function UserGridTileComponent({
           showIndicator={false}
           renderContent={() => <HighlightedText query={searchQuery} text={`@${user.username}`} />}
         />
-        {user.bio ? (
+        {user.bio && !compact ? (
           <ExpandableText
             text={user.bio}
             collapsedLines={1}
@@ -83,17 +91,17 @@ function UserGridTileComponent({
           />
         ) : null}
         <InstantPressable
+          accessibilityState={{ selected: isFollowing || isPending }}
           hapticFeedback="light"
           hitSlop={5}
           onPress={(event) => {
             event.stopPropagation();
-            onFollowPress();
+            return onFollowPress();
           }}
           style={[
             styles.followButton,
             isFollowing || isPending ? styles.followButtonPassive : null,
           ]}
-          preventRepeatWhileBusy={false}
         >
           <Text
             style={[
@@ -120,9 +128,13 @@ function areUserGridTilePropsEqual(
   return (
     previous.user === next.user &&
     previous.fillWidth === next.fillWidth &&
+    previous.compact === next.compact &&
     previous.isFollowing === next.isFollowing &&
     previous.isPending === next.isPending
-    && previous.searchQuery === next.searchQuery
+    && previous.searchQuery === next.searchQuery &&
+    previous.onFollowPress === next.onFollowPress &&
+    previous.onPress === next.onPress &&
+    previous.onPressIn === next.onPressIn
   );
 }
 

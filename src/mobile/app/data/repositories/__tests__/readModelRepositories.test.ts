@@ -47,6 +47,7 @@ function createPlacePayload(overrides: Record<string, unknown> = {}) {
     listIsPublic: true,
     listName: 'Coffee',
     listUpdatedAt: isoB,
+    locationPlaceCardsCount: '3',
     lng: 29.01,
     media: mediaJson,
     menuUrl: 'https://menu.example.com',
@@ -84,6 +85,7 @@ describe('read model repositories', () => {
           rank: '10',
           item: {
             coverImageUrl: 'https://cdn.example.com/list.jpg',
+            createdAt: isoA,
             description: 'Saved cafes',
             emoji: 'coffee',
             id: 'list-1',
@@ -93,6 +95,7 @@ describe('read model repositories', () => {
             ownerName: 'Ada',
             ownerProfilePhotoUrl: 'https://cdn.example.com/profile.jpg',
             ownerUsername: 'ada',
+            placeCount: '4',
             updatedAt: isoB,
           },
         },
@@ -132,7 +135,7 @@ describe('read model repositories', () => {
       viewerId: 'viewer-1',
     });
 
-    expect(rpcMock).toHaveBeenCalledWith('explore_page', {
+    expect(rpcMock).toHaveBeenCalledWith('explore_page_complete', {
       p_cursor_id: null,
       p_cursor_rank: null,
       p_kind: 'all',
@@ -141,7 +144,9 @@ describe('read model repositories', () => {
     });
     expect(page.listItems).toHaveLength(1);
     expect(page.listItems[0]?.owner?.username).toBe('ada');
+    expect(page.listItems[0]?.list).toMatchObject({ createdAt: isoA, placeCount: 4 });
     expect(page.placeItems[0]?.place.photos).toEqual(['https://cdn.example.com/photo.jpg']);
+    expect(page.placeItems[0]?.locationPlaceCardsCount).toBe(3);
     expect(page.placeItems[0]?.place.likedBy).toEqual(['viewer-1']);
     expect(page.userItems[0]).toMatchObject({
       id: 'user-1',
@@ -154,7 +159,7 @@ describe('read model repositories', () => {
   it('maps home feed pages and propagates RPC errors', async () => {
     rpcMock.mockResolvedValueOnce({
       data: [
-        {
+        { item: {
           ...createPlacePayload({
             feed_item_id: 'feed-1',
             item_id: undefined,
@@ -177,8 +182,9 @@ describe('read model repositories', () => {
             like_count: '2',
             comment_count: '1',
             viewer_has_liked: true,
+            location_place_cards_count: '3',
           }),
-        },
+        } },
       ],
       error: null,
     });
@@ -188,13 +194,14 @@ describe('read model repositories', () => {
       viewerId: 'viewer-1',
     });
 
-    expect(rpcMock).toHaveBeenCalledWith('feed_page', {
+    expect(rpcMock).toHaveBeenCalledWith('feed_page_complete', {
       p_cursor_id: null,
       p_cursor_published_at: null,
       p_limit: 1,
     });
     expect(page.items[0]?.key).toBe('list-1:place-1');
     expect(page.items[0]?.place.likes).toBe(2);
+    expect(page.items[0]?.locationPlaceCardsCount).toBe(3);
     expect(page.nextCursor).toEqual({ id: 'feed-1', publishedAt: isoB });
 
     const error = new Error('feed failed');
@@ -245,7 +252,7 @@ describe('read model repositories', () => {
     });
 
     expect(request.abortSignal).toHaveBeenCalledWith(signal);
-    expect(rpcMock).toHaveBeenCalledWith('feed_page', {
+    expect(rpcMock).toHaveBeenCalledWith('feed_page_complete', {
       p_cursor_id: 'cursor-id', p_cursor_published_at: isoA, p_limit: 5,
     });
     expect(page.nextCursor).toBeUndefined();
@@ -451,6 +458,7 @@ describe('read model repositories', () => {
               likeCount: '8',
               name: 'Coffee',
               ownerId: 'user-1',
+              placeCount: '5',
               updatedAt: isoB,
               viewerHasLiked: true,
             },
@@ -494,7 +502,7 @@ describe('read model repositories', () => {
       viewerId: 'viewer-1',
     });
 
-    expect(rpcMock).toHaveBeenLastCalledWith('profile_content_page', {
+    expect(rpcMock).toHaveBeenLastCalledWith('profile_content_page_complete', {
       p_cursor: isoA,
       p_cursor_id: 'old',
       p_limit: 3,
@@ -504,6 +512,7 @@ describe('read model repositories', () => {
     expect(content.lists[0]).toMatchObject({
       id: 'list-1',
       likedBy: ['viewer-1'],
+      placeCount: 5,
     });
     expect(content.places[0]?.place.photos).toEqual(['https://cdn.example.com/photo.jpg']);
     expect(content.nextCursor).toEqual({ id: 'broken', sortAt: isoA });
@@ -553,7 +562,7 @@ describe('read model repositories', () => {
 
     const page = await fetchExplorePage({ abortSignal, viewerId: 'viewer-1' });
     expect(response.abortSignal).toHaveBeenCalledWith(abortSignal);
-    expect(rpcMock).toHaveBeenCalledWith('explore_page', {
+    expect(rpcMock).toHaveBeenCalledWith('explore_page_complete', {
       p_cursor_id: null, p_cursor_rank: null, p_kind: 'all', p_limit: 20, p_query: '',
     });
     expect(page.listItems[0]).toMatchObject({
@@ -575,7 +584,7 @@ describe('read model repositories', () => {
     await expect(fetchExplorePage({
       cursor: { id: 'cursor', rank: 5 }, kind: 'users', limit: 2, query: 'ada', viewerId: 'viewer',
     })).resolves.toEqual({ listItems: [], placeItems: [], userItems: [], nextCursor: undefined });
-    expect(rpcMock).toHaveBeenLastCalledWith('explore_page', {
+    expect(rpcMock).toHaveBeenLastCalledWith('explore_page_complete', {
       p_cursor_id: 'cursor', p_cursor_rank: 5, p_kind: 'users', p_limit: 2, p_query: 'ada',
     });
 

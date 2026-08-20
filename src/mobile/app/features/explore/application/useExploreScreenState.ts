@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import {
@@ -46,7 +46,15 @@ function useDebouncedValue(value: string, delayMs: number) {
   return debouncedValue;
 }
 
-function isActiveOrNeighbor(activeTab: ExploreTabKey, candidate: ExploreTabKey) {
+function shouldLoadExploreTab(
+  activeTab: ExploreTabKey,
+  candidate: ExploreTabKey,
+  hasSearchQuery: boolean,
+) {
+  if (hasSearchQuery) {
+    return activeTab === candidate;
+  }
+
   return Math.abs(EXPLORE_TABS.indexOf(activeTab) - EXPLORE_TABS.indexOf(candidate)) <= 1;
 }
 
@@ -86,21 +94,23 @@ export function useExploreScreenState({
   const selectedTab: ExploreTabKey = EXPLORE_TABS.includes(activeTab) ? activeTab : 'lists';
   const userId = user?.id;
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
-  const q = debouncedSearchQuery.trim().toLowerCase();
+  const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
+  const q = deferredSearchQuery.trim().toLowerCase();
+  const hasSearchQuery = debouncedSearchQuery.trim().length > 0;
   const listExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && isActiveOrNeighbor(selectedTab, 'lists'),
+    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'lists', hasSearchQuery),
     kind: 'lists',
   });
   const placeExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && isActiveOrNeighbor(selectedTab, 'places'),
+    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'places', hasSearchQuery),
     kind: 'places',
   });
   const photoExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && isActiveOrNeighbor(selectedTab, 'photos'),
+    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'photos', hasSearchQuery),
     kind: 'photos',
   });
   const userExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && isActiveOrNeighbor(selectedTab, 'people'),
+    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'people', hasSearchQuery),
     kind: 'users',
   });
   const exploreQueryByTab = {
@@ -272,7 +282,7 @@ export function useExploreScreenState({
 
   return {
     currentUser,
-    debouncedSearchQuery,
+    debouncedSearchQuery: deferredSearchQuery,
     errorMessage,
     fetchNextPage: queryStateByTab[selectedTab].fetchNextPage,
     filteredListItems,

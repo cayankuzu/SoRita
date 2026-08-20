@@ -179,4 +179,65 @@ describe('useNotificationsScreenState', () => {
     expect(hook.result.current.isFetchingNextPage).toBe(true);
     expect(hook.result.current.refreshing).toBe(true);
   });
+
+  it('prevents duplicate follow-request decisions while one is pending', async () => {
+    const queryClient = createTestQueryClient();
+    const wrapper = createQueryClientWrapper(queryClient);
+    let resolveDecision!: () => void;
+    const respondAsync = vi.fn(
+      () => new Promise<void>((resolve) => {
+        resolveDecision = resolve;
+      }),
+    );
+    const request = {
+      id: 'request-notification',
+      type: 'follow_request' as const,
+      read: false,
+      message: 'requested',
+      timestamp: 'now',
+      userId: 'requester',
+      userName: 'Ada',
+      followRequest: { id: 'request-1', status: 'pending' as const },
+    };
+
+    useNotificationsQueryMock.mockReturnValue({
+      data: [request],
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isLoading: false,
+      isFetchingNextPage: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useMarkAllNotificationsReadMutationMock.mockReturnValue({
+      isPending: false,
+      mutateAsync: vi.fn(),
+    });
+    useMarkNotificationReadMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useRespondToFollowRequestMutationMock.mockReturnValue({ mutateAsync: respondAsync });
+    useFocusRefreshMock.mockReturnValue({ refreshing: false, onRefresh: vi.fn() });
+
+    const hooks = await import('@/mobile/app/features/notifications/application/useNotificationsScreenState');
+    const hook = renderHook(
+      () => hooks.useNotificationsScreenState({ userId: 'viewer-1' }),
+      { wrapper },
+    );
+
+    let firstDecision!: Promise<void>;
+    let duplicateDecision!: Promise<void>;
+    act(() => {
+      firstDecision = hook.result.current.respondToFollowRequest(request, 'accept');
+      duplicateDecision = hook.result.current.respondToFollowRequest(request, 'reject');
+    });
+
+    expect(respondAsync).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.pendingFollowRequestIds.has(request.id)).toBe(true);
+
+    await act(async () => {
+      resolveDecision();
+      await Promise.all([firstDecision, duplicateDecision]);
+    });
+
+    expect(hook.result.current.pendingFollowRequestIds.has(request.id)).toBe(false);
+  });
 });

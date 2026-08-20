@@ -16,7 +16,8 @@
 - [ ] Android release bundle builds with production signing guard.
 - [ ] iOS EAS build succeeds with existing credentials.
 - [ ] Sentry sourcemaps/dSYMs are uploaded or upload is intentionally disabled for the build profile.
-- [ ] AASA and assetlinks are published and verified for production domain.
+- [ ] `sorita://` auth callback, password reset and list share links pass cold/warm/terminated
+      device routing tests on iOS and Android.
 - [ ] Physical iOS/Android device smoke tests pass.
 - [ ] Accessibility smoke: 200% font, VoiceOver, TalkBack.
 - [ ] Store privacy/data-safety/account-deletion answers match actual SDK behavior.

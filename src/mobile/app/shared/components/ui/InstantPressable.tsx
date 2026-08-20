@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable } from 'react-native';
 
@@ -49,6 +49,8 @@ function triggerHapticFeedback(feedback: InstantPressableProps['hapticFeedback']
 }
 
 export function InstantPressable({
+  accessibilityRole = 'button',
+  accessibilityState,
   onPress,
   style,
   children,
@@ -63,11 +65,12 @@ export function InstantPressable({
   ...rest
 }: InstantPressableProps) {
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const isDisabled = disabled || (preventRepeatWhileBusy && busy);
 
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
-      if (!onPress || isDisabled) {
+      if (!onPress || disabled || (preventRepeatWhileBusy && busyRef.current)) {
         return;
       }
 
@@ -79,10 +82,20 @@ export function InstantPressable({
         return;
       }
 
+      busyRef.current = true;
       setBusy(true);
-      void result.finally(() => setBusy(false));
+      void result.then(
+        () => {
+          busyRef.current = false;
+          setBusy(false);
+        },
+        () => {
+          busyRef.current = false;
+          setBusy(false);
+        },
+      );
     },
-    [hapticFeedback, isDisabled, onPress],
+    [disabled, hapticFeedback, onPress, preventRepeatWhileBusy],
   );
 
   const renderStyle = useCallback(
@@ -110,22 +123,26 @@ export function InstantPressable({
     [busy, busyOpacity, disableFeedback, isDisabled, pressedOpacity, pressedScale, style],
   );
 
-  const content = useMemo(() => {
-    if (typeof children === 'function') {
-      return children({ pressed: false, busy, disabled: Boolean(isDisabled) });
-    }
-
-    return children;
-  }, [busy, children, isDisabled]);
-
   return (
-    <Pressable {...rest} disabled={isDisabled} hitSlop={hitSlop} onPress={handlePress} style={renderStyle}>
+    <Pressable
+      {...rest}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={{
+        ...accessibilityState,
+        busy: busy || accessibilityState?.busy,
+        disabled: Boolean(isDisabled || accessibilityState?.disabled),
+      }}
+      disabled={isDisabled}
+      hitSlop={hitSlop}
+      onPress={handlePress}
+      style={renderStyle}
+    >
       {(state) => {
         if (typeof children === 'function') {
           return children({ pressed: state.pressed, busy, disabled: Boolean(isDisabled) });
         }
 
-        return content;
+        return children;
       }}
     </Pressable>
   );

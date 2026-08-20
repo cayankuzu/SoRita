@@ -36,7 +36,7 @@ type ListHeaderRow = {
   place_count?: number | string | null;
 };
 
-type ListPlaceRow = {
+export type ListPlaceRow = {
   place_id: string;
   added_at: string;
   updated_at: string;
@@ -95,7 +95,7 @@ function parseMedia(value: ListPlaceRow['media']) {
   }
 }
 
-function mapPlaceRow(row: ListPlaceRow, viewerId?: string | null): Place {
+export function mapPlaceRow(row: ListPlaceRow, viewerId?: string | null): Place {
   const media = parseMedia(row.media);
 
   return {

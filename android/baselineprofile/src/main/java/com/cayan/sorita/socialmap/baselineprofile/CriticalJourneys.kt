@@ -22,7 +22,7 @@ internal fun MacrobenchmarkScope.startSoRita() {
  * otherwise it still covers anonymous startup, auth navigation, and scroll rendering.
  */
 internal fun MacrobenchmarkScope.exerciseCriticalJourneys() {
-    val tabLabels = listOf("Ana Sayfa", "Keşfet", "Harita", "Profil")
+    val tabLabels = listOf("Ana Sayfa", "Ke\u015Ffet", "Harita", "Profil")
     var visitedAuthenticatedTab = false
 
     tabLabels.forEach { label ->
@@ -42,7 +42,7 @@ internal fun MacrobenchmarkScope.exerciseCriticalJourneys() {
     }
 
     if (!visitedAuthenticatedTab) {
-        device.findObject(By.text("Giriş Yap"))?.click()
+        device.findObject(By.text("Giri\u015F Yap"))?.click()
         device.waitForIdle()
         device.swipe(
             device.displayWidth / 2,

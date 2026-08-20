@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -8,7 +9,7 @@ import {
 import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/components/ProfileInterestChips';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileConnectionsSummaryProps = {
   followerCount: number;
@@ -59,17 +60,16 @@ const styles = StyleSheet.create({
   },
   connectionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 16,
   },
   connectionButton: {
-    flex: 1,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingVertical: 10,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    flexDirection: 'row',
+    gap: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   connectionValue: {
     fontSize: 14,
@@ -77,7 +77,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   connectionLabel: {
-    marginTop: 2,
     ...typography.metadataText,
     color: colors.textSoft,
   },

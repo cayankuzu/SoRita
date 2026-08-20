@@ -18,6 +18,7 @@ type MediaThumbnailViewProps = {
   durationLabel?: string;
   fallbackToVideoPreview?: boolean;
   item: Pick<PlaceMedia, 'durationMs' | 'thumbnailTimeMs' | 'thumbnailUrl' | 'type' | 'url'>;
+  onPreviewError?: () => void;
   priority?: 'high' | 'low' | 'normal';
   showDuration?: boolean;
   showPlayOverlay?: boolean;
@@ -62,6 +63,7 @@ type ThumbnailSurfaceProps = {
   fallbackToVideoPreview: boolean;
   item: MediaThumbnailViewProps['item'];
   onPreviewFailed: () => void;
+  onPreviewError?: () => void;
   onPreviewUriChange: (uri: string) => void;
   previewFailed: boolean;
   priority: NonNullable<MediaThumbnailViewProps['priority']>;
@@ -101,7 +103,10 @@ function ThumbnailSurface(props: ThumbnailSurfaceProps) {
       backgroundColor={props.backgroundColor}
       fallback={props.fallbackIcon}
       priority={props.priority}
+      recycleKey={`${props.item.type}:${props.resolvedPreviewUri}`}
       onError={() => {
+        props.onPreviewError?.();
+
         if (props.fallbackPreviewUri && props.resolvedPreviewUri !== props.fallbackPreviewUri) {
           props.onPreviewUriChange(props.fallbackPreviewUri);
           return;
@@ -147,6 +152,7 @@ export function MediaThumbnailView(props: MediaThumbnailViewProps) {
         fallbackToVideoPreview={fallbackToVideoPreview}
         item={props.item}
         onPreviewFailed={() => setPreviewFailed(true)}
+        onPreviewError={props.onPreviewError}
         onPreviewUriChange={setResolvedPreviewUri}
         previewFailed={previewFailed}
         priority={priority}

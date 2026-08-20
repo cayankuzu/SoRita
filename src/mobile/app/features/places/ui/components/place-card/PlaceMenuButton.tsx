@@ -38,6 +38,7 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
       accessibilityRole="link"
       accessibilityState={{ expanded: isExpanded }}
       delayLongPress={500}
+      hitSlop={4}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === 'longpress') {
           void openMenu();

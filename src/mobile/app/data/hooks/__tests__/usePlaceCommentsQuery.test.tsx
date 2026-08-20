@@ -80,4 +80,18 @@ describe('usePlaceCommentsQuery', () => {
     expect(hook.result.current.isFetching).toBe(false);
     expect(getPlaceCommentThreadsPageMock).not.toHaveBeenCalled();
   });
+
+  it('uses the public cache identity when a viewer is absent', async () => {
+    getPlaceCommentThreadsPageMock.mockResolvedValue(
+      Object.assign([], { nextCursor: undefined }),
+    );
+    const wrapper = createQueryClientWrapper(createTestQueryClient());
+    const { usePlaceCommentsQuery } = await import('@/mobile/app/data/hooks/usePlaceCommentsQuery');
+    const hook = renderHook(() => usePlaceCommentsQuery('place-1'), { wrapper });
+
+    await waitFor(() => expect(hook.result.current.isFetching).toBe(false));
+    expect(getPlaceCommentThreadsPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ placeId: 'place-1', viewerId: undefined }),
+    );
+  });
 });

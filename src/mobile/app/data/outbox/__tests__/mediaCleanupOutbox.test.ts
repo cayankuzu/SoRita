@@ -68,7 +68,7 @@ describe('mediaCleanupOutbox', () => {
   });
 
   it('does nothing for an empty cleanup set', async () => {
-    const { deleteStorageAssetsWithRetry } = await import('@/mobile/app/data/outbox/mediaCleanupOutbox');
+    const { deleteStorageAssetsWithRetry, queueStorageAssetsCleanup } = await import('@/mobile/app/data/outbox/mediaCleanupOutbox');
 
     await deleteStorageAssetsWithRetry({
       bucket: 'place-media',
@@ -77,6 +77,12 @@ describe('mediaCleanupOutbox', () => {
     });
 
     expect(deleteStorageAssetsByUrlsMock).not.toHaveBeenCalled();
+    await expect(queueStorageAssetsCleanup({
+      bucket: 'place-media',
+      urls: [null, undefined],
+      userId: 'user-1',
+    })).resolves.toBeUndefined();
+    await expect(readOutboxEntries('user-1')).resolves.toEqual([]);
   });
 
   it('starts post-commit cleanup without blocking the caller', async () => {

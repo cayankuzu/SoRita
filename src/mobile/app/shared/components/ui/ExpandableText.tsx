@@ -3,6 +3,7 @@ import {
   LayoutChangeEvent,
   LayoutAnimation,
   NativeSyntheticEvent,
+  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -15,7 +16,8 @@ import {
 import { ChevronRight } from 'lucide-react-native';
 
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, touch } from '@/mobile/app/shared/theme/tokens';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
 
@@ -34,6 +36,9 @@ type ExpandableTextProps = {
   onExpandedChange?: (expanded: boolean) => void;
   variant?: RichTextVariant;
 };
+
+const EXPAND_ICON_HIT_SLOP =
+  (Platform.OS === 'ios' ? touch.ios : touch.android) / 2 - 7;
 
 export function ExpandableText({
   text,
@@ -160,6 +165,10 @@ export function ExpandableText({
       ) : null}
 
       <Pressable
+        accessibilityRole={isExpandable && !usesRichText ? 'button' : undefined}
+        accessibilityState={
+          isExpandable && !usesRichText ? { expanded: resolvedExpanded } : undefined
+        }
         onPress={(event) => {
           event.stopPropagation?.();
           handleToggleExpanded();
@@ -209,17 +218,30 @@ export function ExpandableText({
           )}
 
           {isExpandable && showIndicator ? (
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={6}
-              onPress={(event) => {
-                event.stopPropagation?.();
-                handleToggleExpanded();
-              }}
-              style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
-            >
-              <ChevronRight color={iconColor} size={14} />
-            </Pressable>
+            usesRichText ? (
+              <Pressable
+                accessibilityLabel={
+                  contentExpanded ? tr.common.collapseLink : tr.common.expandLink
+                }
+                accessibilityRole="button"
+                accessibilityState={{ expanded: contentExpanded }}
+                hitSlop={EXPAND_ICON_HIT_SLOP}
+                onPress={(event) => {
+                  event.stopPropagation?.();
+                  handleToggleExpanded();
+                }}
+                style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
+              >
+                <ChevronRight color={iconColor} size={14} />
+              </Pressable>
+            ) : (
+              <View
+                accessible={false}
+                style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
+              >
+                <ChevronRight color={iconColor} size={14} />
+              </View>
+            )
           ) : null}
         </View>
       </Pressable>

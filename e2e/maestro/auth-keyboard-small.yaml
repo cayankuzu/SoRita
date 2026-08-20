@@ -1,0 +1,23 @@
+appId: com.cayan.sorita.socialmap
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Kayıt koşulları ve gizlilik"
+    timeout: 30000
+- tapOn: "Giriş yap"
+- assertVisible: "Tekrar hoş geldin"
+- tapOn: "E-posta"
+- inputText: "device@example.com"
+- pressKey: Enter
+- inputText: "DevicePass123!"
+- takeScreenshot: ".codex-artifacts/maestro-auth-keyboard-small"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Giriş yap"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Giriş yap"
+- back
+- assertVisible: "Kayıt koşulları ve gizlilik"

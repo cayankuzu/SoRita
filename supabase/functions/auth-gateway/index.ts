@@ -7,19 +7,24 @@ const supabasePublishableKey =
   Deno.env.get('SB_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const allowedOrigins = (
-  Deno.env.get('AUTH_GATEWAY_ALLOWED_ORIGINS') ??
-  'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000'
+  Deno.env.get('AUTH_GATEWAY_ALLOWED_ORIGINS') ?? ''
 )
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedRedirectOrigins = (
-  Deno.env.get('AUTH_REDIRECT_ALLOWED_ORIGINS') ??
-  'https://cayankuzu.github.io/SoRita_web,http://localhost:3000,http://127.0.0.1:3000'
+const mobileRedirectOrigins = [
+  'sorita://auth/callback',
+  'sorita://reset-password',
+];
+const configuredRedirectOrigins = (
+  Deno.env.get('AUTH_REDIRECT_ALLOWED_ORIGINS') ?? ''
 )
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowedRedirectOrigins = [
+  ...new Set([...mobileRedirectOrigins, ...configuredRedirectOrigins]),
+];
 
 const handleAuthGatewayRequest = createAuthGatewayHandler({
   config: {

@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PlaceComment } from '@/mobile/app/data/contracts/entities';
 import type { VisibleDataSnapshot } from '@/mobile/app/data/repositories/visibleDataRepository';
 
-const CACHE_VERSION = 1;
+// v2 prevents four-item legacy media snapshots from masking complete server data.
+const CACHE_VERSION = 2;
 const MAX_CACHED_LISTS = 24;
 const MAX_CACHED_PLACES_PER_LIST = 32;
 const MAX_CACHED_COMMENTS_PER_PLACE = 8;

@@ -41,16 +41,16 @@ export function usePlaceCommentsQuery(
     queryKey: placeId
       ? queryKeys.placeComments.list(placeId, viewerId || '__public__')
       : queryKeys.placeComments.all,
-    queryFn: ({ pageParam, signal }) =>
-      placeId
-        ? getPlaceCommentThreadsPage({
+    queryFn: placeId
+      ? ({ pageParam, signal }) =>
+          getPlaceCommentThreadsPage({
             cursor: pageParam,
             pageSize: PLACE_COMMENTS_PAGE_SIZE,
             placeId,
             signal,
             viewerId,
           })
-        : Promise.resolve([]),
+      : () => Promise.resolve([]),
     getNextPageParam: (lastPage) => (lastPage as PlaceCommentPage).nextCursor,
     staleTime: PLACE_COMMENTS_STALE_TIME_MS,
   });

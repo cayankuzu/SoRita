@@ -27,6 +27,8 @@ export function NotificationCategoryTabs({
 
         return (
           <InstantPressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
             key={tab.key}
             onPress={() => onChange(tab.key)}
             hapticFeedback="selection"

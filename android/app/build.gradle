@@ -1,3 +1,15 @@
+def isWindowsHost = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+
+if (isWindowsHost) {
+    def windowsAppBuildDirectory = file("C:/t/sorita-gradle-build/app")
+
+    // AGP captures its output directory while the application plugin is
+    // applied. Configure it first so native, Kotlin and React codegen outputs
+    // all resolve from the same short Windows path.
+    layout.buildDirectory.set(windowsAppBuildDirectory)
+    buildDir = windowsAppBuildDirectory
+}
+
 apply plugin: "com.android.application"
 apply plugin: "com.google.gms.google-services"
 apply plugin: "org.jetbrains.kotlin.android"
@@ -36,9 +48,9 @@ def normalizeSha1 = { value ->
     value == null ? null : value.toString().trim().toUpperCase(Locale.ROOT)
 }
 
-def isWindowsHost = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
 def windowsResourceExportRoot = file("C:/t/sorita-android-res-export")
 def windowsResourceMirrorDir = new File(windowsResourceExportRoot, "android/app/src/main/res")
+def androidMainResourceDir = file("src/main/res")
 
 def releaseStoreFilePath =
     (findProperty('soritaReleaseStoreFile') ?: System.getenv('SORITA_RELEASE_STORE_FILE') ?: keystoreProperties['storeFile'])?.toString()
@@ -220,6 +232,15 @@ def exportWindowsTrackedResources = tasks.register("exportWindowsTrackedResource
                     trackedFile,
                 ])
             }
+
+        // The Git export is only a fallback for Windows files that cannot be
+        // read in place. Overlay the working tree so local icon, splash and
+        // resource changes are always packaged instead of stale index data.
+        copy {
+            from androidMainResourceDir
+            into windowsResourceMirrorDir
+            includeEmptyDirs = false
+        }
     }
 }
 
@@ -245,8 +266,8 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 97
-        versionName "1.0.92"
+        versionCode 105
+        versionName "1.0.100"
         manifestPlaceholders = [
             googleMapsApiKey: resolveGoogleMapsApiKey()
         ]
@@ -272,14 +293,17 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            buildConfigField "boolean", "USE_METRO", "true"
         }
         standalone {
             initWith debug
             debuggable false
+            buildConfigField "boolean", "USE_METRO", "false"
             signingConfig signingConfigs.debug
             matchingFallbacks = ['release', 'debug']
         }
         release {
+            buildConfigField "boolean", "USE_METRO", "false"
             if (resolveReleaseStoreFile() == null || !resolveReleaseStoreFile().exists()) {
                 throw new GradleException("Release signing config is missing. Create android/keystore.properties before building release.")
             }
@@ -422,22 +446,16 @@ afterEvaluate {
             path  : "../node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni",
             target: "react_codegen_rngesturehandler_codegen",
         ],
-        [
-            path  : "../node_modules/react-native-webview/android/build/generated/source/codegen/jni",
-            target: "react_codegen_RNCWebViewSpec",
-        ],
     ]
     def codegenJniPaths = [
         "../node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni",
         "../node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni",
         "../node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni",
-        "../node_modules/react-native-webview/android/build/generated/source/codegen/jni",
         "../node_modules/@sentry/react-native/android/build/generated/source/codegen/jni",
     ]
     def moduleCleanTaskPaths = [
         ":react-native-async-storage_async-storage:clean",
         ":react-native-gesture-handler:clean",
-        ":react-native-webview:clean",
     ]
     def ensureCodegenJniStubs = tasks.register("ensureCodegenJniStubs") {
         doLast {

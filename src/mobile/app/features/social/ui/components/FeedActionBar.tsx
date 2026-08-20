@@ -1,7 +1,12 @@
 import React, { useEffect } from 'react';
+import { Crosshair, Ellipsis, Flag, ListPlus, MapPin } from 'lucide-react-native';
 
 import { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
 import { FeedActionButtons } from '@/mobile/app/features/social/ui/components/FeedActionButtons';
+import {
+  DeferredActionMenuSheet,
+  type DeferredActionMenuSheetProps,
+} from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import type {
   FeedActionComment,
   FeedActionLiker,
@@ -70,6 +75,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
   const comments = props.comments ?? EMPTY_COMMENTS;
   const likeCount = props.likeCount ?? 0;
   const likers = props.likers ?? EMPTY_LIKERS;
+  const [showSecondaryActions, setShowSecondaryActions] = React.useState(false);
   const state = useFeedActionBarState({
     comments,
     commentCountOverride: props.commentCount,
@@ -99,40 +105,105 @@ export function FeedActionBar(props: FeedActionBarProps) {
     state.showReportSheet ||
     state.confirmDeleteCommentId,
   );
+  const closeSecondaryActions = () => setShowSecondaryActions(false);
+  const secondaryActions: Array<DeferredActionMenuSheetProps['items'][number]> = [];
+
+  if (props.onFocusPress) {
+    secondaryActions.push({
+      key: 'focus-map',
+      label: props.focusActionActive ? tr.cards.hideMiniMap : tr.cards.focusMiniMap,
+      renderIcon: (color) => <Crosshair color={color} size={16} />,
+      onPress: () => {
+        closeSecondaryActions();
+        if (props.focusActionActive) {
+          props.onFocusLongPress?.();
+          return;
+        }
+        props.onFocusPress?.();
+      },
+    });
+  }
+
+  if (props.showAddToList && props.onAddToListPress) {
+    secondaryActions.push({
+      key: 'add-to-list',
+      label: tr.cards.addToListAction,
+      renderIcon: (color) => <ListPlus color={color} size={16} />,
+      onPress: () => {
+        closeSecondaryActions();
+        props.onAddToListPress?.();
+      },
+    });
+  }
+
+  if (props.location) {
+    secondaryActions.push({
+      key: 'address',
+      label: tr.cards.showAddressAction,
+      renderIcon: (color) => <MapPin color={color} size={16} />,
+      onPress: () => {
+        closeSecondaryActions();
+        state.setShowAddress((visible) => !visible);
+      },
+    });
+  }
+
+  if (props.showOverflowAction && props.onOverflowPress) {
+    secondaryActions.push({
+      key: 'content-actions',
+      label: props.overflowActionLabel ?? tr.profile.actions.menuTitle,
+      renderIcon: (color) => <Ellipsis color={color} size={16} />,
+      onPress: () => {
+        closeSecondaryActions();
+        props.onOverflowPress?.();
+      },
+    });
+  }
+
+  if (props.showReportAction && props.onReportSubmit) {
+    secondaryActions.push({
+      key: 'report',
+      label: tr.cards.reportAction,
+      tone: 'danger',
+      renderIcon: (color) => <Flag color={color} size={16} />,
+      onPress: () => {
+        closeSecondaryActions();
+        state.setShowReportSheet(true);
+      },
+    });
+  }
 
   return (
     <>
       <FeedActionButtons
         commentCount={state.commentCount}
-        focusActionActive={props.focusActionActive ?? false}
         likeCount={likeCount}
         liked={props.liked ?? false}
-        locationAvailable={Boolean(props.location)}
-        onAddToListPress={props.onAddToListPress}
         onCommentPress={() => state.setShowComments((visible) => !visible)}
         onCommentsIntent={() => {
           if (!state.showComments) {
             onCommentsVisibilityChange?.(true);
           }
         }}
-        onFocusLongPress={props.onFocusLongPress}
-        onFocusPress={props.onFocusPress}
         onLikePress={() => void state.handleLikePress()}
         onLikersPress={() => state.setShowLikers(true)}
-        onOverflowPress={props.onOverflowPress}
-        onReportPress={() => state.setShowReportSheet(true)}
+        onOverflowPress={() => setShowSecondaryActions(true)}
         onSharePress={props.onSharePress}
-        onToggleAddress={() => state.setShowAddress((visible) => !visible)}
         overflowActionLabel={props.overflowActionLabel ?? tr.profile.actions.menuTitle}
-        showAddToList={props.showAddToList ?? false}
-        showAddress={state.showAddress}
         showCommentAction={props.showCommentAction ?? true}
         showComments={state.showComments}
-        showOverflowAction={Boolean(props.showOverflowAction && props.onOverflowPress)}
-        showReportAction={Boolean(props.showReportAction && props.onReportSubmit)}
-        showReportSheet={state.showReportSheet}
+        showOverflowAction={secondaryActions.length > 0}
         showShareAction={Boolean(props.showShareAction && props.onSharePress)}
       />
+
+      {showSecondaryActions && secondaryActions.length > 0 ? (
+        <DeferredActionMenuSheet
+          visible
+          title={tr.profile.actions.menuTitle}
+          items={secondaryActions}
+          onClose={closeSecondaryActions}
+        />
+      ) : null}
 
       {hasVisibleOverlay ? (
         <DeferredFeedActionOverlays

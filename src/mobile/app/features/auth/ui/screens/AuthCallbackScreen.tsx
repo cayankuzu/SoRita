@@ -19,12 +19,15 @@ type ScreenState =
   | { status: 'success' }
   | { status: 'error'; message: string };
 
+const AUTH_CALLBACK_TIMEOUT_MS = 15_000;
+
 export function AuthCallbackScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'AuthCallback'>();
   const { refreshUser, user } = useAuth();
   const incomingUrl = Linking.useURL();
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const payload = useMemo(() => {
     const parsedPayload = incomingUrl ? parseAuthDeepLinkUrl(incomingUrl) : null;
     return parsedPayload?.target === 'auth/callback'
@@ -34,6 +37,8 @@ export function AuthCallbackScreen() {
 
   useEffect(() => {
     let active = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    setScreenState({ status: 'loading' });
 
     const fail = (message: string) => {
       if (active) {
@@ -50,14 +55,26 @@ export function AuthCallbackScreen() {
       }
     };
 
-    void completeSignup().catch((error) => {
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(tr.auth.callback.timeout)), AUTH_CALLBACK_TIMEOUT_MS);
+    });
+
+    void Promise.race([completeSignup(), timeout]).catch((error) => {
       fail(error instanceof Error ? error.message : tr.auth.callback.failed);
+    }).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
     });
 
     return () => {
       active = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
-  }, [payload, refreshUser]);
+  }, [attempt, payload, refreshUser]);
 
   useEffect(() => {
     if (screenState.status === 'success' && user) {
@@ -67,7 +84,7 @@ export function AuthCallbackScreen() {
 
   if (screenState.status === 'loading' || screenState.status === 'success') {
     return (
-      <Screen scroll={false}>
+      <Screen scroll={false} variant="form">
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.title}>{tr.auth.callback.loadingTitle}</Text>
@@ -78,15 +95,27 @@ export function AuthCallbackScreen() {
   }
 
   return (
-    <Screen scroll={false}>
+    <Screen
+      variant="form"
+      contentContainerStyle={styles.scrollableCenteredContent}
+    >
       <View style={styles.centered}>
         <View style={styles.errorCard}>
           <Text style={styles.title}>{tr.auth.callback.errorTitle}</Text>
           <Text style={styles.description}>{screenState.message}</Text>
-          <PrimaryButton
-            title={tr.auth.callback.backToLogin}
-            onPress={() => navigation.navigate('Auth', { initialView: 'login' })}
-          />
+          <View style={styles.actions}>
+            <PrimaryButton
+              title={tr.auth.callback.retry}
+              onPress={() => setAttempt((current) => current + 1)}
+              style={styles.actionButton}
+            />
+            <PrimaryButton
+              title={tr.auth.callback.backToLogin}
+              variant="secondary"
+              onPress={() => navigation.navigate('Auth', { initialView: 'login' })}
+              style={styles.actionButton}
+            />
+          </View>
         </View>
       </View>
     </Screen>
@@ -94,6 +123,10 @@ export function AuthCallbackScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollableCenteredContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -106,6 +139,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     padding: 14,
+  },
+  actions: {
+    gap: 10,
+  },
+  actionButton: {
+    width: '100%',
   },
   title: {
     color: colors.text,

@@ -144,6 +144,8 @@ async function createSignedHeaders(body: string) {
   const payloadHash = await sha256Hex(body);
   const signature = await createRequestSignature('token-1', {
     deviceId,
+    functionName: 'delete-user',
+    method: 'POST',
     nonce,
     payloadHash,
     timestamp,

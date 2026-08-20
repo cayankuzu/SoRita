@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import {
-  ArrowLeft,
   ChevronUp,
   Ellipsis,
   Flag,
@@ -46,6 +45,7 @@ import { ActionMenuSheet } from '@/mobile/app/shared/components/feedback/ActionM
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
+import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
@@ -64,12 +64,51 @@ type ListDetailScreenContentProps = {
   placeId?: string;
 };
 
+function recoverListScroll({
+  averageItemLength,
+  index,
+  listRef,
+  retryCountRef,
+  retryTimeoutRef,
+}: {
+  averageItemLength: number;
+  index: number;
+  listRef: React.RefObject<FlatList<Place> | null>;
+  retryCountRef: React.MutableRefObject<number>;
+  retryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+}) {
+  if (retryCountRef.current >= 2) {
+    retryCountRef.current = 0;
+    return;
+  }
+
+  retryCountRef.current += 1;
+  listRef.current?.scrollToOffset({
+    offset: Math.max(0, averageItemLength * index),
+    animated: false,
+  });
+  if (retryTimeoutRef.current) {
+    clearTimeout(retryTimeoutRef.current);
+  }
+  retryTimeoutRef.current = setTimeout(() => {
+    retryTimeoutRef.current = null;
+    listRef.current?.scrollToIndex({
+      animated: true,
+      index,
+      viewOffset: 12,
+      viewPosition: 0.08,
+    });
+  }, 80);
+}
+
 function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentProps) {
   const navigation = useAppNavigation();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
   const { user } = useAuth();
   const listRef = React.useRef<FlatList<Place> | null>(null);
+  const scrollRetryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRetryCountRef = React.useRef(0);
   const [deleteListVisible, setDeleteListVisible] = useState(false);
   const [deletePlaceId, setDeletePlaceId] = useState<string | null>(null);
   const [editingPlace, setEditingPlace] = useState<Place | null>(null);
@@ -119,7 +158,17 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   useEffect(() => {
     setHighlightedPlaceId(placeId ?? null);
     setPendingScrollTargetId(placeId ?? null);
+    scrollRetryCountRef.current = 0;
   }, [placeId, listId]);
+
+  useEffect(
+    () => () => {
+      if (scrollRetryTimeoutRef.current) {
+        clearTimeout(scrollRetryTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -181,6 +230,16 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
 
     const targetIndex = displayPlaces.findIndex((place) => place.id === pendingScrollTargetId);
     if (targetIndex < 0) {
+      if (isInitialLoading) {
+        return;
+      }
+      if (hasNextPage && !isFetchingNextPage && fetchNextPage) {
+        void fetchNextPage();
+      } else if (hasNextPage === false) {
+        setPendingScrollTargetId((current) =>
+          current === pendingScrollTargetId ? null : current,
+        );
+      }
       return;
     }
 
@@ -199,7 +258,14 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [displayPlaces, pendingScrollTargetId]);
+  }, [
+    displayPlaces,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isInitialLoading,
+    pendingScrollTargetId,
+  ]);
 
   const confirmDeletePlace = async () => {
     if (!list || !deletePlaceId) {
@@ -349,36 +415,20 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   return (
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={styles.screenShell}>
-        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <IconButton
-            accessibilityLabel={tr.common.back}
-            onPress={() => navigation.goBack()}
-            style={styles.topBarBackButton}
-          >
-            <ArrowLeft color={colors.text} size={16} />
-          </IconButton>
-
-          <View style={styles.topBarTitleWrap}>
-            <Text numberOfLines={1} style={styles.topBarTitle}>
-              {list.emoji ? `${list.emoji} ${list.name}` : list.name}
-            </Text>
-            <Text numberOfLines={1} style={styles.topBarMeta}>
-              {tr.cards.placesCount(displayPlaces.length)}
-            </Text>
-          </View>
-
-          {actionItems.length > 0 ? (
+        <StackScreenHeader
+          onBack={() => navigation.goBack()}
+          title={list.emoji ? `${list.emoji} ${list.name}` : list.name}
+          subtitle={tr.cards.placesCount(displayPlaces.length)}
+          rightAction={actionItems.length > 0 ? (
             <IconButton
               accessibilityLabel={tr.profile.actions.menuTitle}
               onPress={() => setListActionMenuVisible(true)}
-              style={styles.topBarMenuButton}
+              variant="surface"
             >
               <Ellipsis color={colors.text} size={16} />
             </IconButton>
-          ) : (
-            <View style={{ width: 34, height: 34 }} />
-          )}
-        </View>
+          ) : undefined}
+        />
 
         <FlatList
           {...listProps}
@@ -417,7 +467,6 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
                   locationPlaceCardsCount={locationStats?.count}
                   locationOriginalPlaceName={locationStats?.originalPlaceName}
                   markerColor={placeMarkerColorsById.get(place.id)}
-                  markerContext="list"
                   onEdit={isOwner ? () => setEditingPlace(place) : undefined}
                   onOwnerPress={
                     owner ? () => openStackScreen(navigation, 'UserProfile', { userId: owner.id }) : undefined
@@ -490,16 +539,21 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           onScroll={(event) => {
             handleScroll(event.nativeEvent.contentOffset.y);
           }}
-          onScrollToIndexFailed={({ index }) => {
-            listRef.current?.scrollToOffset({
-              offset: Math.max(0, index * 420),
-              animated: true,
+          onScrollToIndexFailed={({ averageItemLength, index }) => {
+            recoverListScroll({
+              averageItemLength,
+              index,
+              listRef,
+              retryCountRef: scrollRetryCountRef,
+              retryTimeoutRef: scrollRetryTimeoutRef,
             });
           }}
         />
 
         {showScrollTopButton ? (
           <Pressable
+            accessibilityLabel={tr.common.scrollToTop}
+            accessibilityRole="button"
             onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
             style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom, 18) + 16 }]}
           >
@@ -562,9 +616,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             setReportDetails('');
             setReportReason('');
           }}
-          onSubmit={() => {
-            void handleReportList();
-          }}
+          onSubmit={handleReportList}
         />
       ) : null}
 

@@ -1,6 +1,7 @@
 # SoRita Release Readiness
 
-Last verified: 2026-07-18, `main` based on `89d9bc89835d55e3fd8415e0225a21213bd05692`.
+Last locally verified: 2026-08-17. The working tree was already dirty; no clean-branch or remote
+equality claim is made.
 
 ## Repository gates
 
@@ -16,7 +17,8 @@ guards, app/test TypeScript, production dead-code/dependency checks, 30 critical
 production audit, license and package provenance, unit/integration/security tests, and 90% global
 coverage thresholds.
 
-Current local result: PASS. Detailed counts and measurements are recorded in
+Current constituent local gates: PASS. Database, staging, iOS, physical-device and store gates are
+not included in this result. Detailed counts and measurements are recorded in
 `docs/release/FINAL_RELEASE_EVIDENCE.md`.
 
 ## Database and backend gate
@@ -38,7 +40,7 @@ production. Never reset production or rewrite migration history.
 The following cannot be inferred from unit tests and must have retained iOS and Android evidence:
 
 - All 30 flows in cold, warm, foreground, background, offline, and recovery states.
-- Small/large screens, light/dark theme, Dynamic Type 200%, VoiceOver, TalkBack, switch control,
+- Small/large screens, Dynamic Type 200%, VoiceOver, TalkBack, switch control,
   contrast, clipping, keyboard, and reduced-motion behavior.
 - Cold/warm start, useful-content latency, scroll/swipe FPS, dropped frames, memory, battery, map,
   media prefetch/playback, and background/interrupted upload behavior.
@@ -48,7 +50,8 @@ The following cannot be inferred from unit tests and must have retained iOS and 
 
 ## Production decision
 
-Repository automatic gates: **PASS**.
+Repository constituent automatic gates: **PASS**. Raw production audit still reports the two
+unpatched transitive Metro/`image-size` advisories documented in the time-bounded risk acceptance.
 
 Production release: **NO-GO** until database CI/staging, authorized load, provider dashboards,
 physical devices, signed internal builds, store checks, and rollout/rollback gates pass.

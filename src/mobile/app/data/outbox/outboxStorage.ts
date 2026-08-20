@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { createUuid } from '@/shared/utils/id';
+import { publishOutboxEntries } from '@/mobile/app/platform/sync/outboxStatus';
 
 const OUTBOX_VERSION = 1;
 const OUTBOX_STORAGE_PREFIX = 'sorita.outbox';
+const writeQueueByUser = new Map<string, Promise<void>>();
 
 export type OutboxEntryState =
   | 'blocked'
@@ -19,6 +21,8 @@ export type OutboxEntryKind =
   | 'media-cleanup'
   | 'moderation-report'
   | 'notification-read'
+  | 'place-like-state'
+  | 'user-follow-state'
   | 'user-block-state';
 
 export type JsonPrimitive = boolean | null | number | string;
@@ -106,6 +110,23 @@ async function writeOutbox(userId: string, entries: OutboxEntry[]) {
   };
 
   await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(payload));
+  publishOutboxEntries(userId, payload.entries);
+}
+
+function withOutboxWriteLock<T>(userId: string, operation: () => Promise<T>) {
+  const previous = writeQueueByUser.get(userId) ?? Promise.resolve();
+  const result = previous.catch(() => undefined).then(operation);
+  const settled = result.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  writeQueueByUser.set(userId, settled);
+  return result.finally(() => {
+    if (writeQueueByUser.get(userId) === settled) {
+      writeQueueByUser.delete(userId);
+    }
+  });
 }
 
 export async function readOutboxEntries(userId: string) {
@@ -113,6 +134,7 @@ export async function readOutboxEntries(userId: string) {
   const rawValue = await AsyncStorage.getItem(key);
 
   if (!rawValue) {
+    publishOutboxEntries(userId, []);
     return [];
   }
 
@@ -126,12 +148,16 @@ export async function readOutboxEntries(userId: string) {
       !payload.entries.every((entry) => isOutboxEntry(entry, userId))
     ) {
       await AsyncStorage.removeItem(key);
+      publishOutboxEntries(userId, []);
       return [];
     }
 
-    return normalizeEntries(payload.entries);
+    const entries = normalizeEntries(payload.entries);
+    publishOutboxEntries(userId, entries);
+    return entries;
   } catch {
     await AsyncStorage.removeItem(key);
+    publishOutboxEntries(userId, []);
     return [];
   }
 }
@@ -139,27 +165,29 @@ export async function readOutboxEntries(userId: string) {
 export async function enqueueOutboxEntry<TPayload extends JsonValue>(
   input: EnqueueOutboxEntryInput<TPayload>,
 ) {
-  const now = new Date().toISOString();
-  const entry: OutboxEntry<TPayload> = {
-    attempt: 0,
-    createdAt: now,
-    dependencies: input.dependencies || [],
-    id: input.id || createUuid(),
-    idempotencyKey: input.idempotencyKey || createUuid(),
-    kind: input.kind,
-    nextAttemptAt: input.nextAttemptAt || now,
-    payloadRef: input.payloadRef,
-    state: input.state || 'pending',
-    updatedAt: now,
-    userId: input.userId,
-  };
-  const entries = await readOutboxEntries(input.userId);
-  const nextEntries = entries.filter((item) => item.idempotencyKey !== entry.idempotencyKey);
+  return withOutboxWriteLock(input.userId, async () => {
+    const now = new Date().toISOString();
+    const entry: OutboxEntry<TPayload> = {
+      attempt: 0,
+      createdAt: now,
+      dependencies: input.dependencies || [],
+      id: input.id || createUuid(),
+      idempotencyKey: input.idempotencyKey || createUuid(),
+      kind: input.kind,
+      nextAttemptAt: input.nextAttemptAt || now,
+      payloadRef: input.payloadRef,
+      state: input.state || 'pending',
+      updatedAt: now,
+      userId: input.userId,
+    };
+    const entries = await readOutboxEntries(input.userId);
+    const nextEntries = entries.filter((item) => item.idempotencyKey !== entry.idempotencyKey);
 
-  nextEntries.push(entry);
-  await writeOutbox(input.userId, nextEntries);
+    nextEntries.push(entry);
+    await writeOutbox(input.userId, nextEntries);
 
-  return entry;
+    return entry;
+  });
 }
 
 export async function updateOutboxEntry(
@@ -170,25 +198,28 @@ export async function updateOutboxEntry(
     'attempt' | 'lastError' | 'nextAttemptAt' | 'payloadRef' | 'state'
   >>,
 ) {
-  const entries = await readOutboxEntries(userId);
-  const now = new Date().toISOString();
-  const nextEntries = entries.map((entry) =>
-    entry.id === entryId
-      ? {
-          ...entry,
-          ...patch,
-          updatedAt: now,
-        }
-      : entry,
-  );
+  return withOutboxWriteLock(userId, async () => {
+    const entries = await readOutboxEntries(userId);
+    const now = new Date().toISOString();
+    const nextEntries = entries.map((entry) =>
+      entry.id === entryId
+        ? {
+            ...entry,
+            ...patch,
+            updatedAt: now,
+          }
+        : entry,
+    );
 
-  await writeOutbox(userId, nextEntries);
+    await writeOutbox(userId, nextEntries);
+  });
 }
 
 export async function removeOutboxEntry(userId: string, entryId: string) {
-  const entries = await readOutboxEntries(userId);
-
-  await writeOutbox(userId, entries.filter((entry) => entry.id !== entryId));
+  return withOutboxWriteLock(userId, async () => {
+    const entries = await readOutboxEntries(userId);
+    await writeOutbox(userId, entries.filter((entry) => entry.id !== entryId));
+  });
 }
 
 export async function readDueOutboxEntries(userId: string, now = new Date()) {
@@ -200,17 +231,22 @@ export async function readDueOutboxEntries(userId: string, now = new Date()) {
     (entry) =>
       !completedStates.has(entry.state) &&
       new Date(entry.nextAttemptAt).getTime() <= nowTime &&
-      entry.dependencies.every((dependencyId) =>
-        entries.some((candidate) => candidate.id === dependencyId && candidate.state === 'done'),
-      ),
+      entry.dependencies.every((dependencyId) => {
+        const dependency = entries.find((candidate) => candidate.id === dependencyId);
+        return !dependency || dependency.state === 'done';
+      }),
   );
 }
 
 export async function clearOutboxForUser(userId: string) {
-  await AsyncStorage.removeItem(getStorageKey(userId));
+  return withOutboxWriteLock(userId, async () => {
+    await AsyncStorage.removeItem(getStorageKey(userId));
+    publishOutboxEntries(userId, []);
+  });
 }
 
 export async function clearAllOutboxEntries() {
+  await Promise.all(writeQueueByUser.values());
   const keys = await AsyncStorage.getAllKeys();
   const matchingKeys = keys.filter((key) => key.startsWith(`${OUTBOX_STORAGE_PREFIX}.`));
 

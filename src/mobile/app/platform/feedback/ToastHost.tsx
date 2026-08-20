@@ -50,7 +50,7 @@ function ToastIcon({ kind }: { kind: ToastKind }) {
   return <Info {...props} />;
 }
 
-export function ToastHost() {
+export function ToastHost({ suppressed = false }: { suppressed?: boolean }) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const [toast, setToast] = useState<AppToast | null>(null);
@@ -121,7 +121,7 @@ export function ToastHost() {
 
   useEffect(() => clearDismissTimer, [clearDismissTimer]);
 
-  if (!toast) return null;
+  if (!toast || suppressed) return null;
 
   const palette = palettes[toast.kind];
   return (

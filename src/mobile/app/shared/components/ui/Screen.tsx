@@ -62,7 +62,7 @@ function getSafeAreaEdges(
   return edges;
 }
 
-function getBottomPadding(
+export function getScreenBottomPadding(
   safeBottom: boolean,
   bottomTabBarHeight: number | null | undefined,
   bottomInset: number,
@@ -72,7 +72,7 @@ function getBottomPadding(
   }
 
   return typeof bottomTabBarHeight === 'number'
-    ? spacing.card
+    ? 0
     : bottomInset + spacing.card;
 }
 
@@ -179,7 +179,11 @@ export function Screen(props: ScreenProps) {
     Platform.OS === 'ios' && resolvedKeyboardMode !== 'form' ? 'padding' : undefined;
   const horizontalPadding = variant === 'fullBleed' ? 0 : appLayout.screenPadding;
   const contentMaxWidth = variant === 'fullBleed' ? undefined : resolvedMaxWidth;
-  const sharedBottomPadding = getBottomPadding(safeBottom, bottomTabBarHeight, insets.bottom);
+  const sharedBottomPadding = getScreenBottomPadding(
+    safeBottom,
+    bottomTabBarHeight,
+    insets.bottom,
+  );
   const edges = getSafeAreaEdges(safeTop, safeBottom, bottomTabBarHeight);
 
   return (

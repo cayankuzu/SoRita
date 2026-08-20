@@ -20,7 +20,9 @@ import type {
   MediaPickerPromptSelection,
 } from '@/mobile/app/platform/media/mediaPickerTypes';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -48,6 +50,8 @@ function MediaPickerOptionCard({
 }: MediaPickerOptionCardProps) {
   return (
     <InstantPressable
+      accessibilityHint={description}
+      accessibilityLabel={title}
       onPress={onPress}
       style={({ pressed }) => [
         styles.optionCard,
@@ -68,6 +72,7 @@ function MediaPickerOptionCard({
 }
 
 export function MediaPickerPromptHost() {
+  const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { options, requestId, visible } = useMediaPickerPromptState();
@@ -145,13 +150,18 @@ export function MediaPickerPromptHost() {
       })}
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={animationType}
       hardwareAccelerated
       onRequestClose={() => resolveMediaPickerPrompt(null)}
       presentationStyle="overFullScreen"
     >
-      <View style={[styles.overlay, { paddingTop, paddingBottom }]}>
+      <View
+        accessibilityViewIsModal
+        importantForAccessibility="yes"
+        style={[styles.overlay, { paddingTop, paddingBottom }]}
+      >
         <Pressable
+          accessible={false}
           style={StyleSheet.absoluteFillObject}
           onPress={() => resolveMediaPickerPrompt(null)}
         />
@@ -161,16 +171,17 @@ export function MediaPickerPromptHost() {
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>{title}</Text>
+              <Text accessibilityRole="header" style={styles.title}>{title}</Text>
               <Text style={styles.description}>{description}</Text>
             </View>
 
-            <InstantPressable
+            <IconButton
+              accessibilityLabel={tr.common.close}
               onPress={() => resolveMediaPickerPrompt(null)}
-              style={styles.closeButton}
+              variant="surface"
             >
               <X color={colors.textSoft} size={16} />
-            </InstantPressable>
+            </IconButton>
           </View>
 
           <View style={styles.options}>
@@ -275,14 +286,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: colors.textMuted,
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
   },
   options: {
     gap: 8,

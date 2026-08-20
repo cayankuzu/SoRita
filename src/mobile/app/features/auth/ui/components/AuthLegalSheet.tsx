@@ -56,6 +56,7 @@ export function AuthLegalSheet({
 
   return (
     <ModalScaffold
+      accessibilityLabel={document.title}
       visible={visible}
       onClose={onClose}
       variant="dialog"

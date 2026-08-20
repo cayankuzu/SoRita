@@ -24,17 +24,22 @@ import { IMAGE_CROSSFADE_MS } from '@/mobile/app/shared/performance/budgets';
 
 const LOADER_DELAY_MS = 220;
 const LOADER_FAILSAFE_MS = 1800;
-const IMAGE_PREFETCH_CONCURRENCY = 4;
+const IMAGE_PREFETCH_CONCURRENCY = 2;
 const MAX_WARMED_IMAGE_KEYS = 512;
-const MAX_PREFETCH_QUEUE_JOBS = 24;
-const MAX_PREFETCH_URIS_PER_JOB = 24;
+const MAX_PREFETCH_QUEUE_JOBS = 8;
+const MAX_PREFETCH_URIS_PER_JOB = 8;
 const DEFAULT_IMAGE_BLURHASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4';
+const DEFAULT_IMAGE_PLACEHOLDER = { blurhash: DEFAULT_IMAGE_BLURHASH } as const;
 
 const warmedImageKeys = new Set<string>();
+const pendingPrefetchKeys = new Set<string>();
+const sourceResolutionInFlight = new Map<string, Promise<ResolvedImageSource | null>>();
 type PrefetchPriority = 'high' | 'low' | 'normal';
 type PrefetchJob = {
+  abortListener?: () => void;
   priority: PrefetchPriority;
   resolve: (succeeded: boolean) => void;
+  settled: boolean;
   signal?: AbortSignal;
   uris: string[];
 };
@@ -156,6 +161,31 @@ function takeNextPrefetchJob() {
   return prefetchQueue.shift();
 }
 
+function resolveImageSource(uri: string) {
+  const inFlight = sourceResolutionInFlight.get(uri);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const resolution = (async (): Promise<ResolvedImageSource | null> => {
+    if (isStorageAssetUri(uri)) {
+      const cachePath = await ExpoImage.getCachePathAsync(uri).catch(() => null);
+      if (cachePath) {
+        rememberWarmedImage(uri);
+        return { uri: toFileUri(cachePath) };
+      }
+    }
+
+    const resolvedUri = await resolveStorageAssetUrl(uri);
+    return resolvedUri ? { uri: resolvedUri } : null;
+  })().finally(() => {
+    sourceResolutionInFlight.delete(uri);
+  });
+
+  sourceResolutionInFlight.set(uri, resolution);
+  return resolution;
+}
+
 function trimPrefetchQueue(priority: PrefetchPriority) {
   if (prefetchQueue.length < MAX_PREFETCH_QUEUE_JOBS) {
     return true;
@@ -167,8 +197,24 @@ function trimPrefetchQueue(priority: PrefetchPriority) {
     return false;
   }
 
-  prefetchQueue.splice(disposableIndex, 1)[0]?.resolve(false);
+  const discardedJob = prefetchQueue.splice(disposableIndex, 1)[0];
+  if (discardedJob) {
+    finishPrefetchJob(discardedJob, false);
+  }
   return true;
+}
+
+function finishPrefetchJob(job: PrefetchJob, succeeded: boolean) {
+  if (job.settled) {
+    return;
+  }
+
+  job.settled = true;
+  if (job.abortListener) {
+    job.signal?.removeEventListener('abort', job.abortListener);
+  }
+  job.uris.forEach((uri) => pendingPrefetchKeys.delete(uri));
+  job.resolve(succeeded);
 }
 
 function drainPrefetchQueue() {
@@ -183,21 +229,21 @@ function drainPrefetchQueue() {
   }
 
   if (job.signal?.aborted) {
-    job.resolve(false);
+    finishPrefetchJob(job, false);
     drainPrefetchQueue();
     return;
   }
 
   if (job.priority === 'low' && getCurrentConnectionStatus() !== 'online') {
-    job.resolve(false);
+    finishPrefetchJob(job, false);
     drainPrefetchQueue();
     return;
   }
 
   prefetchQueueRunning = true;
   void executeImagePrefetch(job.uris)
-    .then(job.resolve)
-    .catch(() => job.resolve(false))
+    .then((succeeded) => finishPrefetchJob(job, succeeded))
+    .catch(() => finishPrefetchJob(job, false))
     .finally(() => {
       prefetchQueueRunning = false;
       drainPrefetchQueue();
@@ -208,11 +254,18 @@ export function prefetchAppImages(
   uris: Array<string | null | undefined>,
   options: { priority?: PrefetchPriority; signal?: AbortSignal } = {},
 ) {
-  const uniqueUris = Array.from(new Set(uris.filter((uri): uri is string => Boolean(uri))))
+  const requestedUris = Array.from(new Set(uris.filter((uri): uri is string => Boolean(uri))))
     .slice(0, MAX_PREFETCH_URIS_PER_JOB);
+  const uniqueUris = requestedUris.filter(
+    (uri) => !warmedImageKeys.has(uri) && !pendingPrefetchKeys.has(uri),
+  );
 
-  if (uniqueUris.length === 0 || options.signal?.aborted) {
+  if (options.signal?.aborted) {
     return Promise.resolve(false);
+  }
+
+  if (uniqueUris.length === 0) {
+    return Promise.resolve(requestedUris.length > 0);
   }
 
   const priority = options.priority ?? 'normal';
@@ -225,26 +278,31 @@ export function prefetchAppImages(
     const job: PrefetchJob = {
       priority,
       resolve,
+      settled: false,
       signal: options.signal,
       uris: uniqueUris,
     };
+    uniqueUris.forEach((uri) => pendingPrefetchKeys.add(uri));
     prefetchQueue.push(job);
 
-    options.signal?.addEventListener('abort', () => {
+    job.abortListener = () => {
       const queuedIndex = prefetchQueue.indexOf(job);
 
       if (queuedIndex >= 0) {
         prefetchQueue.splice(queuedIndex, 1);
-        resolve(false);
+        finishPrefetchJob(job, false);
       }
-    }, { once: true });
+    };
+    options.signal?.addEventListener('abort', job.abortListener, { once: true });
     drainPrefetchQueue();
   });
 }
 
 export function clearAppImagePrefetchQueue() {
-  prefetchQueue.splice(0).forEach((job) => job.resolve(false));
+  prefetchQueue.splice(0).forEach((job) => finishPrefetchJob(job, false));
   warmedImageKeys.clear();
+  pendingPrefetchKeys.clear();
+  sourceResolutionInFlight.clear();
 }
 
 export function AppImage({
@@ -257,7 +315,7 @@ export function AppImage({
   onLoad,
   onLoadEnd,
   onLoadStart,
-  placeholder = DEFAULT_IMAGE_BLURHASH,
+  placeholder = DEFAULT_IMAGE_PLACEHOLDER,
   recycleKey,
   recyclingKey,
   resizeMode = 'cover',
@@ -294,29 +352,11 @@ export function AppImage({
     setResolvedSource(null);
 
     if (uri) {
-      void (async () => {
-        if (isStorageAssetUri(uri)) {
-          const cachePath = await ExpoImage.getCachePathAsync(uri).catch(() => null);
-
-          if (cancelled) {
-            return;
-          }
-
-          if (cachePath) {
-            rememberWarmedImage(uri);
-            setResolvedSource({
-              uri: toFileUri(cachePath),
-            });
-            return;
-          }
+      void resolveImageSource(uri).then((source) => {
+        if (!cancelled) {
+          setResolvedSource(source);
         }
-
-        const nextUri = await resolveStorageAssetUrl(uri);
-
-        if (!cancelled && nextUri) {
-          setResolvedSource({ uri: nextUri });
-        }
-      })().catch(() => {
+      }).catch(() => {
         if (!cancelled) {
           setHasError(true);
         }
@@ -418,6 +458,7 @@ const styles = StyleSheet.create({
 
 export const appImageInternals = {
   DEFAULT_IMAGE_BLURHASH,
+  DEFAULT_IMAGE_PLACEHOLDER,
   MAX_PREFETCH_QUEUE_JOBS,
   MAX_PREFETCH_URIS_PER_JOB,
   clear() {

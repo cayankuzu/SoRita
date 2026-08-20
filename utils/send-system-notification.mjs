@@ -43,7 +43,7 @@ function hasFlag(flagName) {
 }
 
 function printUsageAndExit() {
-  console.log('Kullanim: npm run notify:broadcast -- --title "Baslik" --message "Icerik" [--dry-run] [--user-id <uuid>]');
+  console.log('Kullanim: npm run notify:broadcast -- --title "Baslik" --message "Icerik" [--dry-run] [--user-id <uuid>] [--idempotency-key <uuid>]');
   process.exit(1);
 }
 
@@ -51,6 +51,7 @@ const title = getArgValue(['--title']);
 const message = getArgValue(['--message', '--body']);
 const userIds = getArgValues(['--user-id']);
 const dryRun = hasFlag('--dry-run');
+const idempotencyKey = getArgValue(['--idempotency-key']) ?? randomUUID();
 
 if (!title || !message) {
   printUsageAndExit();
@@ -73,6 +74,7 @@ if (!adminToken) {
 const functionUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/admin-broadcast-notification`;
 const requestBody = {
   dryRun,
+  idempotencyKey,
   message,
   title,
   ...(userIds.length > 0 ? { userIds } : {}),
@@ -109,6 +111,7 @@ if (dryRun) {
   process.exit(0);
 }
 
+console.log(`[SoRita][push] Idempotency anahtari: ${idempotencyKey}`);
 console.log(
-  `[SoRita][push] Sistem bildirimi kuyruga alindi. Alici: ${payload?.recipientCount ?? 0}, eklenen bildirim: ${payload?.insertedCount ?? 0}`,
+  `[SoRita][push] Sistem bildirimi kuyruga alindi. Alici: ${payload?.recipientCount ?? 0}, eklenen bildirim: ${payload?.insertedCount ?? 0}, yinelenen: ${payload?.duplicateCount ?? 0}`,
 );

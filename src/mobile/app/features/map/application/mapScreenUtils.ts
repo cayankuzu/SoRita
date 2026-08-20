@@ -11,6 +11,26 @@ export const LIVE_SEARCH_MIN_LENGTH = 2;
 export const LIVE_SEARCH_DEBOUNCE_MS = 450;
 export const EXISTING_PLACE_MAP_PRESS_MAX_DISTANCE = 0.000004;
 
+export function getMapOverlayLayout(sceneHeight: number, searchChromeHeight: number) {
+  const controlBottom = 12;
+  const searchTop = 10;
+  const isShort = sceneHeight > 0 && sceneHeight < 560;
+  const resultsBottom = isShort ? controlBottom + 56 : undefined;
+  const resultsTop = isShort ? undefined : searchTop + searchChromeHeight + 6;
+  const availableResultsHeight = isShort
+    ? sceneHeight - (resultsBottom || 0) - 88
+    : sceneHeight - (resultsTop || searchTop) - 72;
+
+  return {
+    controlBottom,
+    isShort,
+    resultsBottom,
+    resultsMaxHeight: Math.min(324, Math.max(112, availableResultsHeight)),
+    resultsTop,
+    searchTop,
+  };
+}
+
 export const defaultViewport: MapViewport = {
   latitude: 39.9334,
   longitude: 32.8597,

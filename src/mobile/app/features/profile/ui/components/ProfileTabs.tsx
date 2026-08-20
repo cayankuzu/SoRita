@@ -1,10 +1,12 @@
 import React from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react-native";
 
 import { InstantPressable } from "@/mobile/app/shared/components/ui/InstantPressable";
+import { shouldUseCompactProfileTabs } from "@/mobile/app/features/profile/ui/components/profileTabsLayout";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, typography } from "@/mobile/app/shared/theme/tokens";
+import { colors, radius, touch, typography } from "@/mobile/app/shared/theme/tokens";
+import { useAppLayout } from "@/mobile/app/shared/hooks/useAppLayout";
 
 export type ProfileTabOption = {
   key: string;
@@ -38,6 +40,8 @@ export function ProfileTabs({
   onFilterToggle,
   tabs,
 }: ProfileTabsProps) {
+  const { fontScale, width } = useAppLayout();
+  const compact = shouldUseCompactProfileTabs(width, fontScale);
   const [tabsWidth, setTabsWidth] = React.useState(0);
   const showFilterControls = Boolean(
     filterOptions?.length && onFilterChange && onFilterToggle,
@@ -82,11 +86,12 @@ export function ProfileTabs({
                 key={tab.key}
                 onPress={() => onChange(tab.key)}
                 hapticFeedback="selection"
-                style={styles.button}
+                style={[styles.button, compact ? styles.buttonCompact : null]}
               >
                 {tab.renderIcon(active)}
                 <View style={styles.labelWrap}>
                   <Text
+                    numberOfLines={compact ? 2 : 1}
                     style={[styles.text, active ? styles.textActive : null]}
                   >
                     {tab.label}
@@ -129,7 +134,7 @@ export function ProfileTabs({
         </View>
         {showFilterControls ? (
           <InstantPressable
-        accessibilityLabel={tr.profile.visibilityFilter}
+            accessibilityLabel={tr.profile.visibilityFilter}
             accessibilityRole="button"
             accessibilityState={{ expanded: filterOpen }}
             onPress={onFilterToggle}
@@ -142,19 +147,23 @@ export function ProfileTabs({
               color={filterOpen ? colors.primary : colors.textMuted}
               size={13}
             />
-            <Text
-              style={[
-                styles.filterToggleText,
-                filterOpen ? styles.filterToggleTextActive : null,
-              ]}
-            >
-              {activeFilterLabel}
-            </Text>
-            {filterOpen ? (
-              <ChevronUp color={colors.primary} size={12} />
-            ) : (
-              <ChevronDown color={colors.textMuted} size={12} />
-            )}
+            {!compact ? (
+              <>
+                <Text
+                  style={[
+                    styles.filterToggleText,
+                    filterOpen ? styles.filterToggleTextActive : null,
+                  ]}
+                >
+                  {activeFilterLabel}
+                </Text>
+                {filterOpen ? (
+                  <ChevronUp color={colors.primary} size={12} />
+                ) : (
+                  <ChevronDown color={colors.textMuted} size={12} />
+                )}
+              </>
+            ) : null}
           </InstantPressable>
         ) : null}
       </View>
@@ -211,19 +220,29 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+    minHeight: Platform.OS === "ios" ? touch.ios : touch.android,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
     paddingVertical: 10,
   },
+  buttonCompact: {
+    flexDirection: "column",
+    gap: 2,
+    paddingHorizontal: 2,
+    paddingVertical: 6,
+  },
   labelWrap: {
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   text: {
     fontSize: 12,
+    flexShrink: 1,
+    textAlign: "center",
     color: colors.textMuted,
   },
   textActive: {
@@ -232,12 +251,13 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     minWidth: 18,
-    height: 18,
+    minHeight: 18,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: 'transparent',
     paddingHorizontal: 4,
+    paddingVertical: 1,
   },
   countBadgeActive: {
     backgroundColor: colors.primaryBg,
@@ -258,7 +278,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   filterToggle: {
-    minHeight: 44,
+    minWidth: Platform.OS === "ios" ? touch.ios : touch.android,
+    minHeight: Platform.OS === "ios" ? touch.ios : touch.android,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -296,8 +317,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterChip: {
-    minHeight: 44,
-    borderRadius: 14,
+    minHeight: Platform.OS === "ios" ? touch.ios : touch.android,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceMuted,
@@ -306,6 +329,7 @@ const styles = StyleSheet.create({
   },
   filterChipActive: {
     backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: 12,

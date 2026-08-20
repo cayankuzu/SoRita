@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createAdminBroadcastNotificationHandler } from './handler';
 
+const IDEMPOTENCY_KEY = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
 function createDeps(options?: {
   fetchRecipientUserIds?: string[];
   invalidToken?: boolean;
@@ -10,6 +12,10 @@ function createDeps(options?: {
     options?.fetchRecipientUserIds ?? ['user-1', 'user-2'],
   );
   const insertNotifications = vi.fn().mockResolvedValue(2);
+  const enforceAdminRateLimit = vi.fn().mockResolvedValue({
+    allowed: true,
+    remaining: 4,
+  });
 
   const handler = createAdminBroadcastNotificationHandler({
     config: {
@@ -18,6 +24,7 @@ function createDeps(options?: {
       supabaseServiceRoleKey: 'service-role',
       supabaseUrl: 'https://example.supabase.co',
     },
+    enforceAdminRateLimit,
     repository: {
       fetchRecipientUserIds,
       insertNotifications,
@@ -26,6 +33,7 @@ function createDeps(options?: {
 
   return {
     fetchRecipientUserIds,
+    enforceAdminRateLimit,
     handler,
     insertNotifications,
     token: options?.invalidToken ? 'wrong-token' : 'secret-token',
@@ -104,6 +112,7 @@ describe('admin-broadcast-notification handler', () => {
           'x-admin-token': token,
         },
         body: JSON.stringify({
+          idempotencyKey: IDEMPOTENCY_KEY,
           message: 'Yeni guncelleme geldi.',
           title: 'SoRita duyuru',
           userIds: ['550e8400-e29b-41d4-a716-446655440000'],
@@ -114,16 +123,70 @@ describe('admin-broadcast-notification handler', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       dryRun: false,
+      duplicateCount: 0,
       insertedCount: 2,
       recipientCount: 2,
       success: true,
     });
     expect(fetchRecipientUserIds).toHaveBeenCalledWith(['550e8400-e29b-41d4-a716-446655440000']);
     expect(insertNotifications).toHaveBeenCalledWith({
+      idempotencyKey: IDEMPOTENCY_KEY,
       message: 'Yeni guncelleme geldi.',
       pushTitle: 'SoRita duyuru',
       recipientUserIds: ['user-1', 'user-2'],
     });
+  });
+
+  it('reports recipients already claimed by the same idempotency key', async () => {
+    const { handler, insertNotifications, token } = createDeps();
+    insertNotifications.mockResolvedValueOnce(0);
+
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: JSON.stringify({
+          idempotencyKey: IDEMPOTENCY_KEY,
+          message: 'Yeni guncelleme geldi.',
+          title: 'SoRita duyuru',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      duplicateCount: 2,
+      insertedCount: 0,
+      recipientCount: 2,
+      success: true,
+    });
+  });
+
+  it('rate limits authenticated broadcast attempts before reading recipients', async () => {
+    const {
+      enforceAdminRateLimit,
+      fetchRecipientUserIds,
+      handler,
+      token,
+    } = createDeps();
+    enforceAdminRateLimit.mockResolvedValue({
+      allowed: false,
+      remaining: 0,
+      retryAfterMs: 12_500,
+    });
+
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: JSON.stringify({ message: 'Body', title: 'Title' }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('13');
+    expect(response.headers.get('x-ratelimit-remaining')).toBe('0');
+    expect(fetchRecipientUserIds).not.toHaveBeenCalled();
   });
 
   it('handles CORS, methods, configuration, invalid payloads, empty recipients, and failures', async () => {
@@ -143,6 +206,7 @@ describe('admin-broadcast-notification handler', () => {
         supabaseUrl: 'https://example.supabase.co', ...configOverrides,
       },
       createRequestId: () => 'request-id',
+      enforceAdminRateLimit: async () => ({ allowed: true, remaining: 4 }),
       repository,
     });
 
@@ -151,7 +215,7 @@ describe('admin-broadcast-notification handler', () => {
       method: 'OPTIONS', headers: { origin: 'http://127.0.0.1:3000' },
     }));
     expect(preflight.status).toBe(200);
-    expect(preflight.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:3000');
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('null');
 
     const methodResponse = await handler(new Request(endpoint, { method: 'GET' }));
     expect(methodResponse.status).toBe(405);
@@ -177,10 +241,19 @@ describe('admin-broadcast-notification handler', () => {
       body: JSON.stringify({ message: '', title: '' }),
     }));
     expect(invalidInputResponse.status).toBe(400);
+    const missingIdempotencyKeyResponse = await handler(new Request(endpoint, {
+      method: 'POST', headers: { 'x-admin-token': 'secret-token' },
+      body: JSON.stringify({ message: 'Body', title: 'Title' }),
+    }));
+    expect(missingIdempotencyKeyResponse.status).toBe(400);
+    await expect(missingIdempotencyKeyResponse.json()).resolves.toMatchObject({
+      code: 'idempotency_key_required',
+    });
 
     const emptyResponse = await handler(new Request(endpoint, {
       method: 'POST', headers: { 'x-admin-token': 'secret-token' },
       body: JSON.stringify({
+        idempotencyKey: IDEMPOTENCY_KEY,
         message: '  Body  ', title: '  Title  ',
         userIds: [
           '550e8400-e29b-41d4-a716-446655440000',
@@ -198,15 +271,15 @@ describe('admin-broadcast-notification handler', () => {
     repository.fetchRecipientUserIds.mockRejectedValueOnce(new Error('repository failed'));
     const errorResponse = await handler(new Request(endpoint, {
       method: 'POST', headers: { 'x-admin-token': 'secret-token' },
-      body: JSON.stringify({ message: 'Body', title: 'Title' }),
+      body: JSON.stringify({ idempotencyKey: IDEMPOTENCY_KEY, message: 'Body', title: 'Title' }),
     }));
     expect(errorResponse.status).toBe(500);
-    await expect(errorResponse.json()).resolves.toMatchObject({ error: 'repository failed' });
+    await expect(errorResponse.json()).resolves.toMatchObject({ error: 'Internal server error' });
 
     repository.fetchRecipientUserIds.mockRejectedValueOnce('failure');
     const unknownErrorResponse = await handler(new Request(endpoint, {
       method: 'POST', headers: { 'x-admin-token': 'secret-token' },
-      body: JSON.stringify({ message: 'Body', title: 'Title' }),
+      body: JSON.stringify({ idempotencyKey: IDEMPOTENCY_KEY, message: 'Body', title: 'Title' }),
     }));
     await expect(unknownErrorResponse.json()).resolves.toMatchObject({
       error: 'Internal server error',

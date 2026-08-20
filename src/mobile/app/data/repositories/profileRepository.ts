@@ -65,6 +65,7 @@ type ProfileListPayload = {
   likeCount?: number | string | null;
   name: string;
   ownerId: string;
+  placeCount?: number | string | null;
   updatedAt?: string | null;
   viewerHasLiked?: boolean | null;
 };
@@ -86,6 +87,7 @@ type ProfilePlacePayload = {
   listIsPublic?: boolean | null;
   listName: string;
   listUpdatedAt?: string | null;
+  locationPlaceCardsCount?: number | string | null;
   lng: number;
   media?: PlaceMedia[] | string | null;
   menuUrl?: string | null;
@@ -180,6 +182,7 @@ function mapList(payload: ProfileListPayload, viewerId?: string | null): PlaceLi
     emoji: payload.emoji || undefined,
     coverImage: payload.coverImageUrl || undefined,
     places: [],
+    placeCount: toNumber(payload.placeCount) || 0,
     isPublic: payload.isPublic !== false,
     likes: toNumber(payload.likeCount) || 0,
     likedBy: payload.viewerHasLiked && viewerId ? [viewerId] : undefined,
@@ -246,6 +249,7 @@ function mapPlace(payload: ProfilePlacePayload, viewerId?: string | null): Place
         updatedAt: payload.listUpdatedAt || payload.updatedAt,
       },
     ],
+    locationPlaceCardsCount: toNumber(payload.locationPlaceCardsCount) || 1,
     sortTime: new Date(payload.updatedAt).getTime(),
   };
 }
@@ -307,7 +311,7 @@ export async function fetchProfileContentPage(params: {
   viewerId?: string | null;
 }): Promise<ProfileContentPage> {
   const limit = params.limit ?? PROFILE_CONTENT_PAGE_SIZE;
-  let request = supabase.rpc('profile_content_page', {
+  let request = supabase.rpc('profile_content_page_complete', {
     p_cursor: params.cursor?.sortAt ?? null,
     p_cursor_id: params.cursor?.id ?? null,
     p_limit: limit,

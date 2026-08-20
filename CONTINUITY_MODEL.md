@@ -33,6 +33,7 @@ Bu repo secret-less continuity modeli ile kullanilir.
 - `android/keystores/sorita-upload-reset-20260426-info.txt`
 - Varsa `apple\` altinda local App Store Connect `.p8` ve ilgili auth metadata dosyalari
 - Varsa `firebase-admin\` altinda SoRita Firebase Admin service account JSON dosyalari
+- `supabase\linked-project.json` ve `supabase\project-ref.txt` yerel proje baglantisi
 
 ## Neden Bu Ayrim Secildi
 

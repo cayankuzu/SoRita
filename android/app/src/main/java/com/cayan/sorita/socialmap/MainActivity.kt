@@ -1,7 +1,5 @@
 package com.cayan.sorita.socialmap
 
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 
@@ -11,21 +9,12 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
+import expo.modules.splashscreen.SplashScreenManager
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    setTheme(R.style.AppTheme)
+    SplashScreenManager.registerOnActivity(this)
     super.onCreate(null)
-    clearStartupWindowBackground()
-  }
-
-  override fun onResume() {
-    super.onResume()
-    clearStartupWindowBackground()
-  }
-
-  private fun clearStartupWindowBackground() {
-    window.setBackgroundDrawable(ColorDrawable(Color.rgb(248, 250, 252)))
   }
 
   /**

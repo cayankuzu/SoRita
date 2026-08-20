@@ -400,27 +400,15 @@ export function useAuthScreenState({
   }, []);
 
   const goToLogin = useCallback(() => {
-    if (!requireLegalConsent()) {
-      return;
-    }
-
     setView('login');
-  }, [requireLegalConsent]);
+  }, []);
 
   const goToForgotPassword = useCallback(() => {
-    if (!requireLegalConsent()) {
-      return;
-    }
-
     setForgotPasswordEmailState((current) => current || loginEmail);
     setView('forgotPassword');
-  }, [loginEmail, requireLegalConsent]);
+  }, [loginEmail]);
 
   const handleLogin = useCallback(async () => {
-    if (!requireLegalConsent()) {
-      return;
-    }
-
     try {
       const result = await login(loginEmail, loginPassword);
 
@@ -440,7 +428,7 @@ export function useAuthScreenState({
     } catch {
       showToast(tr.auth.toast.loginInvalid, 'error');
     }
-  }, [login, loginEmail, loginPassword, requireLegalConsent]);
+  }, [login, loginEmail, loginPassword]);
 
   const handleRegister = useCallback(async () => {
     if (!requireLegalConsent()) {
@@ -470,7 +458,7 @@ export function useAuthScreenState({
         interests: regInterests,
         legalConsent: {
           acceptedAt: new Date().toISOString(),
-          documentsAccepted: ['terms', 'community', 'privacy', 'kvkk'],
+          documentsAccepted: ['terms', 'community'],
           version: LEGAL_CONSENT_VERSION,
         },
         profilePhoto,

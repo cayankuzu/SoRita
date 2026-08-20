@@ -14,6 +14,8 @@ import { colors } from '@/mobile/app/shared/theme/tokens';
 type SettingsPasswordViewProps = {
   currentPassword: string;
   email: string;
+  isPasswordResetCoolingDown: boolean;
+  isSendingPasswordReset: boolean;
   onBack: () => void;
   onChangeCurrentPassword: (value: string) => void;
   onRefresh: () => void;
@@ -27,6 +29,8 @@ type SettingsPasswordViewProps = {
 export function SettingsPasswordView({
   currentPassword,
   email,
+  isPasswordResetCoolingDown,
+  isSendingPasswordReset,
   onBack,
   onChangeCurrentPassword,
   onRefresh,
@@ -37,7 +41,7 @@ export function SettingsPasswordView({
   showPassword,
 }: SettingsPasswordViewProps) {
   return (
-    <Screen refreshing={refreshing} onRefresh={onRefresh}>
+    <Screen refreshing={refreshing} onRefresh={onRefresh} variant="settings">
       <SettingsHeader title={tr.settings.password.title} onBack={onBack} />
 
       <View style={styles.form}>
@@ -62,7 +66,12 @@ export function SettingsPasswordView({
           <PasswordToggle visible={showPassword} onPress={onTogglePasswordVisibility} />
         </View>
 
-        <PrimaryButton title={tr.settings.password.resetAction} onPress={onSendResetMail} />
+        <PrimaryButton
+          title={tr.settings.password.resetAction}
+          disabled={isPasswordResetCoolingDown}
+          loading={isSendingPasswordReset}
+          onPress={onSendResetMail}
+        />
 
         {resetMailSent ? (
           <View style={styles.successCard}>

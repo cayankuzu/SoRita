@@ -9,6 +9,11 @@ import {
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
 import { useExploreScreenState } from '@/mobile/app/features/explore/application/useExploreScreenState';
+import {
+  warmListDetailData,
+  warmUserProfileData,
+} from '@/mobile/app/app-shell/startup/startupDataWarmup';
+import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { ExploreFeedView } from '@/mobile/app/features/explore/ui/components/ExploreFeedView';
 import { ExploreHeaderControls } from '@/mobile/app/features/explore/ui/components/ExploreHeaderControls';
 import {
@@ -40,13 +45,59 @@ const EXPLORE_TAB_LABELS: Record<ExploreTabType, string> = {
   places: tr.explore.tabs.places,
 };
 
+type ExplorePageHeaderProps = {
+  activeTab: ExploreTabType;
+  onRetry: () => void;
+  onSearchQueryChange: (value: string) => void;
+  onTabChange: (tab: ExploreTabType) => void;
+  screenPadding: number;
+  searchQuery: string;
+  showPartialDataNotice: boolean;
+};
+
+const ExplorePageHeader = React.memo(function ExplorePageHeader({
+  activeTab,
+  onRetry,
+  onSearchQueryChange,
+  onTabChange,
+  screenPadding,
+  searchQuery,
+  showPartialDataNotice,
+}: ExplorePageHeaderProps) {
+  return (
+    <View>
+      <ExploreHeaderControls
+        activeTab={activeTab}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        onTabChange={onTabChange}
+      />
+      {showPartialDataNotice ? (
+        <View
+          style={[
+            loadMoreStyles.noticeWrap,
+            { paddingHorizontal: screenPadding },
+          ]}
+        >
+          <InlineNotice
+            tone="warning"
+            title={tr.explore.partialDataTitle}
+            description={tr.explore.partialDataDescription}
+            actionLabel={tr.common.retry}
+            onAction={onRetry}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+});
+
 export function ExploreScreen() {
   const navigation = useAppNavigation();
   const { user } = useAuth();
   const { screenPadding } = useAppLayout();
   const activeListRef = React.useRef<FlatList<ExploreGridItem> | null>(null);
   const [activeTab, setActiveTab] = useState<ExploreTabType>('lists');
-  const [visibleTab, setVisibleTab] = useState<ExploreTabType>('lists');
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<ExploreFeedMode | null>(null);
   const {
@@ -58,6 +109,7 @@ export function ExploreScreen() {
   } = useTabScrollMemory<ExploreTabType>();
   const {
     errorMessage,
+    debouncedSearchQuery,
     filteredListItems,
     filteredPhotos,
     filteredPlaces,
@@ -118,7 +170,6 @@ export function ExploreScreen() {
       }
 
       restoreTabScrollOffset(nextTab);
-      setVisibleTab(nextTab);
       setActiveTab(nextTab);
     },
     [activeTab, restoreTabScrollOffset, scrollActiveListToTop],
@@ -127,22 +178,31 @@ export function ExploreScreen() {
   const handleTabPreviewChange = useCallback(
     (nextTab: ExploreTabType) => {
       restoreTabScrollOffset(nextTab);
-      setVisibleTab(nextTab);
     },
     [restoreTabScrollOffset],
   );
+  const handleRetry = useCallback(() => {
+    void retry();
+  }, [retry]);
 
   const handleFollowUser = useCallback(
     async (targetUserId: string) => {
-      const result = await followUser(targetUserId);
-      showToast(
-        result === 'requested'
-          ? tr.explore.toast.followRequestSent
-          : result === 'following'
-            ? tr.explore.toast.userFollowed
-            : tr.explore.toast.followUpdated,
-        'success',
-      );
+      try {
+        const result = await followUser(targetUserId);
+        showToast(
+          result === 'requested'
+            ? tr.explore.toast.followRequestSent
+            : result === 'following'
+              ? tr.explore.toast.userFollowed
+              : tr.explore.toast.followUpdated,
+          'success',
+        );
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : tr.profile.toast.followFailed,
+          'error',
+        );
+      }
     },
     [followUser],
   );
@@ -157,6 +217,22 @@ export function ExploreScreen() {
       openStackScreen(navigation, 'ListDetail', { listId });
     },
     [navigation],
+  );
+  const warmListIntent = useCallback(
+    (listId: string) => {
+      if (user?.id) {
+        void warmListDetailData({ listId, queryClient, viewerId: user.id });
+      }
+    },
+    [user?.id],
+  );
+  const warmOwnerIntent = useCallback(
+    (targetUserId: string) => {
+      if (user?.id) {
+        void warmUserProfileData({ queryClient, targetUserId, viewerId: user.id });
+      }
+    },
+    [user?.id],
   );
   const handleEndReached = useCallback(
     (tab: ExploreTabType) => {
@@ -180,7 +256,7 @@ export function ExploreScreen() {
       <Screen safeTop={false} padded={false} scroll={false}>
         <View style={loadMoreStyles.content}>
           <ExploreHeaderControls
-            activeTab={visibleTab}
+            activeTab={activeTab}
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             onTabChange={handleTabChange}
@@ -216,35 +292,12 @@ export function ExploreScreen() {
   return (
     <Screen safeTop={false} padded={false} scroll={false}>
       <View style={loadMoreStyles.screen}>
-        <ExploreHeaderControls
-          activeTab={visibleTab}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onTabChange={handleTabChange}
-        />
-        {hasPartialDataError && hasAnyBrowseData ? (
-          <View
-            style={[
-              loadMoreStyles.noticeWrap,
-              { paddingHorizontal: screenPadding },
-            ]}
-          >
-            <InlineNotice
-              tone="warning"
-              title={tr.explore.partialDataTitle}
-              description={tr.explore.partialDataDescription}
-              actionLabel={tr.common.retry}
-              onAction={() => {
-                void retry();
-              }}
-            />
-          </View>
-        ) : null}
         <SwipeableTabPager
           activeTab={activeTab}
           enabled={!refreshing && !feedMode}
           getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
-          keepAlive
+          keepAlive={false}
+          lazy
           tabs={EXPLORE_PAGER_TABS}
           onChange={handleTabChange}
           onPreviewTabChange={handleTabPreviewChange}
@@ -265,13 +318,24 @@ export function ExploreScreen() {
                 isFetchingNextPage={tabQuery.isFetchingNextPage}
                 listMarkerLists={listMarkerLists}
                 listRef={getTabScrollRefCallback(tab)}
+                listHeader={
+                  <ExplorePageHeader
+                    activeTab={tab}
+                    onRetry={handleRetry}
+                    onSearchQueryChange={setSearchQuery}
+                    onTabChange={handleTabChange}
+                    screenPadding={screenPadding}
+                    searchQuery={searchQuery}
+                    showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
+                  />
+                }
                 onContentReady={() => notifyTabContentReady(tab)}
                 onClearSearch={() => setSearchQuery('')}
                 onEndReached={() => handleEndReached(tab)}
-                onFollowUser={(targetUserId) => {
-                  void handleFollowUser(targetUserId);
-                }}
+                onFollowUser={handleFollowUser}
+                onListIntent={warmListIntent}
                 onListPress={openListDetail}
+                onOwnerIntent={warmOwnerIntent}
                 onOwnerPress={openUserProfile}
                 onPlacePress={(pageTab, index) =>
                   setFeedMode({
@@ -286,7 +350,7 @@ export function ExploreScreen() {
                 }
                 pendingFollowRequests={pendingFollowRequests}
                 refreshing={refreshing}
-                searchQuery={searchQuery}
+                searchQuery={debouncedSearchQuery}
                 tab={tab}
               />
             );

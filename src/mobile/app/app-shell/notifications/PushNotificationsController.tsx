@@ -11,6 +11,7 @@ import {
   ensureAndroidPushChannel,
   registerDevicePushToken,
   registerPushNotifications,
+  unregisterPushNotifications,
 } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import {
   getNotificationsPage,
@@ -30,6 +31,7 @@ const NOTIFICATIONS_SYNC_PAGE_SIZE = 20;
 const NOTIFICATION_EVENT_DEDUPE_MS = 8000;
 const NOTIFICATION_SYNC_DEDUPE_MS = 1200;
 const REALTIME_BACKOFF_MS = [5000, 15000, 30000, 60000, 300000] as const;
+const PUSH_REGISTRATION_RETRY_MS = [5000, 15000, 60000, 300000] as const;
 
 export async function ensureForegroundNotificationPresentation() {
   if (!notificationRuntime.supportsNotificationObservers) {
@@ -113,6 +115,8 @@ export function PushNotificationsController() {
   const registeredTokenRef = useRef<string | null>(null);
   const registeredUserIdRef = useRef<string | null>(null);
   const registrationInFlightUserIdRef = useRef<string | null>(null);
+  const registrationRetryAttemptRef = useRef(0);
+  const registrationRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHandledNotificationIdRef = useRef<string | null>(null);
   const lastHydrateAtRef = useRef(0);
   const recentNotificationEventsRef = useRef<Map<string, number>>(new Map());
@@ -121,6 +125,33 @@ export function PushNotificationsController() {
 
   useEffect(() => {
     void ensureForegroundNotificationPresentation();
+  }, []);
+
+  const clearRegistrationRetry = useCallback(() => {
+    if (registrationRetryTimeoutRef.current) {
+      clearTimeout(registrationRetryTimeoutRef.current);
+      registrationRetryTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleRegistrationRetry = useCallback((retry: () => void) => {
+    if (registrationRetryTimeoutRef.current) {
+      return;
+    }
+
+    const attempt = registrationRetryAttemptRef.current;
+    const delay = PUSH_REGISTRATION_RETRY_MS[
+      Math.min(attempt, PUSH_REGISTRATION_RETRY_MS.length - 1)
+    ];
+
+    registrationRetryAttemptRef.current = Math.min(
+      attempt + 1,
+      PUSH_REGISTRATION_RETRY_MS.length - 1,
+    );
+    registrationRetryTimeoutRef.current = setTimeout(() => {
+      registrationRetryTimeoutRef.current = null;
+      retry();
+    }, delay);
   }, []);
 
   const hydrateLatestNotifications = useCallback(async (
@@ -163,12 +194,14 @@ export function PushNotificationsController() {
     }
   }, []);
 
-  const syncPushRegistration = useCallback(async () => {
+  const syncPushRegistration = useCallback(async function syncPushRegistration() {
     if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
       return;
     }
 
     if (!user) {
+      clearRegistrationRetry();
+      registrationRetryAttemptRef.current = 0;
       registeredTokenRef.current = null;
       registeredUserIdRef.current = null;
       registrationInFlightUserIdRef.current = null;
@@ -187,17 +220,31 @@ export function PushNotificationsController() {
       const nextToken = await registerPushNotifications(user.id);
 
       if (nextToken) {
+        clearRegistrationRetry();
+        registrationRetryAttemptRef.current = 0;
         registeredTokenRef.current = nextToken;
         registeredUserIdRef.current = user.id;
+      } else {
+        scheduleRegistrationRetry(() => {
+          void syncPushRegistration();
+        });
       }
     } catch (error) {
       logger.warn('push', 'Push registration failed', error);
+      scheduleRegistrationRetry(() => {
+        void syncPushRegistration();
+      });
     } finally {
       if (registrationInFlightUserIdRef.current === user.id) {
         registrationInFlightUserIdRef.current = null;
       }
     }
-  }, [booted, user]);
+  }, [booted, clearRegistrationRetry, scheduleRegistrationRetry, user]);
+
+  useEffect(() => () => {
+    clearRegistrationRetry();
+    registrationRetryAttemptRef.current = 0;
+  }, [clearRegistrationRetry, user?.id]);
 
   const openPushTarget = useCallback(
     (payload: PushPayload) => {
@@ -449,15 +496,33 @@ export function PushNotificationsController() {
         }
 
         subscription = Notifications.addPushTokenListener((devicePushToken) => {
+          const previousToken = registeredTokenRef.current;
+          registeredUserIdRef.current = null;
           void registerDevicePushToken(user.id, devicePushToken)
             .then((nextToken) => {
               if (!cancelled && nextToken) {
+                clearRegistrationRetry();
+                registrationRetryAttemptRef.current = 0;
                 registeredTokenRef.current = nextToken;
                 registeredUserIdRef.current = user.id;
+
+                if (previousToken && previousToken !== nextToken) {
+                  void unregisterPushNotifications(previousToken).catch((error) => {
+                    logger.warn('push', 'Failed to remove replaced Expo push token', error);
+                  });
+                }
+                return;
               }
+
+              scheduleRegistrationRetry(() => {
+                void syncPushRegistration();
+              });
             })
             .catch((error) => {
               logger.warn('push', 'Push token refresh registration failed', error);
+              scheduleRegistrationRetry(() => {
+                void syncPushRegistration();
+              });
             });
         });
       })
@@ -469,7 +534,7 @@ export function PushNotificationsController() {
       cancelled = true;
       subscription?.remove();
     };
-  }, [booted, user]);
+  }, [booted, clearRegistrationRetry, scheduleRegistrationRetry, syncPushRegistration, user]);
 
   return null;
 }

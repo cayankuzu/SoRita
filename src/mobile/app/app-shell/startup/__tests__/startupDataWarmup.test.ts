@@ -176,22 +176,12 @@ describe('startupDataWarmup', () => {
     expect(mocks.fetchExplorePage).not.toHaveBeenCalled();
   });
 
-  it('predicts only a repeated high-confidence transition', async () => {
-    const {
-      recordStartupWarmupTransition,
-      startupDataWarmupInternals,
-    } = await import('../startupDataWarmup');
+  it('uses a deterministic adjacent surface instead of session-only prediction state', async () => {
+    const { getAdjacentStartupWarmupStage } = await import('../startupDataWarmup');
 
-    startupDataWarmupInternals.transitionCounts.clear();
-    recordStartupWarmupTransition('home', 'map');
-    expect(startupDataWarmupInternals.getPredictedStage('home')).toBeNull();
-
-    recordStartupWarmupTransition('home', 'map');
-    expect(startupDataWarmupInternals.getPredictedStage('home')).toBe('map');
-
-    recordStartupWarmupTransition('home', 'profile');
-    recordStartupWarmupTransition('home', 'profile');
-    expect(startupDataWarmupInternals.getPredictedStage('home')).toBeNull();
+    expect(getAdjacentStartupWarmupStage('home')).toBe('explore');
+    expect(getAdjacentStartupWarmupStage('explore')).toBe('map');
+    expect(getAdjacentStartupWarmupStage('profile')).toBe('home');
   });
 
   it('starts list detail data before navigation and deduplicates repeated intent', async () => {

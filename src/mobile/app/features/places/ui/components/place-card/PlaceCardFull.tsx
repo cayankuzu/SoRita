@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, MapPin } from 'lucide-react-native';
 
 import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
 import { FeedActionBar } from '@/mobile/app/features/social/public/components';
@@ -8,7 +8,7 @@ import { PlaceMenuButton } from '@/mobile/app/features/places/ui/components/plac
 import {
   PlaceCardTags,
   PlaceListBar,
-  PlaceMediaStrip,
+  PlacePrimaryMedia,
   PlaceOwnerHeader,
   PlaceSourceBar,
 } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardSections';
@@ -21,7 +21,10 @@ import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPrevi
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
-import { formatLocationPlaceCardsCount } from '@/mobile/app/shared/utils/format';
+import {
+  formatLocationPlaceCardsCount,
+  formatPlaceCardLocation,
+} from '@/mobile/app/shared/utils/format';
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 
 type MapMarker = {
@@ -31,27 +34,47 @@ type MapMarker = {
   markerColor: string;
 };
 
-type PlaceCardFullProps = {
-  allowAddToList: boolean;
-  canReportPlace: boolean;
+type PlaceCardContent = {
+  bestTimes: string[];
   categories: string[];
-  comments: FeedActionComment[];
   context?: 'default' | 'list-detail';
-  currentUserName?: string;
-  currentUserPhoto?: string;
   dietaryOptions: string[];
-  isLiked: boolean;
-  isFetchingNextCommentsPage?: boolean;
-  likers: FeedActionLiker[];
   listCoverImage?: string;
   listEmoji?: string;
   listIsPublic?: boolean;
   listName?: string;
-  isMapInteractive: boolean;
   locationPlaceCardsCount?: number;
-  mapFocusKey: number;
-  mapMarkers: MapMarker[];
-  showMapInteractionHint: boolean;
+  media: PlaceMedia[];
+  owner?: User | null;
+  place: Place;
+  placeTimestampLabels: string[];
+  priceLabel?: string;
+  sourceAttribution?: Place['sourceAttribution'];
+  sourceUser?: User | null;
+  specialFeatures: string[];
+};
+
+type PlaceCardMap = {
+  focusKey: number;
+  interactive: boolean;
+  markers: MapMarker[];
+  previewEnabled: boolean;
+  showInteractionHint: boolean;
+  visible: boolean;
+};
+
+type PlaceCardSocial = {
+  allowAddToList: boolean;
+  comments: FeedActionComment[];
+  currentUserName?: string;
+  currentUserPhoto?: string;
+  hasNextCommentsPage?: boolean;
+  isFetchingNextCommentsPage?: boolean;
+  isLiked: boolean;
+  likers: FeedActionLiker[];
+};
+
+type PlaceCardActions = {
   onAddToListPress: () => void;
   onAddressCopied: () => void;
   onCommentDelete: (commentId: string) => Promise<void> | void;
@@ -76,82 +99,93 @@ type PlaceCardFullProps = {
   onUserPress: (userId: string) => void;
   onCommentsVisibilityChange?: (visible: boolean) => void;
   onLikersVisibilityChange?: (visible: boolean) => void;
-  owner?: User | null;
-  media: PlaceMedia[];
-  place: Place;
-  placeTimestampLabels: string[];
-  priceLabel?: string;
-  specialFeatures: string[];
-  sourceAttribution?: Place['sourceAttribution'];
-  sourceUser?: User | null;
   showActionMenu?: boolean;
-  bestTimes: string[];
-  hasNextCommentsPage?: boolean;
+};
+
+type PlaceCardFullProps = {
+  actions: PlaceCardActions;
+  content: PlaceCardContent;
+  map: PlaceCardMap;
+  social: PlaceCardSocial;
 };
 
 export function PlaceCardFull({
-  allowAddToList,
-  bestTimes,
-  canReportPlace: _canReportPlace,
-  categories,
-  comments,
-  context = 'default',
-  currentUserName,
-  currentUserPhoto,
-  dietaryOptions,
-  isLiked,
-  isFetchingNextCommentsPage = false,
-  likers,
-  listCoverImage,
-  listEmoji,
-  listIsPublic,
-  listName,
-  isMapInteractive,
-  locationPlaceCardsCount,
-  mapFocusKey,
-  mapMarkers,
-  showMapInteractionHint,
-  onAddToListPress,
-  onAddressCopied,
-  onCommentDelete,
-  onCommentsLoadMore,
-  onCommentLikeToggle,
-  onCommentReport,
-  onCommentSubmit,
-  onCommentUpdate,
-  onFocusPress,
-  onFocusLongPress,
-  onLikePress,
-  onSharePress,
-  onOpenActionMenu,
-  onOwnerPress,
-  onMediaPress,
-  onPlaceNamePress,
-  onPress,
-  onPressIn,
-  onRefresh,
-  onReportPlace,
-  onSourcePress,
-  onUserPress,
-  onCommentsVisibilityChange,
-  onLikersVisibilityChange,
-  owner,
-  media,
-  place,
-  placeTimestampLabels,
-  priceLabel,
-  specialFeatures,
-  sourceAttribution,
-  sourceUser,
-  showActionMenu = false,
-  hasNextCommentsPage = false,
+  actions,
+  content,
+  map,
+  social,
 }: PlaceCardFullProps) {
+  const {
+    bestTimes,
+    categories,
+    context = 'default',
+    dietaryOptions,
+    listCoverImage,
+    listEmoji,
+    listIsPublic,
+    listName,
+    locationPlaceCardsCount,
+    media,
+    owner,
+    place,
+    placeTimestampLabels,
+    priceLabel,
+    sourceAttribution,
+    sourceUser,
+    specialFeatures,
+  } = content;
+  const {
+    focusKey: mapFocusKey,
+    interactive: isMapInteractive,
+    markers: mapMarkers,
+    previewEnabled: mapPreviewEnabled,
+    showInteractionHint: showMapInteractionHint,
+    visible: isMapVisible,
+  } = map;
+  const {
+    allowAddToList,
+    comments,
+    currentUserName,
+    currentUserPhoto,
+    hasNextCommentsPage = false,
+    isFetchingNextCommentsPage = false,
+    isLiked,
+    likers,
+  } = social;
+  const {
+    onAddToListPress,
+    onAddressCopied,
+    onCommentDelete,
+    onCommentsLoadMore,
+    onCommentLikeToggle,
+    onCommentReport,
+    onCommentSubmit,
+    onCommentUpdate,
+    onCommentsVisibilityChange,
+    onFocusLongPress,
+    onFocusPress,
+    onLikePress,
+    onLikersVisibilityChange,
+    onMediaPress,
+    onOpenActionMenu,
+    onOwnerPress,
+    onPlaceNamePress,
+    onPress,
+    onPressIn,
+    onRefresh,
+    onReportPlace,
+    onSharePress,
+    onSourcePress,
+    onUserPress,
+    showActionMenu = false,
+  } = actions;
   const handlePlaceNamePress = () => {
     if (!onPlaceNamePress) {
       return;
     }
     onPlaceNamePress();
   };
+  const locationLabel = formatPlaceCardLocation(place.address);
 
   return (
     <View style={styles.feedCard}>
@@ -174,19 +208,36 @@ export function PlaceCardFull({
         />
       )}
 
-      <View style={styles.mapWrap}>
-        <MiniMapPreview
-          places={mapMarkers}
-          interactive={isMapInteractive}
-          instanceId={mapFocusKey}
-          highlightedIndex={0}
-          focusIndex={0}
-          focusTrigger={mapFocusKey}
-        />
-        <MiniMapInteractionHint visible={showMapInteractionHint} />
-      </View>
+      <PlacePrimaryMedia media={media} onPress={onMediaPress} placeName={place.name} />
 
-      <PlaceMediaStrip media={media} onPress={onMediaPress} placeName={place.name} />
+      {locationLabel ? (
+        <View
+          accessibilityLabel={tr.cards.locationAccessibilityLabel(locationLabel)}
+          style={styles.locationBar}
+        >
+          <View style={styles.locationIconWrap}>
+            <MapPin color={colors.primary} size={13} strokeWidth={2.2} />
+          </View>
+          <Text numberOfLines={1} style={styles.locationText}>
+            {locationLabel}
+          </Text>
+        </View>
+      ) : null}
+
+      {isMapVisible ? (
+        <View style={styles.mapWrap}>
+          <MiniMapPreview
+            places={mapMarkers}
+            loadStaticPreview={mapPreviewEnabled}
+            interactive={isMapInteractive}
+            instanceId={mapFocusKey}
+            highlightedIndex={0}
+            focusIndex={0}
+            focusTrigger={mapFocusKey}
+          />
+          <MiniMapInteractionHint visible={showMapInteractionHint} />
+        </View>
+      ) : null}
 
       <View style={styles.content}>
         <View style={styles.contentTitleRow}>

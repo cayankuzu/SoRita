@@ -11,13 +11,15 @@ const subscribeToTopicMock = vi.fn();
 const unsubscribeFromTopicMock = vi.fn();
 const infoMock = vi.fn();
 const warnMock = vi.fn();
+const messagingInstance = {};
 
-const firebaseMessagingMock = vi.fn(() => ({
+const firebaseMessagingMock = {
+  getMessaging: vi.fn(() => messagingInstance),
   getToken: getTokenMock,
   registerDeviceForRemoteMessages: registerDeviceForRemoteMessagesMock,
   subscribeToTopic: subscribeToTopicMock,
   unsubscribeFromTopic: unsubscribeFromTopicMock,
-}));
+};
 
 vi.mock('expo-notifications', () => ({
   IosAuthorizationStatus: {
@@ -89,7 +91,11 @@ describe('systemPushNotificationRepository', () => {
 
     expect(ensureAndroidPushChannelMock).toHaveBeenCalledOnce();
     expect(registerDeviceForRemoteMessagesMock).toHaveBeenCalledOnce();
-    expect(subscribeToTopicMock).toHaveBeenCalledWith('system-announcements');
+    expect(registerDeviceForRemoteMessagesMock).toHaveBeenCalledWith(messagingInstance);
+    expect(subscribeToTopicMock).toHaveBeenCalledWith(
+      messagingInstance,
+      'system-announcements',
+    );
   });
 
   it('accepts provisional and ephemeral iOS delivery permission', async () => {
@@ -129,7 +135,7 @@ describe('systemPushNotificationRepository', () => {
     getPermissionsAsyncMock.mockResolvedValue({ granted: false, ios: null });
     await expect(repository.syncSystemPushNotifications()).resolves.toBeNull();
 
-    expect(firebaseMessagingMock).not.toHaveBeenCalled();
+    expect(firebaseMessagingMock.getMessaging).not.toHaveBeenCalled();
   });
 
   it('returns null when Firebase cannot provide a device token', async () => {
@@ -142,16 +148,13 @@ describe('systemPushNotificationRepository', () => {
     expect(subscribeToTopicMock).not.toHaveBeenCalled();
   });
 
-  it('supports messaging modules without explicit remote registration', async () => {
-    firebaseMessagingMock.mockReturnValueOnce({
-      getToken: getTokenMock,
-      subscribeToTopic: subscribeToTopicMock,
-      unsubscribeFromTopic: unsubscribeFromTopicMock,
-    } as ReturnType<typeof firebaseMessagingMock>);
+  it('uses one modular messaging instance for registration and token access', async () => {
     const repository = await import('@/mobile/app/data/repositories/systemPushNotificationRepository');
 
     await expect(repository.syncSystemPushNotifications()).resolves.toBe('fcm-token');
-    expect(registerDeviceForRemoteMessagesMock).not.toHaveBeenCalled();
+    expect(firebaseMessagingMock.getMessaging).toHaveBeenCalledOnce();
+    expect(registerDeviceForRemoteMessagesMock).toHaveBeenCalledWith(messagingInstance);
+    expect(getTokenMock).toHaveBeenCalledWith(messagingInstance);
   });
 
   it('unsubscribes only when runtime and topic are available', async () => {
@@ -174,7 +177,10 @@ describe('systemPushNotificationRepository', () => {
     await repository.unregisterSystemPushNotifications();
 
     expect(unsubscribeFromTopicMock).toHaveBeenCalledOnce();
-    expect(unsubscribeFromTopicMock).toHaveBeenCalledWith('system-announcements');
+    expect(unsubscribeFromTopicMock).toHaveBeenCalledWith(
+      messagingInstance,
+      'system-announcements',
+    );
   });
 
   it('presents foreground notifications with safe fallbacks on Android', async () => {

@@ -174,6 +174,8 @@ describe('moderation-reports handler', () => {
     const payloadHash = await sha256Hex(body);
     const signature = await createRequestSignature('token-1', {
       deviceId,
+      functionName: 'moderation-reports',
+      method: 'POST',
       nonce,
       payloadHash,
       timestamp,
@@ -300,7 +302,7 @@ describe('moderation-reports handler', () => {
       method: 'OPTIONS', origin: 'http://127.0.0.1:3000',
     }));
     expect(preflight.status).toBe(200);
-    expect(preflight.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:3000');
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('null');
 
     expect((await fallback(await signedRequest({}, { method: 'GET' }))).status).toBe(405);
 

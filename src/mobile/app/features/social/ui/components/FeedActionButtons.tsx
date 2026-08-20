@@ -1,47 +1,31 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import {
-  Crosshair,
   Ellipsis,
-  Flag,
   Heart,
-  ListPlus,
-  MapPin,
   MessageCircle,
   Share2,
 } from 'lucide-react-native';
 
-import { MINI_MAP_RESET_LONG_PRESS_MS } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 type FeedActionButtonsProps = {
   commentCount: number;
-  focusActionActive: boolean;
   likeCount: number;
   liked: boolean;
-  locationAvailable: boolean;
-  onAddToListPress?: () => void;
   onCommentPress: () => void;
   onCommentsIntent: () => void;
-  onFocusLongPress?: () => void;
-  onFocusPress?: () => void;
   onLikePress: () => void;
   onLikersPress: () => void;
   onOverflowPress?: () => void;
-  onReportPress: () => void;
   onSharePress?: () => void;
-  onToggleAddress: () => void;
   overflowActionLabel: string;
-  showAddToList: boolean;
-  showAddress: boolean;
   showCommentAction: boolean;
   showComments: boolean;
   showOverflowAction: boolean;
-  showReportAction: boolean;
-  showReportSheet: boolean;
   showShareAction: boolean;
 };
 
@@ -64,11 +48,16 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
         color={props.liked ? colors.danger : colors.textMuted}
         fill={props.liked ? colors.danger : 'transparent'}
       />
-      {props.likeCount > 0 ? (
-        <Text style={[styles.actionCount, props.liked ? styles.actionCountLiked : null]}>
-          {props.likeCount}
-        </Text>
-      ) : null}
+      <Text
+        accessible={false}
+        style={[
+          styles.actionCount,
+          props.liked ? styles.actionCountLiked : null,
+          props.likeCount === 0 ? styles.actionCountEmpty : null,
+        ]}
+      >
+        {props.likeCount}
+      </Text>
     </InstantPressable>
   );
 }
@@ -87,51 +76,23 @@ function CommentAction(props: Pick<
       onPress={props.onCommentPress}
     >
       <MessageCircle size={16} color={props.showComments ? colors.primary : colors.textMuted} />
-      {props.commentCount > 0 ? (
-        <Text style={[styles.actionCount, props.showComments ? styles.actionCountPrimary : null]}>
-          {props.commentCount}
-        </Text>
-      ) : null}
-    </InstantPressable>
-  );
-}
-
-function FocusAction(props: Pick<
-  FeedActionButtonsProps,
-  'focusActionActive' | 'onFocusLongPress' | 'onFocusPress'
->) {
-  const handledLongPressRef = React.useRef(false);
-
-  return (
-    <InstantPressable
-      accessibilityLabel={tr.cards.focusMiniMap}
-      accessibilityRole="button"
-      style={[styles.actionButton, props.focusActionActive ? styles.primaryActionActive : null]}
-      delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
-      onPressIn={() => {
-        handledLongPressRef.current = false;
-      }}
-      onPress={() => {
-        if (handledLongPressRef.current) {
-          handledLongPressRef.current = false;
-          return;
-        }
-
-        props.onFocusPress?.();
-      }}
-      onLongPress={() => {
-        handledLongPressRef.current = true;
-        props.onFocusLongPress?.();
-      }}
-    >
-      <Crosshair size={16} color={props.focusActionActive ? colors.primary : colors.textMuted} />
+      <Text
+        accessible={false}
+        style={[
+          styles.actionCount,
+          props.showComments ? styles.actionCountPrimary : null,
+          props.commentCount === 0 ? styles.actionCountEmpty : null,
+        ]}
+      >
+        {props.commentCount}
+      </Text>
     </InstantPressable>
   );
 }
 
 export function FeedActionButtons(props: FeedActionButtonsProps) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actions}>
+    <View style={styles.actions}>
       <LikeAction {...props} />
 
       {props.showCommentAction ? (
@@ -149,33 +110,6 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
         </InstantPressable>
       ) : null}
 
-      {props.onFocusPress ? (
-        <FocusAction {...props} />
-      ) : null}
-
-      {props.showAddToList ? (
-        <InstantPressable
-          accessibilityLabel={tr.cards.addToListAction}
-          accessibilityRole="button"
-          style={styles.actionButton}
-          onPress={props.onAddToListPress}
-        >
-          <ListPlus size={16} color={colors.textMuted} />
-        </InstantPressable>
-      ) : null}
-
-      {props.locationAvailable ? (
-        <InstantPressable
-          accessibilityLabel={tr.cards.showAddressAction}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: props.showAddress }}
-          style={[styles.actionButton, props.showAddress ? styles.successActionActive : null]}
-          onPress={props.onToggleAddress}
-        >
-          <MapPin size={16} color={props.showAddress ? colors.secondary : colors.textMuted} />
-        </InstantPressable>
-      ) : null}
-
       {props.showOverflowAction && props.onOverflowPress ? (
         <InstantPressable
           accessibilityLabel={props.overflowActionLabel}
@@ -187,22 +121,14 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
         </InstantPressable>
       ) : null}
 
-      {props.showReportAction ? (
-        <InstantPressable
-          accessibilityLabel={tr.cards.reportAction}
-          accessibilityRole="button"
-          style={[styles.actionButton, props.showReportSheet ? styles.warningActionActive : null]}
-          onPress={props.onReportPress}
-        >
-          <Flag size={16} color={props.showReportSheet ? colors.warning : colors.textMuted} />
-        </InstantPressable>
-      ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
@@ -211,8 +137,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   actionButton: {
-    minWidth: 38,
-    height: 32,
+    minWidth: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.md,
     paddingHorizontal: 8,
     flexDirection: 'row',
@@ -221,14 +147,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actionCount: {
+    minWidth: 12,
+    textAlign: 'center',
     ...typography.metadataText,
     fontWeight: '700',
     color: colors.textMuted,
   },
   actionCountLiked: { color: colors.danger },
   actionCountPrimary: { color: colors.primary },
+  actionCountEmpty: { opacity: 0 },
   likeActionActive: { backgroundColor: colors.dangerBg },
   primaryActionActive: { backgroundColor: colors.primaryBg },
-  successActionActive: { backgroundColor: colors.successBg },
-  warningActionActive: { backgroundColor: colors.warningBg },
 });

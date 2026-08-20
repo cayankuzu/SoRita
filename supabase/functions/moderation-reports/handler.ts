@@ -69,8 +69,7 @@ type ModerationReportsHandlerDeps = {
   }) => Promise<EmailResult>;
 };
 
-const allowedOriginsFallback =
-  'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000';
+const allowedOriginsFallback = '';
 
 const reportIdSchema = z.string().trim().min(1).max(120);
 const reportReasonSchema = z.string().trim().min(1).max(160);

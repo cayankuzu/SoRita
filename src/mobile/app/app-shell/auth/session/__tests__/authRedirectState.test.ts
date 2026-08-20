@@ -17,7 +17,7 @@ vi.mock('expo-crypto', () => ({
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
   env: {
-    authWebOrigin: 'https://auth.example.com/sorita///',
+    appScheme: 'sorita',
   },
 }));
 
@@ -30,7 +30,7 @@ describe('authRedirectState', () => {
     vi.mocked(Crypto.randomUUID).mockReset();
   });
 
-  it('creates tracked web redirects and consumes matching state once', async () => {
+  it('creates tracked app redirects and consumes matching state once', async () => {
     vi.mocked(Crypto.randomUUID).mockReturnValue('state-1');
 
     const entry = await createTrackedAuthRedirect('signup');
@@ -40,7 +40,7 @@ describe('authRedirectState', () => {
       target: 'auth/callback',
       state: 'state-1',
       createdAt: nowMs,
-      url: 'https://auth.example.com/sorita/auth/callback/?flow=signup&state=state-1',
+      url: 'sorita://auth/callback?flow=signup&state=state-1',
     });
 
     await expect(
@@ -189,41 +189,32 @@ describe('authRedirectState', () => {
         'sorita://auth/callback?code=abc&flow=signup&state=hello+world#access_token=token%201&refresh_token=refresh&type=signup',
       ),
     ).toEqual({
-      accessToken: 'token 1',
       code: 'abc',
       error: undefined,
       errorCode: undefined,
       flow: 'signup',
-      refreshToken: 'refresh',
       state: 'hello world',
       target: 'auth/callback',
-      type: 'signup',
     });
 
     expect(
       normalizeAuthRedirectParams(
         {
-          access_token: ['first-token', 'second-token'],
           code: ['code-1'],
-          type: [123],
           error: 123,
           error_code: 'provider_denied',
           flow: 'password-reset',
-          refresh_token: 'refresh-token',
           state: ['state-1'],
         },
         'reset-password',
       ),
     ).toEqual({
-      accessToken: 'first-token',
       code: 'code-1',
       error: undefined,
       errorCode: 'provider_denied',
       flow: 'password-reset',
-      refreshToken: 'refresh-token',
       state: 'state-1',
       target: 'reset-password',
-      type: undefined,
     });
   });
 });
