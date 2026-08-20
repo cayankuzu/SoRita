@@ -110,6 +110,97 @@ function setLatestNotificationsCache(
   queryClient.setQueryData(queryKeys.notifications.unreadCount(userId), unreadCount);
 }
 
+type HydrateLatestNotifications = (
+  userId: string,
+  options?: { force?: boolean; notificationId?: string; reason?: string },
+) => Promise<void>;
+
+function useNotificationsRealtimeSubscription(params: {
+  booted: boolean;
+  hydrateLatestNotifications: HydrateLatestNotifications;
+  userId?: string;
+}) {
+  const { booted, hydrateLatestNotifications, userId } = params;
+  const realtimeBackoffAttemptRef = useRef(0);
+  const realtimeBackoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!booted || !userId) {
+      return;
+    }
+
+    const clearRealtimeBackoff = () => {
+      if (realtimeBackoffTimeoutRef.current) {
+        clearTimeout(realtimeBackoffTimeoutRef.current);
+        realtimeBackoffTimeoutRef.current = null;
+      }
+    };
+    const scheduleRealtimeBackoff = () => {
+      clearRealtimeBackoff();
+      const attempt = realtimeBackoffAttemptRef.current;
+      const baseDelay = REALTIME_BACKOFF_MS[Math.min(attempt, REALTIME_BACKOFF_MS.length - 1)];
+      const jitter = Math.round(baseDelay * 0.2 * Math.random());
+
+      realtimeBackoffAttemptRef.current = Math.min(attempt + 1, REALTIME_BACKOFF_MS.length - 1);
+      realtimeBackoffTimeoutRef.current = setTimeout(() => {
+        realtimeBackoffTimeoutRef.current = null;
+        void hydrateLatestNotifications(userId, {
+          force: true,
+          reason: 'realtime-backoff',
+        });
+      }, baseDelay + jitter);
+    };
+
+    const channel = supabase
+      .channel(`notifications:recipient:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const nextNotificationId =
+            typeof payload.new === 'object'
+            && payload.new
+            && 'id' in payload.new
+            && typeof payload.new.id === 'string'
+              ? payload.new.id
+              : undefined;
+
+          void hydrateLatestNotifications(userId, {
+            notificationId: nextNotificationId,
+            reason: 'realtime-insert',
+          });
+        },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          realtimeBackoffAttemptRef.current = 0;
+          clearRealtimeBackoff();
+          return;
+        }
+
+        if (status === 'CHANNEL_ERROR') {
+          logger.warn('push', `Notifications realtime channel failed for ${userId}`);
+          scheduleRealtimeBackoff();
+          return;
+        }
+
+        if (status === 'TIMED_OUT' || status === 'CLOSED') {
+          scheduleRealtimeBackoff();
+        }
+      });
+
+    return () => {
+      clearRealtimeBackoff();
+      void supabase.removeChannel(channel);
+    };
+  }, [booted, hydrateLatestNotifications, userId]);
+}
+
 export function PushNotificationsController() {
   const { booted, user } = useAuth();
   const registeredTokenRef = useRef<string | null>(null);
@@ -120,8 +211,6 @@ export function PushNotificationsController() {
   const lastHandledNotificationIdRef = useRef<string | null>(null);
   const lastHydrateAtRef = useRef(0);
   const recentNotificationEventsRef = useRef<Map<string, number>>(new Map());
-  const realtimeBackoffAttemptRef = useRef(0);
-  const realtimeBackoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void ensureForegroundNotificationPresentation();
@@ -193,6 +282,12 @@ export function PushNotificationsController() {
       logger.warn('push', `Failed to hydrate latest notifications cache (${options.reason || 'unknown'})`, error);
     }
   }, []);
+
+  useNotificationsRealtimeSubscription({
+    booted,
+    hydrateLatestNotifications,
+    userId: user?.id,
+  });
 
   const syncPushRegistration = useCallback(async function syncPushRegistration() {
     if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
@@ -346,82 +441,6 @@ export function PushNotificationsController() {
   useEffect(() => {
     lastHandledNotificationIdRef.current = null;
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!booted || !user?.id) {
-      return;
-    }
-
-    const clearRealtimeBackoff = () => {
-      if (realtimeBackoffTimeoutRef.current) {
-        clearTimeout(realtimeBackoffTimeoutRef.current);
-        realtimeBackoffTimeoutRef.current = null;
-      }
-    };
-    const scheduleRealtimeBackoff = () => {
-      clearRealtimeBackoff();
-      const attempt = realtimeBackoffAttemptRef.current;
-      const baseDelay = REALTIME_BACKOFF_MS[Math.min(attempt, REALTIME_BACKOFF_MS.length - 1)];
-      const jitter = Math.round(baseDelay * 0.2 * Math.random());
-
-      realtimeBackoffAttemptRef.current = Math.min(attempt + 1, REALTIME_BACKOFF_MS.length - 1);
-      realtimeBackoffTimeoutRef.current = setTimeout(() => {
-        realtimeBackoffTimeoutRef.current = null;
-        void hydrateLatestNotifications(user.id, {
-          force: true,
-          reason: 'realtime-backoff',
-        });
-      }, baseDelay + jitter);
-    };
-
-    const channel = supabase
-      .channel(`notifications:recipient:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const nextNotificationId =
-            typeof payload.new === 'object' &&
-            payload.new &&
-            'id' in payload.new &&
-            typeof payload.new.id === 'string'
-              ? payload.new.id
-              : undefined;
-
-          void hydrateLatestNotifications(user.id, {
-            notificationId: nextNotificationId,
-            reason: 'realtime-insert',
-          });
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          realtimeBackoffAttemptRef.current = 0;
-          clearRealtimeBackoff();
-          return;
-        }
-
-        if (status === 'CHANNEL_ERROR') {
-          logger.warn('push', `Notifications realtime channel failed for ${user.id}`);
-          scheduleRealtimeBackoff();
-          return;
-        }
-
-        if (status === 'TIMED_OUT' || status === 'CLOSED') {
-          scheduleRealtimeBackoff();
-        }
-      });
-
-    return () => {
-      clearRealtimeBackoff();
-      void supabase.removeChannel(channel);
-    };
-  }, [booted, hydrateLatestNotifications, user?.id]);
 
   useEffect(() => {
     if (!booted || !notificationRuntime.supportsNotificationObservers) {

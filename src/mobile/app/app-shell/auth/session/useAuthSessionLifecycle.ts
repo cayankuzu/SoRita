@@ -34,6 +34,24 @@ const AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS = 5 * 60_000;
 const AUTH_SESSION_REVALIDATION_MIN_DELAY_MS = 30_000;
 const AUTH_SESSION_REVALIDATION_RETRY_DELAY_MS = 60_000;
 
+function getSessionRevalidationDelay(session: Session | null) {
+  if (typeof session?.expires_at !== 'number') {
+    return null;
+  }
+
+  return Math.max(
+    AUTH_SESSION_REVALIDATION_MIN_DELAY_MS,
+    session.expires_at * 1000 - Date.now() - AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS,
+  );
+}
+
+function isSessionInsideExpirySafetyWindow(session: Session | null) {
+  return (
+    typeof session?.expires_at === 'number'
+    && session.expires_at * 1000 - Date.now() <= AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS
+  );
+}
+
 export function useAuthSessionLifecycle({
   setBooted,
   setUser,
@@ -211,22 +229,6 @@ export function useAuthSessionLifecycle({
         sessionRevalidationTimeout = null;
       }
     };
-
-    const getSessionRevalidationDelay = (session: Session | null) => {
-      if (typeof session?.expires_at !== 'number') {
-        return null;
-      }
-
-      return Math.max(
-        AUTH_SESSION_REVALIDATION_MIN_DELAY_MS,
-        session.expires_at * 1000 - Date.now() - AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS,
-      );
-    };
-
-    const isSessionInsideExpirySafetyWindow = (session: Session | null) => (
-      typeof session?.expires_at === 'number' &&
-      session.expires_at * 1000 - Date.now() <= AUTH_SESSION_EXPIRY_SAFETY_WINDOW_MS
-    );
 
     const scheduleSessionRevalidation = (session: Session | null, overrideDelay?: number) => {
       stopScheduledSessionRevalidation();

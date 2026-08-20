@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createAdminBroadcastNotificationHandler } from './handler';
 
-const IDEMPOTENCY_KEY = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+const IDEMPOTENCY_KEY = '00000000-0000-4000-8000-000000000001';
 
 function createDeps(options?: {
   fetchRecipientUserIds?: string[];
@@ -187,6 +187,28 @@ describe('admin-broadcast-notification handler', () => {
     expect(response.headers.get('retry-after')).toBe('13');
     expect(response.headers.get('x-ratelimit-remaining')).toBe('0');
     expect(fetchRecipientUserIds).not.toHaveBeenCalled();
+  });
+
+  it('uses safe retry-after bounds when the limiter omits or zeroes its delay', async () => {
+    const { enforceAdminRateLimit, handler, token } = createDeps();
+
+    enforceAdminRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0 });
+    const defaultDelayResponse = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      }),
+    );
+    expect(defaultDelayResponse.headers.get('retry-after')).toBe('60');
+
+    enforceAdminRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0, retryAfterMs: 0 });
+    const minimumDelayResponse = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      }),
+    );
+    expect(minimumDelayResponse.headers.get('retry-after')).toBe('1');
   });
 
   it('handles CORS, methods, configuration, invalid payloads, empty recipients, and failures', async () => {

@@ -164,6 +164,88 @@ type CommentPanelProps = {
   isFetchingNextPage?: boolean;
 };
 
+function useAndroidCommentKeyboardLift(params: {
+  overlayBottomPadding: number;
+  visible: boolean;
+}) {
+  const composerDockRef = React.useRef<View | null>(null);
+  const keyboardLiftRef = React.useRef(0);
+  const keyboardMeasureFrameRef = React.useRef<number | null>(null);
+  const [keyboardLift, setKeyboardLift] = useState(0);
+
+  useEffect(() => {
+    if (!params.visible) {
+      keyboardLiftRef.current = 0;
+      setKeyboardLift(0);
+    }
+  }, [params.visible]);
+
+  useEffect(() => {
+    if (!params.visible || Platform.OS !== 'android') {
+      return;
+    }
+
+    const commitKeyboardLift = (frame: KeyboardFrame, composerBottom: number) => {
+      const nextLift = resolveAndroidKeyboardLift({
+        composerBottom,
+        keyboardTop: frame.screenY,
+      });
+      keyboardLiftRef.current = nextLift;
+      setKeyboardLift(nextLift);
+    };
+    const handleKeyboardShow = (event: KeyboardEvent) => {
+      const keyboardFrame = {
+        height: event.endCoordinates.height,
+        screenY: event.endCoordinates.screenY,
+      };
+      const fallbackComposerBottom =
+        Dimensions.get('screen').height - params.overlayBottomPadding;
+
+      if (keyboardMeasureFrameRef.current != null) {
+        cancelAnimationFrame(keyboardMeasureFrameRef.current);
+      }
+      keyboardMeasureFrameRef.current = requestAnimationFrame(() => {
+        keyboardMeasureFrameRef.current = null;
+        const composerDock = composerDockRef.current;
+        if (!composerDock) {
+          commitKeyboardLift(keyboardFrame, fallbackComposerBottom);
+          return;
+        }
+
+        composerDock.measureInWindow((_x, y, _width, height) => {
+          const unshiftedComposerBottom = y + height + keyboardLiftRef.current;
+          commitKeyboardLift(keyboardFrame, unshiftedComposerBottom);
+        });
+      });
+    };
+    const handleKeyboardHide = () => {
+      keyboardLiftRef.current = 0;
+      setKeyboardLift(0);
+    };
+
+    const currentFrame = Keyboard.metrics?.();
+    if (currentFrame) {
+      handleKeyboardShow({ endCoordinates: currentFrame } as KeyboardEvent);
+    }
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', handleKeyboardShow);
+    const frameSubscription = Keyboard.addListener('keyboardDidChangeFrame', handleKeyboardShow);
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
+
+    return () => {
+      if (keyboardMeasureFrameRef.current != null) {
+        cancelAnimationFrame(keyboardMeasureFrameRef.current);
+        keyboardMeasureFrameRef.current = null;
+      }
+      showSubscription.remove();
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [params.overlayBottomPadding, params.visible]);
+
+  return { composerDockRef, keyboardLift };
+}
+
 export function CommentPanel({
   visible,
   comments,
@@ -214,10 +296,10 @@ export function CommentPanel({
   const [visibleReplyCounts, setVisibleReplyCounts] = useState<Record<string, number>>({});
   const [activeLikedComment, setActiveLikedComment] = useState<FeedActionComment | null>(null);
   const [activeMenuComment, setActiveMenuComment] = useState<FeedActionComment | null>(null);
-  const composerDockRef = React.useRef<View | null>(null);
-  const keyboardLiftRef = React.useRef(0);
-  const keyboardMeasureFrameRef = React.useRef<number | null>(null);
-  const [keyboardLift, setKeyboardLift] = useState(0);
+  const { composerDockRef, keyboardLift } = useAndroidCommentKeyboardLift({
+    overlayBottomPadding,
+    visible,
+  });
 
   const totalComments = useMemo(() => countCommentTree(comments), [comments]);
   const visibleComments = useMemo(
@@ -232,8 +314,6 @@ export function CommentPanel({
       setActiveMenuComment(null);
       setExpandedReplies({});
       setVisibleReplyCounts({});
-      keyboardLiftRef.current = 0;
-      setKeyboardLift(0);
     }
   }, [visible]);
 
@@ -250,72 +330,6 @@ export function CommentPanel({
       showToast(tr.cards.commentCopyFailed, 'error');
     }
   }, []);
-
-  useEffect(() => {
-    if (!visible || Platform.OS !== 'android') {
-      return;
-    }
-
-    const commitKeyboardLift = (frame: KeyboardFrame, composerBottom: number) => {
-      const nextLift = resolveAndroidKeyboardLift({
-        composerBottom,
-        keyboardTop: frame.screenY,
-      });
-      keyboardLiftRef.current = nextLift;
-      setKeyboardLift(nextLift);
-    };
-    const handleKeyboardShow = (event: KeyboardEvent) => {
-      const keyboardFrame = {
-        height: event.endCoordinates.height,
-        screenY: event.endCoordinates.screenY,
-      };
-      const fallbackComposerBottom =
-        Dimensions.get('screen').height - overlayBottomPadding;
-
-      if (keyboardMeasureFrameRef.current != null) {
-        cancelAnimationFrame(keyboardMeasureFrameRef.current);
-      }
-      keyboardMeasureFrameRef.current = requestAnimationFrame(() => {
-        keyboardMeasureFrameRef.current = null;
-        const composerDock = composerDockRef.current;
-        if (!composerDock) {
-          commitKeyboardLift(keyboardFrame, fallbackComposerBottom);
-          return;
-        }
-
-        composerDock.measureInWindow((_x, y, _width, height) => {
-          // Add the existing lift back to recover the dock's unshifted screen
-          // position when the keyboard changes height while already visible.
-          const unshiftedComposerBottom =
-            y + height + keyboardLiftRef.current;
-          commitKeyboardLift(keyboardFrame, unshiftedComposerBottom);
-        });
-      });
-    };
-    const handleKeyboardHide = () => {
-      keyboardLiftRef.current = 0;
-      setKeyboardLift(0);
-    };
-
-    const currentFrame = Keyboard.metrics?.();
-    if (currentFrame) {
-      handleKeyboardShow({ endCoordinates: currentFrame } as KeyboardEvent);
-    }
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', handleKeyboardShow);
-    const frameSubscription = Keyboard.addListener('keyboardDidChangeFrame', handleKeyboardShow);
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
-
-    return () => {
-      if (keyboardMeasureFrameRef.current != null) {
-        cancelAnimationFrame(keyboardMeasureFrameRef.current);
-        keyboardMeasureFrameRef.current = null;
-      }
-      showSubscription.remove();
-      frameSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [overlayBottomPadding, visible]);
 
   const toggleReplies = (commentId: string) => {
     setExpandedReplies((current) => ({

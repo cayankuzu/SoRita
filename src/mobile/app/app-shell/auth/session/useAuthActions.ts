@@ -168,6 +168,99 @@ type UseAuthActionsParams = {
   setUser: Dispatch<SetStateAction<User | null>>;
 };
 
+function useAuthenticatedPasswordReset(user: User | null) {
+  return useCallback(
+    async (currentPassword: string): Promise<AuthActionResult> => {
+      if (!user) {
+        return { success: false, code: 'unexpected' };
+      }
+
+      const { createTrackedAuthRedirect, discardPendingAuthRedirectState } = await loadAuthRedirectState();
+      const redirect = await createTrackedAuthRedirect('password-reset');
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (error || !session?.access_token) {
+        await discardPendingAuthRedirectState(redirect.state);
+        return { success: false, code: 'unexpected', message: error?.message };
+      }
+
+      let passwordResetEmail = user.email;
+
+      try {
+        await callJsonEdgeFunction<{ success: true }>(
+          env.supabaseAuthGatewayFunctionName,
+          {
+            action: 'prepare-password-reset-authenticated',
+            currentPassword,
+          },
+          {
+            accessToken: session.access_token,
+          },
+        );
+      } catch (edgeError) {
+        if (!shouldFallbackToDirectSupabaseAuth(edgeError)) {
+          await discardPendingAuthRedirectState(redirect.state);
+          return toAuthActionResult(edgeError);
+        }
+
+        const {
+          data: authenticatedUserData,
+          error: authenticatedUserError,
+        } = await supabase.auth.getUser();
+        const authenticatedUserEmail = authenticatedUserData.user?.email ?? null;
+
+        if (authenticatedUserError || !authenticatedUserEmail) {
+          await discardPendingAuthRedirectState(redirect.state);
+          return {
+            success: false,
+            code: 'unexpected',
+            message: authenticatedUserError?.message ?? 'Oturum dogrulanamadi.',
+          };
+        }
+
+        passwordResetEmail = authenticatedUserEmail;
+
+        const verificationResult = await supabase.auth.signInWithPassword({
+          email: authenticatedUserEmail,
+          password: currentPassword,
+        });
+
+        if (verificationResult.error) {
+          await discardPendingAuthRedirectState(redirect.state);
+          return toFallbackAuthActionResult(verificationResult.error);
+        }
+
+        if (verificationResult.data.session) {
+          await persistAuthSession(verificationResult.data.session);
+        }
+      }
+
+      try {
+        const resetPasswordResult = await supabase.auth.resetPasswordForEmail(
+          passwordResetEmail,
+          {
+            redirectTo: redirect.url,
+          },
+        );
+
+        if (resetPasswordResult.error) {
+          await discardPendingAuthRedirectState(redirect.state);
+          return toFallbackAuthActionResult(resetPasswordResult.error);
+        }
+      } catch (resetError) {
+        await discardPendingAuthRedirectState(redirect.state);
+        return toFallbackAuthActionResult(resetError);
+      }
+
+      return { success: true };
+    },
+    [user],
+  );
+}
+
 export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
   const refreshUser = useCallback(async () => {
     const {
@@ -421,96 +514,7 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
     return { success: true };
   }, []);
 
-  const requestPasswordReset = useCallback(
-    async (currentPassword: string): Promise<AuthActionResult> => {
-      if (!user) {
-        return { success: false, code: 'unexpected' };
-      }
-
-      const { createTrackedAuthRedirect, discardPendingAuthRedirectState } = await loadAuthRedirectState();
-      const redirect = await createTrackedAuthRedirect('password-reset');
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error || !session?.access_token) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return { success: false, code: 'unexpected', message: error?.message };
-      }
-
-      let passwordResetEmail = user.email;
-
-      try {
-        await callJsonEdgeFunction<{ success: true }>(
-          env.supabaseAuthGatewayFunctionName,
-          {
-            action: 'prepare-password-reset-authenticated',
-            currentPassword,
-          },
-          {
-            accessToken: session.access_token,
-          },
-        );
-      } catch (edgeError) {
-        if (!shouldFallbackToDirectSupabaseAuth(edgeError)) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toAuthActionResult(edgeError);
-        }
-
-        const {
-          data: authenticatedUserData,
-          error: authenticatedUserError,
-        } = await supabase.auth.getUser();
-        const authenticatedUserEmail = authenticatedUserData.user?.email ?? null;
-
-        if (authenticatedUserError || !authenticatedUserEmail) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return {
-            success: false,
-            code: 'unexpected',
-            message: authenticatedUserError?.message ?? 'Oturum dogrulanamadi.',
-          };
-        }
-
-        passwordResetEmail = authenticatedUserEmail;
-
-        const verificationResult = await supabase.auth.signInWithPassword({
-          email: authenticatedUserEmail,
-          password: currentPassword,
-        });
-
-        if (verificationResult.error) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toFallbackAuthActionResult(verificationResult.error);
-        }
-
-        if (verificationResult.data.session) {
-          await persistAuthSession(verificationResult.data.session);
-        }
-      }
-
-      try {
-        const resetPasswordResult = await supabase.auth.resetPasswordForEmail(
-          passwordResetEmail,
-          {
-            redirectTo: redirect.url,
-          },
-        );
-
-        if (resetPasswordResult.error) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toFallbackAuthActionResult(resetPasswordResult.error);
-        }
-      } catch (resetError) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toFallbackAuthActionResult(resetError);
-      }
-
-      return { success: true };
-    },
-    [user],
-  );
+  const requestPasswordReset = useAuthenticatedPasswordReset(user);
 
   const logout = useCallback(async () => {
     const [{ unregisterAllPushNotifications }, { unregisterSystemPushNotifications }] =
