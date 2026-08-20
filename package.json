@@ -118,7 +118,7 @@
     "@types/react-test-renderer": "^19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.64.0",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.10",
     "babel-plugin-module-resolver": "^5.0.3",
     "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -127,7 +127,7 @@
     "msw": "^2.13.3",
     "react-test-renderer": "^19.2.0",
     "typescript": "^5.9.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "@babel/core": "7.29.7",
