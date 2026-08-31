@@ -1,0 +1,6 @@
+# Reviewed public/non-secret values already present in the reset main history.
+# New findings remain fail-closed because only exact historical fingerprints are listed.
+17df4e1cd407dc4b8c1c7ab1d40d6c2da557184b:supabase/functions/admin-broadcast-notification/handler.test.ts:generic-api-key:5
+89d9bc89835d55e3fd8415e0225a21213bd05692:android/app/google-services.json:gcp-api-key:18
+89d9bc89835d55e3fd8415e0225a21213bd05692:eas.json:generic-api-key:31
+89d9bc89835d55e3fd8415e0225a21213bd05692:google-services.json:gcp-api-key:18

@@ -8,6 +8,7 @@ function workflow(name) {
 }
 
 const quality = workflow('quality.yml');
+const gitleaksIgnore = readFileSync(resolve(process.cwd(), '.gitleaksignore'), 'utf8');
 const database = workflow('database-validation.yml');
 const cloudflarePreview = workflow('cloudflare-preview.yml');
 const cloudflareProduction = workflow('cloudflare-production.yml');
@@ -27,7 +28,17 @@ test('quality runs release, Worker, SAST and full-history secret gates', () => {
   assert.match(quality, /infra\/cloudflare\/sorita-edge/u);
   assert.match(quality, /semgrep scan/u);
   assert.match(quality, /gitleaks\/gitleaks:v8\.29\.0@sha256:[0-9a-f]{64}/u);
+  assert.match(quality, /--gitleaks-ignore-path=\/repo\/\.gitleaksignore/u);
   assert.match(quality, /--log-opts="--all"/u);
+
+  const reviewedFingerprints = gitleaksIgnore
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+  assert.equal(reviewedFingerprints.length, 4);
+  for (const fingerprint of reviewedFingerprints) {
+    assert.match(fingerprint, /^[0-9a-f]{40}:[^:]+:[a-z0-9-]+:\d+$/u);
+  }
 });
 
 test('database workflow replays, tests, lints and restores migrations', () => {
