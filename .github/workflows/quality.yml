@@ -99,5 +99,5 @@ jobs:
         run: >-
           docker run --rm
           --volume "${GITHUB_WORKSPACE}:/repo"
-          ghcr.io/gitleaks/gitleaks:v8.29.0@sha256:29c8a0572eae6d8ce620db1a4599663d43b06b0a8f90e42ded2ad5f63ac57f71
+          ghcr.io/gitleaks/gitleaks:v8.29.0@sha256:507de9682470025fb3e7f57fe4c4ca8263d81369e027b6538b8a252a9c0371d4
           git --redact --log-opts="--all" /repo
