@@ -4,6 +4,7 @@ import type { AuthChangeEvent, Session, User as SupabaseAuthUser } from '@supaba
 import { Alert, AppState } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
+import { purgeAuthenticatedUserState } from '@/mobile/app/app-shell/auth/session/authUserStatePurge';
 import {
   clearCurrentUserState,
   getActiveOrPersistedSession,
@@ -19,6 +20,7 @@ import {
 import { isPasswordRecoverySessionExchangeActive } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { refreshSupabaseSession } from '@/mobile/app/platform/supabase/sessionRefresh';
 import { t } from '@/mobile/app/shared/i18n';
 import {
   AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
@@ -52,6 +54,22 @@ function isSessionInsideExpirySafetyWindow(session: Session | null) {
   );
 }
 
+async function transitionAuthScope(previousUserId: string | null, nextUserId: string | null) {
+  if (previousUserId === nextUserId) {
+    return previousUserId;
+  }
+
+  try {
+    await purgeAuthenticatedUserState(previousUserId);
+  } catch (error) {
+    logger.warn('auth', 'Failed to fully purge the previous auth scope.', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+  }
+
+  return nextUserId;
+}
+
 export function useAuthSessionLifecycle({
   setBooted,
   setUser,
@@ -64,6 +82,7 @@ export function useAuthSessionLifecycle({
     let sessionRevalidationGeneration = 0;
     let sessionRevalidationInFlight: Promise<void> | null = null;
     let bootstrapFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
+    let activeAuthUserId: string | null = null;
 
     const setBootedIfMounted = () => {
       if (mounted) {
@@ -92,6 +111,7 @@ export function useAuthSessionLifecycle({
       hasShownMissingAccountAlert = true;
       await persistAuthSession(null);
       await supabase.auth.signOut().catch((err) => { logger.debug('auth', 'Failed to sign out after missing account', err); });
+      activeAuthUserId = await transitionAuthScope(activeAuthUserId, null);
       clearSignedOutState();
 
       if (mounted) {
@@ -104,6 +124,8 @@ export function useAuthSessionLifecycle({
 
     const syncAuthState = async (authUser: SupabaseAuthUser | null, session: Session | null) => {
       try {
+        activeAuthUserId = await transitionAuthScope(activeAuthUserId, authUser?.id ?? null);
+
         if (!authUser) {
           clearSignedOutState();
           return;
@@ -181,7 +203,7 @@ export function useAuthSessionLifecycle({
         let sessionToValidate = session;
 
         if (options.refreshIfExpiring && isSessionInsideExpirySafetyWindow(session)) {
-          const { data, error } = await supabase.auth.refreshSession();
+          const { data, error } = await refreshSupabaseSession();
 
           if (error) {
             logger.warn('auth', 'Failed to refresh auth session before expiry', error);
@@ -278,6 +300,7 @@ export function useAuthSessionLifecycle({
         const persistedUser = await getPersistedAuthUserSnapshot();
 
         if (persistedUser) {
+          activeAuthUserId = persistedUser.id;
           setUserIfMounted(persistedUser);
           let cacheRestoreBudgetTimeout: ReturnType<typeof setTimeout> | null = null;
           const cacheRestore = restorePersistedVisibleDataSnapshot(persistedUser.id).catch((error) => {

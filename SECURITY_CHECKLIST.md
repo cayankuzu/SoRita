@@ -1,27 +1,70 @@
 # Security Checklist
 
-Last updated: 2026-06-28
+Last updated: 2026-08-30
 
-| Status | Area | Current state |
+`[x]` means repository implementation and automated coverage exist. It does not
+claim that deployment, provider configuration, staging, or runtime evidence has
+been completed. Those external checks remain release gates.
+
+| Status | Area | Current repository state |
 | --- | --- | --- |
-| `[x]` | 1. Secrets & Environment Variables | Public client config was separated from server secrets. `GOOGLE_MAPS_SERVICES_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` remain server-only, `.env.example` lists required variables, and this private repo intentionally retains the local env/config files needed to resume development on a new machine. |
-| `[x]` | 2. Rate Limiting | Edge functions now enforce per-scope rate limiting for auth, media uploads, maps geocoding, and account deletion. `429` responses include rate-limit headers and `Retry-After` where applicable. |
-| `[x]` | 3. Input Validation & Sanitization | Auth, media, maps, and delete-user edge functions validate input with `zod`. Database-side normalization and length enforcement were added through the hardening migration. |
-| `[x]` | 4. Auth & Authorization | Sensitive auth flows moved behind `auth-gateway`. Signed edge requests, access-token verification, session rehydration, and temporary login lockouts are enforced. |
-| `[x]` | 5. SQL & Database Security | New migration adds guard tables, RPCs, input normalization helpers, and stricter constraints. Client-side direct availability checks were replaced by the server-side auth gateway. |
-| `[x]` | 6. CORS | Edge functions use explicit origin allowlists instead of permissive wildcard behavior. Redirect targets are validated against an allowlist. |
-| `[x]` | 7. HTTP Security Headers | Shared edge HTTP helpers now attach CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` headers. |
-| `[x]` | 8. File Upload Security | Media uploads are proxied through the edge layer, validated by content type and file signature, constrained by size, and stored with generated object paths instead of raw user filenames. |
-| `[x]` | 9. Error Handling & Logging | Edge functions now return controlled client-safe errors, distinguish `4xx` from `5xx`, and emit structured server logs with request metadata. |
-| `[~]` | 10. Dependency Security | `npm audit` is down to `0` critical and `0` high. Remaining issues are `19` moderate and `1` low, primarily from Expo/React Native upstream packages that require framework upgrades. |
-| `[x]` | 11. XSS Prevention | No active `dangerouslySetInnerHTML`, `eval`, `new Function`, or direct browser-side LLM HTML rendering paths were found in the scanned app code. |
-| `[~]` | 12. Deploy Checklist | Repo-side requirements are prepared, but platform-side rollout still requires a Supabase CLI session plus project DB credentials to apply migrations/functions and verify production hosting settings. |
-| `[x]` | AI/LLM Special Rules | No app-side LLM proxy flow is currently active in the mobile/web code. There is no browser-side model secret exposure in the implemented app paths. |
+| `[x]` | Secrets and runtime config | Client-visible Expo values and server-only secrets are separated in `.env.example`. Real service-role, HMAC, email-provider, EAS, Cloudflare, and Sentry secrets must stay in their protected provider environments and must not be committed. |
+| `[x]` | Authentication and authorization | Sensitive auth operations use `auth-gateway`; public responses are enumeration-safe, signed requests and access tokens are verified, availability cannot be called directly by anonymous/authenticated roles, and session refresh is single-flight. |
+| `[x]` | Rate limiting | High-risk Edge Functions use the atomic database limiter and fail closed when limiter storage is unavailable. The selective Cloudflare gateway adds route/user/IP controls without an in-memory global limiter. |
+| `[x]` | Input validation and request integrity | Auth, media, maps, moderation, and deletion handlers enforce bounded schemas, methods, signed request freshness/nonces, body limits, and controlled error contracts. Selective-Cloudflare requests additionally require a timestamped, replay-protected origin HMAC once the reviewed cutover flag is enabled. |
+| `[x]` | SQL, RLS, and least privilege | Forward-only migrations harden mass assignment and function grants. Private operational ledgers, including deletion and moderation cases, are hidden from app roles; service-role moderation writes are restricted to an audited transition RPC. |
+| `[x]` | CORS and browser origins | Authenticated Edge Functions use exact allowlists. `MODERATION_REPORTS_ALLOWED_ORIGINS` is explicit; wildcard authenticated CORS is not supported. Native requests do not rely on browser CORS as authorization. |
+| `[x]` | HTTP security headers | Shared Edge Function responses and the selective Worker attach the repository's security/no-store headers. Authorization is still enforced by JWT, signatures, RLS, and origin checks rather than headers alone. |
+| `[x]` | File upload security | Upload bytes go directly to Supabase Storage with short-lived signed upload authorization, generated owner-scoped paths, content/size validation, finalize checks, private read authorization, cancellation, and bounded retry. The Cloudflare Worker never proxies upload bodies. |
+| `[x]` | Moderation intake and operations | Existing report flows are authenticated, signed, idempotent, rate-limited, and checked through reporter-scoped RLS before service-role evidence capture. Alert email contains only opaque report/type routing data. Internal case status, SLA metadata, append-only audit events, and confirmed CLI/RPC transitions add admin-panel-free review/close/sanction/appeal operations. |
+| `[x]` | Error handling and logging | Client responses are controlled and unexpected moderation failures no longer return raw database/provider messages. Logs use request IDs and bounded error codes; tokens, signed URLs, report snapshots, user details, and precise location must not be logged. |
+| `[x]` | Account deletion and private state | Deletion is an idempotent leased saga with reconciliation. Logout/account changes purge owner-scoped query, snapshot, outbox, signed-URL, and media state. |
+| `[x]` | Durable upload cleanup source | Upload sessions use a private lease/state ledger, reference gates and repeated cleanup horizons. A protected bounded GitHub sweeper definition and unit guard exist; hosted execution remains an external gate. |
+| `[x]` | Supply-chain automation | Release workflows include production dependency audit, license/provenance checks, Semgrep, full-history Gitleaks, pinned critical actions, and same-SHA release evidence. |
+| `[~]` | Dependency/runtime findings | Counts must come from the current immutable commit's `npm audit`, Expo Doctor, native build, and signed artifact evidence. This checklist intentionally does not preserve stale vulnerability counts. |
+| `[~]` | Deployment and runtime verification | Repository gates are prepared, but Supabase migration/function deployment, Cloudflare protected environments, EAS signing, staging tests, real-device tests, restore drills, canary, and rollback evidence remain external `NO-GO` gates. |
 
-## Manual Follow-up
+## Automated verification
 
-- `[ ]` Apply the pending Supabase migrations in the target project with `npx supabase db push --linked --include-all`.
-- `[ ]` Deploy the current edge functions: `auth-gateway`, `maps-geocoding`, `media-assets`, and `delete-user`.
-- `[ ]` Populate production environment variables from `.env.example` in the hosting and Supabase environments.
-- `[ ]` Revisit the remaining `npm audit` moderate findings when the project is ready for an Expo / React Native framework upgrade.
-- `[ ]` Restore or rewrite `src/mobile/app/features/settings/application/__tests__/useSettingsScreenState.test.tsx` after the Windows-specific Vitest OOM issue is investigated. The main `npm test` flow currently excludes that file to keep CI stable.
+Run from the repository root:
+
+```powershell
+npm run security:verify
+npm run security:audit:prod
+npm run security:licenses
+npm run security:provenance
+npm run feature-surface:check
+npm run ops:test
+```
+
+`security:verify` explicitly includes the `moderation-reports` handler suite as
+well as auth, client/origin request-signing, maps, media, deletion, and
+private-media coverage.
+Database privilege and lifecycle behavior are covered by
+`supabase/tests/rls_and_security.sql`,
+`supabase/tests/account_deletion_moderation_retention.sql`,
+`supabase/tests/cloudflare_origin_security.sql`, and
+`supabase/tests/moderation_ops_security.sql` when `supabase test db` runs.
+
+## Manual release gates
+
+- `[ ]` Apply all pending migrations to isolated staging; run migration replay,
+  DB lint, both pgTAP suites, and dump/restore against the same commit SHA.
+- `[ ]` Deploy `auth-gateway`, `maps-geocoding`, `media-assets`, `moderation-reports`,
+  and `delete-user` with exact secrets/origin allowlists from protected storage.
+- `[ ]` Prove hosted Supabase Auth rate limits, CAPTCHA/bot controls, email
+  confirmation/change behavior, exact redirect allowlist, password/leak policy
+  and the recorded MFA decision for direct `/auth/v1` traffic.
+- `[ ]` Provision and exercise the protected media-upload sweeper in staging,
+  attach retry/reference-safety reconciliation plus alert delivery evidence, and
+  then prove scheduled hosted execution on the exact release SHA.
+- `[ ]` Exercise reporter-visible, reporter-invisible, blocked, duplicate,
+  rate-limited, email-provider-down, and audited moderation case transitions in
+  staging without printing report content or credentials.
+- `[ ]` Configure an approved moderation SLA policy through the audited
+  `set-sla` operation. No SLA duration is assumed by repository code.
+- `[ ]` Attach current full-history secret scan, SAST, dependency, signed
+  Android/iOS artifact, real-device, Cloudflare/EAS canary/rollback, incident,
+  and restore evidence to the immutable release SHA.
+- `[ ]` Follow `docs/MANUAL_STEPS.md`; absent external evidence keeps the release
+  `NO-GO` even when repository checks pass.

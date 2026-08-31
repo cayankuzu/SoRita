@@ -14,6 +14,11 @@ describe('app.config push notification extras', () => {
     vi.resetModules();
     process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'publishable-key';
+    process.env.EXPO_PUBLIC_EDGE_API_URL = '';
+    process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'direct';
+    process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = 'development';
+    process.env.EXPO_PUBLIC_EXPO_PROJECT_ID = 'b4a62a22-92dd-4867-ab44-f9131d958ed2';
+    delete process.env.EAS_BUILD_PROFILE;
     delete process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS;
   });
 
@@ -55,5 +60,54 @@ describe('app.config push notification extras', () => {
       { defaultChannel: androidNotificationChannelId },
     ]);
     warnSpy.mockRestore();
+  });
+
+  it('embeds explicit direct cutover and release metadata by default', async () => {
+    const config = await loadAppConfig();
+
+    expect(config.extra).toMatchObject({
+      edgeApiUrl: '',
+      edgeCutoverMode: 'direct',
+      releaseEnvironment: 'development',
+    });
+  });
+
+  it('normalizes a validated HTTPS gateway URL', async () => {
+    process.env.EXPO_PUBLIC_EDGE_API_URL = '  https://api.example.com/edge/  ';
+    process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
+    process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = 'preview';
+
+    const config = await loadAppConfig();
+
+    expect(config.extra).toMatchObject({
+      edgeApiUrl: 'https://api.example.com/edge',
+      edgeCutoverMode: 'gateway',
+      releaseEnvironment: 'preview',
+    });
+  });
+
+  it('fails closed when gateway mode has no HTTPS base URL', async () => {
+    process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
+    process.env.EXPO_PUBLIC_EDGE_API_URL = '';
+
+    await expect(loadAppConfig()).rejects.toThrow(
+      'Edge API URL is required when gateway cutover mode is enabled.',
+    );
+  });
+
+  it('rejects insecure gateway URLs', async () => {
+    process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
+    process.env.EXPO_PUBLIC_EDGE_API_URL = 'http://api.example.com';
+
+    await expect(loadAppConfig()).rejects.toThrow('Edge API URL must be an HTTPS base URL');
+  });
+
+  it('uses a recognized EAS build profile as release metadata when no override is set', async () => {
+    process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = '';
+    process.env.EAS_BUILD_PROFILE = 'production';
+
+    const config = await loadAppConfig();
+
+    expect(config.extra?.releaseEnvironment).toBe('production');
   });
 });

@@ -6,11 +6,12 @@ import { createMediaAssetsHandler } from './handler';
 const validPngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HwAIAgMBgOnl9QAAAABJRU5ErkJggg==';
 const validPngBytes = Uint8Array.from(Buffer.from(validPngBase64, 'base64'));
+const uploadSessionId = '11111111-1111-4111-8111-111111111111';
 
 function createDeps(options?: {
   allowedOrigins?: string[];
-  claimsResult?: {
-    data?: { claims?: { sub?: string } | null } | null;
+  userResult?: {
+    data?: { user?: { id?: string } | null } | null;
     error?: { message: string } | null;
   };
   config?: {
@@ -41,17 +42,30 @@ function createDeps(options?: {
     error?: { message: string } | null;
   };
   objectPrefixBytes?: Uint8Array;
+  copyError?: { message: string } | null;
+  signedUploadError?: { message: string } | null;
   uploadError?: { message: string } | null;
+  uploadSession?: {
+    contentType: string;
+    destinationBucket: 'profile-media' | 'place-media' | 'place-media-private';
+    destinationPath: string;
+    expectedSizeBytes: number;
+    status?: 'pending' | 'finalized';
+    uploadPath: string;
+  };
 }) {
   const uploadMock = vi.fn().mockResolvedValue({ error: options?.uploadError ?? null });
+  const copyMock = vi.fn().mockResolvedValue({ error: options?.copyError ?? null });
   const removeMock = vi.fn().mockResolvedValue({ error: options?.removeError ?? null });
   const createSignedUploadUrlMock = vi.fn().mockImplementation((path: string) =>
-    Promise.resolve({
-      data: {
-        signedUrl: `https://storage.example/upload/${encodeURIComponent(path)}`,
-      },
-      error: null,
-    }));
+    Promise.resolve(options?.signedUploadError
+      ? { data: null, error: options.signedUploadError }
+      : {
+          data: {
+            signedUrl: `https://storage.example/upload/${encodeURIComponent(path)}`,
+          },
+          error: null,
+        }));
   const createSignedUrlMock = vi.fn().mockImplementation((path: string) =>
     Promise.resolve({
       data: {
@@ -98,14 +112,28 @@ function createDeps(options?: {
 
     return { error: null };
   });
-  const getClaimsMock = vi.fn().mockResolvedValue(options?.claimsResult ?? {
+  const getUserMock = vi.fn().mockResolvedValue(options?.userResult ?? {
     data: {
-      claims: {
-        sub: 'user-1',
+      user: {
+        id: 'user-1',
       },
       },
     error: null,
   });
+  const uploadSessions = new Map<string, {
+    contentType: string;
+    destinationBucket: 'profile-media' | 'place-media' | 'place-media-private';
+    destinationPath: string;
+    expectedSizeBytes: number;
+    status: 'pending' | 'finalized';
+    uploadPath: string;
+  }>();
+  if (options?.uploadSession) {
+    uploadSessions.set(uploadSessionId, {
+      ...options.uploadSession,
+      status: options.uploadSession.status ?? 'pending',
+    });
+  }
   const rpcMock = vi.fn().mockImplementation((
     functionName: string,
     args?: Record<string, unknown>,
@@ -132,6 +160,103 @@ function createDeps(options?: {
       const paths = Array.isArray(args?.p_paths) ? args.p_paths : [];
       return Promise.resolve({
         data: paths.map((path) => ({ allowed: true, path })),
+        error: null,
+      });
+    }
+
+    if (functionName === 'begin_media_upload_session') {
+      const sessionId = String(args?.p_session_id);
+      const session = {
+        contentType: String(args?.p_content_type),
+        destinationBucket: args?.p_destination_bucket as 'profile-media' | 'place-media' | 'place-media-private',
+        destinationPath: String(args?.p_destination_path),
+        expectedSizeBytes: Number(args?.p_expected_size_bytes),
+        status: 'pending' as const,
+        uploadPath: String(args?.p_upload_path),
+      };
+      uploadSessions.set(sessionId, session);
+      return Promise.resolve({
+        data: [{
+          content_type: session.contentType,
+          destination_bucket: session.destinationBucket,
+          destination_path: session.destinationPath,
+          expected_size_bytes: session.expectedSizeBytes,
+          initialization_id: args?.p_initialization_id,
+          session_id: sessionId,
+          session_status: session.status,
+          upload_bucket: 'place-media-private',
+          upload_path: session.uploadPath,
+        }],
+        error: null,
+      });
+    }
+
+    if (functionName === 'claim_media_upload_session_finalize') {
+      const sessionId = String(args?.p_session_id);
+      const session = uploadSessions.get(sessionId) ?? {
+        contentType: 'image/jpeg',
+        destinationBucket: 'place-media-private' as const,
+        destinationPath: `user-1/list-1/place-1/0-${uploadSessionId}.jpg`,
+        expectedSizeBytes: 1024,
+        status: 'pending' as const,
+        uploadPath: `user-1/list-1/place-1/0-${uploadSessionId}.jpg`,
+      };
+      uploadSessions.set(sessionId, session);
+      return Promise.resolve({
+        data: [{
+          claim_status: session.status === 'finalized' ? 'finalized' : 'claimed',
+          content_type: session.contentType,
+          destination_bucket: session.destinationBucket,
+          destination_path: session.destinationPath,
+          expected_size_bytes: session.expectedSizeBytes,
+          lease_id: session.status === 'finalized' ? null : args?.p_lease_id,
+          upload_bucket: 'place-media-private',
+          upload_path: session.uploadPath,
+        }],
+        error: null,
+      });
+    }
+
+    if (functionName === 'complete_media_upload_session_finalize') {
+      const session = uploadSessions.get(String(args?.p_session_id));
+      if (session) session.status = 'finalized';
+      return Promise.resolve({ data: true, error: null });
+    }
+
+    if (
+      functionName === 'renew_media_upload_session_finalize'
+      || functionName === 'release_media_upload_session_finalize'
+      || functionName === 'abort_media_upload_session_initialization'
+      || functionName === 'renew_media_upload_session_cleanup'
+      || functionName === 'complete_media_upload_session_cleanup'
+    ) {
+      return Promise.resolve({ data: true, error: null });
+    }
+
+    if (functionName === 'claim_media_upload_session_cleanup') {
+      const session = uploadSessions.get(String(args?.p_session_id));
+      if (!session) return Promise.resolve({ data: null, error: { message: 'missing session' } });
+      return Promise.resolve({
+        data: [{
+          claim_status: 'claimed',
+          cleanup_after: new Date(Date.now() + 60_000).toISOString(),
+          destination_bucket: session.destinationBucket,
+          destination_path: session.destinationPath,
+          lease_id: args?.p_lease_id,
+          upload_bucket: 'place-media-private',
+          upload_path: session.uploadPath,
+        }],
+        error: null,
+      });
+    }
+
+    if (functionName === 'check_media_upload_session_cleanup_reference') {
+      return Promise.resolve({
+        data: [{
+          delete_destination: true,
+          destination_referenced: false,
+          previous_status: 'pending',
+        }],
         error: null,
       });
     }
@@ -170,13 +295,14 @@ function createDeps(options?: {
         }),
       }),
       storage: {
-        from: () => ({
+        from: (bucketName: string) => ({
+          copy: copyMock,
           createSignedUploadUrl: createSignedUploadUrlMock,
           createSignedUrl: createSignedUrlMock,
           createSignedUrls: createSignedUrlsMock,
           getPublicUrl: (path: string) => ({
             data: {
-              publicUrl: `https://example.supabase.co/storage/v1/object/public/place-media/${path}`,
+              publicUrl: `https://example.supabase.co/storage/v1/object/public/${bucketName}/${path}`,
             },
           }),
           info: infoMock,
@@ -187,7 +313,7 @@ function createDeps(options?: {
     }),
     createAuthClient: () => ({
       auth: {
-        getClaims: getClaimsMock,
+        getUser: getUserMock,
       },
     }),
     createRequestId: () => 'request-1',
@@ -195,8 +321,9 @@ function createDeps(options?: {
   });
 
   return {
-    getClaimsMock,
+    getUserMock,
     handler,
+    copyMock,
     removeMock,
     nonceInsertMock,
     rpcMock,
@@ -294,7 +421,7 @@ describe('media-assets handler', () => {
 
   it('rejects invalid jwt claims and malformed request bodies', async () => {
     const { handler: invalidJwtHandler } = createDeps({
-      claimsResult: {
+      userResult: {
         data: null,
         error: { message: 'Invalid token' },
       },
@@ -544,6 +671,7 @@ describe('media-assets handler', () => {
       extension: 'mp4',
       fileSizeBytes: 140_313_801,
       prefix: 'list-1/video',
+      uploadSessionId,
     });
     const oversizedSignedUploadResponse = await oversizedHandler(
       new Request('https://example.supabase.co/functions/v1/media-assets', {
@@ -595,6 +723,7 @@ describe('media-assets handler', () => {
       extension: 'jpg',
       fileSizeBytes: 1024,
       prefix: 'list-1/cover',
+      uploadSessionId,
     });
 
     const response = await handler(
@@ -656,6 +785,7 @@ describe('media-assets handler', () => {
       extension: 'jpg',
       fileSizeBytes: 1024,
       prefix: 'list-1/place-1/0',
+      uploadSessionId,
     });
     const uploadUrlResponse = await handler(
       new Request('https://example.supabase.co/functions/v1/media-assets', {
@@ -667,13 +797,13 @@ describe('media-assets handler', () => {
 
     expect(uploadUrlResponse.status).toBe(200);
     expect(createSignedUploadUrlMock).toHaveBeenCalledWith(
-      'user-1/list-1/place-1/0-request-1.jpg',
-      { upsert: true },
+      `user-1/list-1/place-1/0-${uploadSessionId}.jpg`,
+      { upsert: false },
     );
     await expect(uploadUrlResponse.json()).resolves.toMatchObject({
-      objectPath: 'user-1/list-1/place-1/0-request-1.jpg',
-      signedUrl: 'https://storage.example/upload/user-1%2Flist-1%2Fplace-1%2F0-request-1.jpg',
-      storageUri: 'sorita-storage://place-media-private/user-1/list-1/place-1/0-request-1.jpg',
+      objectPath: `user-1/list-1/place-1/0-${uploadSessionId}.jpg`,
+      signedUrl: `https://storage.example/upload/user-1%2Flist-1%2Fplace-1%2F0-${uploadSessionId}.jpg`,
+      uploadSessionId,
     });
 
     const readUrlBody = JSON.stringify({
@@ -721,6 +851,168 @@ describe('media-assets handler', () => {
     });
   });
 
+  it('does not cancel a pending session when signed URL issuance fails', async () => {
+    const { handler, rpcMock } = createDeps({
+      signedUploadError: { message: 'storage temporarily unavailable' },
+    });
+    const body = JSON.stringify({
+      action: 'create-upload-url',
+      bucket: 'place-media-private',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      prefix: 'list-1/place-1/0',
+      uploadSessionId,
+    });
+
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body,
+        headers: await createSignedHeaders(body),
+        method: 'POST',
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({ code: 'upload_init_failed' });
+    expect(rpcMock.mock.calls.map(([functionName]) => functionName)).not.toContain(
+      'abort_media_upload_session_initialization',
+    );
+  });
+
+  it('quarantines, verifies, and atomically publishes public image uploads', async () => {
+    const { copyMock, createSignedUploadUrlMock, handler, removeMock } = createDeps();
+    const prepareBody = JSON.stringify({
+      action: 'create-upload-url',
+      bucket: 'profile-media',
+      contentType: 'image/png',
+      extension: 'png',
+      fileSizeBytes: 1024,
+      prefix: 'profile/avatar',
+      uploadSessionId,
+    });
+    const prepareResponse = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body: prepareBody,
+        headers: await createSignedHeaders(prepareBody),
+        method: 'POST',
+      }),
+    );
+    const prepared = await prepareResponse.json() as Record<string, unknown>;
+
+    expect(prepareResponse.status).toBe(200);
+    expect(prepared).not.toHaveProperty('publicUrl');
+    expect(createSignedUploadUrlMock).toHaveBeenCalledWith(
+      `user-1/pending-public/profile-media/profile/avatar-${uploadSessionId}.png`,
+      { upsert: false },
+    );
+
+    const completeBody = JSON.stringify({
+      action: 'complete-upload',
+      bucket: 'profile-media',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      mediaType: 'photo',
+      objectPath: prepared.objectPath,
+      uploadSessionId,
+    });
+    const completeResponse = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body: completeBody,
+        headers: await createSignedHeaders(completeBody),
+        method: 'POST',
+      }),
+    );
+
+    expect(completeResponse.status).toBe(200);
+    expect(copyMock).toHaveBeenCalledWith(
+      `user-1/pending-public/profile-media/profile/avatar-${uploadSessionId}.png`,
+      `user-1/profile/avatar-${uploadSessionId}.png`,
+      { destinationBucket: 'profile-media' },
+    );
+    expect(removeMock).toHaveBeenCalledWith([
+      `user-1/pending-public/profile-media/profile/avatar-${uploadSessionId}.png`,
+    ]);
+    await expect(completeResponse.json()).resolves.toMatchObject({
+      objectPath: `user-1/profile/avatar-${uploadSessionId}.png`,
+      publicUrl: `https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile/avatar-${uploadSessionId}.png`,
+      verified: true,
+    });
+  });
+
+  it('preserves quarantine on copy failure and makes finalize response-loss retries idempotent', async () => {
+    const publicSession = {
+      contentType: 'image/png',
+      destinationBucket: 'profile-media' as const,
+      destinationPath: 'user-1/profile/avatar-request-1.png',
+      expectedSizeBytes: 1024,
+      uploadPath: 'user-1/pending-public/profile-media/profile/avatar-request-1.png',
+    };
+    const copyFailure = createDeps({
+      copyError: { message: 'copy unavailable' },
+      uploadSession: publicSession,
+    });
+    copyFailure.infoMock
+      .mockResolvedValueOnce({ data: { contentType: 'image/png', size: 1024 }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'not found' } });
+    const body = JSON.stringify({
+      action: 'complete-upload',
+      bucket: 'profile-media',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      mediaType: 'photo',
+      objectPath: 'user-1/pending-public/profile-media/profile/avatar-request-1.png',
+      uploadSessionId,
+    });
+    const failureResponse = await copyFailure.handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body,
+        headers: await createSignedHeaders(body),
+        method: 'POST',
+      }),
+    );
+
+    expect(failureResponse.status).toBe(500);
+    expect(copyFailure.removeMock).not.toHaveBeenCalled();
+
+    const retry = createDeps({ uploadSession: publicSession });
+    retry.infoMock
+      .mockResolvedValueOnce({ data: null, error: { message: 'source already removed' } })
+      .mockResolvedValueOnce({ data: { contentType: 'image/png', size: 1024 }, error: null });
+    const retryResponse = await retry.handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body,
+        headers: await createSignedHeaders(body),
+        method: 'POST',
+      }),
+    );
+
+    expect(retryResponse.status).toBe(200);
+    expect(retry.copyMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects public finalize paths outside the authenticated staging scope', async () => {
+    const { copyMock, handler } = createDeps();
+    const body = JSON.stringify({
+      action: 'complete-upload',
+      bucket: 'profile-media',
+      contentType: 'image/png',
+      fileSizeBytes: 1024,
+      mediaType: 'photo',
+      objectPath: 'other-user/pending-public/profile-media/forged.png',
+      uploadSessionId,
+    });
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/media-assets', {
+        body,
+        headers: await createSignedHeaders(body),
+        method: 'POST',
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(copyMock).not.toHaveBeenCalled();
+  });
+
   it('finalizes signed uploads only after storage metadata and signature verification', async () => {
     const {
       createSignedUrlMock,
@@ -728,7 +1020,15 @@ describe('media-assets handler', () => {
       handler,
       infoMock,
       removeMock,
-    } = createDeps();
+    } = createDeps({
+      uploadSession: {
+        contentType: 'image/png',
+        destinationBucket: 'place-media-private',
+        destinationPath: 'user-1/list-1/place-1/0-request-1.png',
+        expectedSizeBytes: 1024,
+        uploadPath: 'user-1/list-1/place-1/0-request-1.png',
+      },
+    });
     const body = JSON.stringify({
       action: 'complete-upload',
       bucket: 'place-media-private',
@@ -737,6 +1037,7 @@ describe('media-assets handler', () => {
       height: 1,
       mediaType: 'photo',
       objectPath: 'user-1/list-1/place-1/0-request-1.png',
+      uploadSessionId,
       width: 1,
     });
     const response = await handler(
@@ -771,6 +1072,13 @@ describe('media-assets handler', () => {
         data: { contentType: 'image/png', size: 2048 },
         error: null,
       },
+      uploadSession: {
+        contentType: 'image/png',
+        destinationBucket: 'place-media-private',
+        destinationPath: 'user-1/list-1/place-1/invalid.png',
+        expectedSizeBytes: 1024,
+        uploadPath: 'user-1/list-1/place-1/invalid.png',
+      },
     });
     const body = JSON.stringify({
       action: 'complete-upload',
@@ -779,6 +1087,7 @@ describe('media-assets handler', () => {
       fileSizeBytes: 1024,
       mediaType: 'photo',
       objectPath: 'user-1/list-1/place-1/invalid.png',
+      uploadSessionId,
     });
     const invalidSizeResponse = await invalidSizeDeps.handler(
       new Request('https://example.supabase.co/functions/v1/media-assets', {
@@ -795,6 +1104,13 @@ describe('media-assets handler', () => {
 
     const invalidSignatureDeps = createDeps({
       objectPrefixBytes: Uint8Array.from([0, 1, 2, 3, 4, 5]),
+      uploadSession: {
+        contentType: 'image/png',
+        destinationBucket: 'place-media-private',
+        destinationPath: 'user-1/list-1/place-1/invalid.png',
+        expectedSizeBytes: 1024,
+        uploadPath: 'user-1/list-1/place-1/invalid.png',
+      },
     });
     const invalidSignatureResponse = await invalidSignatureDeps.handler(
       new Request('https://example.supabase.co/functions/v1/media-assets', {

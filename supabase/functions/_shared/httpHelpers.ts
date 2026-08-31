@@ -100,13 +100,15 @@ export type ErrorLike = {
   message: string;
 };
 
-export type ClaimsResult = {
-  data?: { claims?: { sub?: string } | null } | null;
+export type AuthUserResult = {
+  data?: { user?: { id?: string } | null } | null;
   error?: ErrorLike | null;
 };
 
 export type AuthClientLike = {
   auth: {
-    getClaims: (token: string) => Promise<ClaimsResult>;
+    // This must remain a live Auth server lookup. Local-only JWT claims do not
+    // detect revoked, deleted, or administratively disabled sessions.
+    getUser: (token: string) => Promise<AuthUserResult>;
   };
 };

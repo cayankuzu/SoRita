@@ -1,0 +1,2 @@
+-- Intentionally empty. Deterministic test fixtures live in supabase/tests and
+-- production-like seed data must never be inferred or fabricated.

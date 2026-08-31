@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { createEdgeRequestContext, logEdgeEvent } from '../_shared/edgeLogger.ts';
-import { verifySignedRequest } from '../_shared/requestSecurity.ts';
+import { verifyRequestEnvelope, verifySignedRequest } from '../_shared/requestSecurity.ts';
 import {
   type AuthClientLike,
   type ErrorLike,
@@ -61,20 +61,92 @@ type AccountDeletionStep =
   | 'completed'
   | 'failed';
 
+type AccountDeletionClaim = {
+  claim_status: 'claimed' | 'completed' | 'in_progress';
+  last_completed_step: Exclude<AccountDeletionStep, 'failed'>;
+  retry_after_seconds: number;
+};
+
+const ACCOUNT_DELETION_STEP_ORDER: Record<Exclude<AccountDeletionStep, 'failed'>, number> = {
+  requested: 0,
+  storage_deleted: 1,
+  notifications_deleted: 2,
+  auth_delete_started: 3,
+  completed: 4,
+};
+
+function readRpcRow<T>(data: unknown) {
+  return (Array.isArray(data) ? data[0] : data) as T | null;
+}
+
+async function claimAccountDeletionJob(
+  adminClient: AdminClientLike,
+  userId: string,
+  leaseId: string,
+) {
+  const { data, error } = await adminClient.rpc('claim_account_deletion_job', {
+    p_lease_id: leaseId,
+    p_lease_seconds: 300,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const claim = readRpcRow<AccountDeletionClaim>(data);
+
+  if (!claim || !(claim.claim_status in { claimed: true, completed: true, in_progress: true })) {
+    throw new Error('Account deletion claim response was invalid.');
+  }
+
+  return claim;
+}
+
+function completedBefore(
+  lastCompletedStep: Exclude<AccountDeletionStep, 'failed'>,
+  nextStep: Exclude<AccountDeletionStep, 'failed'>,
+) {
+  return ACCOUNT_DELETION_STEP_ORDER[lastCompletedStep] < ACCOUNT_DELETION_STEP_ORDER[nextStep];
+}
+
+function isMissingAuthUserError(error: ErrorLike) {
+  const message = error.message.toLowerCase();
+  return error.status === 404 || message.includes('user not found') || message.includes('does not exist');
+}
+
 async function recordAccountDeletionStep(
   adminClient: AdminClientLike,
   userId: string,
   step: AccountDeletionStep,
+  leaseId: string,
   error?: string,
 ) {
   const { error: ledgerError } = await adminClient.rpc('record_account_deletion_step', {
     p_error: error ?? null,
+    p_lease_id: leaseId,
     p_step: step,
     p_user_id: userId,
   });
 
   if (ledgerError) {
     throw new Error(ledgerError.message);
+  }
+}
+
+async function renewAccountDeletionLease(
+  adminClient: AdminClientLike,
+  userId: string,
+  leaseId: string,
+) {
+  const { data, error } = await adminClient.rpc('renew_account_deletion_job_lease', {
+    p_lease_id: leaseId,
+    p_lease_seconds: 300,
+    p_user_id: userId,
+  });
+
+  if (error || readRpcBoolean(data) !== true) {
+    throw new Error(error?.message ?? 'Account deletion lease could not be renewed.');
   }
 }
 
@@ -88,15 +160,29 @@ export type DeleteUserHandlerConfig = {
 export type DeleteUserHandlerDeps = {
   config: DeleteUserHandlerConfig;
   createAdminClient: () => AdminClientLike;
-  createAuthClient: (token: string) => AuthClientLike;
+  createAuthClient: (token: string) => AuthClientLike & {
+    auth: AuthClientLike['auth'] & {
+      getClaims: (token: string) => Promise<{
+        data?: { claims?: { sub?: string } | null } | null;
+        error?: ErrorLike | null;
+      }>;
+    };
+  };
 };
 
 const deleteUserPayloadSchema = z.object({});
+
+function readRpcBoolean(data: unknown) {
+  if (typeof data === 'boolean') return data;
+  if (Array.isArray(data) && typeof data[0] === 'boolean') return data[0];
+  return null;
+}
 
 async function deleteBucketFolder(
   adminClient: AdminClientLike,
   bucket: 'profile-media' | 'place-media' | 'place-media-private',
   userId: string,
+  heartbeat: () => Promise<void>,
 ) {
   async function collectFilePaths(path: string): Promise<string[]> {
     const pageSize = 1000;
@@ -105,6 +191,7 @@ async function deleteBucketFolder(
     const childFolders: string[] = [];
 
     while (true) {
+      await heartbeat();
       const { data, error } = await adminClient.storage.from(bucket).list(path, {
         limit: pageSize,
         offset,
@@ -151,6 +238,7 @@ async function deleteBucketFolder(
 
   const pageSize = 1000;
   for (let start = 0; start < filesToRemove.length; start += pageSize) {
+    await heartbeat();
     const chunk = filesToRemove.slice(start, start + pageSize);
     const { error: removeError } = await adminClient.storage.from(bucket).remove(chunk);
 
@@ -207,30 +295,44 @@ export function createDeleteUserHandler({
         );
       }
 
-      const authClient = createAuthClient(token);
-      const {
-        data,
-        error: claimsError,
-      } = await authClient.auth.getClaims(token);
-      const userId = typeof data?.claims?.sub === 'string' ? data.claims.sub : null;
-
-      if (claimsError || !userId) {
+      const adminClient = createAdminClient();
+      const envelope = await verifyRequestEnvelope({
+        adminClient,
+        functionName: 'delete-user',
+        maxBodyBytes: 1024,
+        request,
+      });
+      if (!envelope.ok) {
         return jsonResponse(
           request,
           allowedOrigins,
-          401,
-          { code: 'invalid_jwt', error: claimsError?.message ?? 'Invalid JWT' },
+          envelope.status,
+          { code: 'invalid_signature', error: envelope.error },
           { requestId: requestContext.requestId },
         );
       }
 
-      const adminClient = createAdminClient();
+      const authClient = createAuthClient(token);
+      const claimsResult = await authClient.auth.getClaims(token);
+      const claimedUserId = claimsResult.data?.claims?.sub?.trim();
+
+      if (claimsResult.error || !claimedUserId) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          401,
+          { code: 'invalid_jwt', error: 'Invalid JWT' },
+          { requestId: requestContext.requestId },
+        );
+      }
+
       const securityResult = await verifySignedRequest({
         adminClient,
+        bodyText: envelope.bodyText,
         functionName: 'delete-user',
         request,
         token,
-        userId,
+        userId: claimedUserId,
       });
 
       if (!securityResult.ok) {
@@ -239,6 +341,47 @@ export function createDeleteUserHandler({
           allowedOrigins,
           securityResult.status,
           { code: 'invalid_signature', error: securityResult.error },
+          { requestId: requestContext.requestId },
+        );
+      }
+
+      const {
+        data,
+        error: userError,
+      } = await authClient.auth.getUser(token);
+      const userId = typeof data?.user?.id === 'string' ? data.user.id : null;
+
+      if (userError || !userId) {
+        const completedResult = await adminClient.rpc('is_account_deletion_job_completed', {
+          p_user_id: claimedUserId,
+        });
+        const completed = completedResult.error ? null : readRpcBoolean(completedResult.data);
+
+        if (completed === true) {
+          return jsonResponse(
+            request,
+            allowedOrigins,
+            200,
+            { success: true },
+            { requestId: requestContext.requestId },
+          );
+        }
+
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          401,
+          { code: 'invalid_jwt', error: userError?.message ?? 'Invalid JWT' },
+          { requestId: requestContext.requestId },
+        );
+      }
+
+      if (userId !== claimedUserId) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          401,
+          { code: 'invalid_jwt', error: 'Invalid JWT' },
           { requestId: requestContext.requestId },
         );
       }
@@ -257,7 +400,7 @@ export function createDeleteUserHandler({
 
       const rateLimitResult = await enforceRateLimit({
         adminClient,
-        identifier: `${userId}:${request.headers.get('x-device-id') ?? 'unknown-device'}`,
+        identifier: userId,
         maxRequests: 2,
         scope: 'account:delete',
         windowMs: 60 * 60_000,
@@ -276,38 +419,88 @@ export function createDeleteUserHandler({
         );
       }
 
-      await recordAccountDeletionStep(adminClient, userId, 'requested');
+      const leaseId = crypto.randomUUID();
+      const claim = await claimAccountDeletionJob(adminClient, userId, leaseId);
+
+      if (claim.claim_status === 'completed') {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          200,
+          { success: true },
+          {
+            extraHeaders: rateLimitHeaders(rateLimitResult, 2),
+            requestId: requestContext.requestId,
+          },
+        );
+      }
+
+      if (claim.claim_status === 'in_progress') {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          409,
+          { code: 'deletion_in_progress', error: 'Hesap silme islemi zaten devam ediyor.' },
+          {
+            extraHeaders: {
+              ...rateLimitHeaders(rateLimitResult, 2),
+              'Retry-After': String(Math.max(1, claim.retry_after_seconds)),
+            },
+            requestId: requestContext.requestId,
+          },
+        );
+      }
 
       try {
-        await deleteBucketFolder(adminClient, 'profile-media', userId);
-        await deleteBucketFolder(adminClient, 'place-media', userId);
-        await deleteBucketFolder(adminClient, 'place-media-private', userId);
-        await recordAccountDeletionStep(adminClient, userId, 'storage_deleted');
-
-        const { error: deleteActorNotificationsError } = await adminClient
-          .from('notifications')
-          .delete()
-          .eq('actor_user_id', userId);
-
-        if (deleteActorNotificationsError) {
-          throw new Error(deleteActorNotificationsError.message);
+        const heartbeat = () => renewAccountDeletionLease(adminClient, userId, leaseId);
+        if (completedBefore(claim.last_completed_step, 'storage_deleted')) {
+          await deleteBucketFolder(adminClient, 'profile-media', userId, heartbeat);
+          await deleteBucketFolder(adminClient, 'place-media', userId, heartbeat);
+          await deleteBucketFolder(adminClient, 'place-media-private', userId, heartbeat);
+          await heartbeat();
+          await recordAccountDeletionStep(adminClient, userId, 'storage_deleted', leaseId);
         }
-        await recordAccountDeletionStep(adminClient, userId, 'notifications_deleted');
 
-        await recordAccountDeletionStep(adminClient, userId, 'auth_delete_started');
+        if (completedBefore(claim.last_completed_step, 'notifications_deleted')) {
+          await heartbeat();
+          const { error: deleteActorNotificationsError } = await adminClient
+            .from('notifications')
+            .delete()
+            .eq('actor_user_id', userId);
+
+          if (deleteActorNotificationsError) {
+            throw new Error(deleteActorNotificationsError.message);
+          }
+          await recordAccountDeletionStep(adminClient, userId, 'notifications_deleted', leaseId);
+        }
+
+        if (completedBefore(claim.last_completed_step, 'auth_delete_started')) {
+          await heartbeat();
+          await recordAccountDeletionStep(adminClient, userId, 'auth_delete_started', leaseId);
+        }
+
+        await heartbeat();
         const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId, false);
 
-        if (deleteError) {
+        if (deleteError && !isMissingAuthUserError(deleteError)) {
           throw new Error(deleteError.message);
         }
-        await recordAccountDeletionStep(adminClient, userId, 'completed');
+        await heartbeat();
+        await recordAccountDeletionStep(adminClient, userId, 'completed', leaseId);
       } catch (error) {
-        await recordAccountDeletionStep(
-          adminClient,
-          userId,
-          'failed',
-          error instanceof Error ? error.message : 'unknown',
-        ).catch(() => undefined);
+        try {
+          await recordAccountDeletionStep(
+            adminClient,
+            userId,
+            'failed',
+            leaseId,
+            error instanceof Error ? error.message : 'unknown',
+          );
+        } catch (ledgerError) {
+          logEdgeEvent('error', 'Failed to record account deletion failure', requestContext, {
+            error: ledgerError instanceof Error ? ledgerError.message : 'Unknown ledger error',
+          });
+        }
         throw error;
       }
 

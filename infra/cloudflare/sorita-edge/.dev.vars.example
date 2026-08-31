@@ -1,0 +1,3 @@
+SUPABASE_PUBLISHABLE_KEY="replace-with-the-environment-publishable-key"
+ORIGIN_HMAC_SECRET="replace-with-at-least-32-random-characters"
+IP_HASH_PEPPER="replace-with-a-different-32-character-random-value"

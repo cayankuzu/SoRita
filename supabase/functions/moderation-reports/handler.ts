@@ -11,11 +11,21 @@ import {
   parseJsonBody,
 } from '../_shared/httpHelpers.ts';
 import { enforceRateLimit, rateLimitHeaders, type RateLimitAdminClientLike } from '../_shared/rateLimit.ts';
-import { verifySignedRequest } from '../_shared/requestSecurity.ts';
+import { verifyRequestEnvelope, verifySignedRequest } from '../_shared/requestSecurity.ts';
 
 type ErrorLike = {
   code?: string;
   message: string;
+};
+
+type RowSelectClientLike = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (column: string, value: string) => {
+        maybeSingle: () => Promise<{ data?: Record<string, unknown> | null; error?: ErrorLike | null }>;
+      };
+    };
+  };
 };
 
 type AdminClientLike = RateLimitAdminClientLike & {
@@ -41,6 +51,8 @@ type AdminClientLike = RateLimitAdminClientLike & {
   };
 };
 
+type ReporterClientLike = AuthClientLike & RowSelectClientLike;
+
 type EmailResult = {
   error?: string | null;
 };
@@ -59,7 +71,7 @@ type ModerationReportsHandlerConfig = {
 type ModerationReportsHandlerDeps = {
   config: ModerationReportsHandlerConfig;
   createAdminClient: () => AdminClientLike;
-  createAuthClient: (token: string) => AuthClientLike;
+  createAuthClient: (token: string) => ReporterClientLike;
   createRequestId?: () => string;
   sendEmail?: (params: {
     from: string;
@@ -70,6 +82,7 @@ type ModerationReportsHandlerDeps = {
 };
 
 const allowedOriginsFallback = '';
+const emailProviderTimeoutMs = 10_000;
 
 const reportIdSchema = z.string().trim().min(1).max(120);
 const reportReasonSchema = z.string().trim().min(1).max(160);
@@ -117,13 +130,13 @@ function assertConfigured(config: ModerationReportsHandlerConfig) {
 }
 
 function getSelectQuery(
-  adminClient: AdminClientLike,
+  client: RowSelectClientLike,
   table: string,
   columns: string,
   column: string,
   value: string,
 ) {
-  return adminClient.from(table).select(columns).eq(column, value).maybeSingle();
+  return client.from(table).select(columns).eq(column, value).maybeSingle();
 }
 
 async function getRequiredRow(
@@ -211,21 +224,16 @@ function buildEmailSubject(payload: ReportPayload) {
 }
 
 function buildEmailBody(payload: {
-  details: string | null;
   reportId: string;
-  snapshot: Record<string, unknown>;
   targetType: ReportPayload['targetType'];
 }) {
   return [
-    `SoRita moderation report`,
+    'SoRita moderation case awaiting review',
     `Report ID: ${payload.reportId}`,
     `Target Type: ${payload.targetType}`,
     '',
-    'Reporter and target snapshot:',
-    JSON.stringify(payload.snapshot, null, 2),
-    '',
-    'User supplied details:',
-    payload.details ?? '(none)',
+    'Review this report only through the audited moderation operations workflow.',
+    'Reporter, target, reason, details, and snapshot data are intentionally omitted from email.',
   ].join('\n');
 }
 
@@ -240,7 +248,7 @@ async function sendEmailViaResend(
 ): Promise<EmailResult> {
   if (!config.resendApiKey?.trim()) {
     return {
-      error: 'RESEND_API_KEY is missing',
+      error: 'email_provider_not_configured',
     };
   }
 
@@ -256,15 +264,15 @@ async function sendEmailViaResend(
       text: params.text,
       to: [params.to],
     }),
+    signal: AbortSignal.timeout(emailProviderTimeoutMs),
   });
 
   if (response.ok) {
     return { error: null };
   }
 
-  const bodyText = await response.text().catch(() => '');
   return {
-    error: bodyText.trim() || `Resend API returned ${response.status}`,
+    error: `email_provider_rejected:${response.status}`,
   };
 }
 
@@ -279,7 +287,7 @@ async function sendEmailViaBrevo(
 ): Promise<EmailResult> {
   if (!config.brevoApiKey?.trim()) {
     return {
-      error: 'BREVO_API_KEY is missing',
+      error: 'email_provider_not_configured',
     };
   }
 
@@ -298,28 +306,63 @@ async function sendEmailViaBrevo(
       textContent: params.text,
       to: [{ email: params.to }],
     }),
+    signal: AbortSignal.timeout(emailProviderTimeoutMs),
   });
 
   if (response.ok) {
     return { error: null };
   }
 
-  const bodyText = await response.text().catch(() => '');
   return {
-    error: bodyText.trim() || `Brevo API returned ${response.status}`,
+    error: `email_provider_rejected:${response.status}`,
   };
 }
 
+function targetIdentity(payload: ReportPayload) {
+  switch (payload.targetType) {
+    case 'user':
+      return { column: 'id', table: 'profiles', value: payload.targetUserId };
+    case 'list':
+      return { column: 'id', table: 'lists', value: payload.listId };
+    case 'place':
+      return { column: 'id', table: 'list_places', value: payload.placeId };
+    case 'comment':
+      return { column: 'id', table: 'list_place_comments', value: payload.commentId };
+  }
+}
+
+async function assertTargetVisible(reporterClient: ReporterClientLike, payload: ReportPayload) {
+  const target = targetIdentity(payload);
+  const { data, error } = await getSelectQuery(
+    reporterClient,
+    target.table,
+    'id',
+    target.column,
+    target.value,
+  );
+
+  if (error) {
+    throw new Error('Moderation target visibility check failed');
+  }
+
+  if (!data) {
+    throw new HttpRequestError(404, 'report_target_not_found', 'Sikayet edilen icerik bulunamadi.');
+  }
+}
+
+function assertNotSelfReport(reporterUserId: string, targetOwnerId: unknown) {
+  if (typeof targetOwnerId === 'string' && targetOwnerId === reporterUserId) {
+    throw new HttpRequestError(409, 'self_report_not_allowed', 'Kendi iceriginizi sikayet edemezsiniz.');
+  }
+}
+
 async function buildReportSnapshot(adminClient: AdminClientLike, payload: ReportPayload) {
-  const reporter = await getOptionalRow(adminClient, {
-    columns: 'id, name, username, email, profile_photo_url, is_public_account',
-    table: 'profiles',
-    value: payload.reporterUserId,
-  });
+  const reporter = { id: payload.reporterUserId };
 
   if (payload.targetType === 'user') {
+    assertNotSelfReport(payload.reporterUserId, payload.targetUserId);
     const targetUser = await getRequiredRow(adminClient, {
-      columns: 'id, name, username, email, profile_photo_url, is_public_account, bio',
+      columns: 'id, username, is_public_account, bio',
       errorMessage: 'Sikayet edilen kullanici bulunamadi.',
       table: 'profiles',
       value: payload.targetUserId,
@@ -334,15 +377,16 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
 
   if (payload.targetType === 'list') {
     const list = await getRequiredRow(adminClient, {
-      columns: 'id, owner_id, name, description, emoji, cover_image_url, is_public, created_at, updated_at',
+      columns: 'id, owner_id, name, description, is_public, created_at, updated_at',
       errorMessage: 'Sikayet edilen liste bulunamadi.',
       table: 'lists',
       value: payload.listId,
     });
     const ownerId = typeof list.owner_id === 'string' ? list.owner_id : null;
+    assertNotSelfReport(payload.reporterUserId, ownerId);
     const owner = ownerId
       ? await getOptionalRow(adminClient, {
-          columns: 'id, name, username, email, profile_photo_url, is_public_account',
+          columns: 'id, username',
           table: 'profiles',
           value: ownerId,
         })
@@ -359,7 +403,7 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
   if (payload.targetType === 'place') {
     const place = await getRequiredRow(adminClient, {
       columns:
-        'id, list_id, created_by, source_list_id, source_place_id, source_user_id, source_user_name, name, title, address, notes, lat, lng, rating, added_at, updated_at',
+        'id, list_id, created_by, source_list_id, source_place_id, source_user_id, name, title, notes, rating, added_at, updated_at',
       errorMessage: 'Sikayet edilen mekan karti bulunamadi.',
       table: 'list_places',
       value: payload.placeId,
@@ -367,7 +411,7 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
     const listId = typeof place.list_id === 'string' ? place.list_id : null;
     const list = listId
       ? await getOptionalRow(adminClient, {
-          columns: 'id, owner_id, name, description, emoji, cover_image_url, is_public',
+          columns: 'id, owner_id, name, is_public',
           table: 'lists',
           value: listId,
         })
@@ -378,9 +422,10 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
         : typeof place.created_by === 'string'
           ? place.created_by
           : null;
+    assertNotSelfReport(payload.reporterUserId, ownerId);
     const owner = ownerId
       ? await getOptionalRow(adminClient, {
-          columns: 'id, name, username, email, profile_photo_url, is_public_account',
+          columns: 'id, username',
           table: 'profiles',
           value: ownerId,
         })
@@ -405,7 +450,7 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
   const place = placeId
     ? await getOptionalRow(adminClient, {
         columns:
-          'id, list_id, created_by, source_user_id, source_user_name, name, title, address, notes, lat, lng, rating, added_at, updated_at',
+          'id, list_id, created_by, source_user_id, name, title, notes, rating, added_at, updated_at',
         table: 'list_places',
         value: placeId,
       })
@@ -413,15 +458,16 @@ async function buildReportSnapshot(adminClient: AdminClientLike, payload: Report
   const listId = typeof place?.list_id === 'string' ? place.list_id : null;
   const list = listId
     ? await getOptionalRow(adminClient, {
-        columns: 'id, owner_id, name, description, emoji, cover_image_url, is_public',
+        columns: 'id, owner_id, name, is_public',
         table: 'lists',
         value: listId,
       })
     : null;
   const commentAuthorId = typeof comment.user_id === 'string' ? comment.user_id : null;
+  assertNotSelfReport(payload.reporterUserId, commentAuthorId);
   const commentAuthor = commentAuthorId
     ? await getOptionalRow(adminClient, {
-        columns: 'id, name, username, email, profile_photo_url, is_public_account',
+        columns: 'id, username',
         table: 'profiles',
         value: commentAuthorId,
       })
@@ -502,22 +548,39 @@ export function createModerationReportsHandler({
       }
 
       const adminClient = createAdminClient();
-      const authClient = createAuthClient(token);
-      const claimsResult = await authClient.auth.getClaims(token);
-      const authenticatedUserId = claimsResult.data?.claims?.sub?.trim();
+      const envelope = await verifyRequestEnvelope({
+        adminClient,
+        functionName: 'moderation-reports',
+        maxBodyBytes: 64 * 1024,
+        request,
+      });
+      if (!envelope.ok) {
+        return jsonResponse(
+          request,
+          normalizedAllowedOrigins,
+          envelope.status,
+          { code: 'invalid_signature', error: envelope.error },
+          { requestId },
+        );
+      }
 
-      if (claimsResult.error || !authenticatedUserId) {
+      const reporterClient = createAuthClient(token);
+      const userResult = await reporterClient.auth.getUser(token);
+      const authenticatedUserId = userResult.data?.user?.id?.trim();
+
+      if (userResult.error || !authenticatedUserId) {
         return jsonResponse(
           request,
           normalizedAllowedOrigins,
           401,
-          { code: 'invalid_token', error: claimsResult.error?.message ?? 'Invalid token' },
+          { code: 'invalid_token', error: 'Invalid token' },
           { requestId },
         );
       }
 
       const securityResult = await verifySignedRequest({
         adminClient,
+        bodyText: envelope.bodyText,
         functionName: 'moderation-reports',
         request,
         token,
@@ -563,7 +626,7 @@ export function createModerationReportsHandler({
 
       const rateLimitResult = await enforceRateLimit({
         adminClient,
-        identifier: `${authenticatedUserId}:${request.headers.get('x-device-id') ?? 'unknown-device'}`,
+        identifier: authenticatedUserId,
         maxRequests: 12,
         scope: 'moderation:report',
         windowMs: 10 * 60_000,
@@ -585,6 +648,7 @@ export function createModerationReportsHandler({
         );
       }
 
+      await assertTargetVisible(reporterClient, payload);
       const snapshot = await buildReportSnapshot(adminClient, payload);
       const { data: insertedReport, error: insertError } = await adminClient
         .from('moderation_reports')
@@ -619,19 +683,25 @@ export function createModerationReportsHandler({
       }
 
       const emailText = buildEmailBody({
-        details: trimDetails(payload.details),
         reportId: insertedReport.id,
-        snapshot,
         targetType: payload.targetType,
       });
-      const emailDeliveryError = !config.reportEmailFrom?.trim()
-        ? 'REPORTS_EMAIL_FROM is missing'
-        : (await sendReportEmail({
+      let emailDeliveryError: string | null = null;
+      if (!config.reportEmailFrom?.trim()) {
+        emailDeliveryError = 'email_sender_not_configured';
+      } else {
+        try {
+          const emailResult = await sendReportEmail({
             from: config.reportEmailFrom,
             subject: buildEmailSubject(payload),
             text: emailText,
             to: config.reportEmailTo,
-          })).error ?? null;
+          });
+          emailDeliveryError = emailResult.error ? 'email_delivery_failed' : null;
+        } catch {
+          emailDeliveryError = 'email_provider_unavailable';
+        }
+      }
 
       const { error: updateError } = await adminClient.from('moderation_reports').update({
         email_delivery_error: emailDeliveryError,
@@ -640,14 +710,14 @@ export function createModerationReportsHandler({
 
       if (updateError) {
         logEdgeEvent('warn', 'Moderation report email status update failed', requestContext, {
-          message: updateError.message,
+          errorCode: 'email_status_update_failed',
           reportId: insertedReport.id,
         });
       }
 
       if (emailDeliveryError) {
         logEdgeEvent('warn', 'Moderation report email delivery failed', requestContext, {
-          message: emailDeliveryError,
+          errorCode: emailDeliveryError,
           reportId: insertedReport.id,
         });
       }
@@ -678,13 +748,13 @@ export function createModerationReportsHandler({
       }
 
       logEdgeEvent('error', 'Unhandled moderation-reports error', requestContext, {
-        error: error instanceof Error ? error.message : 'Unknown moderation report error',
+        errorType: error instanceof Error ? error.name : 'UnknownError',
       });
       return jsonResponse(
         request,
         normalizedAllowedOrigins,
         500,
-        { code: 'internal_error', error: error instanceof Error ? error.message : 'Internal server error' },
+        { code: 'internal_error', error: 'Sikayet servisi su anda kullanilamiyor.' },
         { requestId },
       );
     }

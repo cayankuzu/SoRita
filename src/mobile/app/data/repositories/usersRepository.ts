@@ -141,7 +141,6 @@ export async function updateUser(user: User) {
       interests: user.interests?.length ? uniqueStrings(user.interests) : null,
       profile_photo_url: profilePhoto || null,
       cover_photo_url: coverPhoto || null,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', user.id);
 

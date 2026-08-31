@@ -10,6 +10,11 @@ import {
   parseJsonBody,
 } from '../_shared/httpHelpers.ts';
 import { enforceRateLimit, rateLimitHeaders, type RateLimitAdminClientLike } from '../_shared/rateLimit.ts';
+import {
+  completeTrustedEdgeOriginVerification,
+  verifyTrustedEdgeOriginHeaders,
+} from '../_shared/originSecurity.ts';
+import { readBoundedRequestBody } from '../_shared/requestSecurity.ts';
 
 type RpcRowResult<T> = {
   data?: T[] | T | null;
@@ -185,6 +190,11 @@ const authGatewayPayloadSchema = z.discriminatedUnion('action', [
   }),
 ]);
 
+type AvailabilityPayload = Extract<
+  z.infer<typeof authGatewayPayloadSchema>,
+  { action: 'check-availability' }
+>;
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown error';
 }
@@ -240,6 +250,18 @@ function inferAuthErrorCode(message: string | undefined) {
   return 'unexpected';
 }
 
+function isIdentifierPresenceError(error: AuthErrorLike) {
+  const normalized = error.message?.toLowerCase() ?? '';
+
+  return (
+    error.status === 404
+    || normalized.includes('user not found')
+    || normalized.includes('email not found')
+    || normalized.includes('no user')
+    || normalized.includes('already registered')
+  );
+}
+
 function isAllowedRedirectUrl(url: string, allowedOrigins: string[]) {
   const normalizedUrl = url.replace(/\/+$/g, '');
 
@@ -266,6 +288,65 @@ async function readRpcRow<TRow>(
   }
 
   return (Array.isArray(data) ? data[0] : data) as TRow | null;
+}
+
+async function handleAccountAvailability(params: {
+  adminClient: AuthGatewayAdminClientLike;
+  allowedOrigins: string[];
+  createAuthenticatedAuthClient: AuthGatewayHandlerDeps['createAuthenticatedAuthClient'];
+  payload: AvailabilityPayload;
+  request: Request;
+  requestId: string;
+}) {
+  const token = getBearerToken(params.request.headers.get('Authorization'));
+
+  if (params.payload.excludeUserId) {
+    if (!token) {
+      return jsonResponse(
+        params.request,
+        params.allowedOrigins,
+        401,
+        { code: 'missing_authorization', error: 'Eksik yetkilendirme basligi.' },
+        { requestId: params.requestId },
+      );
+    }
+
+    const authClient = params.createAuthenticatedAuthClient(token);
+    const { data, error } = await authClient.auth.getUser(token);
+
+    if (error || !data?.user?.id || data.user.id !== params.payload.excludeUserId) {
+      return jsonResponse(
+        params.request,
+        params.allowedOrigins,
+        403,
+        { code: 'invalid_session', error: 'Oturum dogrulanamadi.' },
+        { requestId: params.requestId },
+      );
+    }
+  }
+
+  const availabilityRow = await readRpcRow<AvailabilityRpcRow>(
+    params.adminClient,
+    'check_account_availability',
+    {
+      input_email: params.payload.email ?? null,
+      input_exclude_user_id: params.payload.excludeUserId ?? null,
+      input_username: params.payload.username ?? null,
+    },
+  );
+
+  return jsonResponse(
+    params.request,
+    params.allowedOrigins,
+    200,
+    {
+      // Email presence is deliberately never exposed. Username availability
+      // remains part of the existing public registration/profile contract.
+      emailAvailable: true,
+      usernameAvailable: availabilityRow?.username_available ?? true,
+    },
+    { requestId: params.requestId },
+  );
 }
 
 export function createAuthGatewayHandler({
@@ -317,7 +398,48 @@ export function createAuthGatewayHandler({
         );
       }
 
-      const bodyText = await request.text();
+      const adminClient = createAdminClient();
+      const originPreflight = await verifyTrustedEdgeOriginHeaders({
+        functionName: 'auth-gateway',
+        request,
+      });
+      if (!originPreflight.ok) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          originPreflight.status,
+          { code: 'invalid_origin', error: originPreflight.error },
+          { requestId: requestContext.requestId },
+        );
+      }
+      const bodyResult = await readBoundedRequestBody(request, 32 * 1024);
+      if (!bodyResult.ok) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          bodyResult.status,
+          { code: 'invalid_request_body', error: bodyResult.error },
+          { requestId: requestContext.requestId },
+        );
+      }
+      const bodyText = bodyResult.bodyText;
+      const originResult = await completeTrustedEdgeOriginVerification({
+        adminClient,
+        bodyText,
+        functionName: 'auth-gateway',
+        preflight: originPreflight,
+      });
+
+      if (!originResult.ok) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          originResult.status,
+          { code: 'invalid_origin_signature', error: originResult.error },
+          { requestId: requestContext.requestId },
+        );
+      }
+
       const parsedPayload = authGatewayPayloadSchema.safeParse(parseJsonBody(bodyText));
 
       if (!parsedPayload.success) {
@@ -331,7 +453,6 @@ export function createAuthGatewayHandler({
       }
 
       const payload = parsedPayload.data;
-      const adminClient = createAdminClient();
       const clientIdentifier = getClientIdentifier(requestContext, deviceId);
 
       const applyRateLimit = async (scope: string, maxRequests: number, windowMs: number) => {
@@ -388,23 +509,15 @@ export function createAuthGatewayHandler({
       }
 
       if (payload.action === 'check-availability') {
-        const authClient = createAnonymousAuthClient();
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
-          input_email: payload.email ?? null,
-          input_exclude_user_id: payload.excludeUserId ?? null,
-          input_username: payload.username ?? null,
-        });
-
-        return jsonResponse(
-          request,
+        const availabilityResponse = await handleAccountAvailability({
+          adminClient,
           allowedOrigins,
-          200,
-          {
-            emailAvailable: availabilityRow?.email_available ?? true,
-            usernameAvailable: availabilityRow?.username_available ?? true,
-          },
-          { requestId: requestContext.requestId },
-        );
+          createAuthenticatedAuthClient,
+          payload,
+          request,
+          requestId: requestContext.requestId,
+        });
+        return availabilityResponse;
       }
 
       if (payload.action === 'login') {
@@ -468,7 +581,7 @@ export function createAuthGatewayHandler({
         if (error) {
           const authCode = inferAuthErrorCode(error.message);
 
-          if (authCode === 'invalid_credentials') {
+          if (authCode === 'invalid_credentials' || authCode === 'email_not_confirmed') {
             const failureResult = await readRpcRow<AuthLoginGuardRpcRow>(adminClient, 'record_auth_login_failure', {
               input_email: payload.email,
             });
@@ -498,19 +611,6 @@ export function createAuthGatewayHandler({
               {
                 code: 'invalid_credentials',
                 error: 'Gecersiz e-posta veya sifre.',
-              },
-              { requestId: requestContext.requestId },
-            );
-          }
-
-          if (authCode === 'email_not_confirmed') {
-            return jsonResponse(
-              request,
-              allowedOrigins,
-              403,
-              {
-                code: 'email_not_confirmed',
-                error: 'E-posta adresinizi dogrulamaniz gerekiyor.',
               },
               { requestId: requestContext.requestId },
             );
@@ -561,21 +661,13 @@ export function createAuthGatewayHandler({
 
       if (payload.action === 'register') {
         const authClient = createAnonymousAuthClient();
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
-          input_email: payload.email,
+        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(adminClient, 'check_account_availability', {
+          // Email uniqueness is intentionally delegated to Supabase Auth so its
+          // duplicate-account obfuscation remains intact.
+          input_email: null,
           input_exclude_user_id: null,
           input_username: payload.username,
         });
-
-        if (availabilityRow && !availabilityRow.email_available) {
-          return jsonResponse(
-            request,
-            allowedOrigins,
-            409,
-            { code: 'duplicate_email', error: 'Bu e-posta adresi zaten kullaniliyor.' },
-            { requestId: requestContext.requestId },
-          );
-        }
 
         if (availabilityRow && !availabilityRow.username_available) {
           return jsonResponse(
@@ -609,7 +701,18 @@ export function createAuthGatewayHandler({
 
         if (error) {
           const authCode = inferAuthErrorCode(error.message);
-          const status = authCode === 'duplicate_email' || authCode === 'duplicate_username' ? 409 : 400;
+
+          if (authCode === 'duplicate_email') {
+            return jsonResponse(
+              request,
+              allowedOrigins,
+              200,
+              { success: true },
+              { requestId: requestContext.requestId },
+            );
+          }
+
+          const status = authCode === 'duplicate_username' ? 409 : 400;
 
           return jsonResponse(
             request,
@@ -618,9 +721,7 @@ export function createAuthGatewayHandler({
             {
               code: authCode,
               error:
-                authCode === 'duplicate_email'
-                  ? 'Bu e-posta adresi zaten kullaniliyor.'
-                  : authCode === 'duplicate_username'
+                authCode === 'duplicate_username'
                     ? 'Bu kullanici adi zaten kullaniliyor.'
                     : authCode === 'weak_password'
                       ? 'Sifre guvenlik gereksinimlerini karsilamiyor.'
@@ -650,6 +751,16 @@ export function createAuthGatewayHandler({
         });
 
         if (error) {
+          if (isIdentifierPresenceError(error)) {
+            return jsonResponse(
+              request,
+              allowedOrigins,
+              200,
+              { success: true },
+              { requestId: requestContext.requestId },
+            );
+          }
+
           return jsonResponse(
             request,
             allowedOrigins,
@@ -673,21 +784,6 @@ export function createAuthGatewayHandler({
         payload.action === 'prepare-password-reset'
       ) {
         const authClient = createAnonymousAuthClient();
-        const availabilityRow = await readRpcRow<AvailabilityRpcRow>(authClient, 'check_account_availability', {
-          input_email: payload.email,
-          input_exclude_user_id: null,
-          input_username: null,
-        });
-
-        if (!availabilityRow || availabilityRow.email_available) {
-          return jsonResponse(
-            request,
-            allowedOrigins,
-            404,
-            { code: 'email_not_found', error: 'Bu e-posta adresiyle kayitli bir hesap bulunamadi.' },
-            { requestId: requestContext.requestId },
-          );
-        }
 
         if (payload.action === 'request-password-reset') {
           const { error } = await authClient.auth.resetPasswordForEmail(payload.email, {
@@ -695,6 +791,16 @@ export function createAuthGatewayHandler({
           });
 
           if (error) {
+            if (isIdentifierPresenceError(error)) {
+              return jsonResponse(
+                request,
+                allowedOrigins,
+                200,
+                { success: true },
+                { requestId: requestContext.requestId },
+              );
+            }
+
             return jsonResponse(
               request,
               allowedOrigins,

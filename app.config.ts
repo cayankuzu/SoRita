@@ -54,7 +54,7 @@ const supabaseMapsFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_MAPS_FUNCTION_NAME ?? 'maps-geocoding';
 const appScheme = 'sorita';
 const facebookAppId = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '';
-const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID ?? '';
+const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID?.trim() ?? '';
 const enablePushNotifications = process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS;
 const systemNotificationFcmTopic =
   process.env.EXPO_PUBLIC_SYSTEM_NOTIFICATION_FCM_TOPIC ?? 'system-all-users-v1';
@@ -65,6 +65,84 @@ const sentryUrl = process.env.SENTRY_URL ?? '';
 const sentryPluginEnabled = Boolean(sentryOrg && sentryProject && sentryUrl);
 const expoOwner =
   process.env.EXPO_OWNER?.trim() || process.env.EXPO_PUBLIC_EXPO_OWNER?.trim() || undefined;
+const easBuildProfile = process.env.EAS_BUILD_PROFILE?.trim().toLowerCase();
+const releaseEnvironmentCandidate =
+  process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT?.trim() ||
+  (easBuildProfile === 'development' ||
+  easBuildProfile === 'preview' ||
+  easBuildProfile === 'production'
+    ? easBuildProfile
+    : undefined);
+const edgeCutoverMode = process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE?.trim().toLowerCase() || 'direct';
+const releaseEnvironment = releaseEnvironmentCandidate?.toLowerCase() || 'development';
+const rawEdgeApiUrl = process.env.EXPO_PUBLIC_EDGE_API_URL?.trim() ?? '';
+
+if (edgeCutoverMode !== 'direct' && edgeCutoverMode !== 'gateway') {
+  throw new Error('Invalid public runtime configuration: edgeCutoverMode must be direct or gateway.');
+}
+
+if (
+  releaseEnvironment !== 'development' &&
+  releaseEnvironment !== 'preview' &&
+  releaseEnvironment !== 'production'
+) {
+  throw new Error(
+    'Invalid public runtime configuration: releaseEnvironment must be development, preview, or production.',
+  );
+}
+
+if (
+  expoProjectId &&
+  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(expoProjectId)
+) {
+  throw new Error(
+    'Invalid EAS Update configuration: EXPO_PUBLIC_EXPO_PROJECT_ID must be a UUID.',
+  );
+}
+
+if (releaseEnvironment === 'production' && !expoProjectId) {
+  throw new Error(
+    'Invalid EAS Update configuration: EXPO_PUBLIC_EXPO_PROJECT_ID is required for production.',
+  );
+}
+
+const expoUpdatesUrl = expoProjectId ? `https://u.expo.dev/${expoProjectId}` : undefined;
+
+let edgeApiUrl = '';
+
+if (rawEdgeApiUrl) {
+  try {
+    const parsedEdgeApiUrl = new URL(rawEdgeApiUrl);
+
+    if (
+      parsedEdgeApiUrl.protocol !== 'https:' ||
+      parsedEdgeApiUrl.username ||
+      parsedEdgeApiUrl.password ||
+      parsedEdgeApiUrl.search ||
+      parsedEdgeApiUrl.hash
+    ) {
+      throw new Error('unsafe_url');
+    }
+
+    edgeApiUrl = rawEdgeApiUrl.replace(/\/+$/, '');
+  } catch {
+    throw new Error(
+      'Invalid public runtime configuration: Edge API URL must be an HTTPS base URL without credentials, query, or fragment.',
+    );
+  }
+}
+
+if (edgeCutoverMode === 'gateway' && !edgeApiUrl) {
+  throw new Error(
+    'Invalid public runtime configuration: Edge API URL is required when gateway cutover mode is enabled.',
+  );
+}
+
+const publicRuntimeConfig = {
+  edgeApiUrl,
+  edgeCutoverMode,
+  releaseEnvironment,
+};
 
 type SoRitaExpoConfig = ExpoConfig & {
   newArchEnabled?: boolean;
@@ -74,7 +152,7 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-  version: '1.0.100',
+  version: '1.0.101',
   newArchEnabled: true,
   orientation: 'default',
   scheme: appScheme,
@@ -86,6 +164,18 @@ const config: SoRitaExpoConfig = {
     'assets/app-icons_background_removed/playstore.png',
     'assets/splash/launch-splash.png',
   ],
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    // With a zero launch wait, a newly downloaded update is applied on the
+    // next cold start while the embedded/cached update remains the fallback.
+    enabled: Boolean(expoUpdatesUrl),
+    checkAutomatically: 'ON_LOAD',
+    fallbackToCacheTimeout: 0,
+    useEmbeddedUpdate: true,
+    ...(expoUpdatesUrl ? { url: expoUpdatesUrl } : {}),
+  },
   plugins: [
     'expo-image',
     'expo-video',
@@ -187,7 +277,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 105,
+    versionCode: 106,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -215,7 +305,7 @@ const config: SoRitaExpoConfig = {
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '85',
+    buildNumber: '86',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
       CFBundleDevelopmentRegion: 'tr',
@@ -275,6 +365,9 @@ const config: SoRitaExpoConfig = {
     systemNotificationFcmTopic,
     sentryDsn,
     authRedirectPath: 'auth/callback',
+    edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
+    edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,
+    releaseEnvironment: publicRuntimeConfig.releaseEnvironment,
   },
 };
 

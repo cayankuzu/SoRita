@@ -6,13 +6,34 @@ import { getFunctionUrl } from '@/mobile/app/platform/api/edgeFunctions';
 import { createSignedEdgeHeaders } from '@/mobile/app/platform/security/requestSigning';
 import {
   PLACE_MEDIA_MAX_FILE_SIZE_BYTES,
-  PLACE_MEDIA_MAX_FILE_SIZE_MB,
 } from '@/mobile/app/platform/media/placeMediaSize';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import {
+  buildUploadSizeLimitMessage,
+  readMediaFunctionError,
+  readStorageUploadError,
+} from '@/mobile/app/platform/supabase/mediaErrorMessages';
+import { createPrivateSignedReadUrlManager } from '@/mobile/app/platform/supabase/privateSignedReadUrls';
+import {
+  assertAllowedMediaUri,
+  buildStorageAssetUri,
+  getStorageAssetRef,
+  parseFinalizedPrivateUpload,
+  parseFinalizedPublicUpload,
+  parsePreparedUpload,
+  parseStorageAssetUri,
+  PRIVATE_PLACE_MEDIA_BUCKET,
+} from '@/mobile/app/platform/supabase/mediaProtocol';
+import type {
+  MediaBucket,
+  PrivateMediaBucket,
+  PublicMediaBucket,
+} from '@/mobile/app/platform/supabase/mediaProtocol';
+import { refreshSupabaseSession } from '@/mobile/app/platform/supabase/sessionRefresh';
+import { createUuid } from '@/shared/utils/id';
+import {
   getContentType,
   getFileExtension,
-  readLocalMediaAsBase64,
   readLocalMediaSize,
 } from '@/mobile/app/platform/supabase/localMediaFiles';
 import { t } from '@/mobile/app/shared/i18n';
@@ -22,136 +43,22 @@ import {
   waitWithAbort,
 } from '@/mobile/app/shared/utils/abort';
 
+export {
+  isAllowedMediaUri,
+  isPublicPlaceMediaAsset,
+  isStorageAssetUri,
+} from '@/mobile/app/platform/supabase/mediaProtocol';
+export type { MediaBucket } from '@/mobile/app/platform/supabase/mediaProtocol';
+
 const PROFILE_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 const PLACE_MEDIA_MAX_BYTES = PLACE_MEDIA_MAX_FILE_SIZE_BYTES;
 const IMMUTABLE_MEDIA_CACHE_CONTROL = 'max-age=31536000, immutable';
 
-type PublicMediaBucket = 'profile-media' | 'place-media';
-type PrivateMediaBucket = 'place-media-private';
-export type MediaBucket = PublicMediaBucket | PrivateMediaBucket;
-type StorageAssetRef = {
-  bucket: MediaBucket;
-  path: string;
-};
-
-const PRIVATE_PLACE_MEDIA_BUCKET: PrivateMediaBucket = 'place-media-private';
-const STORAGE_ASSET_SCHEME = 'sorita-storage://';
-const signedReadUrlCache = new Map<string, { expiresAt: number; signedUrl: string }>();
-const signedReadUrlInFlight = new Map<string, Promise<string>>();
-const pendingSignedReadRequests = new Map<
-  string,
-  {
-    ref: StorageAssetRef;
-    reject: (error: unknown) => void;
-    resolve: (signedUrl: string) => void;
-  }
->();
-let signedReadBatchScheduled = false;
-const SIGNED_READ_URL_CACHE_TTL_MS = 4 * 60 * 1000;
-const SIGNED_READ_URL_BATCH_SIZE = 64;
 const AUTH_SESSION_WAIT_TIMEOUT_MS = 5_000;
 const AUTH_SESSION_POLL_INTERVAL_MS = 150;
-const TRUSTED_MEDIA_HOSTS = new Set([
-  'maps.googleapis.com',
-  (() => {
-    try {
-      return new URL(env.supabaseUrl).hostname;
-    } catch {
-      return '';
-    }
-  })(),
-].filter(Boolean));
+const PRIVATE_COVER_REHOME_DIRECTORY = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}private-cover-rehome/`;
 
-export function isAllowedMediaUri(uri: string) {
-  if (/^(asset|content|file|ph):\/\//i.test(uri)) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(uri);
-    return parsed.protocol === 'https:' && TRUSTED_MEDIA_HOSTS.has(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
-
-function assertAllowedMediaUri(uri: string) {
-  if (!isAllowedMediaUri(uri)) {
-    throw new Error('Media URL host is not trusted.');
-  }
-}
-
-function buildStorageAssetUri(bucket: MediaBucket, path: string) {
-  return `${STORAGE_ASSET_SCHEME}${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`;
-}
-
-export function isStorageAssetUri(value?: string | null) {
-  return Boolean(value?.startsWith(STORAGE_ASSET_SCHEME));
-}
-
-function parseStorageAssetUri(value: string): StorageAssetRef | null {
-  if (!isStorageAssetUri(value)) {
-    return null;
-  }
-
-  try {
-    const parsedUrl = new URL(value);
-    const bucket = parsedUrl.hostname as MediaBucket;
-
-    if (!['profile-media', 'place-media', PRIVATE_PLACE_MEDIA_BUCKET].includes(bucket)) {
-      return null;
-    }
-
-    const path = decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ''));
-
-    if (!path || path.includes('..')) {
-      return null;
-    }
-
-    return { bucket, path };
-  } catch {
-    return null;
-  }
-}
-
-function getStorageAssetRef(
-  fallbackBucket: MediaBucket,
-  url?: string | null,
-): StorageAssetRef | null {
-  if (!url) {
-    return null;
-  }
-
-  const storageAssetRef = parseStorageAssetUri(url);
-
-  if (storageAssetRef) {
-    return storageAssetRef;
-  }
-
-  try {
-    const normalizedUrl = new URL(url);
-    const pathMatch = normalizedUrl.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-
-    if (!pathMatch) {
-      return null;
-    }
-
-    const [, bucketName, encodedPath] = pathMatch;
-
-    if (bucketName !== fallbackBucket) {
-      return null;
-    }
-
-    return {
-      bucket: fallbackBucket,
-      path: decodeURIComponent(encodedPath),
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function getAccessToken(signal?: AbortSignal) {
+async function getMediaRequestSession(signal?: AbortSignal, requireUser = false) {
   const waitDeadline = Date.now() + AUTH_SESSION_WAIT_TIMEOUT_MS;
 
   while (true) {
@@ -166,8 +73,11 @@ async function getAccessToken(signal?: AbortSignal) {
       throw new Error(error.message);
     }
 
-    if (session?.access_token) {
-      return session.access_token;
+    if (session?.access_token && (!requireUser || session.user?.id)) {
+      return {
+        accessToken: session.access_token,
+        userId: session.user?.id,
+      };
     }
 
     const remainingWaitMs = waitDeadline - Date.now();
@@ -186,11 +96,15 @@ async function getAccessToken(signal?: AbortSignal) {
   }
 }
 
+async function getAccessToken(signal?: AbortSignal) {
+  return (await getMediaRequestSession(signal)).accessToken;
+}
+
 async function refreshAccessToken() {
   const {
     data: { session },
     error,
-  } = await supabase.auth.refreshSession();
+  } = await refreshSupabaseSession();
 
   if (error) {
     throw new Error(error.message);
@@ -201,135 +115,6 @@ async function refreshAccessToken() {
   }
 
   return session.access_token;
-}
-
-async function readMediaFunctionError(response: Response) {
-  const retryAfterHeaderValue = response.headers.get('Retry-After');
-  const retryAfterSecondsFromHeader =
-    retryAfterHeaderValue && Number.isFinite(Number(retryAfterHeaderValue))
-      ? Number(retryAfterHeaderValue)
-      : null;
-  const responseText = await response.text().catch(() => '');
-  const trimmedResponseText = responseText.trim();
-
-  const buildRateLimitMessage = (retryAfterSeconds?: number | null) => {
-    const totalSeconds = Math.max(1, Math.ceil(retryAfterSeconds || 60));
-    const retryAt = new Date(Date.now() + totalSeconds * 1000);
-    const retryAtLabel = retryAt.toLocaleTimeString('tr-TR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-
-    if (totalSeconds < 60) {
-      return `Medya istek sinirina ulasildi. Lutfen ${totalSeconds} saniye sonra, ${retryAtLabel} itibariyla tekrar deneyin.`;
-    }
-
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const durationLabel = seconds > 0 ? `${minutes} dk ${seconds} sn` : `${minutes} dk`;
-    return `Medya istek sinirina ulasildi. Lutfen ${durationLabel} sonra, ${retryAtLabel} itibariyla tekrar deneyin.`;
-  };
-
-  if (trimmedResponseText) {
-    try {
-      const payload = JSON.parse(trimmedResponseText);
-
-      if (payload && typeof payload === 'object') {
-        if (response.status === 429 && retryAfterSecondsFromHeader) {
-          return buildRateLimitMessage(retryAfterSecondsFromHeader);
-        }
-
-        if (
-          response.status === 429 &&
-          'retryAfterSeconds' in payload &&
-          typeof payload.retryAfterSeconds === 'number' &&
-          payload.retryAfterSeconds > 0
-        ) {
-          return buildRateLimitMessage(payload.retryAfterSeconds);
-        }
-
-        if ('error' in payload && typeof payload.error === 'string' && payload.error.trim()) {
-          return payload.error;
-        }
-
-        if ('message' in payload && typeof payload.message === 'string' && payload.message.trim()) {
-          return payload.message;
-        }
-      }
-    } catch {
-      return trimmedResponseText;
-    }
-  }
-
-  if (response.status === 429) {
-    return buildRateLimitMessage(retryAfterSecondsFromHeader);
-  }
-
-  return response.statusText || `Media request failed (${response.status})`;
-}
-
-function readUploadResponseError(bodyText: string, fallbackMessage: string) {
-  const trimmedBody = bodyText.trim();
-
-  if (!trimmedBody) {
-    return fallbackMessage;
-  }
-
-  try {
-    const parsedBody = JSON.parse(trimmedBody);
-
-    if (
-      parsedBody &&
-      typeof parsedBody === 'object' &&
-      'error' in parsedBody &&
-      typeof parsedBody.error === 'string' &&
-      parsedBody.error.trim()
-    ) {
-      return parsedBody.error;
-    }
-
-    if (
-      parsedBody &&
-      typeof parsedBody === 'object' &&
-      'message' in parsedBody &&
-      typeof parsedBody.message === 'string' &&
-      parsedBody.message.trim()
-    ) {
-      return parsedBody.message;
-    }
-  } catch {
-    return trimmedBody;
-  }
-
-  return fallbackMessage;
-}
-
-function buildUploadSizeLimitMessage(bucket: 'profile-media' | 'place-media') {
-  if (bucket === 'place-media') {
-    return t.placeEditor.mediaSizeLimitPopupDescription(PLACE_MEDIA_MAX_FILE_SIZE_MB);
-  }
-
-  return `Media upload failed (${Math.ceil(PROFILE_MEDIA_MAX_BYTES / (1024 * 1024))} MB max)`;
-}
-
-function readStorageUploadError(params: {
-  bodyText: string;
-  bucket: 'profile-media' | 'place-media';
-  fallbackMessage: string;
-  status: number;
-}) {
-  const normalizedBodyText = params.bodyText.trim().toLowerCase();
-
-  if (
-    params.status === 413 ||
-    normalizedBodyText.includes('payload too large') ||
-    normalizedBodyText.includes('entity too large')
-  ) {
-    return buildUploadSizeLimitMessage(params.bucket);
-  }
-
-  return readUploadResponseError(params.bodyText, params.fallbackMessage);
 }
 
 async function performMediaFunctionRequest<TPayload extends Record<string, unknown>>(
@@ -387,6 +172,7 @@ const MEDIA_RETRY_BASE_DELAY_MS = 500;
 
 type MediaRequestSession = {
   accessToken: string;
+  userId?: string;
 };
 
 async function readRetryAfterSeconds(response: Response) {
@@ -524,34 +310,91 @@ export async function uploadImageAsset(params: {
   const extension = getFileExtension(uri);
   const contentType = getContentType(extension);
   const fileSizeBytes = await readLocalMediaSize(uri);
-  const maxUploadBytes = bucket === 'place-media' ? PLACE_MEDIA_MAX_BYTES : PROFILE_MEDIA_MAX_BYTES;
+  const maxUploadBytes = PROFILE_MEDIA_MAX_BYTES;
 
   if (fileSizeBytes > maxUploadBytes) {
-    throw new Error(buildUploadSizeLimitMessage(bucket));
+    throw new Error(buildUploadSizeLimitMessage(bucket, maxUploadBytes));
   }
 
   throwIfAborted(params.signal);
-  const base64File = await readLocalMediaAsBase64(uri);
-  const result = await callMediaFunction<
+  const authenticatedSession = await getMediaRequestSession(params.signal, true);
+
+  if (authenticatedSession.userId !== params.userId) {
+    throw new Error('Media session identity mismatch.');
+  }
+
+  const requestSession = { accessToken: authenticatedSession.accessToken };
+  const uploadSessionId = createUuid();
+  const prepared = parsePreparedUpload(await callMediaFunction<
     {
-      action: 'upload';
+      action: 'create-upload-url';
       bucket: PublicMediaBucket;
       contentType: string;
       extension: string;
-      fileBase64: string;
+      fileSizeBytes: number;
       prefix: string;
+      uploadSessionId: string;
     },
-    { publicUrl: string }
+    unknown
   >({
-    action: 'upload',
+    action: 'create-upload-url',
     bucket,
     contentType,
     extension,
-    fileBase64: base64File,
+    fileSizeBytes,
     prefix,
-  }, params.signal);
+    uploadSessionId,
+  }, params.signal, requestSession), params.userId, uploadSessionId);
 
-  return result.publicUrl;
+  try {
+    await uploadLocalFileToSignedUrl({
+      contentType,
+      fileSizeBytes,
+      maxUploadBytes,
+      signal: params.signal,
+      signedUrl: prepared.signedUrl,
+      uri,
+    });
+
+    const finalized = parseFinalizedPublicUpload(await callMediaFunction<
+      {
+        action: 'complete-upload';
+        bucket: PublicMediaBucket;
+        contentType: string;
+        fileSizeBytes: number;
+        mediaType: 'photo';
+        objectPath: string;
+        uploadSessionId: string;
+      },
+      unknown
+    >({
+      action: 'complete-upload',
+      bucket,
+      contentType,
+      fileSizeBytes,
+      mediaType: 'photo',
+      objectPath: prepared.objectPath,
+      uploadSessionId,
+    }, params.signal, requestSession), bucket, params.userId);
+
+    return finalized.publicUrl;
+  } catch (error) {
+    await callMediaFunction<
+      {
+        action: 'delete';
+        bucket: PrivateMediaBucket;
+        paths: string[];
+        uploadSessionId: string;
+      },
+      { success: true }
+    >({
+      action: 'delete',
+      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      paths: [prepared.objectPath],
+      uploadSessionId,
+    }, undefined, requestSession).catch(() => undefined);
+    throw error;
+  }
 }
 
 export type UploadPlaceMediaAssetParams = {
@@ -576,6 +419,7 @@ function isRetriableStorageUploadStatus(status: number) {
 async function uploadLocalFileToSignedUrl(params: {
   contentType: string;
   fileSizeBytes: number;
+  maxUploadBytes: number;
   onProgress?: UploadPlaceMediaAssetParams['onProgress'];
   signal?: AbortSignal;
   signedUrl: string;
@@ -648,6 +492,7 @@ async function uploadLocalFileToSignedUrl(params: {
         bodyText: uploadResult.body,
         bucket: 'place-media',
         fallbackMessage: `Media upload failed (${uploadResult.status})`,
+        maxUploadBytes: params.maxUploadBytes,
         status: uploadResult.status,
       }),
     );
@@ -686,8 +531,16 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
   }
 
   throwIfAborted(params.signal);
-  const requestSession = { accessToken: await getAccessToken() };
-  const data = await callMediaFunction<
+  const authenticatedSession = await getMediaRequestSession(params.signal, true);
+
+  if (params.userId && authenticatedSession.userId !== params.userId) {
+    throw new Error('Media session identity mismatch.');
+  }
+
+  const authenticatedUserId = authenticatedSession.userId as string;
+  const requestSession = { accessToken: authenticatedSession.accessToken };
+  const uploadSessionId = createUuid();
+  const data = parsePreparedUpload(await callMediaFunction<
     {
       action: 'create-upload-url';
       bucket: PrivateMediaBucket;
@@ -695,8 +548,9 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
       extension: string;
       fileSizeBytes: number;
       prefix: string;
+      uploadSessionId: string;
     },
-    { objectPath: string; signedUrl: string; storageUri?: string }
+    unknown
   >({
     action: 'create-upload-url',
     contentType,
@@ -704,7 +558,8 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
     bucket: PRIVATE_PLACE_MEDIA_BUCKET,
     fileSizeBytes,
     prefix,
-  }, params.signal, requestSession);
+    uploadSessionId,
+  }, params.signal, requestSession), authenticatedUserId, uploadSessionId);
   const mediaType = params.mediaType ?? (contentType.startsWith('video/') ? 'video' : 'photo');
   let lastReportedProgressBucket = -1;
   let lastReportedProgressPercent = -1;
@@ -713,6 +568,7 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
     await uploadLocalFileToSignedUrl({
       contentType,
       fileSizeBytes,
+      maxUploadBytes: PLACE_MEDIA_MAX_BYTES,
       onProgress: ({ sentBytes, totalBytes }) => {
         const progressPercent = totalBytes > 0
           ? Math.min(100, Math.floor((sentBytes / totalBytes) * 100))
@@ -740,11 +596,28 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
     });
   } catch (error) {
     trackEvent({ name: 'upload_failed', params: { mediaType } });
+    const orphanedStorageUri = buildStorageAssetUri(PRIVATE_PLACE_MEDIA_BUCKET, data.objectPath);
+    await callMediaFunction<
+      {
+        action: 'delete';
+        bucket: PrivateMediaBucket;
+        paths: string[];
+        uploadSessionId: string;
+      },
+      { success: true }
+    >({
+      action: 'delete',
+      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      paths: [data.objectPath],
+      uploadSessionId,
+    }, undefined, requestSession).catch(async () => {
+      await params.onOrphanedUpload?.(orphanedStorageUri);
+    });
     throw error;
   }
 
   try {
-    const finalized = await callMediaFunction<
+    const finalized = parseFinalizedPrivateUpload(await callMediaFunction<
       {
         action: 'complete-upload';
         bucket: PrivateMediaBucket;
@@ -754,9 +627,10 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
         height?: number;
         mediaType: 'photo' | 'video';
         objectPath: string;
+        uploadSessionId: string;
         width?: number;
       },
-      { objectPath: string; storageUri?: string; verified: true }
+      unknown
     >({
       action: 'complete-upload',
       bucket: PRIVATE_PLACE_MEDIA_BUCKET,
@@ -769,8 +643,9 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
       height: params.height,
       mediaType,
       objectPath: data.objectPath,
+      uploadSessionId,
       width: params.width,
-    }, params.signal, requestSession);
+    }, params.signal, requestSession), authenticatedUserId);
 
     const storageUri = finalized.storageUri || buildStorageAssetUri(
       PRIVATE_PLACE_MEDIA_BUCKET,
@@ -782,16 +657,69 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
     trackEvent({ name: 'upload_failed', params: { mediaType } });
     const orphanedStorageUri = buildStorageAssetUri(PRIVATE_PLACE_MEDIA_BUCKET, data.objectPath);
     await callMediaFunction<
-      { action: 'delete'; bucket: PrivateMediaBucket; paths: string[] },
+      {
+        action: 'delete';
+        bucket: PrivateMediaBucket;
+        paths: string[];
+        uploadSessionId: string;
+      },
       { success: true }
     >({
       action: 'delete',
       bucket: PRIVATE_PLACE_MEDIA_BUCKET,
       paths: [data.objectPath],
+      uploadSessionId,
     }, undefined, requestSession).catch(async () => {
       await params.onOrphanedUpload?.(orphanedStorageUri);
     });
     throw error;
+  }
+}
+
+export async function rehomePublicPlaceMediaAssetToPrivate(params: {
+  prefix: string;
+  signal?: AbortSignal;
+  uri: string;
+  userId: string;
+}) {
+  const source = getStorageAssetRef('place-media', params.uri);
+
+  if (!source || source.bucket !== 'place-media' || !PRIVATE_COVER_REHOME_DIRECTORY) {
+    throw new Error('Public list cover cannot be moved to private storage safely.');
+  }
+
+  throwIfAborted(params.signal);
+  const directoryInfo = await FileSystem.getInfoAsync(PRIVATE_COVER_REHOME_DIRECTORY);
+
+  if (!directoryInfo.exists) {
+    await FileSystem.makeDirectoryAsync(PRIVATE_COVER_REHOME_DIRECTORY, { intermediates: true });
+  }
+
+  const extension = getFileExtension(source.path);
+  const temporaryPath = `${PRIVATE_COVER_REHOME_DIRECTORY}${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}.${extension}`;
+  const { data } = supabase.storage.from(source.bucket).getPublicUrl(source.path);
+  assertAllowedMediaUri(data.publicUrl);
+
+  try {
+    const download = await FileSystem.downloadAsync(data.publicUrl, temporaryPath);
+
+    if (download.status < 200 || download.status >= 300) {
+      throw new Error('Public list cover download failed.');
+    }
+
+    throwIfAborted(params.signal);
+    return await uploadPlaceMediaAsset({
+      extension,
+      mediaType: 'photo',
+      prefix: params.prefix,
+      signal: params.signal,
+      uri: download.uri,
+      userId: params.userId,
+    });
+  } finally {
+    await FileSystem.deleteAsync(temporaryPath, { idempotent: true }).catch(() => undefined);
   }
 }
 
@@ -839,87 +767,37 @@ export async function deleteStorageAssetsByUrls(params: {
   }
 }
 
-function cacheSignedReadUrl(cacheKey: string, signedUrl: string, expiresInSeconds?: number) {
-  const ttlMs = Math.max(60, expiresInSeconds ?? 300) * 1000;
+const privateSignedReadUrlManager = createPrivateSignedReadUrlManager({
+  async getRequestSession() {
+    const requestSession = await getMediaRequestSession(undefined, true);
 
-  signedReadUrlCache.set(cacheKey, {
-    expiresAt: Date.now() + Math.min(ttlMs, SIGNED_READ_URL_CACHE_TTL_MS),
-    signedUrl,
-  });
-}
-
-async function flushSignedReadUrlBatch() {
-  signedReadBatchScheduled = false;
-  const pendingEntries = Array.from(pendingSignedReadRequests.entries());
-  pendingSignedReadRequests.clear();
-
-  for (let offset = 0; offset < pendingEntries.length; offset += SIGNED_READ_URL_BATCH_SIZE) {
-    const batch = pendingEntries.slice(offset, offset + SIGNED_READ_URL_BATCH_SIZE);
-
-    try {
-      const result = await callMediaFunction<
-        {
-          action: 'create-read-urls';
-          bucket: PrivateMediaBucket;
-          paths: string[];
-        },
-        {
-          expiresInSeconds?: number;
-          items: Array<{ path: string; signedUrl: string }>;
-        }
-      >({
-        action: 'create-read-urls',
-        bucket: PRIVATE_PLACE_MEDIA_BUCKET,
-        paths: batch.map(([, entry]) => entry.ref.path),
-      });
-      const signedUrlsByPath = new Map(
-        result.items.map((item) => [item.path, item.signedUrl]),
-      );
-
-      batch.forEach(([cacheKey, entry]) => {
-        const signedUrl = signedUrlsByPath.get(entry.ref.path);
-
-        if (!signedUrl) {
-          entry.reject(new Error('Private media URL response was incomplete.'));
-          return;
-        }
-
-        cacheSignedReadUrl(cacheKey, signedUrl, result.expiresInSeconds);
-        entry.resolve(signedUrl);
-      });
-    } catch (error) {
-      batch.forEach(([, entry]) => entry.reject(error));
+    if (!requestSession.userId) {
+      throw new Error(t.settings.sessionMissing);
     }
-  }
-}
 
-function enqueueSignedReadUrl(ref: StorageAssetRef) {
-  const cacheKey = `${ref.bucket}/${ref.path}`;
-  const cached = signedReadUrlCache.get(cacheKey);
+    return { accessToken: requestSession.accessToken, userId: requestSession.userId };
+  },
+  requestSignedUrls: ({ paths, requestSession, signal }) =>
+    callMediaFunction<
+      {
+        action: 'create-read-urls';
+        bucket: PrivateMediaBucket;
+        paths: string[];
+      },
+      {
+        expiresInSeconds?: number;
+        items: Array<{ path: string; signedUrl: string }>;
+      }
+    >({
+      action: 'create-read-urls',
+      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      paths,
+    }, signal, requestSession),
+});
 
-  if (cached && cached.expiresAt > Date.now() + 30_000) {
-    return Promise.resolve(cached.signedUrl);
-  }
-
-  const inFlight = signedReadUrlInFlight.get(cacheKey);
-
-  if (inFlight) {
-    return inFlight;
-  }
-
-  const request = new Promise<string>((resolve, reject) => {
-    pendingSignedReadRequests.set(cacheKey, { ref, reject, resolve });
-
-    if (!signedReadBatchScheduled) {
-      signedReadBatchScheduled = true;
-      void Promise.resolve().then(flushSignedReadUrlBatch);
-    }
-  }).finally(() => {
-    signedReadUrlInFlight.delete(cacheKey);
-  });
-
-  signedReadUrlInFlight.set(cacheKey, request);
-  return request;
+/** Clears every private signed URL and invalidates queued/in-flight batches. */
+export function purgePrivateSignedReadUrlState() {
+  privateSignedReadUrlManager.purge();
 }
 
 export async function resolveStorageAssetUrl(uri?: string | null) {
@@ -938,9 +816,44 @@ export async function resolveStorageAssetUrl(uri?: string | null) {
     return uri;
   }
 
-  return enqueueSignedReadUrl(ref);
+  return privateSignedReadUrlManager.resolve(ref);
 }
 
-export function resolveStorageAssetUrls(uris: Array<string | null | undefined>) {
-  return Promise.all(uris.map((uri) => resolveStorageAssetUrl(uri)));
+export async function resolveStorageAssetUrls(uris: Array<string | null | undefined>) {
+  const parsedUris = uris.map((uri) => ({
+    ref: uri ? parseStorageAssetUri(uri) : null,
+    uri,
+  }));
+  parsedUris.forEach(({ ref, uri }) => {
+    if (uri && !ref) {
+      assertAllowedMediaUri(uri);
+    }
+  });
+  const privateRefs = parsedUris.flatMap(({ ref }) =>
+    ref?.bucket === PRIVATE_PLACE_MEDIA_BUCKET ? [ref] : []);
+  const privateUrls = await privateSignedReadUrlManager.resolveMany(privateRefs);
+  let privateUrlIndex = 0;
+
+  return parsedUris.map(({ ref, uri }) => {
+    if (!uri) {
+      return null;
+    }
+
+    if (!ref) {
+      return uri;
+    }
+
+    if (ref.bucket !== PRIVATE_PLACE_MEDIA_BUCKET) {
+      return uri;
+    }
+
+    const privateUrl = privateUrls[privateUrlIndex];
+    privateUrlIndex += 1;
+
+    if (!privateUrl) {
+      throw new Error('Private media URL response was incomplete.');
+    }
+
+    return privateUrl;
+  });
 }

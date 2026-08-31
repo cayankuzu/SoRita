@@ -6,15 +6,20 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development",
+      "environment": "development"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview",
+      "environment": "preview"
     },
     "production": {
       "distribution": "store",
       "autoIncrement": false,
       "credentialsSource": "local",
+      "channel": "production",
       "environment": "production",
       "env": {
         "EXPO_OWNER": "cayann"

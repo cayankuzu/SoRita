@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildRequestSigningMessage,
   createRequestSignature,
+  readBoundedRequestBody,
   sha256Hex,
   verifySignedRequest,
 } from './requestSecurity';
@@ -50,6 +51,43 @@ async function createSignedRequest(body: string) {
 }
 
 describe('requestSecurity', () => {
+  it('bounds declared and streamed UTF-8 request bodies', async () => {
+    const declaredOversize = await readBoundedRequestBody(
+      new Request('https://example.com', {
+        body: '{}',
+        headers: { 'content-length': '1024' },
+        method: 'POST',
+      }),
+      16,
+    );
+    expect(declaredOversize).toMatchObject({ ok: false, status: 413 });
+
+    const streamedRequest = new Request('https://example.com', {
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('1234'));
+          controller.enqueue(new TextEncoder().encode('5678'));
+          controller.close();
+        },
+      }),
+      duplex: 'half',
+      method: 'POST',
+    } as RequestInit & { duplex: 'half' });
+    await expect(readBoundedRequestBody(streamedRequest, 7)).resolves.toMatchObject({
+      ok: false,
+      status: 413,
+    });
+
+    const bodyWithoutLength = new Request('https://example.com', {
+      body: '{"ok":true}',
+      method: 'POST',
+    });
+    await expect(readBoundedRequestBody(bodyWithoutLength, 32)).resolves.toEqual({
+      bodyText: '{"ok":true}',
+      ok: true,
+    });
+  });
+
   it('builds stable signing messages and hashes', async () => {
     expect(
       buildRequestSigningMessage({

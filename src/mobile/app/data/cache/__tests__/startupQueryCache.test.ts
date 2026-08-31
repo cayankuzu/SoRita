@@ -3,6 +3,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  cancelAndDrainStartupQueryCacheWork,
   flushStartupQueryCachePersist,
   isStartupQueryKeyAllowed,
   persistStartupQueryCache,
@@ -196,5 +197,23 @@ describe('startupQueryCache', () => {
     scheduleStartupQueryCachePersist(client, 'flush-user');
     await expect(flushStartupQueryCachePersist('flush-user')).resolves.toBe(true);
     await expect(flushStartupQueryCachePersist('flush-user')).resolves.toBe(false);
+  });
+
+  it('cancels pending persistence so signed-out user data cannot be rewritten', async () => {
+    vi.useFakeTimers();
+    const client = createClient();
+    const userId = 'signed-out-user';
+    client.setQueryData(queryKeys.feed.page(userId), { pages: [], pageParams: [] }, {
+      updatedAt: Date.now(),
+    });
+
+    scheduleStartupQueryCachePersist(client, userId);
+    await cancelAndDrainStartupQueryCacheWork(userId);
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(AsyncStorage.getItem(
+      `sorita.screen-index.1.${userId}.startup-queries-v3`,
+    )).resolves.toBeNull();
+    await expect(flushStartupQueryCachePersist(userId)).resolves.toBe(false);
   });
 });

@@ -1,0 +1,189 @@
+name: Cloudflare Preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare/sorita-edge/**'
+      - '.github/workflows/cloudflare-preview.yml'
+  workflow_dispatch:
+    inputs:
+      deploy_preview:
+        description: Deploy the verified Worker to the protected preview environment
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-preview-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  CI: 'true'
+  NODE_VERSION: '24'
+  WORKER_DIRECTORY: infra/cloudflare/sorita-edge
+
+jobs:
+  validate:
+    name: Worker validation and dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: infra/cloudflare/sorita-edge/package-lock.json
+
+      - name: Install the isolated Worker lockfile
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        run: npm ci --ignore-scripts
+
+      - name: Run types, lint, tests and audit
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        run: |
+          npm run check
+          npm audit --audit-level=high
+
+      - name: Build the preview Worker without deploying
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        run: npm run dry-run:preview
+
+  deploy-preview:
+    name: Deploy protected preview Worker
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: preview
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EDGE_CORS_ALLOWLIST: ${{ vars.CLOUDFLARE_EDGE_CORS_ALLOWLIST }}
+      EDGE_HEALTH_URL: ${{ vars.CLOUDFLARE_EDGE_HEALTH_URL }}
+      EDGE_LOG_SAMPLE_RATE: ${{ vars.CLOUDFLARE_EDGE_LOG_SAMPLE_RATE }}
+      EDGE_SUPABASE_URL: ${{ vars.CLOUDFLARE_EDGE_SUPABASE_URL }}
+      ORIGIN_HMAC_SECRET: ${{ secrets.CLOUDFLARE_ORIGIN_HMAC_SECRET }}
+      IP_HASH_PEPPER: ${{ secrets.CLOUDFLARE_IP_HASH_PEPPER }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: infra/cloudflare/sorita-edge/package-lock.json
+
+      - name: Install the isolated Worker lockfile
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        run: npm ci --ignore-scripts
+
+      - name: Validate protected environment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN EDGE_CORS_ALLOWLIST EDGE_HEALTH_URL EDGE_SUPABASE_URL ORIGIN_HMAC_SECRET IP_HASH_PEPPER SUPABASE_PUBLISHABLE_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Protected preview environment is missing ${name}."
+              exit 1
+            fi
+          done
+          node -e "for (const name of ['EDGE_HEALTH_URL','EDGE_SUPABASE_URL']) { const value=process.env[name]; const url=new URL(value); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || value.includes('replace-')) throw new Error(name + ' must be a non-placeholder HTTPS URL'); }"
+
+      - name: Create a mode-600 transient Worker secret file
+        shell: bash
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/sorita-edge-preview-secrets.json
+        run: |
+          set -euo pipefail
+          node -e "const fs=require('node:fs'); fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify({SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY,ORIGIN_HMAC_SECRET:process.env.ORIGIN_HMAC_SECRET,IP_HASH_PEPPER:process.env.IP_HASH_PEPPER}), {mode:0o600,flag:'wx'});"
+
+      - name: Deploy preview from the verified lockfile
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        shell: bash
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/sorita-edge-preview-secrets.json
+        run: |
+          set -euo pipefail
+          sample_rate="${EDGE_LOG_SAMPLE_RATE:-0.25}"
+          npx wrangler deploy \
+            --env preview \
+            --strict \
+            --secrets-file "$SECRETS_FILE" \
+            --message "preview sha:${GITHUB_SHA}" \
+            --metafile "${RUNNER_TEMP}/cloudflare-preview-metafile.json" \
+            --var "BUILD_SHA:${GITHUB_SHA}" \
+            --var 'ENVIRONMENT:preview' \
+            --var "SUPABASE_URL:${EDGE_SUPABASE_URL}" \
+            --var 'SUPABASE_JWT_AUDIENCE:authenticated' \
+            --var "CORS_ALLOWLIST:${EDGE_CORS_ALLOWLIST}" \
+            --var 'ORIGIN_TIMEOUT_MS:8000' \
+            --var 'JWKS_TIMEOUT_MS:2500' \
+            --var "LOG_SAMPLE_RATE:${sample_rate}"
+
+      - name: Verify the deployed health contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const expectedSha = process.env.GITHUB_SHA;
+          let lastError;
+
+          for (let attempt = 1; attempt <= 8; attempt += 1) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10_000);
+
+            try {
+              const response = await fetch(process.env.EDGE_HEALTH_URL, {
+                cache: 'no-store',
+                redirect: 'error',
+                signal: controller.signal,
+              });
+              if (response.status !== 200) throw new Error(`health status ${response.status}`);
+              if (!/no-store/.test(response.headers.get('cache-control') ?? '')) {
+                throw new Error('health response must be no-store');
+              }
+              const body = await response.json();
+              if (body?.ok !== true || body?.buildSha !== expectedSha) {
+                throw new Error(`health BUILD_SHA mismatch on attempt ${attempt}`);
+              }
+              lastError = undefined;
+              break;
+            } catch (error) {
+              lastError = error;
+            } finally {
+              clearTimeout(timer);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 2_000));
+          }
+
+          if (lastError) throw lastError;
+          NODE
+
+      - name: Remove transient secret material
+        if: always()
+        shell: bash
+        run: rm -f -- "${RUNNER_TEMP}/sorita-edge-preview-secrets.json"
+
+      - name: Upload non-secret Worker build metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cloudflare-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/cloudflare-preview-metafile.json
+          if-no-files-found: error
+          retention-days: 30

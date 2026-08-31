@@ -21,6 +21,7 @@ const loggerDebugMock = vi.fn();
 const loggerErrorMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const isPasswordRecoverySessionExchangeActiveMock = vi.fn();
+const purgeAuthenticatedUserStateMock = vi.fn();
 
 function dispatchAuthChange<TSession>(
   handler: ((event: string, session: TSession) => void) | null,
@@ -80,6 +81,10 @@ vi.mock('@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard', () =
   isPasswordRecoverySessionExchangeActive: isPasswordRecoverySessionExchangeActiveMock,
 }));
 
+vi.mock('@/mobile/app/app-shell/auth/session/authUserStatePurge', () => ({
+  purgeAuthenticatedUserState: purgeAuthenticatedUserStateMock,
+}));
+
 describe('useAuthSessionLifecycle', () => {
   beforeEach(() => {
     clearCurrentUserStateMock.mockReset();
@@ -99,10 +104,12 @@ describe('useAuthSessionLifecycle', () => {
     loggerErrorMock.mockReset();
     loggerWarnMock.mockReset();
     isPasswordRecoverySessionExchangeActiveMock.mockReset();
+    purgeAuthenticatedUserStateMock.mockReset();
     isPasswordRecoverySessionExchangeActiveMock.mockReturnValue(false);
     refreshSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     signOutMock.mockResolvedValue(undefined);
     restorePersistedVisibleDataSnapshotMock.mockResolvedValue(null);
+    purgeAuthenticatedUserStateMock.mockResolvedValue(undefined);
 
     vi.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     vi.spyOn(AppState, 'addEventListener').mockImplementation(() => ({

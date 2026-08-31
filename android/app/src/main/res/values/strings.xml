@@ -1,3 +1,5 @@
 <resources>
   <string name="app_name">SoRita</string>
+    <string name="expo_runtime_version" translatable="false">1.0.101</string>
+  <string name="expo_update_url" translatable="false">https://u.expo.dev/b4a62a22-92dd-4867-ab44-f9131d958ed2</string>
 </resources>

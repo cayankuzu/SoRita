@@ -5,6 +5,8 @@ const getSessionMock = vi.fn();
 const rpcMock = vi.fn();
 const uploadImageAssetMock = vi.fn();
 const uploadPlaceMediaAssetMock = vi.fn();
+const isPublicPlaceMediaAssetMock = vi.fn();
+const rehomePublicPlaceMediaAssetToPrivateMock = vi.fn();
 const deleteStorageAssetsByUrlsMock = vi.fn();
 const fetchVisibleDataContextMock = vi.fn();
 const fetchVisibleListsPageMock = vi.fn();
@@ -23,6 +25,8 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
 
 vi.mock('@/mobile/app/platform/supabase/media', () => ({
   deleteStorageAssetsByUrls: deleteStorageAssetsByUrlsMock,
+  isPublicPlaceMediaAsset: isPublicPlaceMediaAssetMock,
+  rehomePublicPlaceMediaAssetToPrivate: rehomePublicPlaceMediaAssetToPrivateMock,
   uploadImageAsset: uploadImageAssetMock,
   uploadPlaceMediaAsset: uploadPlaceMediaAssetMock,
 }));
@@ -66,11 +70,16 @@ describe('listsRepository', () => {
     rpcMock.mockReset();
     uploadImageAssetMock.mockReset();
     uploadPlaceMediaAssetMock.mockReset();
+    isPublicPlaceMediaAssetMock.mockReset();
+    rehomePublicPlaceMediaAssetToPrivateMock.mockReset();
     deleteStorageAssetsByUrlsMock.mockReset();
     fetchVisibleDataContextMock.mockReset();
     fetchVisibleListsPageMock.mockReset();
     generateVideoThumbnailUriMock.mockReset();
     submitModerationReportMock.mockReset();
+    isPublicPlaceMediaAssetMock.mockImplementation(
+      (value?: string) => Boolean(value?.includes('/storage/v1/object/public/place-media/')),
+    );
     deleteStorageAssetsByUrlsMock.mockResolvedValue(undefined);
     rpcMock.mockResolvedValue({ error: null });
     generateVideoThumbnailUriMock.mockResolvedValue(undefined);
@@ -308,7 +317,7 @@ describe('listsRepository', () => {
     })).rejects.toThrow('Mekân adı topluluk kurallarına aykırı ifade içeriyor.');
 
     expect(fromMock).toHaveBeenCalledTimes(1);
-    expect(uploadImageAssetMock).toHaveBeenCalledTimes(1);
+    expect(uploadImageAssetMock).not.toHaveBeenCalled();
   });
 
   it('throws when place persistence fails', async () => {
@@ -362,6 +371,7 @@ describe('listsRepository', () => {
       id: 'list-auth',
       userId: '',
       name: 'Saved spots',
+      coverImage: 'file:///tmp/owner-cover.jpg',
       places: [],
       isPublic: true,
       likes: 0,
@@ -380,6 +390,41 @@ describe('listsRepository', () => {
         owner_id: 'auth-user',
       }),
     );
+  });
+
+  it('uploads private-list covers directly to private storage', async () => {
+    const { createList } = await import('@/mobile/app/data/repositories/listsRepository');
+    const listsInsertMock = vi.fn().mockResolvedValue({ error: null });
+    uploadPlaceMediaAssetMock.mockResolvedValueOnce(
+      'sorita-storage://place-media-private/user-1/list-private/cover.jpg',
+    );
+    fromMock.mockReturnValueOnce({ insert: listsInsertMock });
+
+    await createList({
+      id: 'list-private',
+      userId: 'user-1',
+      name: 'Private spots',
+      coverImage: 'file:///tmp/private-cover.jpg',
+      places: [],
+      isPublic: false,
+      likes: 0,
+      likedBy: [],
+      createdAt: '2026-04-16T10:00:00.000Z',
+      updatedAt: '2026-04-16T10:00:00.000Z',
+    });
+
+    expect(uploadPlaceMediaAssetMock).toHaveBeenCalledWith({
+      mediaType: 'photo',
+      prefix: 'list-private/cover',
+      signal: undefined,
+      uri: 'file:///tmp/private-cover.jpg',
+      userId: 'user-1',
+    });
+    expect(uploadImageAssetMock).not.toHaveBeenCalled();
+    expect(listsInsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      cover_image_url: 'sorita-storage://place-media-private/user-1/list-private/cover.jpg',
+      is_public: false,
+    }));
   });
 
   it('persists empty array fields and a fallback name when optional place details are omitted', async () => {
@@ -541,6 +586,45 @@ describe('listsRepository', () => {
     expect(deleteStorageAssetsByUrlsMock).toHaveBeenCalledWith({
       bucket: 'place-media',
       urls: ['https://cdn.example/old-cover.jpg'],
+    });
+  });
+
+  it('rehomes an unchanged public cover before tightening list visibility', async () => {
+    const { updateList } = await import('@/mobile/app/data/repositories/listsRepository');
+    const publicCover = 'https://example.supabase.co/storage/v1/object/public/place-media/user-1/list-1/cover.jpg';
+    const privateCover = 'sorita-storage://place-media-private/user-1/list-1/cover-private.jpg';
+    const upsertMock = vi.fn().mockResolvedValue({ error: null });
+    const previousList = {
+      id: 'list-1',
+      userId: 'user-1',
+      name: 'Saved spots',
+      coverImage: publicCover,
+      places: [],
+      isPublic: true,
+      createdAt: '2026-04-16T10:00:00.000Z',
+      updatedAt: '2026-04-16T10:00:00.000Z',
+    };
+
+    rehomePublicPlaceMediaAssetToPrivateMock.mockResolvedValueOnce(privateCover);
+    fromMock.mockReturnValueOnce({ upsert: upsertMock });
+
+    await updateList({ ...previousList, isPublic: false }, previousList);
+
+    expect(rehomePublicPlaceMediaAssetToPrivateMock).toHaveBeenCalledWith({
+      prefix: 'list-1/cover',
+      signal: undefined,
+      uri: publicCover,
+      userId: 'user-1',
+    });
+    expect(upsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      cover_image_url: privateCover,
+      is_public: false,
+    }));
+    // A public object can still be referenced by another list. The rehome is
+    // lossless; reference-counted cleanup belongs to the privileged ops job.
+    expect(deleteStorageAssetsByUrlsMock).not.toHaveBeenCalledWith({
+      bucket: 'place-media',
+      urls: [publicCover],
     });
   });
 

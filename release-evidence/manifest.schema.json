@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cayankuzu/SoRita/blob/main/release-evidence/manifest.schema.json",
+  "title": "SoRita immutable release evidence manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "commitSha",
+    "ref",
+    "treeState",
+    "generatedAt",
+    "release",
+    "checks",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": { "type": ["string", "null"] },
+    "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "ref": { "type": ["string", "null"] },
+    "treeState": { "const": "clean" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "channel", "runtimeVersion"],
+      "properties": {
+        "environment": { "type": ["string", "null"] },
+        "channel": { "type": ["string", "null"] },
+        "runtimeVersion": { "type": ["string", "null"] }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality",
+        "database-local",
+        "feature-surface",
+        "evidence-tool",
+        "sast-secret-scan",
+        "cloudflare-preview",
+        "signed-android-ios",
+        "physical-device-matrix",
+        "provider-dashboards",
+        "staging-restore",
+        "store-internal-tracks",
+        "ota-preview-rollback",
+        "backup-pitr",
+        "observability-alerts",
+        "security-review"
+      ],
+      "properties": {
+        "quality": { "enum": ["pass", "fail", "unverified"] },
+        "database-local": { "enum": ["pass", "fail", "unverified"] },
+        "feature-surface": { "enum": ["pass", "fail", "unverified"] },
+        "evidence-tool": { "enum": ["pass", "fail", "unverified"] },
+        "sast-secret-scan": { "enum": ["pass", "fail", "unverified"] },
+        "cloudflare-preview": { "enum": ["pass", "fail", "unverified"] },
+        "signed-android-ios": { "enum": ["pass", "fail", "unverified"] },
+        "physical-device-matrix": { "enum": ["pass", "fail", "unverified"] },
+        "provider-dashboards": { "enum": ["pass", "fail", "unverified"] },
+        "staging-restore": { "enum": ["pass", "fail", "unverified"] },
+        "store-internal-tracks": { "enum": ["pass", "fail", "unverified"] },
+        "ota-preview-rollback": { "enum": ["pass", "fail", "unverified"] },
+        "backup-pitr": { "enum": ["pass", "fail", "unverified"] },
+        "observability-alerts": { "enum": ["pass", "fail", "unverified"] },
+        "security-review": { "enum": ["pass", "fail", "unverified"] }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bytes", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    }
+  }
+}

@@ -29,6 +29,7 @@ function completePayload(overrides: Record<string, unknown> = {}) {
     height: 20,
     mediaType: 'photo',
     objectPath: 'user-1/list-1/place-1/asset.png',
+    uploadSessionId: '11111111-1111-4111-8111-111111111111',
     width: 10,
     ...overrides,
   } as Parameters<typeof media.assertMediaMetadata>[0];
@@ -48,6 +49,12 @@ describe('media-assets validation internals', () => {
       {
         action: 'create-upload-url', bucket: 'place-media-private', contentType: 'video/mp4',
         fileSizeBytes: 100, prefix: 'list/place/video',
+        uploadSessionId: '22222222-2222-4222-8222-222222222222',
+      },
+      {
+        action: 'create-upload-url', bucket: 'place-media', contentType: 'image/png',
+        fileSizeBytes: 100, prefix: 'list/place/image',
+        uploadSessionId: '33333333-3333-4333-8333-333333333333',
       },
       { action: 'create-read-url', bucket: 'place-media-private', path: 'owner/list/image.jpg' },
       { action: 'create-read-urls', bucket: 'place-media-private', paths: ['owner/list/image.jpg'] },
@@ -78,7 +85,13 @@ describe('media-assets validation internals', () => {
       { action: 'create-read-url', bucket: 'place-media-private', path: '' },
       { action: 'create-read-urls', bucket: 'place-media', paths: ['owner/list/x.jpg'] },
       { action: 'create-read-urls', bucket: 'place-media-private', paths: [] },
-      { ...completePayload(), bucket: 'place-media' },
+      {
+        ...completePayload(),
+        bucket: 'place-media',
+        contentType: 'video/mp4',
+        durationSeconds: 1,
+        mediaType: 'video',
+      },
       { ...completePayload(), contentType: 1 },
       { ...completePayload(), contentType: 'image/gif' },
       { ...completePayload(), objectPath: '' },

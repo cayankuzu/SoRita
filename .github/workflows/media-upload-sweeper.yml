@@ -1,0 +1,64 @@
+name: Media Upload Session Sweeper
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      apply_changes:
+        description: Claim and clean eligible stale upload sessions
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-media-upload-session-sweeper
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  sweep:
+    name: Bounded stale-upload cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Check out the scheduled source revision
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install production dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --omit=dev
+
+      - name: Inventory eligible sessions without mutation
+        if: github.event_name == 'workflow_dispatch' && !inputs.apply_changes
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run ops:media-uploads:audit -- --limit 100
+
+      - name: Sweep eligible sessions in bounded batches
+        if: github.event_name == 'schedule' || inputs.apply_changes
+        env:
+          SORITA_MEDIA_SWEEP_CONFIRM: SWEEP_STALE_MEDIA_UPLOADS
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run ops:media-uploads:sweep -- --limit 100 --max-batches 10
+
+      - name: Surface cleanup failures to GitHub monitoring
+        if: failure()
+        run: |
+          echo '::error title=Media upload sweep failed::Inspect this protected production workflow run; do not expose credentials in the incident record.'
+          echo 'Media upload sweep failed. Production release and operations remain NO-GO until reconciled.' >> "$GITHUB_STEP_SUMMARY"

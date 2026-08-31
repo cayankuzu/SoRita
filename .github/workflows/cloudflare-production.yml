@@ -1,0 +1,402 @@
+name: Cloudflare Production
+run-name: Cloudflare production canary for ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      quality_run_id:
+        description: Successful Quality workflow run ID for this exact commit
+        required: true
+        type: string
+      database_run_id:
+        description: Successful Database Validation workflow run ID for this exact commit
+        required: true
+        type: string
+      preview_run_id:
+        description: Successful Cloudflare Preview deployment run ID for this exact commit
+        required: true
+        type: string
+      release_evidence_run_id:
+        description: Successful Release Evidence workflow run ID for this exact commit
+        required: true
+        type: string
+      previous_version_id:
+        description: Currently healthy production Worker version UUID
+        required: true
+        type: string
+      confirm_production:
+        description: Upload this commit and route an initial 5% of production traffic to it
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+
+env:
+  CI: 'true'
+  NODE_VERSION: '24'
+  WORKER_DIRECTORY: infra/cloudflare/sorita-edge
+
+jobs:
+  deploy-production-canary:
+    name: Verify evidence and deploy 5% canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EDGE_CORS_ALLOWLIST: ${{ vars.CLOUDFLARE_EDGE_CORS_ALLOWLIST }}
+      EDGE_HEALTH_URL: ${{ vars.CLOUDFLARE_EDGE_HEALTH_URL }}
+      EDGE_LOG_SAMPLE_RATE: ${{ vars.CLOUDFLARE_EDGE_LOG_SAMPLE_RATE }}
+      EDGE_SUPABASE_URL: ${{ vars.CLOUDFLARE_EDGE_SUPABASE_URL }}
+      ORIGIN_HMAC_SECRET: ${{ secrets.CLOUDFLARE_ORIGIN_HMAC_SECRET }}
+      IP_HASH_PEPPER: ${{ secrets.CLOUDFLARE_IP_HASH_PEPPER }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Check out the exact production candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: infra/cloudflare/sorita-edge/package-lock.json
+
+      - name: Verify default branch, approval and prior same-SHA workflow evidence
+        shell: bash
+        env:
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+          DATABASE_RUN_ID: ${{ inputs.database_run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_RUN_ID: ${{ inputs.preview_run_id }}
+          QUALITY_RUN_ID: ${{ inputs.quality_run_id }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo '::error::Production Worker deployment must be dispatched from the default branch.'
+            exit 1
+          fi
+          if [[ "$CONFIRM_PRODUCTION" != 'true' ]]; then
+            echo '::error::Explicit production confirmation is required.'
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$TARGET_SHA" ]]; then
+            echo '::error::Checked-out source does not match github.sha.'
+            exit 1
+          fi
+
+          verify_run() {
+            local run_id="$1"
+            local workflow_file="$2"
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "::error::${workflow_file} run ID must be numeric."
+              exit 1
+            fi
+            local fields expected_id
+            fields="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion,.head_sha,(.workflow_id|tostring),.head_repository.full_name] | @tsv')"
+            expected_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}" --jq '.id')"
+            local status conclusion head_sha workflow_id head_repository
+            IFS=$'\t' read -r status conclusion head_sha workflow_id head_repository <<< "$fields"
+            if [[ "$status" != completed || "$conclusion" != success || "$head_sha" != "$TARGET_SHA" || "$workflow_id" != "$expected_id" || "$head_repository" != "$GITHUB_REPOSITORY" ]]; then
+              echo "::error::${workflow_file} is not successful same-SHA evidence."
+              exit 1
+            fi
+          }
+
+          verify_run "$QUALITY_RUN_ID" quality.yml
+          verify_run "$DATABASE_RUN_ID" database-validation.yml
+          verify_run "$PREVIEW_RUN_ID" cloudflare-preview.yml
+
+          mapfile -t preview_deploy_jobs < <(
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${PREVIEW_RUN_ID}/jobs?filter=latest&per_page=100" \
+              --paginate \
+              --jq '.jobs[] | select(.name == "Deploy protected preview Worker") | [.status,.conclusion] | @tsv'
+          )
+          if [[ "${#preview_deploy_jobs[@]}" -ne 1 || "${preview_deploy_jobs[0]}" != $'completed\tsuccess' ]]; then
+            echo '::error::Cloudflare Preview evidence must include a successful protected preview deployment job.'
+            exit 1
+          fi
+
+      - name: Download and verify the exact release evidence packet
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_EVIDENCE_RUN_ID: ${{ inputs.release_evidence_run_id }}
+          RELEASE_MANIFEST: ${{ github.workspace }}/artifacts/release-evidence/manifest.json
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo '::error::release_evidence_run_id must be numeric.'
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$TARGET_SHA" ]]; then
+            echo '::error::Release evidence must be verified from the exact deployment commit.'
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+            echo '::error::Release evidence verification requires a clean checkout.'
+            exit 1
+          fi
+
+          run_fields="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_EVIDENCE_RUN_ID}" --jq '[.status,.conclusion,.head_sha,.event,(.workflow_id|tostring),.head_repository.full_name,.repository.full_name] | @tsv')"
+          expected_workflow_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-evidence.yml" --jq '.id')"
+          IFS=$'\t' read -r run_status conclusion evidence_sha event_name workflow_id head_repository repository <<< "$run_fields"
+          if [[ "$run_status" != completed || "$conclusion" != success || "${evidence_sha,,}" != "${TARGET_SHA,,}" || "$event_name" != workflow_dispatch || "$workflow_id" != "$expected_workflow_id" || "$head_repository" != "$GITHUB_REPOSITORY" || "$repository" != "$GITHUB_REPOSITORY" ]]; then
+            echo '::error::Release Evidence run must be a successful same-repository workflow_dispatch for the exact deployment SHA.'
+            exit 1
+          fi
+
+          artifact_name="partial-release-evidence-${TARGET_SHA}"
+          artifact_rows="${RUNNER_TEMP}/release-evidence-artifacts.jsonl"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_EVIDENCE_RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | @json' \
+            > "$artifact_rows"
+          ARTIFACT_NAME="$artifact_name" ARTIFACT_ROWS="$artifact_rows" node <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const rows = readFileSync(process.env.ARTIFACT_ROWS, 'utf8')
+            .split(/\r?\n/u)
+            .filter(Boolean)
+            .map((row) => JSON.parse(row));
+          const matches = rows.filter((artifact) => artifact.name === process.env.ARTIFACT_NAME);
+          if (matches.length !== 1) {
+            throw new Error(`Expected exactly one ${process.env.ARTIFACT_NAME} artifact; found ${matches.length}.`);
+          }
+          const [artifact] = matches;
+          if (artifact.expired === true) throw new Error('The selected release evidence artifact has expired.');
+          if (artifact.workflow_run?.id !== Number(process.env.RELEASE_EVIDENCE_RUN_ID)) {
+            throw new Error('Release evidence artifact is not bound to the selected workflow run.');
+          }
+          if (artifact.workflow_run?.head_sha?.toLowerCase() !== process.env.TARGET_SHA.toLowerCase()) {
+            throw new Error('Release evidence artifact SHA does not match the deployment SHA.');
+          }
+          if (!/^sha256:[a-f0-9]{64}$/u.test(artifact.digest ?? '')) {
+            throw new Error('Release evidence artifact is missing its GitHub SHA-256 digest.');
+          }
+          NODE
+
+          mkdir -p artifacts/release-evidence
+          gh run download "$RELEASE_EVIDENCE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$artifact_name" \
+            --dir artifacts/release-evidence
+          test -f "$RELEASE_MANIFEST"
+          npm run release-evidence:verify -- --manifest "$RELEASE_MANIFEST"
+
+          EXPECTED_RUNTIME_VERSION="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version)")" \
+            RELEASE_MANIFEST="$RELEASE_MANIFEST" \
+            TARGET_SHA="$TARGET_SHA" \
+            node <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const manifest = JSON.parse(readFileSync(process.env.RELEASE_MANIFEST, 'utf8'));
+          const nonPassingChecks = Object.entries(manifest.checks ?? {})
+            .filter(([, state]) => state !== 'pass')
+            .map(([name, state]) => `${name}=${state}`);
+          if (nonPassingChecks.length > 0) {
+            throw new Error(`Release evidence contains non-passing checks: ${nonPassingChecks.join(', ')}`);
+          }
+          if (manifest.commitSha !== process.env.TARGET_SHA) {
+            throw new Error('Release evidence commit does not match the deployment commit.');
+          }
+          if (manifest.repository !== `https://github.com/${process.env.GITHUB_REPOSITORY}`) {
+            throw new Error('Release evidence repository does not match this repository.');
+          }
+          if (manifest.release?.environment !== 'production' || manifest.release?.channel !== 'production') {
+            throw new Error('Release evidence must target the production environment and channel.');
+          }
+          if (manifest.release?.runtimeVersion !== process.env.EXPECTED_RUNTIME_VERSION) {
+            throw new Error('Release evidence runtime does not match package.json.');
+          }
+          NODE
+
+      - name: Validate protected environment configuration
+        shell: bash
+        env:
+          PREVIOUS_VERSION_ID: ${{ inputs.previous_version_id }}
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN EDGE_CORS_ALLOWLIST EDGE_HEALTH_URL EDGE_SUPABASE_URL ORIGIN_HMAC_SECRET IP_HASH_PEPPER SUPABASE_PUBLISHABLE_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Protected production environment is missing ${name}."
+              exit 1
+            fi
+          done
+          if [[ ! "$PREVIOUS_VERSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo '::error::previous_version_id must be a Worker version UUID.'
+            exit 1
+          fi
+          node -e "for (const name of ['EDGE_HEALTH_URL','EDGE_SUPABASE_URL']) { const value=process.env[name]; const url=new URL(value); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || value.includes('replace-')) throw new Error(name + ' must be a non-placeholder HTTPS URL'); }"
+
+      - name: Install and re-check the isolated Worker
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        run: |
+          npm ci --ignore-scripts
+          npm run check
+          npm audit --audit-level=high
+
+      - name: Confirm the declared rollback version is currently deployed
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        shell: bash
+        env:
+          PREVIOUS_VERSION_ID: ${{ inputs.previous_version_id }}
+          STATUS_FILE: ${{ runner.temp }}/cloudflare-production-before.json
+        run: |
+          set -euo pipefail
+          npx wrangler deployments status --env production --json > "$STATUS_FILE"
+          node -e "const fs=require('node:fs'); const body=fs.readFileSync(process.env.STATUS_FILE,'utf8'); const parsed=JSON.parse(body); if(!JSON.stringify(parsed).includes(process.env.PREVIOUS_VERSION_ID)) throw new Error('declared rollback version is not in the active deployment');"
+
+      - name: Create a mode-600 transient Worker secret file
+        shell: bash
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/sorita-edge-production-secrets.json
+        run: |
+          set -euo pipefail
+          node -e "const fs=require('node:fs'); fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify({SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY,ORIGIN_HMAC_SECRET:process.env.ORIGIN_HMAC_SECRET,IP_HASH_PEPPER:process.env.IP_HASH_PEPPER}), {mode:0o600,flag:'wx'});"
+
+      - name: Upload a production version without routing traffic
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        shell: bash
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/sorita-edge-production-secrets.json
+        run: |
+          set -euo pipefail
+          sample_rate="${EDGE_LOG_SAMPLE_RATE:-0.1}"
+          version_tag="sha-${GITHUB_SHA:0:12}"
+          npx wrangler versions upload \
+            --env production \
+            --strict \
+            --secrets-file "$SECRETS_FILE" \
+            --tag "$version_tag" \
+            --message "production candidate sha:${GITHUB_SHA}" \
+            --var "BUILD_SHA:${GITHUB_SHA}" \
+            --var 'ENVIRONMENT:production' \
+            --var "SUPABASE_URL:${EDGE_SUPABASE_URL}" \
+            --var 'SUPABASE_JWT_AUDIENCE:authenticated' \
+            --var "CORS_ALLOWLIST:${EDGE_CORS_ALLOWLIST}" \
+            --var 'ORIGIN_TIMEOUT_MS:8000' \
+            --var 'JWKS_TIMEOUT_MS:2500' \
+            --var "LOG_SAMPLE_RATE:${sample_rate}"
+          npx wrangler versions list --env production --json > "${RUNNER_TEMP}/cloudflare-production-versions.json"
+          VERSION_TAG="$version_tag" node <<'NODE'
+          const { appendFileSync, readFileSync } = require('node:fs');
+          const payload = JSON.parse(readFileSync(process.env.RUNNER_TEMP + '/cloudflare-production-versions.json', 'utf8'));
+          const rows = Array.isArray(payload) ? payload : (payload.versions ?? []);
+          const candidate = rows.find((row) => row.tag === process.env.VERSION_TAG);
+          const id = candidate?.id ?? candidate?.version_id ?? candidate?.versionId;
+          if (typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+            throw new Error('Unable to resolve the newly uploaded Worker version by immutable SHA tag.');
+          }
+          appendFileSync(process.env.GITHUB_ENV, `CANDIDATE_VERSION_ID=${id}\n`);
+          NODE
+
+      - name: Route an initial 5% to the candidate
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        shell: bash
+        env:
+          PREVIOUS_VERSION_ID: ${{ inputs.previous_version_id }}
+        run: |
+          set -euo pipefail
+          npx wrangler versions deploy \
+            "${PREVIOUS_VERSION_ID}@95%" \
+            "${CANDIDATE_VERSION_ID}@5%" \
+            --env production \
+            --message "5% canary sha:${GITHUB_SHA}" \
+            --yes
+          npx wrangler deployments status --env production --json > "${RUNNER_TEMP}/cloudflare-production-after.json"
+
+      - name: Verify health and record hold/promotion/rollback commands
+        shell: bash
+        env:
+          PREVIOUS_VERSION_ID: ${{ inputs.previous_version_id }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const expectedSha = process.env.GITHUB_SHA;
+          const candidateVersion = process.env.CANDIDATE_VERSION_ID;
+          const versionOverride = `sorita-edge-production="${candidateVersion}"`;
+          let lastError;
+
+          if (!/^[0-9a-fA-F-]{36}$/.test(candidateVersion ?? '')) {
+            throw new Error('candidate version ID is unavailable');
+          }
+
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10_000);
+
+            try {
+              const response = await fetch(process.env.EDGE_HEALTH_URL, {
+                cache: 'no-store',
+                headers: {
+                  'Cloudflare-Workers-Version-Overrides': versionOverride,
+                },
+                redirect: 'error',
+                signal: controller.signal,
+              });
+              if (response.status !== 200) throw new Error(`health status ${response.status}`);
+              if (!/no-store/.test(response.headers.get('cache-control') ?? '')) {
+                throw new Error('health response must be no-store');
+              }
+              const body = await response.json();
+              if (body?.ok !== true || body?.buildSha !== expectedSha) {
+                throw new Error(`candidate BUILD_SHA not observed on attempt ${attempt}`);
+              }
+              lastError = undefined;
+              break;
+            } catch (error) {
+              lastError = error;
+            } finally {
+              clearTimeout(timer);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 2_000));
+          }
+
+          if (lastError) throw lastError;
+          NODE
+          {
+            echo '## Cloudflare Worker canary started at 5%'
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Previous version: \`${PREVIOUS_VERSION_ID}\`"
+            echo "- Candidate version: \`${CANDIDATE_VERSION_ID}\`"
+            echo
+            echo 'After each SLO hold, an approved operator may run:'
+            echo "1. \`npx wrangler versions deploy ${PREVIOUS_VERSION_ID}@75% ${CANDIDATE_VERSION_ID}@25% --env production --yes\`"
+            echo "2. \`npx wrangler versions deploy ${PREVIOUS_VERSION_ID}@50% ${CANDIDATE_VERSION_ID}@50% --env production --yes\`"
+            echo "3. \`npx wrangler versions deploy ${CANDIDATE_VERSION_ID}@100% --env production --yes\`"
+            echo
+            echo "Rollback: \`npx wrangler versions deploy ${PREVIOUS_VERSION_ID}@100% --env production --yes\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove transient secret material
+        if: always()
+        shell: bash
+        run: rm -f -- "${RUNNER_TEMP}/sorita-edge-production-secrets.json"
+
+      - name: Upload non-secret deployment evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cloudflare-production-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/cloudflare-production-before.json
+            ${{ runner.temp }}/cloudflare-production-after.json
+            ${{ runner.temp }}/cloudflare-production-versions.json
+          if-no-files-found: error
+          retention-days: 90

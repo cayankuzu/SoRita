@@ -7,19 +7,17 @@ import type {
   RegisterData,
 } from '@/mobile/app/app-shell/auth/authTypes';
 import {
-  clearCurrentUserState,
   persistAuthSession,
   persistResolvedAuthUser,
   resolveImmediateAuthUser,
   syncAuthenticatedUser,
 } from '@/mobile/app/app-shell/auth/session/authSessionSupport';
+import { purgeAuthenticatedUserState } from '@/mobile/app/app-shell/auth/session/authUserStatePurge';
 import type { User } from '@/mobile/app/data/contracts/entities';
 import {
   callJsonEdgeFunction,
   EdgeFunctionError,
-  isMissingEdgeFunctionError,
 } from '@/mobile/app/platform/api/edgeFunctions';
-import { clearOutboxForUser } from '@/mobile/app/data/outbox/outboxStorage';
 import { env } from '@/mobile/app/platform/config/env';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -73,76 +71,6 @@ function toAuthActionResult(error: unknown): AuthActionResult {
   return { success: false, code: 'unexpected' };
 }
 
-function inferFallbackAuthCode(message?: string): AuthActionResult['code'] {
-  const normalizedMessage = message?.toLowerCase() ?? '';
-
-  if (normalizedMessage.includes('email not confirmed')) {
-    return 'email_not_confirmed';
-  }
-
-  if (normalizedMessage.includes('invalid login credentials')) {
-    return 'invalid_credentials';
-  }
-
-  if (
-    normalizedMessage.includes('password is known to be weak') ||
-    normalizedMessage.includes('weak and easy to guess') ||
-    normalizedMessage.includes('weak password')
-  ) {
-    return 'weak_password';
-  }
-
-  if (
-    normalizedMessage.includes('user already registered') ||
-    normalizedMessage.includes('already registered') ||
-    normalizedMessage.includes('already exists') ||
-    normalizedMessage.includes('profiles_email_key') ||
-    normalizedMessage.includes('users_email_key')
-  ) {
-    return 'duplicate_email';
-  }
-
-  if (
-    normalizedMessage.includes('profiles_username_key') ||
-    normalizedMessage.includes('username already') ||
-    (normalizedMessage.includes('username') && normalizedMessage.includes('duplicate'))
-  ) {
-    return 'duplicate_username';
-  }
-
-  return 'unexpected';
-}
-
-function toFallbackAuthActionResult(error: unknown): AuthActionResult {
-  if (error instanceof Error) {
-    return {
-      success: false,
-      code: inferFallbackAuthCode(error.message),
-      message: error.message,
-    };
-  }
-
-  return { success: false, code: 'unexpected' };
-}
-
-function shouldFallbackToDirectSupabaseAuth(error: unknown) {
-  if (isMissingEdgeFunctionError(error)) {
-    return true;
-  }
-
-  if (error instanceof EdgeFunctionError) {
-    const normalizedCode = error.code?.trim().toLowerCase();
-
-    return (
-      error.status >= 500 ||
-      normalizedCode === 'unexpected' ||
-      normalizedCode === 'misconfigured'
-    );
-  }
-
-  return error instanceof Error;
-}
-
 async function hydrateAuthenticatedUser(params: {
   session: Session;
   authUser: SupabaseAuthUser;
@@ -187,72 +115,21 @@ function useAuthenticatedPasswordReset(user: User | null) {
         return { success: false, code: 'unexpected', message: error?.message };
       }
 
-      let passwordResetEmail = user.email;
-
       try {
         await callJsonEdgeFunction<{ success: true }>(
           env.supabaseAuthGatewayFunctionName,
           {
-            action: 'prepare-password-reset-authenticated',
+            action: 'request-password-reset-authenticated',
             currentPassword,
+            redirectUrl: redirect.url,
           },
           {
             accessToken: session.access_token,
           },
         );
       } catch (edgeError) {
-        if (!shouldFallbackToDirectSupabaseAuth(edgeError)) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toAuthActionResult(edgeError);
-        }
-
-        const {
-          data: authenticatedUserData,
-          error: authenticatedUserError,
-        } = await supabase.auth.getUser();
-        const authenticatedUserEmail = authenticatedUserData.user?.email ?? null;
-
-        if (authenticatedUserError || !authenticatedUserEmail) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return {
-            success: false,
-            code: 'unexpected',
-            message: authenticatedUserError?.message ?? 'Oturum dogrulanamadi.',
-          };
-        }
-
-        passwordResetEmail = authenticatedUserEmail;
-
-        const verificationResult = await supabase.auth.signInWithPassword({
-          email: authenticatedUserEmail,
-          password: currentPassword,
-        });
-
-        if (verificationResult.error) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toFallbackAuthActionResult(verificationResult.error);
-        }
-
-        if (verificationResult.data.session) {
-          await persistAuthSession(verificationResult.data.session);
-        }
-      }
-
-      try {
-        const resetPasswordResult = await supabase.auth.resetPasswordForEmail(
-          passwordResetEmail,
-          {
-            redirectTo: redirect.url,
-          },
-        );
-
-        if (resetPasswordResult.error) {
-          await discardPendingAuthRedirectState(redirect.state);
-          return toFallbackAuthActionResult(resetPasswordResult.error);
-        }
-      } catch (resetError) {
         await discardPendingAuthRedirectState(redirect.state);
-        return toFallbackAuthActionResult(resetError);
+        return toAuthActionResult(edgeError);
       }
 
       return { success: true };
@@ -269,14 +146,27 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
     } = await supabase.auth.getUser();
 
     if (error || !authUser) {
-      await persistAuthSession(null);
-      clearCurrentUserState();
+      const localCleanup = await Promise.allSettled([
+        persistAuthSession(null),
+        purgeAuthenticatedUserState(user?.id ?? null),
+      ]);
       setUser(null);
+
+      if (localCleanup.some((result) => result.status === 'rejected')) {
+        logger.error('auth', 'Local auth cleanup was incomplete while refreshing the user.', {
+          failedOperations: localCleanup.flatMap((result, index) =>
+            result.status === 'rejected'
+              ? [index === 0 ? 'persisted-auth-session' : 'authenticated-user-state']
+              : []),
+        });
+        throw new Error('Local auth cleanup was incomplete.');
+      }
+
       return;
     }
 
     setUser(await syncAuthenticatedUser(authUser));
-  }, [setUser]);
+  }, [setUser, user?.id]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthActionResult> => {
@@ -313,35 +203,8 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         });
         return { success: true };
       } catch (error) {
-        if (!isMissingEdgeFunctionError(error)) {
-          return toAuthActionResult(error);
-        }
+        return toAuthActionResult(error);
       }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
-
-      if (error) {
-        return toFallbackAuthActionResult(error);
-      }
-
-      if (!data.session || !data.user) {
-        return {
-          success: false,
-          code: 'unexpected',
-          message: tr.auth.login.sessionCreateFailed,
-        };
-      }
-
-      await hydrateAuthenticatedUser({
-        session: data.session,
-        authUser: data.user,
-        setUser,
-      });
-
-      return { success: true };
     },
     [setUser],
   );
@@ -380,35 +243,8 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         },
       );
     } catch (error) {
-      if (!shouldFallbackToDirectSupabaseAuth(error)) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toAuthActionResult(error);
-      }
-
-      const { error: fallbackError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: data.password,
-        options: {
-          emailRedirectTo: redirect.url,
-          data: {
-            bio: normalizedBio || null,
-            community_safety_acknowledged: true,
-            cover_photo_url: data.coverPhoto ?? null,
-            interests: data.interests?.length ? data.interests : null,
-            legal_consent_at: data.legalConsent.acceptedAt,
-            legal_consent_documents: data.legalConsent.documentsAccepted,
-            legal_consent_version: data.legalConsent.version,
-            name: normalizedName,
-            profile_photo_url: data.profilePhoto ?? null,
-            username: normalizedUsername,
-          },
-        },
-      });
-
-      if (fallbackError) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toFallbackAuthActionResult(fallbackError);
-      }
+      await discardPendingAuthRedirectState(redirect.state);
+      return toAuthActionResult(error);
     }
 
     const { savePendingSignupMedia } = await loadPendingSignupMediaStorage();
@@ -444,23 +280,8 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
         },
       );
     } catch (error) {
-      if (!shouldFallbackToDirectSupabaseAuth(error)) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toAuthActionResult(error);
-      }
-
-      const { error: fallbackError } = await supabase.auth.resend({
-        type: 'signup',
-        email: normalizedEmail,
-        options: {
-          emailRedirectTo: redirect.url,
-        },
-      });
-
-      if (fallbackError) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toFallbackAuthActionResult(fallbackError);
-      }
+      await discardPendingAuthRedirectState(redirect.state);
+      return toAuthActionResult(error);
     }
 
     return { success: true };
@@ -475,40 +296,14 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
       await callJsonEdgeFunction<{ success: true }>(
         env.supabaseAuthGatewayFunctionName,
         {
-          action: 'prepare-password-reset',
+          action: 'request-password-reset',
           email: normalizedEmail,
+          redirectUrl: redirect.url,
         },
       );
     } catch (error) {
       await discardPendingAuthRedirectState(redirect.state);
-
-      if (error instanceof EdgeFunctionError && error.code === 'email_not_found') {
-        return toAuthActionResult(error);
-      }
-
-      if (shouldFallbackToDirectSupabaseAuth(error)) {
-        return {
-          success: false,
-          code: error instanceof EdgeFunctionError ? (error.code as AuthActionResult['code']) ?? 'unexpected' : 'unexpected',
-          message: tr.settings.toast.passwordResetFailed,
-        };
-      }
-
       return toAuthActionResult(error);
-    }
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: redirect.url,
-      });
-
-      if (error) {
-        await discardPendingAuthRedirectState(redirect.state);
-        return toFallbackAuthActionResult(error);
-      }
-    } catch (error) {
-      await discardPendingAuthRedirectState(redirect.state);
-      return toFallbackAuthActionResult(error);
     }
 
     return { success: true };
@@ -517,29 +312,63 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
   const requestPasswordReset = useAuthenticatedPasswordReset(user);
 
   const logout = useCallback(async () => {
-    const [{ unregisterAllPushNotifications }, { unregisterSystemPushNotifications }] =
-      await Promise.all([
-        loadPushNotificationRepository(),
-        loadSystemPushNotificationRepository(),
-      ]);
     const userId = user?.id;
-    await persistAuthSession(null);
-    await Promise.all([
-      userId
-        ? clearOutboxForUser(userId).catch((err) => {
-            logger.debug('auth', 'Failed to clear outbox during logout', err);
-          })
-        : Promise.resolve(),
-      unregisterAllPushNotifications().catch((err) => {
-        logger.debug('auth', 'Failed to unregister push notifications during logout', err);
-      }),
-      unregisterSystemPushNotifications().catch((err) => {
-        logger.debug('auth', 'Failed to unregister system push notifications during logout', err);
-      }),
-    ]);
-    await supabase.auth.signOut();
-    clearCurrentUserState();
-    setUser(null);
+    let remoteSignOutError: unknown;
+    let localCleanupError: Error | null = null;
+
+    try {
+      try {
+        const [{ unregisterAllPushNotifications }, { unregisterSystemPushNotifications }] =
+          await Promise.all([
+            loadPushNotificationRepository(),
+            loadSystemPushNotificationRepository(),
+          ]);
+        await Promise.all([
+          unregisterAllPushNotifications().catch((err) => {
+            logger.debug('auth', 'Failed to unregister push notifications during logout', err);
+          }),
+          unregisterSystemPushNotifications().catch((err) => {
+            logger.debug('auth', 'Failed to unregister system push notifications during logout', err);
+          }),
+        ]);
+      } catch (error) {
+        logger.debug('auth', 'Failed to load push cleanup during logout', error);
+      }
+
+      try {
+        const signOutResult = await supabase.auth.signOut();
+
+        if (signOutResult?.error) {
+          remoteSignOutError = signOutResult.error;
+        }
+      } catch (error) {
+        remoteSignOutError = error;
+      }
+    } finally {
+      const localCleanup = await Promise.allSettled([
+        persistAuthSession(null),
+        purgeAuthenticatedUserState(userId ?? null),
+      ]);
+      const failedOperations = localCleanup.flatMap((result, index) =>
+        result.status === 'rejected'
+          ? [index === 0 ? 'persisted-auth-session' : 'authenticated-user-state']
+          : []);
+
+      if (failedOperations.length > 0) {
+        logger.error('auth', 'Local logout cleanup was incomplete.', { failedOperations });
+        localCleanupError = new Error('Local logout cleanup was incomplete.');
+      }
+
+      setUser(null);
+    }
+
+    if (remoteSignOutError) {
+      throw remoteSignOutError;
+    }
+
+    if (localCleanupError) {
+      throw localCleanupError;
+    }
   }, [setUser, user?.id]);
 
   return useMemo(

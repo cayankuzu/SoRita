@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import type { VisibleDataSnapshot } from '@/mobile/app/data/repositories/visibleDataRepository';
 import {
+  clearPersistedVisibleDataSnapshot,
   getPersistedVisibleDataSnapshot,
   savePersistedVisibleDataSnapshot,
 } from '@/mobile/app/data/cache/visibleDataSnapshotCache';
@@ -121,5 +122,15 @@ describe('visibleDataSnapshotCache', () => {
     await AsyncStorage.setItem(storageKey, '{not-json');
     await expect(getPersistedVisibleDataSnapshot('viewer-1')).resolves.toBeNull();
     await expect(AsyncStorage.getItem(storageKey)).resolves.toBeNull();
+  });
+
+  it('removes only the requested viewer snapshot during auth cleanup', async () => {
+    await savePersistedVisibleDataSnapshot('viewer-1', buildSnapshot());
+    await savePersistedVisibleDataSnapshot('viewer-2', buildSnapshot());
+
+    await clearPersistedVisibleDataSnapshot('viewer-1');
+
+    await expect(getPersistedVisibleDataSnapshot('viewer-1')).resolves.toBeNull();
+    await expect(getPersistedVisibleDataSnapshot('viewer-2')).resolves.not.toBeNull();
   });
 });

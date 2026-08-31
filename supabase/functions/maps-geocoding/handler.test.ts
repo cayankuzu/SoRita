@@ -4,8 +4,8 @@ import { createRequestSignature, sha256Hex } from '../_shared/requestSecurity';
 import { createMapsGeocodingHandler } from './handler';
 
 function createDeps(options?: {
-  claimsResult?: {
-    data?: { claims?: { sub?: string } | null } | null;
+  userResult?: {
+    data?: { user?: { id?: string } | null } | null;
     error?: { message: string } | null;
   };
   rateLimited?: boolean;
@@ -51,10 +51,10 @@ function createDeps(options?: {
     },
     error: options?.rateLimitError ? { message: 'rate limit unavailable' } : null,
   });
-  const getClaimsMock = vi.fn().mockResolvedValue(options?.claimsResult ?? {
+  const getUserMock = vi.fn().mockResolvedValue(options?.userResult ?? {
     data: {
-      claims: {
-        sub: 'user-1',
+      user: {
+        id: 'user-1',
       },
     },
     error: null,
@@ -80,13 +80,13 @@ function createDeps(options?: {
     }),
     createAuthClient: () => ({
       auth: {
-        getClaims: getClaimsMock,
+        getUser: getUserMock,
       },
     }),
   });
 
   return {
-    getClaimsMock,
+    getUserMock,
     handler,
     nonceDeleteLtMock,
     nonceInsertMock,
@@ -276,17 +276,13 @@ describe('maps-geocoding handler', () => {
   });
 
   it('rejects invalid claims, missing signed headers, and invalid signed payloads', async () => {
-    for (const claimsResult of [
-      { data: { claims: null }, error: null },
-      { data: { claims: {} }, error: null },
+    for (const userResult of [
+      { data: { user: null }, error: null },
+      { data: { user: {} }, error: null },
       { data: null, error: { message: 'expired' } },
     ]) {
-      const { handler } = createDeps({ claimsResult });
-      const response = await handler(new Request('https://example.supabase.co/functions/v1/maps-geocoding', {
-        body: '{}',
-        headers: { Authorization: 'Bearer token-1' },
-        method: 'POST',
-      }));
+      const { handler } = createDeps({ userResult });
+      const response = await handler(await signedRequest({}));
       expect(response.status).toBe(401);
       await expect(response.json()).resolves.toMatchObject({ code: 'invalid_jwt' });
     }

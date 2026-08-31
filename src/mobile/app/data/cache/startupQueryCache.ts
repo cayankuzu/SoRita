@@ -32,6 +32,12 @@ type PendingPersistence = {
 
 const pendingPersistenceByUser = new Map<string, PendingPersistence>();
 const restoreInFlightByUser = new Map<string, Promise<number>>();
+const persistenceInFlightByUser = new Map<string, Set<Promise<boolean>>>();
+const workGenerationByUser = new Map<string, number>();
+
+function getWorkGeneration(userId: string) {
+  return workGenerationByUser.get(userId) ?? 0;
+}
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
@@ -197,6 +203,7 @@ export function restoreStartupQueryCache(queryClient: QueryClient, userId: strin
     return existingRestore;
   }
 
+  const generation = getWorkGeneration(userId);
   const restore = (async () => {
     const snapshot = await readScreenIndex<unknown>(
       userId,
@@ -204,13 +211,17 @@ export function restoreStartupQueryCache(queryClient: QueryClient, userId: strin
       MAX_STARTUP_QUERY_RETENTION_MS,
     );
 
-    if (!isValidSnapshot(snapshot)) {
+    if (generation !== getWorkGeneration(userId) || !isValidSnapshot(snapshot)) {
       return 0;
     }
 
     let restoredCount = 0;
 
     for (const entry of snapshot.queries) {
+      if (generation !== getWorkGeneration(userId)) {
+        return 0;
+      }
+
       const retentionMs = getStartupQueryRetentionMs(entry.queryKey);
 
       if (
@@ -235,25 +246,52 @@ export function restoreStartupQueryCache(queryClient: QueryClient, userId: strin
   return restore;
 }
 
-export async function persistStartupQueryCache(queryClient: QueryClient, userId: string) {
-  const snapshot = createPersistedSnapshot(queryClient, userId);
+export function persistStartupQueryCache(queryClient: QueryClient, userId: string) {
+  const generation = getWorkGeneration(userId);
+  const persist = (async () => {
+    const snapshot = createPersistedSnapshot(queryClient, userId);
 
-  if (snapshot.queries.length === 0) {
-    return false;
-  }
+    if (snapshot.queries.length === 0 || generation !== getWorkGeneration(userId)) {
+      return false;
+    }
 
-  const payloadSize = JSON.stringify(snapshot).length;
+    const payloadSize = JSON.stringify(snapshot).length;
 
-  if (payloadSize > MAX_PERSISTED_PAYLOAD_BYTES) {
-    logger.warn('startup-cache', 'Skipped oversized startup query snapshot.', {
-      payloadSize,
-      queryCount: snapshot.queries.length,
-    });
-    return false;
-  }
+    if (payloadSize > MAX_PERSISTED_PAYLOAD_BYTES) {
+      logger.warn('startup-cache', 'Skipped oversized startup query snapshot.', {
+        payloadSize,
+        queryCount: snapshot.queries.length,
+      });
+      return false;
+    }
 
-  await writeScreenIndex(userId, STARTUP_QUERY_INDEX_NAME, snapshot);
-  return true;
+    if (generation !== getWorkGeneration(userId)) {
+      return false;
+    }
+
+    await writeScreenIndex(userId, STARTUP_QUERY_INDEX_NAME, snapshot);
+    return generation === getWorkGeneration(userId);
+  })();
+  const userPersistence = persistenceInFlightByUser.get(userId) ?? new Set<Promise<boolean>>();
+  userPersistence.add(persist);
+  persistenceInFlightByUser.set(userId, userPersistence);
+  void persist.then(
+    () => {
+      userPersistence.delete(persist);
+
+      if (userPersistence.size === 0) {
+        persistenceInFlightByUser.delete(userId);
+      }
+    },
+    () => {
+      userPersistence.delete(persist);
+
+      if (userPersistence.size === 0) {
+        persistenceInFlightByUser.delete(userId);
+      }
+    },
+  );
+  return persist;
 }
 
 export function scheduleStartupQueryCachePersist(queryClient: QueryClient, userId: string) {
@@ -298,6 +336,31 @@ export async function flushStartupQueryCachePersist(userId: string) {
   pending.deferredTask?.cancel();
   pendingPersistenceByUser.delete(userId);
   return persistStartupQueryCache(pending.queryClient, userId);
+}
+
+/** Invalidates and drains startup cache work before user-scoped storage is removed. */
+export async function cancelAndDrainStartupQueryCacheWork(userId: string) {
+  workGenerationByUser.set(userId, getWorkGeneration(userId) + 1);
+  const pending = pendingPersistenceByUser.get(userId);
+
+  if (pending?.timeout) {
+    clearTimeout(pending.timeout);
+  }
+  pending?.deferredTask?.cancel();
+  pendingPersistenceByUser.delete(userId);
+
+  const workInFlight: Promise<unknown>[] = [
+    ...Array.from(persistenceInFlightByUser.get(userId) ?? []),
+  ];
+  const restoreInFlight = restoreInFlightByUser.get(userId);
+
+  if (restoreInFlight) {
+    workInFlight.push(restoreInFlight);
+  }
+
+  if (workInFlight.length > 0) {
+    await Promise.allSettled(workInFlight);
+  }
 }
 
 export const startupQueryCacheInternals = {

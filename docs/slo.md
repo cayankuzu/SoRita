@@ -1,8 +1,14 @@
 # SLO And Observability Plan
 
-## Initial Product SLOs
+> **Status on 2026-08-30: PROVISIONAL POLICY / UNMEASURED.** Every numeric target and alert rule
+> below is a proposed release policy, not an observed baseline, provider-side configuration, or
+> achieved service level. Production dashboards, query definitions, retention, alert routing,
+> paging ownership, burn-rate validation, and physical-device measurements are `UNVERIFIED`.
+> Production remains `NO-GO` until those items are approved and retained as immutable evidence.
 
-| SLO | Target |
+## Provisional Product SLOs (Unmeasured)
+
+| SLO | Provisional target; no achievement claim |
 |---|---|
 | API availability | 99.9% monthly |
 | Feed p95 latency | < 1.5s server-side |
@@ -31,7 +37,7 @@
 - Push sent/delivered/opened and notification dedupe rate.
 - Share opened/cancelled/completed and deep-link cold/warm success.
 
-## Alert Rules
+## Provisional Alert Rules (Not Proven Active)
 
 - Critical: auth, feed, upload, or database error budget burn.
 - Critical: crash-free sessions below target for a new release.
@@ -48,3 +54,7 @@
   dataset and at least 20 authenticated load-test identities.
 - Device cold/warm start, FPS, memory, battery, and accessibility evidence must be captured on the
   release device matrix.
+
+Operational setup, validation, evidence handling, and rollback expectations are defined in
+[`observability-slo-runbook.md`](./observability-slo-runbook.md). Until a named role is approved,
+the operational owner is `OWNER_TBD`.

@@ -1,0 +1,36 @@
+{
+  "name": "@sorita/edge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "npm run types:check && npm run typecheck && npm run lint && npm test",
+    "dev": "wrangler dev --env development",
+    "dev:preview": "wrangler dev --env preview",
+    "dry-run:development": "wrangler deploy --dry-run --env development --outdir .wrangler/dry-run/development",
+    "dry-run:preview": "wrangler deploy --dry-run --env preview --outdir .wrangler/dry-run/preview",
+    "dry-run:production": "wrangler deploy --dry-run --env production --outdir .wrangler/dry-run/production",
+    "lint": "eslint src test vitest.config.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types --include-runtime false --strict-vars false",
+    "types:check": "wrangler types --include-runtime false --strict-vars false --check"
+  },
+  "dependencies": {
+    "jose": "6.2.10",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.1.2",
+    "@cloudflare/workers-types": "5.20260830.1",
+    "@typescript-eslint/eslint-plugin": "8.64.0",
+    "@typescript-eslint/parser": "8.64.0",
+    "eslint": "10.7.0",
+    "typescript": "5.9.2",
+    "vitest": "4.1.11",
+    "wrangler": "4.127.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "navigation": {
+    "rootRoutes": [
+      "Auth",
+      "AuthCallback",
+      "ListDetail",
+      "LocationPlaceCards",
+      "MainTabs",
+      "Notifications",
+      "ResetPassword",
+      "Settings",
+      "UICatalog",
+      "UserProfile"
+    ],
+    "tabRoutes": [
+      "Explore",
+      "Home",
+      "Map",
+      "Profile"
+    ],
+    "screenEntrypoints": [
+      {
+        "route": "Auth",
+        "module": "@/mobile/app/features/auth/public/authScreen",
+        "exportName": "AuthScreen"
+      },
+      {
+        "route": "AuthCallback",
+        "module": "@/mobile/app/features/auth/public/authCallbackScreen",
+        "exportName": "AuthCallbackScreen"
+      },
+      {
+        "route": "Explore",
+        "module": "@/mobile/app/features/explore/public/exploreScreen",
+        "exportName": "ExploreScreen"
+      },
+      {
+        "route": "Home",
+        "module": "@/mobile/app/features/home/public/homeScreen",
+        "exportName": "HomeScreen"
+      },
+      {
+        "route": "ListDetail",
+        "module": "@/mobile/app/features/lists/public/listDetailScreen",
+        "exportName": "ListDetailScreen"
+      },
+      {
+        "route": "LocationPlaceCards",
+        "module": "@/mobile/app/features/map/public/locationPlaceCardsScreen",
+        "exportName": "LocationPlaceCardsScreen"
+      },
+      {
+        "route": "Map",
+        "module": "@/mobile/app/features/map/public/mapScreen",
+        "exportName": "MapScreen"
+      },
+      {
+        "route": "Notifications",
+        "module": "@/mobile/app/features/notifications/public/notificationsScreen",
+        "exportName": "NotificationsScreen"
+      },
+      {
+        "route": "Profile",
+        "module": "@/mobile/app/features/profile/public/profileScreen",
+        "exportName": "ProfileScreen"
+      },
+      {
+        "route": "ResetPassword",
+        "module": "@/mobile/app/features/auth/public/resetPasswordScreen",
+        "exportName": "ResetPasswordScreen"
+      },
+      {
+        "route": "Settings",
+        "module": "@/mobile/app/features/settings/public/settingsScreen",
+        "exportName": "SettingsScreen"
+      },
+      {
+        "route": "UICatalog",
+        "module": "@/mobile/app/features/settings/public/uiCatalogScreen",
+        "exportName": "UiCatalogScreen"
+      },
+      {
+        "route": "UserProfile",
+        "module": "@/mobile/app/features/profile/public/userProfileScreen",
+        "exportName": "UserProfileScreen"
+      }
+    ]
+  },
+  "nativeCapabilities": {
+    "expoAndroidPermissions": [
+      "ACCESS_COARSE_LOCATION",
+      "ACCESS_FINE_LOCATION",
+      "CAMERA",
+      "INTERNET",
+      "POST_NOTIFICATIONS",
+      "RECORD_AUDIO"
+    ],
+    "expoAndroidBlockedPermissions": [
+      "android.permission.SYSTEM_ALERT_WINDOW"
+    ],
+    "expoPermissionPlugins": [
+      "expo-camera",
+      "expo-image-picker",
+      "expo-location",
+      "expo-media-library",
+      "expo-notifications"
+    ],
+    "expoPermissionDeclarations": [
+      "expo-camera:cameraPermission=<string>",
+      "expo-camera:microphonePermission=<string>",
+      "expo-camera:recordAudioAndroid=true",
+      "expo-image-picker:cameraPermission=<string>",
+      "expo-image-picker:microphonePermission=<string>",
+      "expo-image-picker:photosPermission=<string>",
+      "expo-location:locationWhenInUsePermission=<string>",
+      "expo-media-library:granularPermissions=[\"photo\",\"video\"]",
+      "expo-media-library:photosPermission=<string>",
+      "expo-media-library:savePhotosPermission=<string>"
+    ],
+    "expoIosEntitlements": [],
+    "iosUsageDescriptionKeys": [
+      "NSLocationWhenInUseUsageDescription",
+      "NSPhotoLibraryAddUsageDescription",
+      "NSPhotoLibraryUsageDescription"
+    ],
+    "iosBackgroundModes": [
+      "remote-notification"
+    ],
+    "androidManifestPermissions": [
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.CAMERA",
+      "android.permission.INTERNET",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.READ_EXTERNAL_STORAGE@maxSdk=32",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.VIBRATE",
+      "android.permission.WRITE_EXTERNAL_STORAGE@maxSdk=32"
+    ],
+    "androidManifestRemovedPermissions": [
+      "android.permission.SYSTEM_ALERT_WINDOW"
+    ],
+    "iosEntitlements": []
+  },
+  "notifications": {
+    "types": [
+      "comment",
+      "comment_like",
+      "comment_reply",
+      "follow",
+      "follow_request",
+      "like",
+      "list_liked",
+      "place_added",
+      "place_quote",
+      "system_announcement"
+    ],
+    "categories": [
+      "all",
+      "comments",
+      "follows",
+      "likes",
+      "places",
+      "quotes"
+    ]
+  },
+  "api": {
+    "edgeFunctionContracts": [
+      "admin-broadcast-notification",
+      "auth-gateway",
+      "delete-user",
+      "maps-geocoding",
+      "media-assets",
+      "moderation-reports"
+    ],
+    "mobileEdgeFunctionContracts": [
+      "auth-gateway",
+      "delete-user",
+      "maps-geocoding",
+      "media-assets",
+      "moderation-reports"
+    ]
+  },
+  "data": {
+    "productTables": [
+      "public.follow_requests",
+      "public.list_likes",
+      "public.list_place_comment_likes",
+      "public.list_place_comment_reports",
+      "public.list_place_comments",
+      "public.list_place_likes",
+      "public.list_place_photos",
+      "public.list_place_reports",
+      "public.list_places",
+      "public.list_reports",
+      "public.lists",
+      "public.moderation_reports",
+      "public.notifications",
+      "public.profiles",
+      "public.user_blocks",
+      "public.user_follows",
+      "public.user_push_tokens",
+      "public.user_reports"
+    ],
+    "internalTablesAtBaseline": [
+      "private.auth_login_guards",
+      "private.edge_rate_limits",
+      "private.push_delivery_jobs",
+      "private.system_broadcast_deliveries",
+      "public.account_deletion_jobs",
+      "public.request_nonces"
+    ],
+    "storageBuckets": [
+      "place-media",
+      "place-media-private",
+      "profile-media"
+    ]
+  },
+  "settings": {
+    "views": [
+      "blocked",
+      "editProfile",
+      "main",
+      "password",
+      "privacy"
+    ],
+    "visibleGroups": [
+      "tr.settings.sections.account",
+      "tr.settings.sections.other",
+      "tr.uiCatalog.developerSection"
+    ],
+    "visibleCtas": [
+      "tr.common.back",
+      "tr.common.cancel",
+      "tr.common.hidePassword",
+      "tr.common.save",
+      "tr.common.showPassword",
+      "tr.settings.blocked.title",
+      "tr.settings.blocked.viewProfile",
+      "tr.settings.deleteAccount",
+      "tr.settings.editProfile.coverPhoto",
+      "tr.settings.editProfile.profilePhoto",
+      "tr.settings.editProfile.stepNext",
+      "tr.settings.editProfile.title",
+      "tr.settings.logout",
+      "tr.settings.password.resetAction",
+      "tr.settings.password.title",
+      "tr.settings.privacy.private",
+      "tr.settings.privacy.public",
+      "tr.settings.privacy.title",
+      "tr.uiCatalog.title"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { createEdgeRequestContext, logEdgeEvent } from '../_shared/edgeLogger.ts';
-import { verifySignedRequest } from '../_shared/requestSecurity.ts';
+import { verifyRequestEnvelope, verifySignedRequest } from '../_shared/requestSecurity.ts';
 import {
   type AuthClientLike,
   type ErrorLike,
@@ -28,6 +28,11 @@ type NonceStoreLike = {
 };
 
 type StorageBucketLike = {
+  copy: (
+    fromPath: string,
+    toPath: string,
+    options?: { destinationBucket?: string },
+  ) => Promise<{ error?: ErrorLike | null }>;
   createSignedUploadUrl: (path: string, options?: { upsert: boolean }) => Promise<{
     data?: SignedUploadUrlData | null;
     error?: ErrorLike | null;
@@ -138,7 +143,6 @@ const placeMediaUploadBytes = Math.ceil(
     placeMediaContainerHeadroomRatio) /
     8,
 );
-const placeMediaUploadMegabytes = Math.ceil(placeMediaUploadBytes / bytesInMb);
 const maxDeleteRequestsPerMinute = 160;
 // Worst-case place save:
 // 6 media items * (file + optional thumbnail) * 3 target lists = 36 requests.
@@ -151,6 +155,9 @@ const maxReadPathsPerRequest = 64;
 const immutableMediaCacheSeconds = '31536000';
 const privateReadUrlExpiresInSeconds = 5 * 60;
 const mediaSignatureProbeBytes = 512 * 1024;
+const privateMediaBucket: AllowedBucket = 'place-media-private';
+const publicUploadStagingSegment = 'pending-public';
+const mediaRequestBodyMaxBytes = Math.ceil(profileImageUploadBytes * 4 / 3) + 64 * 1024;
 
 const uploadPayloadSchema = z.object({
   action: z.literal('upload'),
@@ -163,11 +170,12 @@ const uploadPayloadSchema = z.object({
 
 const createUploadUrlPayloadSchema = z.object({
   action: z.literal('create-upload-url'),
-  bucket: z.literal('place-media-private'),
+  bucket: z.enum(allowedBucketValues),
   contentType: z.enum(signedUploadContentTypeValues),
   extension: z.string().trim().min(1).max(8).optional(),
   fileSizeBytes: z.number().int().positive(),
   prefix: z.string().trim().min(1).max(160),
+  uploadSessionId: z.string().uuid(),
 });
 
 const createReadUrlPayloadSchema = z.object({
@@ -184,7 +192,7 @@ const createReadUrlsPayloadSchema = z.object({
 
 const completeUploadPayloadSchema = z.object({
   action: z.literal('complete-upload'),
-  bucket: z.literal('place-media-private'),
+  bucket: z.enum(allowedBucketValues),
   contentType: z.enum(signedUploadContentTypeValues),
   durationSeconds: z
     .number()
@@ -195,6 +203,7 @@ const completeUploadPayloadSchema = z.object({
   height: z.number().int().positive().max(8192).optional(),
   mediaType: z.enum(['photo', 'video']),
   objectPath: z.string().trim().min(1).max(512),
+  uploadSessionId: z.string().uuid(),
   width: z.number().int().positive().max(8192).optional(),
 });
 
@@ -202,6 +211,7 @@ const deletePayloadSchema = z.object({
   action: z.literal('delete'),
   bucket: z.enum(allowedBucketValues),
   paths: z.array(z.string().trim().min(1).max(512)).max(maxDeletePathsPerRequest),
+  uploadSessionId: z.string().uuid().optional(),
 });
 
 type MediaPayload =
@@ -256,12 +266,16 @@ function parseMediaPayload(bodyText: string): MediaPayload {
   }
 
   if (action === 'create-upload-url') {
-    if (rawPayload.bucket !== 'place-media-private') {
+    if (!isAllowedBucket(rawPayload.bucket)) {
       throw new HttpRequestError(400, 'invalid_input', 'Invalid media bucket');
     }
 
     if (typeof rawPayload.contentType !== 'string' || !signedUploadContentTypes.has(rawPayload.contentType)) {
       throw new HttpRequestError(415, 'unsupported_media_type', 'Unsupported media type');
+    }
+
+    if (rawPayload.bucket !== 'place-media-private' && !imageContentTypes.has(rawPayload.contentType)) {
+      throw new HttpRequestError(415, 'unsupported_media_type', 'Public media uploads must be images');
     }
 
     const parsedPayload = createUploadUrlPayloadSchema.safeParse(rawPayload);
@@ -302,12 +316,19 @@ function parseMediaPayload(bodyText: string): MediaPayload {
   }
 
   if (action === 'complete-upload') {
-    if (rawPayload.bucket !== 'place-media-private') {
+    if (!isAllowedBucket(rawPayload.bucket)) {
       throw new HttpRequestError(400, 'invalid_input', 'Invalid media bucket');
     }
 
     if (typeof rawPayload.contentType !== 'string' || !signedUploadContentTypes.has(rawPayload.contentType)) {
       throw new HttpRequestError(415, 'unsupported_media_type', 'Unsupported media type');
+    }
+
+    if (
+      rawPayload.bucket !== 'place-media-private'
+      && (!imageContentTypes.has(rawPayload.contentType) || rawPayload.mediaType !== 'photo')
+    ) {
+      throw new HttpRequestError(415, 'unsupported_media_type', 'Public media uploads must be images');
     }
 
     const parsedPayload = completeUploadPayloadSchema.safeParse(rawPayload);
@@ -837,6 +858,218 @@ function getOwnedPath(userId: string, value: string) {
   return normalized;
 }
 
+function buildSignedUploadPaths(params: {
+  bucket: AllowedBucket;
+  extension: string;
+  prefix: string;
+  uploadSessionId: string;
+  userId: string;
+}) {
+  const relativeFinalPath = `${params.prefix}-${params.uploadSessionId}.${params.extension}`;
+  const destinationPath = `${params.userId}/${relativeFinalPath}`;
+
+  if (params.bucket === privateMediaBucket) {
+    return {
+      destinationPath,
+      uploadBucket: privateMediaBucket,
+      uploadPath: destinationPath,
+    };
+  }
+
+  return {
+    destinationPath,
+    uploadBucket: privateMediaBucket,
+    uploadPath: `${params.userId}/${publicUploadStagingSegment}/${params.bucket}/${relativeFinalPath}`,
+  };
+}
+
+type UploadSessionRecord = {
+  claimStatus?: 'busy' | 'claimed' | 'finalized';
+  cleanupAfter?: string;
+  contentType: string;
+  destinationBucket: AllowedBucket;
+  destinationPath: string;
+  expectedSizeBytes: number;
+  initializationId?: string;
+  leaseId?: string;
+  sessionId?: string;
+  sessionStatus?: string;
+  uploadBucket: typeof privateMediaBucket;
+  uploadPath: string;
+};
+
+function firstRpcRecord(data: unknown) {
+  const value = Array.isArray(data) ? data[0] : data;
+  return isRecord(value) ? value : null;
+}
+
+function parseUploadSessionRecord(data: unknown): UploadSessionRecord {
+  const row = firstRpcRecord(data);
+  const expectedSizeBytes = Number(row?.expected_size_bytes);
+  const destinationBucket = row?.destination_bucket;
+
+  if (
+    !row
+    || row.upload_bucket !== privateMediaBucket
+    || !isAllowedBucket(destinationBucket)
+    || typeof row.upload_path !== 'string'
+    || typeof row.destination_path !== 'string'
+    || typeof row.content_type !== 'string'
+    || !Number.isSafeInteger(expectedSizeBytes)
+    || expectedSizeBytes <= 0
+  ) {
+    throw new HttpRequestError(500, 'upload_session_failed', 'Medya yukleme oturumu dogrulanamadi.');
+  }
+
+  const claimStatus = row.claim_status;
+  if (
+    claimStatus !== undefined
+    && claimStatus !== 'busy'
+    && claimStatus !== 'claimed'
+    && claimStatus !== 'finalized'
+  ) {
+    throw new HttpRequestError(500, 'upload_session_failed', 'Medya yukleme oturumu dogrulanamadi.');
+  }
+
+  return {
+    claimStatus,
+    cleanupAfter: typeof row.cleanup_after === 'string' ? row.cleanup_after : undefined,
+    contentType: row.content_type,
+    destinationBucket,
+    destinationPath: row.destination_path,
+    expectedSizeBytes,
+    initializationId: typeof row.initialization_id === 'string' ? row.initialization_id : undefined,
+    leaseId: typeof row.lease_id === 'string' ? row.lease_id : undefined,
+    sessionId: typeof row.session_id === 'string' ? row.session_id : undefined,
+    sessionStatus: typeof row.session_status === 'string' ? row.session_status : undefined,
+    uploadBucket: privateMediaBucket,
+    uploadPath: row.upload_path,
+  };
+}
+
+function parseUploadCleanupRecord(data: unknown) {
+  const row = firstRpcRecord(data);
+  const destinationBucket = row?.destination_bucket;
+  const claimStatus = row?.claim_status;
+
+  if (
+    !row
+    || row.upload_bucket !== privateMediaBucket
+    || !isAllowedBucket(destinationBucket)
+    || typeof row.upload_path !== 'string'
+    || typeof row.destination_path !== 'string'
+    || (claimStatus !== 'busy' && claimStatus !== 'claimed' && claimStatus !== 'finalized')
+  ) {
+    throw new HttpRequestError(500, 'upload_session_failed', 'Medya yukleme oturumu dogrulanamadi.');
+  }
+
+  return {
+    claimStatus,
+    destinationBucket,
+    destinationPath: row.destination_path,
+    leaseId: typeof row.lease_id === 'string' ? row.lease_id : undefined,
+    uploadBucket: privateMediaBucket,
+    uploadPath: row.upload_path,
+  };
+}
+
+async function callUploadSessionRpc(
+  adminClient: AdminClientLike,
+  functionName: string,
+  args: Record<string, unknown>,
+) {
+  if (!adminClient.rpc) {
+    throw new HttpRequestError(500, 'upload_session_failed', 'Medya yukleme oturumu kullanilamiyor.');
+  }
+
+  const result = await adminClient.rpc(functionName, args);
+  if (result.error) {
+    throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu kullanilamiyor.');
+  }
+  return result.data;
+}
+
+function assertUploadSessionMatchesPayload(
+  session: UploadSessionRecord,
+  payload: z.infer<typeof completeUploadPayloadSchema>,
+  userId: string,
+) {
+  const expectedObjectPath = getOwnedPath(userId, payload.objectPath);
+  if (
+    session.destinationBucket !== payload.bucket
+    || session.uploadPath !== expectedObjectPath
+    || session.contentType !== payload.contentType
+    || session.expectedSizeBytes !== payload.fileSizeBytes
+  ) {
+    throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme bilgileri oturumla eslesmiyor.');
+  }
+}
+
+async function verifyStoredUpload(params: {
+  bucket: StorageBucketLike;
+  fetchObjectPrefix: NonNullable<MediaAssetsHandlerDeps['fetchObjectPrefix']>;
+  maxUploadBytes: number;
+  objectPath: string;
+  payload: z.infer<typeof completeUploadPayloadSchema>;
+  removeInvalid: boolean;
+}) {
+  const { data: objectInfo, error: objectInfoError } = await params.bucket.info(params.objectPath);
+
+  if (objectInfoError || !objectInfo) {
+    return false;
+  }
+
+  const actualSize = objectInfo.size ?? objectInfo.metadata?.size ?? null;
+  const actualContentType = (
+    objectInfo.contentType ?? objectInfo.metadata?.mimetype ?? ''
+  ).split(';')[0]?.trim().toLowerCase();
+  const rejectInvalidUpload = async (message: string) => {
+    if (params.removeInvalid) {
+      await params.bucket.remove([params.objectPath]).catch(() => undefined);
+    }
+    throw new HttpRequestError(422, 'upload_verification_failed', message);
+  };
+
+  if (
+    actualSize == null
+    || actualSize !== params.payload.fileSizeBytes
+    || actualSize > params.maxUploadBytes
+  ) {
+    await rejectInvalidUpload('Uploaded media size could not be verified');
+  }
+
+  if (actualContentType !== params.payload.contentType) {
+    await rejectInvalidUpload('Uploaded media content type could not be verified');
+  }
+
+  const { data: probeUrlData, error: probeUrlError } = await params.bucket.createSignedUrl(
+    params.objectPath,
+    60,
+  );
+
+  if (probeUrlError || !probeUrlData?.signedUrl) {
+    throw new HttpRequestError(500, 'upload_verification_failed', 'Uploaded media could not be verified');
+  }
+
+  const signatureBytes = await params.fetchObjectPrefix(
+    probeUrlData.signedUrl,
+    mediaSignatureProbeBytes,
+    actualSize,
+  );
+
+  try {
+    assertMediaSignature(params.payload.contentType, signatureBytes);
+    assertActualMediaMetadata(
+      params.payload,
+      readActualMediaMetadata(params.payload.contentType, signatureBytes),
+    );
+  } catch {
+    await rejectInvalidUpload('Uploaded media content could not be verified');
+  }
+
+  return true;
+}
+
 function sanitizeStoragePath(value: string) {
   const normalized = value.trim().replace(/^\/+/, '');
 
@@ -990,6 +1223,257 @@ async function getAuthorizedPrivatePlaceMediaPaths(
   );
 }
 
+type CompleteUploadActionParams = {
+  adminClient: AdminClientLike;
+  allowedOrigins: string[];
+  createRequestId: () => string;
+  fetchObjectPrefix: NonNullable<MediaAssetsHandlerDeps['fetchObjectPrefix']>;
+  payload: z.infer<typeof completeUploadPayloadSchema>;
+  rateLimitResult: Awaited<ReturnType<typeof enforceRateLimit>>;
+  request: Request;
+  requestContext: ReturnType<typeof createEdgeRequestContext>;
+  userId: string;
+};
+
+async function handleCompleteUploadAction({
+  adminClient,
+  allowedOrigins,
+  createRequestId,
+  fetchObjectPrefix,
+  payload,
+  rateLimitResult,
+  request,
+  requestContext,
+  userId,
+}: CompleteUploadActionParams) {
+  assertMediaMetadata(payload);
+  const maxUploadBytes = getMaxUploadBytes(payload.bucket, payload.contentType);
+  const finalizeLeaseId = createRequestId();
+  const session = parseUploadSessionRecord(await callUploadSessionRpc(
+    adminClient,
+    'claim_media_upload_session_finalize',
+    {
+      p_lease_id: finalizeLeaseId,
+      p_lease_seconds: 300,
+      p_session_id: payload.uploadSessionId,
+      p_user_id: userId,
+    },
+  ));
+  assertUploadSessionMatchesPayload(session, payload, userId);
+
+  if (session.claimStatus === 'busy') {
+    throw new HttpRequestError(409, 'upload_session_busy', 'Medya yukleme oturumu halen tamamlaniyor.');
+  }
+  if (
+    session.claimStatus !== 'claimed'
+    && session.claimStatus !== 'finalized'
+  ) {
+    throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu kullanilamiyor.');
+  }
+  if (session.claimStatus === 'claimed' && session.leaseId !== finalizeLeaseId) {
+    throw new HttpRequestError(500, 'upload_session_failed', 'Medya yukleme oturumu dogrulanamadi.');
+  }
+
+  const isPublicDestination = session.destinationBucket !== privateMediaBucket;
+  const paths = {
+    destinationPath: getOwnedPath(userId, session.destinationPath),
+    uploadPath: getOwnedPath(userId, session.uploadPath),
+  };
+  const uploadBucket = adminClient.storage.from(privateMediaBucket);
+  const renewFinalizeLease = async () => {
+    if (session.claimStatus !== 'claimed') {
+      return;
+    }
+    const renewed = await callUploadSessionRpc(
+      adminClient,
+      'renew_media_upload_session_finalize',
+      {
+        p_lease_id: finalizeLeaseId,
+        p_lease_seconds: 300,
+        p_session_id: payload.uploadSessionId,
+        p_user_id: userId,
+      },
+    );
+    if (renewed !== true) {
+      throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu zaman asimina ugradi.');
+    }
+  };
+
+  const markFinalized = async () => {
+    if (session.claimStatus !== 'claimed') {
+      return;
+    }
+    await renewFinalizeLease();
+    const marked = await callUploadSessionRpc(
+      adminClient,
+      'complete_media_upload_session_finalize',
+      {
+        p_lease_id: finalizeLeaseId,
+        p_session_id: payload.uploadSessionId,
+        p_user_id: userId,
+      },
+    );
+    if (marked !== true) {
+      throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu tamamlanamadi.');
+    }
+  };
+
+  const responseOptions = {
+    extraHeaders: rateLimitHeaders(
+      rateLimitResult,
+      getMediaRequestRateLimit(payload.action),
+    ),
+    requestId: requestContext.requestId,
+  };
+
+  try {
+    if (payload.fileSizeBytes > maxUploadBytes) {
+      const { error: stagingRemoveError } = await uploadBucket.remove([paths.uploadPath]);
+      if (stagingRemoveError) {
+        throw new HttpRequestError(
+          500,
+          'upload_finalize_failed',
+          'Medya gecici alandan temizlenemedi.',
+        );
+      }
+      throw new HttpRequestError(413, 'file_too_large', 'Media payload exceeds size limit');
+    }
+
+    if (!isPublicDestination) {
+      const privateUploadExists = await verifyStoredUpload({
+        bucket: uploadBucket,
+        fetchObjectPrefix,
+        maxUploadBytes,
+        objectPath: paths.uploadPath,
+        payload,
+        removeInvalid: true,
+      });
+
+      if (!privateUploadExists) {
+        throw new HttpRequestError(404, 'not_found', 'Uploaded media was not found');
+      }
+
+      await markFinalized();
+      return jsonResponse(
+        request,
+        allowedOrigins,
+        200,
+        {
+          objectPath: paths.destinationPath,
+          storageUri: `sorita-storage://${privateMediaBucket}/${paths.destinationPath
+            .split('/')
+            .map(encodeURIComponent)
+            .join('/')}`,
+          uploadSessionId: payload.uploadSessionId,
+          verified: true,
+        },
+        responseOptions,
+      );
+    }
+
+    const destinationBucket = adminClient.storage.from(session.destinationBucket);
+    const uploadExists = session.claimStatus === 'claimed'
+      ? await verifyStoredUpload({
+          bucket: uploadBucket,
+          fetchObjectPrefix,
+          maxUploadBytes,
+          objectPath: paths.uploadPath,
+          payload,
+          removeInvalid: true,
+        })
+      : false;
+
+    if (!uploadExists) {
+      const alreadyFinalized = await verifyStoredUpload({
+        bucket: destinationBucket,
+        fetchObjectPrefix,
+        maxUploadBytes,
+        objectPath: paths.destinationPath,
+        payload,
+        removeInvalid: true,
+      });
+
+      if (!alreadyFinalized) {
+        throw new HttpRequestError(404, 'not_found', 'Uploaded media was not found');
+      }
+    } else {
+      await renewFinalizeLease();
+      const { error: copyError } = await uploadBucket.copy(
+        paths.uploadPath,
+        paths.destinationPath,
+        { destinationBucket: session.destinationBucket },
+      );
+
+      if (copyError) {
+        const copyWasAlreadyFinalized = await verifyStoredUpload({
+          bucket: destinationBucket,
+          fetchObjectPrefix,
+          maxUploadBytes,
+          objectPath: paths.destinationPath,
+          payload,
+          removeInvalid: true,
+        });
+
+        if (!copyWasAlreadyFinalized) {
+          logEdgeEvent('error', 'Verified public media copy failed', requestContext, {
+            bucket: session.destinationBucket,
+            message: copyError.message,
+          });
+          throw new HttpRequestError(500, 'upload_finalize_failed', 'Medya yuklemesi tamamlanamadi.');
+        }
+      } else {
+        const destinationVerified = await verifyStoredUpload({
+          bucket: destinationBucket,
+          fetchObjectPrefix,
+          maxUploadBytes,
+          objectPath: paths.destinationPath,
+          payload,
+          removeInvalid: true,
+        });
+
+        if (!destinationVerified) {
+          throw new HttpRequestError(500, 'upload_finalize_failed', 'Medya yuklemesi tamamlanamadi.');
+        }
+      }
+
+      const { error: stagingRemoveError } = await uploadBucket.remove([paths.uploadPath]);
+      if (stagingRemoveError) {
+        throw new HttpRequestError(
+          500,
+          'upload_finalize_failed',
+          'Medya gecici alandan temizlenemedi.',
+        );
+      }
+    }
+
+    await markFinalized();
+    const { data: publicUrlData } = destinationBucket.getPublicUrl(paths.destinationPath);
+
+    return jsonResponse(
+      request,
+      allowedOrigins,
+      200,
+      {
+        objectPath: paths.destinationPath,
+        publicUrl: publicUrlData.publicUrl,
+        uploadSessionId: payload.uploadSessionId,
+        verified: true,
+      },
+      responseOptions,
+    );
+  } catch (error) {
+    if (session.claimStatus === 'claimed' && adminClient.rpc) {
+      await adminClient.rpc('release_media_upload_session_finalize', {
+        p_error: error instanceof Error ? error.message : 'upload finalize failed',
+        p_lease_id: finalizeLeaseId,
+        p_session_id: payload.uploadSessionId,
+        p_user_id: userId,
+      }).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
 // Pure validation/parsing helpers are exported as one narrow surface so their
 // security boundaries can be regression-tested without exercising storage.
 export const mediaAssetsInternals = {
@@ -1061,26 +1545,44 @@ export function createMediaAssetsHandler({
         );
       }
 
-      const authClient = createAuthClient(token);
-      const {
-        data,
-        error: claimsError,
-      } = await authClient.auth.getClaims(token);
-      const userId = typeof data?.claims?.sub === 'string' ? data.claims.sub : null;
+      const adminClient = createAdminClient();
+      const envelope = await verifyRequestEnvelope({
+        adminClient,
+        functionName: 'media-assets',
+        maxBodyBytes: mediaRequestBodyMaxBytes,
+        request,
+      });
 
-      if (claimsError || !userId) {
+      if (!envelope.ok) {
         return jsonResponse(
           request,
           allowedOrigins,
-          401,
-          { code: 'invalid_jwt', error: claimsError?.message ?? 'Invalid JWT' },
+          envelope.status,
+          { code: 'invalid_signature', error: envelope.error },
           { requestId: requestContext.requestId },
         );
       }
 
-      const adminClient = createAdminClient();
+      const authClient = createAuthClient(token);
+      const {
+        data,
+        error: userError,
+      } = await authClient.auth.getUser(token);
+      const userId = typeof data?.user?.id === 'string' ? data.user.id : null;
+
+      if (userError || !userId) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          401,
+          { code: 'invalid_jwt', error: userError?.message ?? 'Invalid JWT' },
+          { requestId: requestContext.requestId },
+        );
+      }
+
       const securityResult = await verifySignedRequest({
         adminClient,
+        bodyText: envelope.bodyText,
         functionName: 'media-assets',
         request,
         token,
@@ -1103,7 +1605,7 @@ export function createMediaAssetsHandler({
       const payload = parseMediaPayload(securityResult.bodyText ?? '');
       const rateLimitResult = await enforceRateLimit({
         adminClient,
-        identifier: `${userId}:${request.headers.get('x-device-id') ?? 'unknown-device'}`,
+        identifier: userId,
         maxRequests: getMediaRequestRateLimit(payload.action),
         scope: `media:${payload.action}`,
         windowMs: 60_000,
@@ -1200,7 +1702,7 @@ export function createMediaAssetsHandler({
             413,
             {
               code: 'file_too_large',
-              error: `Dosya boyutu limiti asildi. En fazla ${payload.bucket === 'place-media' ? placeMediaUploadMegabytes : Math.ceil(maxUploadBytes / bytesInMb)} MB destekleniyor.`,
+              error: `Dosya boyutu limiti asildi. En fazla ${Math.ceil(maxUploadBytes / bytesInMb)} MB destekleniyor.`,
             },
             { requestId: requestContext.requestId },
           );
@@ -1208,12 +1710,47 @@ export function createMediaAssetsHandler({
 
         const prefix = sanitizePrefix(payload.prefix);
         const extension = normalizeExtension(payload.extension, payload.contentType);
-        const fileName = `${userId}/${prefix}-${createRequestId()}.${extension}`;
-        const bucket = adminClient.storage.from(payload.bucket);
+        const paths = buildSignedUploadPaths({
+          bucket: payload.bucket,
+          extension,
+          prefix,
+          uploadSessionId: payload.uploadSessionId,
+          userId,
+        });
+        const initializationId = createRequestId();
+        const session = parseUploadSessionRecord(await callUploadSessionRpc(
+          adminClient,
+          'begin_media_upload_session',
+          {
+            p_content_type: payload.contentType,
+            p_destination_bucket: payload.bucket,
+            p_destination_path: paths.destinationPath,
+            p_expected_size_bytes: payload.fileSizeBytes,
+            p_initialization_id: initializationId,
+            p_session_id: payload.uploadSessionId,
+            p_upload_bucket: paths.uploadBucket,
+            p_upload_path: paths.uploadPath,
+            p_user_id: userId,
+          },
+        ));
+
+        if (
+          session.sessionId !== payload.uploadSessionId
+          || session.sessionStatus !== 'pending'
+          || session.initializationId !== initializationId
+        ) {
+          throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu kullanilamiyor.');
+        }
+
+        const bucket = adminClient.storage.from(paths.uploadBucket);
         const { data: signedUploadData, error: signedUploadError } =
-          await bucket.createSignedUploadUrl(fileName, { upsert: true });
+          await bucket.createSignedUploadUrl(paths.uploadPath, { upsert: false });
 
         if (signedUploadError || !signedUploadData?.signedUrl) {
+          // Do not cancel here. A reissued request can race an earlier caller
+          // that already received a usable URL; cancelling the latest ledger
+          // row would make that valid upload impossible to finalize. A pending
+          // session is safely reclaimed after its signed-token horizon.
           logEdgeEvent('error', 'Signed upload URL creation failed', requestContext, {
             bucket: payload.bucket,
             message: signedUploadError?.message,
@@ -1232,9 +1769,9 @@ export function createMediaAssetsHandler({
           allowedOrigins,
           200,
           {
-            objectPath: fileName,
-            storageUri: `sorita-storage://${payload.bucket}/${fileName.split('/').map(encodeURIComponent).join('/')}`,
+            objectPath: paths.uploadPath,
             signedUrl: signedUploadData.signedUrl,
+            uploadSessionId: payload.uploadSessionId,
           },
           {
             extraHeaders: rateLimitHeaders(
@@ -1247,85 +1784,17 @@ export function createMediaAssetsHandler({
       }
 
       if (payload.action === 'complete-upload') {
-        assertMediaMetadata(payload);
-        const objectPath = getOwnedPath(userId, payload.objectPath);
-        const maxUploadBytes = getMaxUploadBytes(payload.bucket, payload.contentType);
-        const bucket = adminClient.storage.from(payload.bucket);
-
-        if (payload.fileSizeBytes > maxUploadBytes) {
-          await bucket.remove([objectPath]).catch(() => undefined);
-          throw new HttpRequestError(413, 'file_too_large', 'Media payload exceeds size limit');
-        }
-
-        const { data: objectInfo, error: objectInfoError } = await bucket.info(objectPath);
-
-        if (objectInfoError || !objectInfo) {
-          throw new HttpRequestError(404, 'not_found', 'Uploaded media was not found');
-        }
-
-        const actualSize = objectInfo.size ?? objectInfo.metadata?.size ?? null;
-        const actualContentType = (
-          objectInfo.contentType ?? objectInfo.metadata?.mimetype ?? ''
-        ).split(';')[0]?.trim().toLowerCase();
-        const rejectInvalidUpload = async (message: string) => {
-          await bucket.remove([objectPath]).catch(() => undefined);
-          throw new HttpRequestError(422, 'upload_verification_failed', message);
-        };
-
-        if (
-          actualSize == null ||
-          actualSize !== payload.fileSizeBytes ||
-          actualSize > maxUploadBytes
-        ) {
-          await rejectInvalidUpload('Uploaded media size could not be verified');
-        }
-
-        if (actualContentType !== payload.contentType) {
-          await rejectInvalidUpload('Uploaded media content type could not be verified');
-        }
-
-        const { data: probeUrlData, error: probeUrlError } = await bucket.createSignedUrl(
-          objectPath,
-          60,
-        );
-
-        if (probeUrlError || !probeUrlData?.signedUrl) {
-          throw new HttpRequestError(500, 'upload_verification_failed', 'Uploaded media could not be verified');
-        }
-
-        const signatureBytes = await fetchObjectPrefix(
-          probeUrlData.signedUrl,
-          mediaSignatureProbeBytes,
-          actualSize,
-        );
-
-        try {
-          assertMediaSignature(payload.contentType, signatureBytes);
-          assertActualMediaMetadata(
-            payload,
-            readActualMediaMetadata(payload.contentType, signatureBytes),
-          );
-        } catch {
-          await rejectInvalidUpload('Uploaded media content could not be verified');
-        }
-
-        return jsonResponse(
-          request,
+        return await handleCompleteUploadAction({
+          adminClient,
           allowedOrigins,
-          200,
-          {
-            objectPath,
-            storageUri: `sorita-storage://${payload.bucket}/${objectPath.split('/').map(encodeURIComponent).join('/')}`,
-            verified: true,
-          },
-          {
-            extraHeaders: rateLimitHeaders(
-              rateLimitResult,
-              getMediaRequestRateLimit(payload.action),
-            ),
-            requestId: requestContext.requestId,
-          },
-        );
+          createRequestId,
+          fetchObjectPrefix,
+          payload,
+          rateLimitResult,
+          request,
+          requestContext,
+          userId,
+        });
       }
 
       if (payload.action === 'create-read-urls') {
@@ -1407,6 +1876,142 @@ export function createMediaAssetsHandler({
             expiresInSeconds: privateReadUrlExpiresInSeconds,
             signedUrl: signedReadData.signedUrl,
           },
+          {
+            extraHeaders: rateLimitHeaders(
+              rateLimitResult,
+              getMediaRequestRateLimit(payload.action),
+            ),
+            requestId: requestContext.requestId,
+          },
+        );
+      }
+
+      if (payload.uploadSessionId) {
+        const cleanupLeaseId = createRequestId();
+        const session = parseUploadCleanupRecord(await callUploadSessionRpc(
+          adminClient,
+          'claim_media_upload_session_cleanup',
+          {
+            p_lease_id: cleanupLeaseId,
+            p_lease_seconds: 300,
+            p_session_id: payload.uploadSessionId,
+            p_user_id: userId,
+          },
+        ));
+
+        if (session.claimStatus === 'busy') {
+          throw new HttpRequestError(409, 'upload_session_busy', 'Medya yukleme oturumu halen kullaniliyor.');
+        }
+        if (session.claimStatus === 'finalized') {
+          return jsonResponse(
+            request,
+            allowedOrigins,
+            200,
+            { success: true },
+            {
+              extraHeaders: rateLimitHeaders(
+                rateLimitResult,
+                getMediaRequestRateLimit(payload.action),
+              ),
+              requestId: requestContext.requestId,
+            },
+          );
+        }
+        if (session.claimStatus !== 'claimed' || session.leaseId !== cleanupLeaseId) {
+          throw new HttpRequestError(409, 'upload_session_conflict', 'Medya yukleme oturumu temizlenemiyor.');
+        }
+
+        const requestedPaths = Array.from(new Set(
+          payload.paths.map((path) => getOwnedPath(userId, path)),
+        ));
+        if (
+          payload.bucket !== session.uploadBucket
+          || requestedPaths.length !== 1
+          || requestedPaths[0] !== session.uploadPath
+        ) {
+          throw new HttpRequestError(409, 'upload_session_conflict', 'Medya temizleme istegi oturumla eslesmiyor.');
+        }
+
+        const cleanupLeaseRenewed = await callUploadSessionRpc(
+          adminClient,
+          'renew_media_upload_session_cleanup',
+          {
+            p_lease_id: cleanupLeaseId,
+            p_lease_seconds: 300,
+            p_session_id: payload.uploadSessionId,
+          },
+        );
+        if (cleanupLeaseRenewed !== true) {
+          throw new HttpRequestError(409, 'upload_session_conflict', 'Medya temizleme oturumu zaman asimina ugradi.');
+        }
+
+        const cleanupDecision = firstRpcRecord(await callUploadSessionRpc(
+          adminClient,
+          'check_media_upload_session_cleanup_reference',
+          {
+            p_allow_unreferenced_destination_delete: true,
+            p_lease_id: cleanupLeaseId,
+            p_session_id: payload.uploadSessionId,
+          },
+        ));
+        if (
+          !cleanupDecision
+          || typeof cleanupDecision.destination_referenced !== 'boolean'
+          || typeof cleanupDecision.delete_destination !== 'boolean'
+          || typeof cleanupDecision.previous_status !== 'string'
+        ) {
+          throw new HttpRequestError(500, 'upload_session_failed', 'Medya temizleme karari dogrulanamadi.');
+        }
+
+        let cleanupError: ErrorLike | null | undefined;
+        const pathsAreIdentical =
+          session.destinationBucket === session.uploadBucket
+          && session.destinationPath === session.uploadPath;
+
+        if (!pathsAreIdentical || cleanupDecision.delete_destination) {
+          const uploadRemoval = await adminClient.storage
+            .from(session.uploadBucket)
+            .remove([session.uploadPath]);
+          cleanupError = uploadRemoval.error;
+        }
+
+        if (
+          !cleanupError
+          && cleanupDecision.delete_destination
+          && !pathsAreIdentical
+        ) {
+          const destinationRemoval = await adminClient.storage
+            .from(session.destinationBucket)
+            .remove([session.destinationPath]);
+          cleanupError = destinationRemoval.error;
+        }
+
+        const cleanupRecorded = await callUploadSessionRpc(
+          adminClient,
+          'complete_media_upload_session_cleanup',
+          {
+            p_automatic:
+              cleanupDecision.previous_status === 'finalized'
+              && cleanupDecision.destination_referenced,
+            p_destination_retained:
+              cleanupDecision.previous_status === 'finalized'
+              && cleanupDecision.destination_referenced,
+            p_error: cleanupError?.message ?? null,
+            p_lease_id: cleanupLeaseId,
+            p_session_id: payload.uploadSessionId,
+            p_success: !cleanupError,
+          },
+        );
+
+        if (cleanupRecorded !== true || cleanupError) {
+          throw new HttpRequestError(500, 'delete_failed', 'Medya silme islemi tamamlanamadi.');
+        }
+
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          200,
+          { success: true },
           {
             extraHeaders: rateLimitHeaders(
               rateLimitResult,

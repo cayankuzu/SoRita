@@ -9,14 +9,16 @@ function createDeps(options?: {
   updateError?: { message: string } | null;
   emailError?: string | null;
   reportEmailFrom?: string;
-  claimsResult?: {
-    data?: { claims?: { sub?: string } | null } | null;
+  userResult?: {
+    data?: { user?: { id?: string } | null } | null;
     error?: { message: string } | null;
   };
   rateLimited?: boolean;
   rateLimitError?: boolean;
   rowErrors?: Partial<Record<'list_place_comments' | 'list_places' | 'lists' | 'profiles', { message: string }>>;
   rows?: Partial<Record<'list_place_comments' | 'list_places' | 'lists' | 'profiles', Record<string, unknown>>>;
+  visibilityErrors?: Partial<Record<'list_place_comments' | 'list_places' | 'lists' | 'profiles', { message: string }>>;
+  visibleRows?: Partial<Record<'list_place_comments' | 'list_places' | 'lists' | 'profiles', Record<string, unknown> | null>>;
   useDefaultEmail?: boolean;
   configOverrides?: Partial<{
     allowedOrigins: string[];
@@ -137,14 +139,32 @@ function createDeps(options?: {
     }),
     createAuthClient: () => ({
       auth: {
-        getClaims: vi.fn().mockResolvedValue(options?.claimsResult ?? {
+        getUser: vi.fn().mockResolvedValue(options?.userResult ?? {
           data: {
-            claims: {
-              sub: 'user-1',
+            user: {
+              id: 'user-1',
             },
           },
           error: null,
         }),
+      },
+      from: (table: string) => {
+        const tableName = table as 'list_place_comments' | 'list_places' | 'lists' | 'profiles';
+        const hasVisibilityOverride = Object.prototype.hasOwnProperty.call(
+          options?.visibleRows ?? {},
+          tableName,
+        );
+        const row = hasVisibilityOverride
+          ? options?.visibleRows?.[tableName] ?? null
+          : options?.rows?.[tableName] ?? null;
+        const error = options?.visibilityErrors?.[tableName] ?? options?.rowErrors?.[tableName] ?? null;
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({ data: row, error }),
+            }),
+          }),
+        };
       },
     }),
     createRequestId: () => 'request-1',
@@ -246,6 +266,11 @@ describe('moderation-reports handler', () => {
         to: 'memodee333@gmail.com',
       }),
     );
+    const email = sendEmailMock.mock.calls[0]?.[0];
+    expect(email?.text).toContain('Report ID: report-1');
+    expect(email?.text).not.toContain('Hidden gems');
+    expect(email?.text).not.toContain('owner@example.com');
+    expect(email?.text).not.toContain('Spam');
     expect(moderationReportUpdateEqMock).toHaveBeenCalledWith('id', 'report-1');
   });
 
@@ -325,15 +350,13 @@ describe('moderation-reports handler', () => {
     expect(missing.status).toBe(401);
     await expect(missing.json()).resolves.toMatchObject({ code: 'missing_authorization' });
 
-    for (const claimsResult of [
-      { data: { claims: null }, error: null },
-      { data: { claims: { sub: ' ' } }, error: null },
+    for (const userResult of [
+      { data: { user: null }, error: null },
+      { data: { user: { id: ' ' } }, error: null },
       { data: null, error: { message: 'expired' } },
     ]) {
-      const invalid = createDeps({ claimsResult });
-      const response = await invalid.handler(new Request('https://example.supabase.co/functions/v1/moderation-reports', {
-        body: '{}', headers: { Authorization: 'Bearer token-1' }, method: 'POST',
-      }));
+      const invalid = createDeps({ userResult });
+      const response = await invalid.handler(await signedRequest({}));
       expect(response.status).toBe(401);
       await expect(response.json()).resolves.toMatchObject({ code: 'invalid_token' });
     }
@@ -458,6 +481,42 @@ describe('moderation-reports handler', () => {
     await expect(response.json()).resolves.toMatchObject({ code: 'internal_error' });
   });
 
+  it('uses reporter-scoped RLS visibility before service-role snapshot reads', async () => {
+    const deps = createDeps({
+      rows: {
+        lists: { id: 'list-1', owner_id: 'owner-1', name: 'Private list', is_public: false },
+        profiles: { id: 'owner-1', username: 'owner' },
+      },
+      visibleRows: { lists: null },
+    });
+    const response = await deps.handler(await signedRequest({
+      targetType: 'list', reporterUserId: 'user-1', listId: 'list-1', reason: 'Spam',
+    }));
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ code: 'report_target_not_found' });
+    expect(deps.moderationReportInsertMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects self reports for users and owned content', async () => {
+    for (const testCase of [
+      {
+        payload: { targetType: 'user', reporterUserId: 'user-1', targetUserId: 'user-1', reason: 'Spam' },
+        rows: { profiles: { id: 'user-1', username: 'self' } },
+      },
+      {
+        payload: { targetType: 'list', reporterUserId: 'user-1', listId: 'list-1', reason: 'Spam' },
+        rows: { lists: { id: 'list-1', owner_id: 'user-1', name: 'Own list' } },
+      },
+    ] as const) {
+      const deps = createDeps({ rows: testCase.rows });
+      const response = await deps.handler(await signedRequest(testCase.payload));
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toMatchObject({ code: 'self_report_not_allowed' });
+      expect(deps.moderationReportInsertMock).not.toHaveBeenCalled();
+    }
+  });
+
   it('fails on generic inserts or invalid returned ids without attempting email', async () => {
     for (const options of [
       { insertError: { code: 'XX000', message: 'insert failed' } },
@@ -472,6 +531,10 @@ describe('moderation-reports handler', () => {
         targetType: 'user', reporterUserId: 'user-1', targetUserId: 'target-1', reason: 'Spam',
       }));
       expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual(expect.objectContaining({
+        code: 'internal_error',
+        error: 'Sikayet servisi su anda kullanilamiyor.',
+      }));
       expect(deps.sendEmailMock).not.toHaveBeenCalled();
     }
   });

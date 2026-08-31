@@ -1,0 +1,185 @@
+name: Release Evidence
+run-name: Repository evidence for ${{ inputs.candidate_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full immutable commit SHA to attest
+        required: true
+        type: string
+      quality_run_id:
+        description: Successful Quality workflow run ID for candidate_sha
+        required: true
+        type: string
+      database_run_id:
+        description: Successful Database Validation workflow run ID for candidate_sha
+        required: true
+        type: string
+      channel:
+        description: Intended release channel (metadata only; this workflow never deploys)
+        required: true
+        default: preview
+        type: choice
+        options: [preview, production]
+      runtime_version:
+        description: Runtime version expected by the candidate binary
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: release-evidence-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+env:
+  CI: 'true'
+  NODE_VERSION: '24'
+
+jobs:
+  repository-evidence:
+    name: Build checksum-bound repository evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the requested immutable commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Validate candidate identity and default-branch ancestry
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::candidate_sha must be a canonical lower-case full commit SHA.'
+            exit 1
+          fi
+          if [[ "${CANDIDATE_SHA,,}" != "${WORKFLOW_SHA,,}" ]]; then
+            echo '::error::Release Evidence must be dispatched from the exact candidate SHA.'
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "${CANDIDATE_SHA,,}" ]]; then
+            echo '::error::Checked-out source does not match candidate_sha.'
+            exit 1
+          fi
+          expected_runtime_version="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version)")"
+          if [[ "$REQUESTED_RUNTIME_VERSION" != "$expected_runtime_version" ]]; then
+            echo '::error::runtime_version must match the immutable candidate package version.'
+            exit 1
+          fi
+          git fetch --no-tags origin "$DEFAULT_BRANCH"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" "origin/${DEFAULT_BRANCH}"
+          git status --porcelain=v1 --untracked-files=all | tee /tmp/initial-status.txt
+          test ! -s /tmp/initial-status.txt
+
+      - name: Verify successful same-SHA Quality and Database runs
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          DATABASE_RUN_ID: ${{ inputs.database_run_id }}
+          GH_TOKEN: ${{ github.token }}
+          QUALITY_RUN_ID: ${{ inputs.quality_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release-evidence
+
+          verify_and_record() {
+            local run_id="$1"
+            local workflow_file="$2"
+            local output_file="$3"
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "::error::${workflow_file} run ID must be numeric."
+              exit 1
+            fi
+            local fields expected_id
+            fields="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion,.head_sha,(.workflow_id|tostring),.head_repository.full_name] | @tsv')"
+            expected_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}" --jq '.id')"
+            local status conclusion head_sha workflow_id head_repository
+            IFS=$'\t' read -r status conclusion head_sha workflow_id head_repository <<< "$fields"
+            if [[ "$status" != completed || "$conclusion" != success || "${head_sha,,}" != "${CANDIDATE_SHA,,}" || "$workflow_id" != "$expected_id" || "$head_repository" != "$GITHUB_REPOSITORY" ]]; then
+              echo "::error::${workflow_file} is not successful same-SHA evidence."
+              exit 1
+            fi
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+              --jq '{id,workflow_id,head_sha,status,conclusion,event,html_url,created_at,updated_at}' \
+              > "artifacts/release-evidence/${output_file}"
+          }
+
+          verify_and_record "$QUALITY_RUN_ID" quality.yml quality-run.json
+          verify_and_record "$DATABASE_RUN_ID" database-validation.yml database-run.json
+
+      - name: Install the root lockfile without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Re-run immutable-surface and evidence-tool checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run feature-surface:check 2>&1 | tee artifacts/release-evidence/feature-surface.log
+          npm run release-evidence:test 2>&1 | tee artifacts/release-evidence/manifest-tests.log
+          git diff --exit-code
+
+      - name: Generate a deliberately partial NO-GO manifest
+        shell: bash
+        env:
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_ENVIRONMENT: ${{ inputs.channel }}
+          RELEASE_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+        run: |
+          set -euo pipefail
+          node utils/release-evidence/manifest.mjs create \
+            --manifest artifacts/release-evidence/manifest.json \
+            --artifact artifacts/release-evidence/quality-run.json \
+            --artifact artifacts/release-evidence/database-run.json \
+            --artifact artifacts/release-evidence/feature-surface.log \
+            --artifact artifacts/release-evidence/manifest-tests.log \
+            --result quality=pass \
+            --result database-local=pass \
+            --result feature-surface=pass \
+            --result evidence-tool=pass \
+            --result sast-secret-scan=pass \
+            --result cloudflare-preview=unverified \
+            --result signed-android-ios=unverified \
+            --result physical-device-matrix=unverified \
+            --result provider-dashboards=unverified \
+            --result staging-restore=unverified \
+            --result store-internal-tracks=unverified \
+            --result ota-preview-rollback=unverified \
+            --result backup-pitr=unverified \
+            --result observability-alerts=unverified \
+            --result security-review=unverified
+
+      - name: Confirm incomplete evidence cannot pass the production verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node utils/release-evidence/manifest.mjs verify --manifest artifacts/release-evidence/manifest.json; then
+            echo '::error::An incomplete evidence manifest was accepted unexpectedly.'
+            exit 1
+          fi
+          echo 'Incomplete external/runtime evidence was correctly rejected; production remains NO-GO.'
+
+      - name: Upload checksum-bound partial evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: partial-release-evidence-${{ inputs.candidate_sha }}
+          path: artifacts/release-evidence
+          if-no-files-found: error
+          retention-days: 90

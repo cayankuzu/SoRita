@@ -10,7 +10,7 @@ import {
   parseJsonBody,
 } from '../_shared/httpHelpers.ts';
 import { enforceRateLimit, rateLimitHeaders, type RateLimitAdminClientLike } from '../_shared/rateLimit.ts';
-import { verifySignedRequest } from '../_shared/requestSecurity.ts';
+import { verifyRequestEnvelope, verifySignedRequest } from '../_shared/requestSecurity.ts';
 
 type ErrorLike = {
   message: string;
@@ -378,26 +378,43 @@ export function createMapsGeocodingHandler({
         );
       }
 
-      const authClient = createAuthClient(token);
-      const {
-        data,
-        error: claimsError,
-      } = await authClient.auth.getClaims(token);
-      const userId = typeof data?.claims?.sub === 'string' ? data.claims.sub : null;
-
-      if (claimsError || !userId) {
+      const adminClient = createAdminClient();
+      const envelope = await verifyRequestEnvelope({
+        adminClient,
+        functionName: 'maps-geocoding',
+        maxBodyBytes: 16 * 1024,
+        request,
+      });
+      if (!envelope.ok) {
         return jsonResponse(
           request,
           allowedOrigins,
-          401,
-          { code: 'invalid_jwt', error: claimsError?.message ?? 'Invalid JWT' },
+          envelope.status,
+          { code: 'invalid_signature', error: envelope.error },
           { requestId: requestContext.requestId },
         );
       }
 
-      const adminClient = createAdminClient();
+      const authClient = createAuthClient(token);
+      const {
+        data,
+        error: userError,
+      } = await authClient.auth.getUser(token);
+      const userId = typeof data?.user?.id === 'string' ? data.user.id : null;
+
+      if (userError || !userId) {
+        return jsonResponse(
+          request,
+          allowedOrigins,
+          401,
+          { code: 'invalid_jwt', error: userError?.message ?? 'Invalid JWT' },
+          { requestId: requestContext.requestId },
+        );
+      }
+
       const securityResult = await verifySignedRequest({
         adminClient,
+        bodyText: envelope.bodyText,
         functionName: 'maps-geocoding',
         request,
         token,
@@ -426,10 +443,9 @@ export function createMapsGeocodingHandler({
         );
       }
 
-      const deviceId = request.headers.get('x-device-id') ?? 'unknown-device';
       const rateLimitResult = await enforceRateLimit({
         adminClient,
-        identifier: `${userId}:${deviceId}`,
+        identifier: userId,
         maxRequests: 20,
         scope: `maps:${parsedPayload.data.action}`,
         windowMs: 60_000,

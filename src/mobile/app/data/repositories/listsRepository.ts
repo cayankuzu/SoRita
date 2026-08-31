@@ -9,6 +9,8 @@ import {
 } from '@/mobile/app/data/repositories/visibleDataRepository';
 import { submitModerationReport } from '@/mobile/app/data/repositories/moderationReports';
 import {
+  isPublicPlaceMediaAsset,
+  rehomePublicPlaceMediaAssetToPrivate,
   uploadImageAsset,
   uploadPlaceMediaAsset,
 } from '@/mobile/app/platform/supabase/media';
@@ -40,6 +42,14 @@ import { uniqueStrings } from '@/mobile/app/shared/utils/format';
 import { throwIfAborted } from '@/mobile/app/shared/utils/abort';
 import { mapWithConcurrency } from '@/shared/utils/mapWithConcurrency';
 import { getCurrentConnectionStatus } from '@/mobile/app/platform/network/connectivityStatus';
+import {
+  createProgressTracker,
+  estimateListUpdateUnits as calculateListUpdateUnits,
+  estimateUpdateListsUnits as calculateUpdateListsUnits,
+  getListPlaceChanges as calculateListPlaceChanges,
+  isPendingUploadUri,
+  type ProgressTracker,
+} from './listPersistenceProgress';
 
 const MEDIA_UPLOAD_CONCURRENCY = 3;
 const PLACE_WRITE_CONCURRENCY = 2;
@@ -52,10 +62,6 @@ function getMediaUploadConcurrency() {
   }
 
   return status === 'online' ? MEDIA_UPLOAD_CONCURRENCY : 2;
-}
-
-function isPendingUploadUri(value?: string | null) {
-  return Boolean(value && (value.startsWith('file://') || value.startsWith('content://')));
 }
 
 function resolvePlaceName(place: Place) {
@@ -168,117 +174,16 @@ function areListMetadataEquivalentForPersistence(
   );
 }
 
-type ProgressTracker = {
-  advance: (units?: number) => void;
-  completeUnit: (key: string) => void;
-  setUnitProgress: (key: string, fraction: number) => void;
-};
-
-function createProgressTracker(totalUnits: number, onProgress?: (progress: number) => void): ProgressTracker {
-  if (!onProgress) {
-    return {
-      advance: () => undefined,
-      completeUnit: () => undefined,
-      setUnitProgress: () => undefined,
-    };
-  }
-
-  const total = Math.max(1, totalUnits);
-  let completed = 0;
-  let lastEmittedProgress = 0;
-  const completedUnitKeys = new Set<string>();
-  const inFlightUnitProgress = new Map<string, number>();
-
-  const emit = () => {
-    const inFlightProgress = Array.from(inFlightUnitProgress.values()).reduce(
-      (sum, value) => sum + value,
-      0,
-    );
-    const progress = Math.round(((completed + inFlightProgress) / total) * 100);
-    const boundedProgress = Math.max(0, Math.min(99, progress));
-
-    if (boundedProgress === lastEmittedProgress) {
-      return;
-    }
-
-    lastEmittedProgress = boundedProgress;
-    onProgress(boundedProgress);
-  };
-
-  onProgress(0);
-
-  return {
-    advance(units = 1) {
-      completed += units;
-      emit();
-    },
-    completeUnit(key) {
-      if (completedUnitKeys.has(key)) {
-        return;
-      }
-
-      completedUnitKeys.add(key);
-      inFlightUnitProgress.delete(key);
-      completed += 1;
-      emit();
-    },
-    setUnitProgress(key, fraction) {
-      if (completedUnitKeys.has(key)) {
-        return;
-      }
-
-      inFlightUnitProgress.set(key, Math.max(0, Math.min(0.99, fraction)));
-      emit();
-    },
-  };
-}
-
-function estimatePlaceMediaUnits(place: Place, previousPlace?: Place | null) {
-  const media = getPlaceMedia(place);
-  const previousMedia = getPlaceMedia(previousPlace);
-
-  if (previousPlace && arePlaceMediaArraysEqual(media, previousMedia)) {
-    return 0;
-  }
-
-  return media.reduce(
-    (total, item) =>
-      total +
-      (item.url ? 1 : 0) +
-      (isPendingUploadUri(item.thumbnailUrl) ? 1 : 0),
-    0,
-  );
+function getListPlaceChanges(list: PlaceList, previousList?: PlaceList | null) {
+  return calculateListPlaceChanges(list, previousList, arePlacesEquivalentForPersistence);
 }
 
 function estimateListUpdateUnits(list: PlaceList, previousList?: PlaceList | null) {
-  const { placesToUpsert, previousPlacesById, removedPlaces } =
-    getListPlaceChanges(list, previousList);
-  const replacedCoverUnits = previousList?.coverImage && previousList.coverImage !== list.coverImage ? 1 : 0;
-  const placeUnits = placesToUpsert.reduce(
-    (total, place) =>
-      total + 1 + estimatePlaceMediaUnits(place, previousPlacesById.get(place.id)),
-    0,
-  );
-
-  return Math.max(
-    1,
-    1 +
-      (list.coverImage ? 1 : 0) +
-      (removedPlaces.length > 0 ? 1 : 0) +
-      replacedCoverUnits +
-      placeUnits,
-  );
+  return calculateListUpdateUnits(list, previousList, getListPlaceChanges);
 }
 
 function estimateUpdateListsUnits(lists: PlaceList[], previousLists?: PlaceList[]) {
-  const previousListsById = new Map(previousLists?.map((list) => [list.id, list]) ?? []);
-  return Math.max(
-    1,
-    lists.reduce(
-      (total, list) => total + estimateListUpdateUnits(list, previousListsById.get(list.id)),
-      0,
-    ),
-  );
+  return calculateUpdateListsUnits(lists, previousLists, getListPlaceChanges);
 }
 
 function getPlaceStorageUrls(place?: Place | null) {
@@ -522,7 +427,9 @@ function buildPlacePayload(
   return {
     id: place.id,
     list_id: list.id,
-    created_by: firstText(place.addedBy?.userId, list.userId),
+    // The actor writing into this owned list is the creator. Any quoted
+    // attribution is preserved separately in the source_* fields below.
+    created_by: list.userId,
     source_list_id: nullable(place.sourceAttribution?.listId),
     source_place_id: nullable(place.sourceAttribution?.placeId),
     source_place_name: nullable(place.sourceAttribution?.placeName),
@@ -670,7 +577,7 @@ async function writeListMetadata(params: {
   normalizedDescription: string | null;
   normalizedName: string;
   previousList?: PlaceList | null;
-  shouldUploadCoverImage: boolean;
+  uploadedCoverImage: boolean;
   signal?: AbortSignal;
 }) {
   const shouldWrite =
@@ -707,30 +614,17 @@ async function writeListMetadata(params: {
     return;
   }
 
-  if (params.shouldUploadCoverImage && params.coverImage) {
+  if (params.uploadedCoverImage && params.coverImage) {
     await deleteStorageAssetsWithRetry({
-      bucket: 'place-media',
+      bucket: params.coverImage.startsWith('sorita-storage://place-media-private/')
+        ? 'place-media-private'
+        : 'place-media',
       urls: [params.coverImage],
       userId: params.list.userId,
     });
   }
 
   throw error;
-}
-
-function getListPlaceChanges(list: PlaceList, previousList?: PlaceList | null) {
-  const previousPlaces = previousList?.places || [];
-  const nextPlaceIds = new Set(list.places.map((place) => place.id));
-  const previousPlacesById = new Map(previousPlaces.map((place) => [place.id, place]));
-
-  return {
-    previousPlacesById,
-    removedPlaces: previousPlaces.filter((place) => !nextPlaceIds.has(place.id)),
-    placesToUpsert: list.places.filter((place) => {
-      const previousPlace = previousPlacesById.get(place.id);
-      return !previousPlace || !arePlacesEquivalentForPersistence(place, previousPlace);
-    }),
-  };
 }
 
 async function removeListPlaces(
@@ -766,13 +660,20 @@ function removeReplacedCoverImage(
   previousList: PlaceList | null | undefined,
   coverImage: string | null | undefined,
   progressTracker?: ProgressTracker,
+  preservePreviousPublicCover = false,
 ) {
   const oldCoverImage = previousList?.coverImage;
   const shouldRemove = Boolean(oldCoverImage && oldCoverImage !== coverImage);
+  const shouldDeleteNow = shouldRemove && !preservePreviousPublicCover;
 
   scheduleStorageAssetsCleanup({
-    bucket: 'place-media',
-    urls: shouldRemove && oldCoverImage ? [oldCoverImage] : [],
+    bucket: oldCoverImage?.startsWith('sorita-storage://place-media-private/')
+      ? 'place-media-private'
+      : 'place-media',
+    // A legacy public object can be referenced by more than one list. The
+    // authenticated client cannot see every private reference, so rehome
+    // sources are retained for the service-role, reference-counted GC.
+    urls: shouldDeleteNow && oldCoverImage ? [oldCoverImage] : [],
     userId: list.userId,
   });
 
@@ -798,13 +699,34 @@ async function persistList(
 
   throwIfAborted(signal);
   const shouldUploadCoverImage = isPendingUploadUri(list.coverImage);
-  const coverImage = await uploadImageAsset({
-    bucket: 'place-media',
-    signal,
-    userId: list.userId,
-    uri: list.coverImage,
-    prefix: `${list.id}/cover`,
-  });
+  const shouldRehomePublicCover =
+    !list.isPublic &&
+    !shouldUploadCoverImage &&
+    isPublicPlaceMediaAsset(list.coverImage);
+  const coverImage = shouldUploadCoverImage
+    ? await (list.isPublic
+        ? uploadImageAsset({
+            bucket: 'place-media',
+            signal,
+            userId: list.userId,
+            uri: list.coverImage,
+            prefix: `${list.id}/cover`,
+          })
+        : uploadPlaceMediaAsset({
+            mediaType: 'photo',
+            prefix: `${list.id}/cover`,
+            signal,
+            uri: list.coverImage,
+            userId: list.userId,
+          }))
+    : shouldRehomePublicCover && list.coverImage
+      ? await rehomePublicPlaceMediaAssetToPrivate({
+          prefix: `${list.id}/cover`,
+          signal,
+          uri: list.coverImage,
+          userId: list.userId,
+        })
+    : list.coverImage;
 
   if (list.coverImage) {
     progressTracker?.advance();
@@ -817,7 +739,7 @@ async function persistList(
     normalizedDescription: normalizedListDescription,
     normalizedName: normalizedListName,
     previousList,
-    shouldUploadCoverImage,
+    uploadedCoverImage: shouldUploadCoverImage || shouldRehomePublicCover,
     signal,
   });
 
@@ -839,7 +761,13 @@ async function persistList(
     ),
   );
 
-  removeReplacedCoverImage(list, previousList, coverImage, progressTracker);
+  removeReplacedCoverImage(
+    list,
+    previousList,
+    coverImage,
+    progressTracker,
+    shouldRehomePublicCover,
+  );
 }
 
 export async function createList(list: PlaceList) {

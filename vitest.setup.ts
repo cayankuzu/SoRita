@@ -8,6 +8,13 @@ const { secureStoreValues } = vi.hoisted(() => ({
 }));
 
 Object.assign(globalThis, {
+  Deno: {
+    env: {
+      get: (name: string) => name === 'CLOUDFLARE_ORIGIN_SIGNATURE_REQUIRED'
+        ? 'false'
+        : undefined,
+    },
+  },
   IS_REACT_ACT_ENVIRONMENT: true,
   __DEV__: false,
 });
@@ -34,6 +41,7 @@ afterEach(() => {
   secureStoreValues.clear();
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 vi.mock('@react-native-async-storage/async-storage', () => ({

@@ -1,18 +1,10 @@
-import {
-  callJsonEdgeFunction,
-  isMissingEdgeFunctionError,
-} from '@/mobile/app/platform/api/edgeFunctions';
+import { callJsonEdgeFunction } from '@/mobile/app/platform/api/edgeFunctions';
 import { env } from '@/mobile/app/platform/config/env';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 
 export type AccountAvailabilityResult = {
   emailAvailable: boolean;
   usernameAvailable: boolean;
-};
-
-type AccountAvailabilityRpcRow = {
-  email_available?: boolean | null;
-  username_available?: boolean | null;
 };
 
 export async function checkAccountAvailability(params: {
@@ -22,38 +14,33 @@ export async function checkAccountAvailability(params: {
 }): Promise<AccountAvailabilityResult> {
   const normalizedEmail = params.email?.trim().toLowerCase() || undefined;
   const normalizedUsername = params.username?.trim().toLowerCase() || undefined;
-  const rpcArgs = {
-    input_email: normalizedEmail ?? null,
-    input_exclude_user_id: params.excludeUserId || null,
-    input_username: normalizedUsername ?? null,
-  };
+  let accessToken: string | undefined;
 
-  try {
-    return await callJsonEdgeFunction<AccountAvailabilityResult>(
-      env.supabaseAuthGatewayFunctionName,
-      {
-        action: 'check-availability',
-        email: normalizedEmail,
-        excludeUserId: params.excludeUserId || undefined,
-        username: normalizedUsername,
-      },
-    );
-  } catch (edgeError) {
-    const { data, error } = await supabase.rpc('check_account_availability', rpcArgs);
+  if (params.excludeUserId) {
+    const { data, error } = await supabase.auth.getSession();
 
-    if (error) {
-      if (!isMissingEdgeFunctionError(edgeError)) {
-        throw edgeError;
-      }
-
-      throw error;
+    if (error || !data.session?.access_token) {
+      throw error ?? new Error('Authenticated account availability check requires a session.');
     }
 
-    const row = (Array.isArray(data) ? data[0] : data) as AccountAvailabilityRpcRow | null;
-
-    return {
-      emailAvailable: row?.email_available ?? true,
-      usernameAvailable: row?.username_available ?? true,
-    };
+    accessToken = data.session.access_token;
   }
+
+  const payload = {
+    action: 'check-availability',
+    email: normalizedEmail,
+    excludeUserId: params.excludeUserId || undefined,
+    username: normalizedUsername,
+  } as const;
+
+  return accessToken
+    ? callJsonEdgeFunction<AccountAvailabilityResult>(
+        env.supabaseAuthGatewayFunctionName,
+        payload,
+        { accessToken },
+      )
+    : callJsonEdgeFunction<AccountAvailabilityResult>(
+        env.supabaseAuthGatewayFunctionName,
+        payload,
+      );
 }

@@ -11,6 +11,7 @@ const MAX_CACHED_COMMENTS_PER_PLACE = 8;
 const MAX_CACHED_REPLIES_PER_COMMENT = 4;
 const SNAPSHOT_TTL_MS = 1000 * 60 * 60 * 12;
 const STORAGE_KEY_PREFIX = 'sorita.visible-data.snapshot';
+const saveInFlightByViewer = new Map<string, Set<Promise<void>>>();
 
 type VisibleDataSnapshotCachePayload = {
   savedAt: string;
@@ -115,5 +116,28 @@ export async function savePersistedVisibleDataSnapshot(
     version: CACHE_VERSION,
   };
 
-  await AsyncStorage.setItem(getStorageKey(viewerId), JSON.stringify(payload));
+  const save = AsyncStorage.setItem(getStorageKey(viewerId), JSON.stringify(payload));
+  const viewerSaves = saveInFlightByViewer.get(viewerId) ?? new Set<Promise<void>>();
+  viewerSaves.add(save);
+  saveInFlightByViewer.set(viewerId, viewerSaves);
+
+  try {
+    await save;
+  } finally {
+    viewerSaves.delete(save);
+
+    if (viewerSaves.size === 0) {
+      saveInFlightByViewer.delete(viewerId);
+    }
+  }
+}
+
+export async function clearPersistedVisibleDataSnapshot(viewerId: string) {
+  const writesInFlight = Array.from(saveInFlightByViewer.get(viewerId) ?? []);
+
+  if (writesInFlight.length > 0) {
+    await Promise.allSettled(writesInFlight);
+  }
+
+  await AsyncStorage.removeItem(getStorageKey(viewerId));
 }

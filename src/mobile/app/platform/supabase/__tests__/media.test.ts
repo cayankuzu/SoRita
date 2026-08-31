@@ -18,10 +18,12 @@ const createUploadTaskMock = vi.fn((url: string, fileUri: string, options: unkno
     return uploadAsyncMock(url, fileUri, options);
   },
 }));
+const downloadAsyncMock = vi.fn();
 const createSignedEdgeHeadersMock = vi.fn();
 const storageUploadMock = vi.fn();
 const storageRemoveMock = vi.fn();
 const storageGetPublicUrlMock = vi.fn();
+const uploadSessionId = '11111111-1111-4111-8111-111111111111';
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
   env: {
@@ -51,6 +53,10 @@ vi.mock('@/mobile/app/platform/security/requestSigning', () => ({
   createSignedEdgeHeaders: createSignedEdgeHeadersMock,
 }));
 
+vi.mock('@/shared/utils/id', () => ({
+  createUuid: () => '11111111-1111-4111-8111-111111111111',
+}));
+
 vi.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   documentDirectory: 'file:///documents/',
@@ -59,6 +65,7 @@ vi.mock('expo-file-system/legacy', () => ({
   },
   copyAsync: copyAsyncMock,
   deleteAsync: deleteAsyncMock,
+  downloadAsync: downloadAsyncMock,
   FileSystemSessionType: {
     BACKGROUND: 'background',
   },
@@ -87,7 +94,7 @@ describe('platform/supabase/media', () => {
     vi.useRealTimers();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     getSessionMock.mockReset();
     refreshSessionMock.mockReset();
     readAsStringAsyncMock.mockReset();
@@ -95,6 +102,7 @@ describe('platform/supabase/media', () => {
     makeDirectoryAsyncMock.mockReset();
     copyAsyncMock.mockReset();
     deleteAsyncMock.mockReset();
+    downloadAsyncMock.mockReset();
     uploadAsyncMock.mockReset();
     cancelUploadAsyncMock.mockReset();
     createUploadTaskMock.mockClear();
@@ -106,6 +114,7 @@ describe('platform/supabase/media', () => {
       data: {
         session: {
           access_token: 'session-token',
+          user: { id: 'user-1' },
         },
       },
       error: null,
@@ -114,6 +123,7 @@ describe('platform/supabase/media', () => {
       data: {
         session: {
           access_token: 'refreshed-session-token',
+          user: { id: 'user-1' },
         },
       },
       error: null,
@@ -128,6 +138,12 @@ describe('platform/supabase/media', () => {
     makeDirectoryAsyncMock.mockResolvedValue(undefined);
     copyAsyncMock.mockResolvedValue(undefined);
     deleteAsyncMock.mockResolvedValue(undefined);
+    downloadAsyncMock.mockResolvedValue({
+      headers: {},
+      mimeType: 'image/jpeg',
+      status: 200,
+      uri: 'file:///cache/private-cover-rehome/downloaded.jpg',
+    });
     uploadAsyncMock.mockResolvedValue({
       body: '',
       status: 200,
@@ -139,18 +155,31 @@ describe('platform/supabase/media', () => {
         publicUrl: 'https://example.supabase.co/storage/v1/object/public/place-media/user-1/fallback.jpg',
       },
     });
+    const { purgePrivateSignedReadUrlState } = await import(
+      '@/mobile/app/platform/supabase/media'
+    );
+    purgePrivateSignedReadUrlState();
   });
 
-  it('uploads local image assets through the media edge function', async () => {
+  it('uploads local image assets with bounded control JSON and direct signed Storage PUT', async () => {
     const requestBodies: unknown[] = [];
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-final.png';
 
-    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
     server.use(
       http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
-        requestBodies.push(await request.json());
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile.jpg',
-        });
+        const body = await request.json() as { action: string; objectPath?: string };
+        requestBodies.push(body);
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-final.png',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile',
+              uploadSessionId,
+            })
+          : HttpResponse.json({
+              objectPath: 'user-1/profile-final.png',
+              publicUrl,
+              verified: true,
+            });
       }),
     );
 
@@ -160,26 +189,102 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.png?version=2',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile.jpg');
+    })).resolves.toBe(publicUrl);
 
     expect(requestBodies).toEqual([
       {
-        action: 'upload',
+        action: 'create-upload-url',
         bucket: 'profile-media',
         contentType: 'image/png',
         extension: 'png',
-        fileBase64: 'aGVsbG8=',
+        fileSizeBytes: 1024,
         prefix: 'profile',
+        uploadSessionId,
+      },
+      {
+        action: 'complete-upload',
+        bucket: 'profile-media',
+        contentType: 'image/png',
+        fileSizeBytes: 1024,
+        mediaType: 'photo',
+        objectPath: 'user-1/pending-public/profile-media/profile-final.png',
+        uploadSessionId,
       },
     ]);
+    expect(createUploadTaskMock).toHaveBeenCalledWith(
+      'https://example.supabase.co/storage/v1/object/upload/sign/profile',
+      'file:///tmp/avatar.png?version=2',
+      expect.objectContaining({ httpMethod: 'PUT', uploadType: 'binary' }),
+      undefined,
+    );
+    expect(JSON.stringify(requestBodies)).not.toContain('fileBase64');
+  });
+
+  it('rejects an untrusted signed upload destination before reading local media bytes', async () => {
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async () =>
+        HttpResponse.json({
+          objectPath: 'user-1/pending-public/profile-media/profile-final.png',
+          signedUrl: 'https://attacker.example/collect-local-file',
+          uploadSessionId,
+        })),
+    );
+
+    const { uploadImageAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadImageAsset({
+      bucket: 'profile-media',
+      prefix: 'profile',
+      uri: 'file:///tmp/avatar.png',
+      userId: 'user-1',
+    })).rejects.toThrow('invalid signed upload URL');
+
+    expect(createUploadTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('rehomes a managed public cover through local direct private upload', async () => {
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { action: string; objectPath?: string };
+        if (body.action === 'complete-upload') {
+          return HttpResponse.json({
+            objectPath: body.objectPath,
+            storageUri: 'sorita-storage://place-media-private/user-1/list-1/cover-private.jpg',
+            verified: true,
+          });
+        }
+        return HttpResponse.json({
+          objectPath: 'user-1/list-1/cover-private.jpg',
+          signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/private-cover',
+          uploadSessionId,
+        });
+      }),
+    );
+
+    const { rehomePublicPlaceMediaAssetToPrivate } = await import(
+      '@/mobile/app/platform/supabase/media'
+    );
+    await expect(rehomePublicPlaceMediaAssetToPrivate({
+      prefix: 'list-1/cover',
+      uri: 'https://example.supabase.co/storage/v1/object/public/place-media/user-1/list-1/cover.jpg',
+      userId: 'user-1',
+    })).resolves.toBe(
+      'sorita-storage://place-media-private/user-1/list-1/cover-private.jpg',
+    );
+
+    expect(downloadAsyncMock).toHaveBeenCalledWith(
+      'https://example.supabase.co/storage/v1/object/public/place-media/user-1/fallback.jpg',
+      expect.stringMatching(/^file:\/\/\/cache\/private-cover-rehome\/.+\.jpg$/),
+    );
+    expect(deleteAsyncMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^file:\/\/\/cache\/private-cover-rehome\/.+\.jpg$/),
+      { idempotent: true },
+    );
   });
 
   it('falls back to copying unreadable local media before upload', async () => {
     const requestBodies: unknown[] = [];
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-copied.jpg';
 
-    readAsStringAsyncMock
-      .mockRejectedValueOnce(new Error('content uri unreadable'))
-      .mockResolvedValueOnce('Y29udGVudA==');
     getInfoAsyncMock
       .mockResolvedValueOnce({ exists: false })
       .mockResolvedValueOnce({ exists: false })
@@ -187,10 +292,19 @@ describe('platform/supabase/media', () => {
       .mockResolvedValueOnce({ exists: true });
     server.use(
       http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
-        requestBodies.push(await request.json());
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile-copied.jpg',
-        });
+        const body = await request.json() as { action: string; objectPath?: string };
+        requestBodies.push(body);
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-copied.jpg',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-copied',
+              uploadSessionId,
+            })
+          : HttpResponse.json({
+              objectPath: 'user-1/profile-copied.jpg',
+              publicUrl,
+              verified: true,
+            });
       }),
     );
 
@@ -200,7 +314,7 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'content://media/external/images/123',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile-copied.jpg');
+    })).resolves.toBe(publicUrl);
 
     expect(makeDirectoryAsyncMock).toHaveBeenCalledWith('file:///cache/media-upload-cache/', {
       intermediates: true,
@@ -215,14 +329,30 @@ describe('platform/supabase/media', () => {
     );
     expect(requestBodies).toEqual([
       {
-        action: 'upload',
+        action: 'create-upload-url',
         bucket: 'profile-media',
         contentType: 'image/jpeg',
         extension: 'jpg',
-        fileBase64: 'Y29udGVudA==',
+        fileSizeBytes: 1024,
         prefix: 'profile',
+        uploadSessionId,
+      },
+      {
+        action: 'complete-upload',
+        bucket: 'profile-media',
+        contentType: 'image/jpeg',
+        fileSizeBytes: 1024,
+        mediaType: 'photo',
+        objectPath: 'user-1/pending-public/profile-media/profile-copied.jpg',
+        uploadSessionId,
       },
     ]);
+    expect(createUploadTaskMock).toHaveBeenCalledWith(
+      'https://example.supabase.co/storage/v1/object/upload/sign/profile-copied',
+      'content://media/external/images/123',
+      expect.objectContaining({ httpMethod: 'PUT', uploadType: 'binary' }),
+      undefined,
+    );
   });
 
   it('deletes only deduplicated in-scope storage paths', async () => {
@@ -308,6 +438,7 @@ describe('platform/supabase/media', () => {
         data: {
           session: {
             access_token: 'restored-session-token',
+            user: { id: 'user-1' },
           },
         },
         error: null,
@@ -379,6 +510,83 @@ describe('platform/supabase/media', () => {
     }]);
   });
 
+  it('never reuses a private signed URL after the authenticated user changes', async () => {
+    let activeUserId = 'user-a';
+    let requestCount = 0;
+    getSessionMock.mockImplementation(async () => ({
+      data: {
+        session: {
+          access_token: `token-${activeUserId}`,
+          user: { id: activeUserId },
+        },
+      },
+      error: null,
+    }));
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        requestCount += 1;
+        const body = await request.json() as { paths: string[] };
+        const authorization = request.headers.get('authorization') ?? '';
+        return HttpResponse.json({
+          expiresInSeconds: 300,
+          items: body.paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.example/read/${path}?owner=${authorization.slice(7)}`,
+          })),
+        });
+      }),
+    );
+
+    const { resolveStorageAssetUrl } = await import('@/mobile/app/platform/supabase/media');
+    const uri = 'sorita-storage://place-media-private/shared/photo.jpg';
+
+    await expect(resolveStorageAssetUrl(uri)).resolves.toContain('owner=token-user-a');
+    activeUserId = 'user-b';
+    await expect(resolveStorageAssetUrl(uri)).resolves.toContain('owner=token-user-b');
+
+    expect(requestCount).toBe(2);
+  });
+
+  it('rejects a signed-read batch that completes after its auth scope is purged', async () => {
+    let releaseResponse!: () => void;
+    let markRequestStarted: (() => void) | null = null;
+    const requestStarted = new Promise<void>((resolve) => {
+      markRequestStarted = resolve;
+    });
+    const responseGate = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { paths: string[] };
+        markRequestStarted?.();
+        await responseGate;
+        return HttpResponse.json({
+          expiresInSeconds: 300,
+          items: body.paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.example/read/${path}?token=stale`,
+          })),
+        });
+      }),
+    );
+
+    const {
+      purgePrivateSignedReadUrlState,
+      resolveStorageAssetUrl,
+    } = await import('@/mobile/app/platform/supabase/media');
+    const resolution = resolveStorageAssetUrl(
+      'sorita-storage://place-media-private/user-1/stale.jpg',
+    );
+
+    await requestStarted;
+    purgePrivateSignedReadUrlState();
+    releaseResponse();
+
+    await expect(resolution).rejects.toThrow('authorization state changed');
+  });
+
   it('rejects untrusted and insecure media hosts while allowing managed storage', async () => {
     const { isAllowedMediaUri, resolveStorageAssetUrl } = await import('@/mobile/app/platform/supabase/media');
 
@@ -392,19 +600,24 @@ describe('platform/supabase/media', () => {
 
   it('retries upload requests when the media edge function temporarily returns 503', async () => {
     let requestCount = 0;
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-retried.jpg';
 
-    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
     server.use(
-      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
         requestCount += 1;
 
         if (requestCount === 1) {
           return new HttpResponse('Temporary upstream failure', { status: 503 });
         }
 
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile-retried.jpg',
-        });
+        const body = await request.json() as { action: string };
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-retried.jpg',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-retried',
+              uploadSessionId,
+            })
+          : HttpResponse.json({ objectPath: 'user-1/profile-retried.jpg', publicUrl, verified: true });
       }),
     );
 
@@ -414,27 +627,36 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.jpg',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile-retried.jpg');
+    })).resolves.toBe(publicUrl);
 
-    expect(requestCount).toBe(2);
-    expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(2);
+    expect(requestCount).toBe(3);
+    expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(3);
   });
 
   it('retries media edge requests when the network connection changes', async () => {
     let requestCount = 0;
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-network-retried.jpg';
 
-    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
     server.use(
-      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
         requestCount += 1;
 
         if (requestCount === 1) {
           return HttpResponse.error();
         }
 
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile-network-retried.jpg',
-        });
+        const body = await request.json() as { action: string };
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-network-retried.jpg',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-network-retried',
+              uploadSessionId,
+            })
+          : HttpResponse.json({
+              objectPath: 'user-1/profile-network-retried.jpg',
+              publicUrl,
+              verified: true,
+            });
       }),
     );
 
@@ -444,17 +666,17 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.jpg',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile-network-retried.jpg');
+    })).resolves.toBe(publicUrl);
 
-    expect(requestCount).toBe(2);
-    expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(2);
+    expect(requestCount).toBe(3);
+    expect(createSignedEdgeHeadersMock).toHaveBeenCalledTimes(3);
   });
 
   it('refreshes the auth session and retries after a 401 response', async () => {
     const authorizationHeaders: string[] = [];
     let requestCount = 0;
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-refreshed.jpg';
 
-    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
     server.use(
       http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
         requestCount += 1;
@@ -464,9 +686,14 @@ describe('platform/supabase/media', () => {
           return new HttpResponse('Unauthorized', { status: 401 });
         }
 
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile-refreshed.jpg',
-        });
+        const body = await request.json() as { action: string };
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-refreshed.jpg',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-refreshed',
+              uploadSessionId,
+            })
+          : HttpResponse.json({ objectPath: 'user-1/profile-refreshed.jpg', publicUrl, verified: true });
       }),
     );
 
@@ -476,25 +703,27 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.jpg',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile-refreshed.jpg');
+    })).resolves.toBe(publicUrl);
 
     expect(refreshSessionMock).toHaveBeenCalledTimes(1);
     expect(createSignedEdgeHeadersMock.mock.calls).toEqual([
       [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
       [{ accessToken: 'refreshed-session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
+      [{ accessToken: 'refreshed-session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
     ]);
     expect(authorizationHeaders).toEqual([
       'Bearer session-token',
+      'Bearer refreshed-session-token',
       'Bearer refreshed-session-token',
     ]);
   });
 
   it('retries with the legacy signing protocol when the deployed function rejects v2', async () => {
     let requestCount = 0;
+    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-legacy-signature.jpg';
 
-    readAsStringAsyncMock.mockResolvedValue('aGVsbG8=');
     server.use(
-      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
         requestCount += 1;
 
         if (requestCount === 1) {
@@ -507,9 +736,18 @@ describe('platform/supabase/media', () => {
           );
         }
 
-        return HttpResponse.json({
-          publicUrl: 'https://cdn.example/profile-legacy-signature.jpg',
-        });
+        const body = await request.json() as { action: string };
+        return body.action === 'create-upload-url'
+          ? HttpResponse.json({
+              objectPath: 'user-1/pending-public/profile-media/profile-legacy-signature.jpg',
+              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-legacy-signature',
+              uploadSessionId,
+            })
+          : HttpResponse.json({
+              objectPath: 'user-1/profile-legacy-signature.jpg',
+              publicUrl,
+              verified: true,
+            });
       }),
     );
 
@@ -519,12 +757,13 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.jpg',
       userId: 'user-1',
-    })).resolves.toBe('https://cdn.example/profile-legacy-signature.jpg');
+    })).resolves.toBe(publicUrl);
 
     expect(refreshSessionMock).not.toHaveBeenCalled();
     expect(createSignedEdgeHeadersMock.mock.calls).toEqual([
       [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
       [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', legacy: true, method: 'POST' }],
+      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
     ]);
   });
 
@@ -603,7 +842,8 @@ describe('platform/supabase/media', () => {
         HttpResponse.json({
           objectPath: 'user-1/places/video.mp4',
           storageUri: 'sorita-storage://place-media-private/user-1/places/video.mp4',
-          signedUrl: 'https://storage.example/upload',
+          signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/place',
+          uploadSessionId,
         })),
     );
     uploadAsyncMock.mockResolvedValueOnce({
@@ -639,7 +879,8 @@ describe('platform/supabase/media', () => {
         return HttpResponse.json({
           objectPath: 'user-1/places/retried.jpg',
           storageUri: 'sorita-storage://place-media-private/user-1/places/retried.jpg',
-          signedUrl: 'https://storage.example/upload',
+          signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/place-retry',
+          uploadSessionId,
         });
       }),
     );
@@ -751,7 +992,8 @@ describe('platform/supabase/media', () => {
         return HttpResponse.json({
           objectPath: 'user-1/places/cover.jpg',
           storageUri: 'sorita-storage://place-media-private/user-1/places/cover.jpg',
-          signedUrl: 'https://storage.example/upload',
+          signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/place-progress',
+          uploadSessionId,
         });
       }),
     );
@@ -784,7 +1026,8 @@ describe('platform/supabase/media', () => {
         if (body.action === 'create-upload-url') {
           return HttpResponse.json({
             objectPath: 'user-1/places/orphan.jpg',
-            signedUrl: 'https://storage.example/upload',
+            signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/place-session',
+            uploadSessionId,
           });
         }
 

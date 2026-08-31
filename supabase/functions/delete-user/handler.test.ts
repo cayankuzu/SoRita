@@ -8,13 +8,23 @@ function createDeps(options?: {
     data?: { claims?: { sub?: string } | null } | null;
     error?: { message: string } | null;
   };
+  completedDeletion?: boolean;
+  userResult?: {
+    data?: { user?: { id?: string } | null } | null;
+    error?: { message: string } | null;
+  };
+  claimResult?: {
+    claim_status: 'claimed' | 'completed' | 'in_progress';
+    last_completed_step: 'requested' | 'storage_deleted' | 'notifications_deleted' | 'auth_delete_started' | 'completed';
+    retry_after_seconds: number;
+  };
   config?: {
     supabasePublishableKey?: string;
     supabaseServiceRoleKey?: string;
     supabaseUrl?: string;
   };
   deleteNotificationsError?: { message: string } | null;
-  deleteUserError?: { message: string } | null;
+  deleteUserError?: { message: string; status?: number } | null;
   ledgerErrorStep?: string;
   listError?: { message: string } | null;
   listResponses?: Record<string, { data?: Array<{ id?: string | null; name?: string | null }> | null; error?: { message: string } | null }>;
@@ -24,9 +34,13 @@ function createDeps(options?: {
   rateLimitResult?: { allowed: boolean; remaining: number; retry_after_seconds: number };
 }) {
   const getClaimsMock = vi.fn().mockResolvedValue(options?.claimsResult ?? {
+    data: { claims: { sub: 'user-1' } },
+    error: null,
+  });
+  const getUserMock = vi.fn().mockResolvedValue(options?.userResult ?? {
     data: {
-      claims: {
-        sub: 'user-1',
+      user: {
+        id: 'user-1',
       },
     },
     error: null,
@@ -69,12 +83,31 @@ function createDeps(options?: {
       });
     }
 
+    if (functionName === 'claim_account_deletion_job') {
+      return Promise.resolve({
+        data: options?.claimResult ?? {
+          claim_status: 'claimed',
+          last_completed_step: 'requested',
+          retry_after_seconds: 0,
+        },
+        error: null,
+      });
+    }
+
     if (functionName === 'record_account_deletion_step') {
       const step = args?.p_step;
       return Promise.resolve({
         data: null,
         error: step === options?.ledgerErrorStep ? { message: 'ledger failed' } : null,
       });
+    }
+
+    if (functionName === 'renew_account_deletion_job_lease') {
+      return Promise.resolve({ data: true, error: null });
+    }
+
+    if (functionName === 'is_account_deletion_job_completed') {
+      return Promise.resolve({ data: options?.completedDeletion ?? false, error: null });
     }
 
     return Promise.resolve({ data: null, error: { message: `Unexpected RPC: ${functionName}` } });
@@ -117,6 +150,7 @@ function createDeps(options?: {
     createAuthClient: () => ({
       auth: {
         getClaims: getClaimsMock,
+        getUser: getUserMock,
       },
     }),
   });
@@ -124,6 +158,7 @@ function createDeps(options?: {
   return {
     deleteUserMock,
     getClaimsMock,
+    getUserMock,
     handler,
     listMock,
     nonceInsertMock,
@@ -213,7 +248,7 @@ describe('delete-user handler', () => {
 
   it('rejects invalid claims, invalid signatures, and replayed requests', async () => {
     const { handler: invalidClaimsHandler } = createDeps({
-      claimsResult: {
+      userResult: {
         data: null,
         error: { message: 'Invalid token' },
       },
@@ -229,7 +264,7 @@ describe('delete-user handler', () => {
     expect(invalidClaimsResponse.status).toBe(401);
 
     const { handler: missingSubjectHandler } = createDeps({
-      claimsResult: { data: { claims: {} }, error: null },
+      userResult: { data: { user: {} }, error: null },
     });
     const missingSubjectResponse = await missingSubjectHandler(
       new Request('https://example.supabase.co/functions/v1/delete-user', {
@@ -313,7 +348,6 @@ describe('delete-user handler', () => {
     expect(notificationsEqMock).toHaveBeenCalledWith('actor_user_id', 'user-1');
     expect(deleteUserMock).toHaveBeenCalledWith('user-1', false);
     expect(rpcMock.mock.calls.filter(([name]) => name === 'record_account_deletion_step').map(([, args]) => args.p_step)).toEqual([
-      'requested',
       'storage_deleted',
       'notifications_deleted',
       'auth_delete_started',
@@ -354,6 +388,83 @@ describe('delete-user handler', () => {
       'user-1/cover.jpg',
       'user-1/nested-folder/nested.jpg',
     ]);
+  });
+
+  it('handles completed, active, and resumable deletion claims idempotently', async () => {
+    const completed = createDeps({
+      claimResult: {
+        claim_status: 'completed',
+        last_completed_step: 'completed',
+        retry_after_seconds: 0,
+      },
+    });
+    const completedResponse = await completed.handler(
+      new Request('https://example.supabase.co/functions/v1/delete-user', {
+        method: 'POST', headers: await createSignedHeaders('{}'), body: '{}',
+      }),
+    );
+    expect(completedResponse.status).toBe(200);
+    expect(completed.storageFromMock).not.toHaveBeenCalled();
+    expect(completed.deleteUserMock).not.toHaveBeenCalled();
+
+    const responseLossRetry = createDeps({
+      completedDeletion: true,
+      userResult: {
+        data: { user: null },
+        error: { message: 'user not found' },
+      },
+    });
+    const retryBody = '{}';
+    const retryResponse = await responseLossRetry.handler(
+      new Request('https://example.supabase.co/functions/v1/delete-user', {
+        body: retryBody,
+        headers: await createSignedHeaders(retryBody),
+        method: 'POST',
+      }),
+    );
+    expect(retryResponse.status).toBe(200);
+    expect(responseLossRetry.deleteUserMock).not.toHaveBeenCalled();
+    expect(responseLossRetry.rpcMock).toHaveBeenCalledWith(
+      'is_account_deletion_job_completed',
+      { p_user_id: 'user-1' },
+    );
+
+    const active = createDeps({
+      claimResult: {
+        claim_status: 'in_progress',
+        last_completed_step: 'storage_deleted',
+        retry_after_seconds: 45,
+      },
+    });
+    const activeResponse = await active.handler(
+      new Request('https://example.supabase.co/functions/v1/delete-user', {
+        method: 'POST', headers: await createSignedHeaders('{}'), body: '{}',
+      }),
+    );
+    expect(activeResponse.status).toBe(409);
+    expect(activeResponse.headers.get('Retry-After')).toBe('45');
+    expect(active.deleteUserMock).not.toHaveBeenCalled();
+
+    const resumed = createDeps({
+      claimResult: {
+        claim_status: 'claimed',
+        last_completed_step: 'notifications_deleted',
+        retry_after_seconds: 0,
+      },
+      deleteUserError: { message: 'User not found', status: 404 },
+    });
+    const resumedResponse = await resumed.handler(
+      new Request('https://example.supabase.co/functions/v1/delete-user', {
+        method: 'POST', headers: await createSignedHeaders('{}'), body: '{}',
+      }),
+    );
+    expect(resumedResponse.status).toBe(200);
+    expect(resumed.storageFromMock).not.toHaveBeenCalled();
+    expect(resumed.notificationsEqMock).not.toHaveBeenCalled();
+    expect(resumed.deleteUserMock).toHaveBeenCalledTimes(1);
+    expect(resumed.rpcMock.mock.calls
+      .filter(([name]) => name === 'record_account_deletion_step')
+      .map(([, args]) => args.p_step)).toEqual(['auth_delete_started', 'completed']);
   });
 
   it('paginates and chunks large storage folders while ignoring nameless rows', async () => {
@@ -436,7 +547,7 @@ describe('delete-user handler', () => {
     );
     expect(removeFailureResponse.status).toBe(500);
 
-    const { handler: ledgerFailureHandler } = createDeps({ ledgerErrorStep: 'requested' });
+    const { handler: ledgerFailureHandler } = createDeps({ ledgerErrorStep: 'storage_deleted' });
     const ledgerFailureResponse = await ledgerFailureHandler(
       new Request('https://example.supabase.co/functions/v1/delete-user', {
         method: 'POST', headers: await createSignedHeaders('{}'), body: '{}',

@@ -2,6 +2,11 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 
+import {
+  getPublicRuntimeConfigIssueEnvNames,
+  publicRuntimeConfigSchema,
+} from '@/mobile/app/platform/config/publicRuntimeConfig';
+
 type ExpoExtraConfig = {
   googleMapsApiKey?: string;
   googleMapsAndroidApiKey?: string;
@@ -21,13 +26,31 @@ type ExpoExtraConfig = {
   systemNotificationFcmTopic?: string;
   authRedirectPath?: string;
   sentryDsn?: string;
+  edgeApiUrl?: string;
+  edgeCutoverMode?: string;
+  releaseEnvironment?: string;
 };
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as ExpoExtraConfig;
 const authRedirectPath = expoExtra.authRedirectPath ?? 'auth/callback';
+const publicRuntimeConfigResult = publicRuntimeConfigSchema.safeParse({
+  edgeApiUrl: expoExtra.edgeApiUrl,
+  edgeCutoverMode: expoExtra.edgeCutoverMode,
+  releaseEnvironment: expoExtra.releaseEnvironment,
+});
+const publicRuntimeConfig = publicRuntimeConfigResult.success
+  ? publicRuntimeConfigResult.data
+  : {
+      edgeApiUrl: '',
+      edgeCutoverMode: 'direct' as const,
+      releaseEnvironment: 'development' as const,
+    };
 const missingRequiredStartupEnvVars = [
   !expoExtra.supabaseUrl ? 'EXPO_PUBLIC_SUPABASE_URL' : null,
   !expoExtra.supabasePublishableKey ? 'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY' : null,
+  ...(!publicRuntimeConfigResult.success
+    ? getPublicRuntimeConfigIssueEnvNames(publicRuntimeConfigResult.error)
+    : []),
 ].filter((value): value is string => Boolean(value));
 
 function parsePushNotificationsEnabled(value: ExpoExtraConfig['enablePushNotifications']) {
@@ -81,6 +104,10 @@ export const env = {
   authRedirectPath,
   authRedirectUrl: Linking.createURL(authRedirectPath),
   sentryDsn: expoExtra.sentryDsn ?? '',
+  edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
+  edgeConfigValid: publicRuntimeConfigResult.success,
+  edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,
+  releaseEnvironment: publicRuntimeConfig.releaseEnvironment,
   hasRequiredStartupConfig: missingRequiredStartupEnvVars.length === 0,
   missingRequiredStartupEnvVars,
 };

@@ -267,7 +267,7 @@ describe('auth-gateway handler', () => {
     });
   });
 
-  it('checks account availability and logs users in through the gateway', async () => {
+  it('masks email availability and logs users in through the gateway', async () => {
     const { handler, rpcMock, signInWithPasswordMock } = createDeps({
       availabilityRow: {
         email_available: false,
@@ -290,7 +290,7 @@ describe('auth-gateway handler', () => {
 
     expect(availabilityResponse.status).toBe(200);
     await expect(availabilityResponse.json()).resolves.toEqual({
-      emailAvailable: false,
+      emailAvailable: true,
       usernameAvailable: true,
     });
 
@@ -355,13 +355,54 @@ describe('auth-gateway handler', () => {
     expect(signInWithPasswordMock).not.toHaveBeenCalled();
   });
 
-  it('sends password reset mail only for registered email addresses', async () => {
-    const { adminRpcMock, anonymousRpcMock, handler, resetPasswordForEmailMock } = createDeps({
-      availabilityRow: {
-        email_available: false,
-        username_available: true,
+  it('authorizes owner-scoped username availability checks', async () => {
+    const missing = createDeps();
+    const missingResponse = await missing.handler(authRequest({
+      action: 'check-availability',
+      excludeUserId: '10000000-0000-4000-8000-000000000001',
+      username: 'updated_name',
+    }));
+    expect(missingResponse.status).toBe(401);
+
+    const mismatched = createDeps();
+    const mismatchedResponse = await mismatched.handler(authRequest({
+      action: 'check-availability',
+      excludeUserId: '20000000-0000-4000-8000-000000000002',
+      username: 'updated_name',
+    }, { authorization: 'Bearer access' }));
+    expect(mismatchedResponse.status).toBe(403);
+
+    const owner = createDeps({
+      availabilityRow: { email_available: false, username_available: false },
+      getUserResult: {
+        data: {
+          user: {
+            email: 'user@example.com',
+            id: '10000000-0000-4000-8000-000000000001',
+          },
+        },
+        error: null,
       },
     });
+    const ownerResponse = await owner.handler(authRequest({
+      action: 'check-availability',
+      excludeUserId: '10000000-0000-4000-8000-000000000001',
+      username: 'updated_name',
+    }, { authorization: 'Bearer access' }));
+    expect(ownerResponse.status).toBe(200);
+    await expect(ownerResponse.json()).resolves.toEqual({
+      emailAvailable: true,
+      usernameAvailable: false,
+    });
+    expect(owner.adminRpcMock).toHaveBeenCalledWith('check_account_availability', {
+      input_email: null,
+      input_exclude_user_id: '10000000-0000-4000-8000-000000000001',
+      input_username: 'updated_name',
+    });
+  });
+
+  it('requests password reset without an account-presence lookup', async () => {
+    const { anonymousRpcMock, handler, resetPasswordForEmailMock } = createDeps();
 
     const response = await handler(
       new Request('https://example.supabase.co/functions/v1/auth-gateway', {
@@ -384,23 +425,15 @@ describe('auth-gateway handler', () => {
     expect(resetPasswordForEmailMock).toHaveBeenCalledWith('user@example.com', {
       redirectTo: 'sorita://reset-password',
     });
-    expect(anonymousRpcMock).toHaveBeenCalledWith('check_account_availability', {
-      input_email: 'user@example.com',
-      input_exclude_user_id: null,
-      input_username: null,
-    });
-    expect(adminRpcMock).not.toHaveBeenCalledWith(
+    expect(anonymousRpcMock).not.toHaveBeenCalledWith(
       'check_account_availability',
       expect.anything(),
     );
   });
 
-  it('rejects password reset requests for unknown email addresses', async () => {
+  it('returns the same password reset response for unknown email addresses', async () => {
     const { handler, resetPasswordForEmailMock } = createDeps({
-      availabilityRow: {
-        email_available: true,
-        username_available: true,
-      },
+      resetPasswordErrors: [{ message: 'User not found', status: 404 }],
     });
 
     const response = await handler(
@@ -417,15 +450,14 @@ describe('auth-gateway handler', () => {
       }),
     );
 
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toMatchObject({
-      code: 'email_not_found',
-      error: 'Bu e-posta adresiyle kayitli bir hesap bulunamadi.',
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(resetPasswordForEmailMock).toHaveBeenCalledWith('missing@example.com', {
+      redirectTo: 'sorita://reset-password',
     });
-    expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
 
-  it('preflights password reset without sending mail from the edge runtime', async () => {
+  it('keeps legacy password reset preflight enumeration-safe without sending mail', async () => {
     const { anonymousRpcMock, handler, resetPasswordForEmailMock } = createDeps({
       availabilityRow: {
         email_available: false,
@@ -440,11 +472,10 @@ describe('auth-gateway handler', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
-    expect(anonymousRpcMock).toHaveBeenCalledWith('check_account_availability', {
-      input_email: 'user@example.com',
-      input_exclude_user_id: null,
-      input_username: null,
-    });
+    expect(anonymousRpcMock).not.toHaveBeenCalledWith(
+      'check_account_availability',
+      expect.anything(),
+    );
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
 
@@ -554,6 +585,18 @@ describe('auth-gateway handler', () => {
     expect(invalidResponse.status).toBe(401);
     await expect(invalidResponse.json()).resolves.toMatchObject({ code: 'invalid_credentials' });
 
+    const unconfirmed = createDeps({
+      signInResult: { data: null, error: { message: 'Email not confirmed' } },
+    });
+    const unconfirmedResponse = await unconfirmed.handler(authRequest({
+      action: 'login', email: 'user@example.com', password: 'possibly-correct',
+    }));
+    expect(unconfirmedResponse.status).toBe(401);
+    expect(unconfirmed.adminRpcMock).toHaveBeenCalledWith(
+      'record_auth_login_failure',
+      { input_email: 'user@example.com' },
+    );
+
     const locked = createDeps({
       recordFailureStatus: {
         failure_count: 5,
@@ -571,7 +614,7 @@ describe('auth-gateway handler', () => {
 
   it('maps login provider failures and rejects incomplete successful sessions', async () => {
     for (const [message, code, status] of [
-      ['Email not confirmed', 'email_not_confirmed', 403],
+      ['Email not confirmed', 'invalid_credentials', 401],
       ['Weak password', 'weak_password', 400],
       ['Provider unavailable', 'unexpected', 400],
     ] as const) {
@@ -614,10 +657,12 @@ describe('auth-gateway handler', () => {
     }));
 
     const duplicateEmail = createDeps({
-      availabilityRow: { email_available: false, username_available: true },
+      signUpError: { message: 'User already registered' },
     });
-    expect((await duplicateEmail.handler(authRequest(validRegistration))).status).toBe(409);
-    expect(duplicateEmail.signUpMock).not.toHaveBeenCalled();
+    const duplicateEmailResponse = await duplicateEmail.handler(authRequest(validRegistration));
+    expect(duplicateEmailResponse.status).toBe(200);
+    await expect(duplicateEmailResponse.json()).resolves.toEqual({ success: true });
+    expect(duplicateEmail.signUpMock).toHaveBeenCalled();
 
     const duplicateUsername = createDeps({
       availabilityRow: { email_available: true, username_available: false },
@@ -628,8 +673,6 @@ describe('auth-gateway handler', () => {
 
   it('maps registration provider errors without exposing provider messages', async () => {
     const cases = [
-      ['User already registered', 'duplicate_email', 409],
-      ['profiles_email_key', 'duplicate_email', 409],
       ['profiles_username_key', 'duplicate_username', 409],
       ['Password is known to be weak', 'weak_password', 400],
       ['Provider unavailable', 'unexpected', 400],

@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const callJsonEdgeFunctionMock = vi.fn();
-const isMissingEdgeFunctionErrorMock = vi.fn();
-const rpcMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock('@/mobile/app/platform/api/edgeFunctions', () => ({
   callJsonEdgeFunction: callJsonEdgeFunctionMock,
-  isMissingEdgeFunctionError: isMissingEdgeFunctionErrorMock,
 }));
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
@@ -17,16 +15,20 @@ vi.mock('@/mobile/app/platform/config/env', () => ({
 
 vi.mock('@/mobile/app/platform/supabase/client', () => ({
   supabase: {
-    rpc: rpcMock,
+    auth: {
+      getSession: getSessionMock,
+    },
   },
 }));
 
 describe('checkAccountAvailability', () => {
   beforeEach(() => {
     callJsonEdgeFunctionMock.mockReset();
-    isMissingEdgeFunctionErrorMock.mockReset();
-    rpcMock.mockReset();
-    isMissingEdgeFunctionErrorMock.mockReturnValue(false);
+    getSessionMock.mockReset();
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'viewer-access-token' } },
+      error: null,
+    });
   });
 
   it('normalizes params and proxies availability checks through the auth gateway', async () => {
@@ -46,12 +48,16 @@ describe('checkAccountAvailability', () => {
       emailAvailable: false,
       usernameAvailable: true,
     });
-    expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith('auth-gateway', {
-      action: 'check-availability',
-      email: 'test@example.com',
-      excludeUserId: 'viewer-1',
-      username: 'test_user',
-    });
+    expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith(
+      'auth-gateway',
+      {
+        action: 'check-availability',
+        email: 'test@example.com',
+        excludeUserId: 'viewer-1',
+        username: 'test_user',
+      },
+      { accessToken: 'viewer-access-token' },
+    );
   });
 
   it('passes through missing optional values and defaults no payload locally', async () => {
@@ -75,76 +81,22 @@ describe('checkAccountAvailability', () => {
     });
   });
 
-  it('rethrows gateway errors', async () => {
+  it('fails closed when the gateway rejects the availability request', async () => {
     callJsonEdgeFunctionMock.mockRejectedValue(new Error('gateway failed'));
-    rpcMock.mockResolvedValue({
-      data: null,
-      error: new Error('rpc failed'),
-    });
 
     const { checkAccountAvailability } = await import('@/mobile/app/data/repositories/accountAvailability');
 
     await expect(checkAccountAvailability({ email: 'a@b.com' })).rejects.toThrow('gateway failed');
   });
 
-  it('falls back to the rpc when the gateway returns an unexpected error', async () => {
-    callJsonEdgeFunctionMock.mockRejectedValue(new Error('gateway failed'));
-    rpcMock.mockResolvedValue({
-      data: [
-        {
-          email_available: false,
-          username_available: true,
-        },
-      ],
-      error: null,
-    });
-
+  it('fails closed before an owner-scoped check when no session exists', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     const { checkAccountAvailability } = await import('@/mobile/app/data/repositories/accountAvailability');
-    const result = await checkAccountAvailability({
-      email: 'taken@example.com',
-      username: 'free_user',
-    });
 
-    expect(result).toEqual({
-      emailAvailable: false,
-      usernameAvailable: true,
-    });
-    expect(rpcMock).toHaveBeenCalledWith('check_account_availability', {
-      input_email: 'taken@example.com',
-      input_exclude_user_id: null,
-      input_username: 'free_user',
-    });
-  });
-
-  it('falls back to the rpc when the auth gateway function is unavailable', async () => {
-    const missingFunctionError = new Error('Requested function was not found');
-    callJsonEdgeFunctionMock.mockRejectedValue(missingFunctionError);
-    isMissingEdgeFunctionErrorMock.mockReturnValue(true);
-    rpcMock.mockResolvedValue({
-      data: [
-        {
-          email_available: true,
-          username_available: false,
-        },
-      ],
-      error: null,
-    });
-
-    const { checkAccountAvailability } = await import('@/mobile/app/data/repositories/accountAvailability');
-    const result = await checkAccountAvailability({
-      email: ' test@example.com ',
-      username: ' Demo_User ',
+    await expect(checkAccountAvailability({
+      username: 'demo_user',
       excludeUserId: 'viewer-2',
-    });
-
-    expect(result).toEqual({
-      emailAvailable: true,
-      usernameAvailable: false,
-    });
-    expect(rpcMock).toHaveBeenCalledWith('check_account_availability', {
-      input_email: 'test@example.com',
-      input_exclude_user_id: 'viewer-2',
-      input_username: 'demo_user',
-    });
+    })).rejects.toThrow('requires a session');
+    expect(callJsonEdgeFunctionMock).not.toHaveBeenCalled();
   });
 });

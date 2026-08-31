@@ -1,0 +1,88 @@
+name: Database Validation
+
+on:
+  push:
+    branches: [main, chore/aaa-mvp-feature-freeze-cloudflare-ota]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/database-validation.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/database-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-rls-restore:
+    name: Migration replay, RLS/IDOR and restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up the pinned Supabase CLI action and CLI version
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.116.0
+
+      - name: Start an isolated local Supabase stack
+        run: supabase start
+
+      - name: Reset and replay every forward-only migration
+        run: supabase db reset --local
+
+      - name: Lint the resulting database schema
+        run: supabase db lint --local --level error
+
+      - name: Run pgTAP RLS, IDOR and invariant tests
+        run: supabase test db --local
+
+      - name: Dump and restore into a separate database
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container='supabase_db_SoRita'
+          docker inspect "$db_container" >/dev/null
+          docker exec "$db_container" pg_dump \
+            --username supabase_admin \
+            --format custom \
+            --no-owner \
+            --no-privileges \
+            --file /tmp/sorita.backup \
+            postgres
+          docker exec "$db_container" createdb \
+            --username supabase_admin \
+            sorita_restore_drill
+          docker exec "$db_container" sh -c \
+            "pg_restore --list /tmp/sorita.backup | sed -E '/ (pg_cron|cron) /s/^/;/' > /tmp/sorita.restore.list"
+          docker exec "$db_container" pg_restore \
+            --username supabase_admin \
+            --dbname sorita_restore_drill \
+            --exit-on-error \
+            --no-owner \
+            --no-privileges \
+            --use-list /tmp/sorita.restore.list \
+            /tmp/sorita.backup
+          docker exec "$db_container" psql \
+            --username supabase_admin \
+            --dbname sorita_restore_drill \
+            --set ON_ERROR_STOP=1 \
+            --command "select count(*) from pg_catalog.pg_tables where schemaname = 'public';"
+          docker exec "$db_container" dropdb \
+            --username supabase_admin \
+            sorita_restore_drill
+
+      - name: Stop and remove the ephemeral local stack
+        if: always()
+        run: supabase stop --no-backup
