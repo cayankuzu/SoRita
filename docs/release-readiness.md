@@ -4,9 +4,9 @@ Son repo incelemesi: 2026-09-03
 
 İncelenen branch: `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`
 
-Başlangıç HEAD: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
+Önceki HEAD: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
 
-Candidate SHA: henüz yok; çalışma ağacı değiştirilmiş durumda
+Candidate SHA: `86702f86c06d57a05a668bebf47bdb91e7b0636f` (immutable branch commit)
 
 Kaynak sürümü: `1.0.102`; Android `107`; iOS `87`
 
@@ -16,17 +16,54 @@ Kaynak sürümü: `1.0.102`; Android `107`; iOS `87`
 
 Kaynakta bir kontrol, workflow veya runbook bulunması; sağlayıcı
 yapılandırmasının, signed binary'nin, cihaz testinin ya da dağıtımın gerçekten
-tamamlandığını kanıtlamaz. Bu belgedeki yerel sonuçlar henüz immutable candidate
-SHA'ya bağlanmadığı için release attestation'ı değildir.
+tamamlandığını kanıtlamaz.
+
+### Kanıt sınıfları
+
+Bir sonucun hangi ortamda üretildiği, sonucun kendisi kadar önemlidir. Yerel bir
+PASS'i CI PASS gibi sunmak bu belgenin en büyük hatası olurdu. Bu nedenle her
+kanıt aşağıdaki sınıflardan biriyle etiketlenir:
+
+| Sınıf | Anlamı | Nerede üretilir |
+| --- | --- | --- |
+| `STATIC` | Kod/sözleşme incelemesi | Repository |
+| `CI` | GitHub Actions, candidate SHA'ya bağlı | GitHub-hosted runner |
+| `LOCAL_RUNTIME` | Geliştirici makinesi / yerel container | Workstation |
+| `PROVIDER` | Supabase, Cloudflare, EAS, Sentry kontrol düzlemi | Sağlayıcı paneli/API |
+| `DEVICE` | Fiziksel Android/iOS cihaz | Gerçek donanım |
+| `STORE` | TestFlight / Play Internal | Mağaza kanalları |
+
+Her kanıt kaydı şunları taşımalıdır: candidate SHA, run ID, zaman damgası,
+ortam, artifact SHA-256 ve sonuç.
+
+`LOCAL_RUNTIME` sonuçları release attestation değildir. Bu belgede yerel olarak
+doğrulanan her satır açıkça `LOCAL_RUNTIME` olarak işaretlenmiştir ve aynı-SHA
+`CI` sonucu geldiğinde yükseltilmelidir.
 
 Durum sözlüğü:
 
 - `VERIFIED (STATIC)`: Dosya/sözleşme repo içinde incelendi.
 - `VERIFIED (LOCAL)`: Komut mevcut çalışma ağacında geçti; canlı servis/cihaz
   kanıtı değildir.
+- `VERIFIED (CI)`: Candidate SHA için GitHub Actions'ta geçti.
 - `UNVERIFIED`: Gerekli dış veya aynı-SHA kanıt eklenmedi.
 - `BLOCKED`: Mevcut yetki/plan/ortam işi güvenli biçimde tamamlamaya izin vermiyor.
 - `NO-GO`: Release ilerlemesini durduran kapı.
+
+## Candidate SHA CI durumu
+
+`86702f8` için ilk CI koşusu üç kırmızı kapı üretti. Hepsinin kök nedeni
+bulundu ve düzeltildi; düzeltmeler bir sonraki commit'te doğrulanacaktır.
+
+| Kapı | İlk sonuç | Kök neden | Durum |
+| --- | --- | --- | --- |
+| `Lint & Type Check` | failure | knip, `expo-updates`'i unused sayıyordu. Paketin hiç JS import'u yok; yalnız Expo config ve Android native manifest tarafından tüketiliyor. Knip'in Expo plugin'i bunu ancak `app.config.ts` bir update URL ile değerlendiğinde çözebiliyordu, yani sonuç `.env` varlığına göre değişiyordu. | Düzeltildi: gerekçelendirilmiş dar exception + `check-knip-exceptions.mjs` guard'ı |
+| `Repository release gates` | failure | Aynı knip kök nedeni | Düzeltildi |
+| `Docker Validation` | failure | `docker buildx build --provenance=mode=max --sbom=true` varsayılan `docker` driver ile çalışıyordu: `Attestation is not supported for the docker driver`. Image hiç oluşmadı, SBOM ve evidence manifest de zincirleme düştü. | Düzeltildi: pinned `setup-buildx-action` + `docker-container` driver + driver doğrulaması |
+| `Unit Tests` | **skipped** | `Lint & Type Check` başarısız olunca `needs` zinciri testleri hiç çalıştırmadı. GitHub, required check `skipped` ise bunu sağlanmış sayar. | Düzeltildi: `Release gates green` aggregator'ı, `if: always()` ile çalışır ve `success` olmayan her required job'ı kırmızıya çevirir |
+
+Bu tablodaki en önemli satır sonuncusudur: bir kapının **atlanmış** olması,
+geçmiş olması anlamına gelmez. Aggregator bu boşluğu kapatır.
 
 ## Güncel readiness özeti
 

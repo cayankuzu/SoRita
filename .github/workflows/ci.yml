@@ -264,3 +264,73 @@ jobs:
 
       - name: Build iOS preview
         run: eas build --platform ios --profile preview --non-interactive
+  release-gates:
+    name: Release gates green
+    runs-on: ubuntu-latest
+    # Runs even when an upstream gate fails, so a failed or skipped required job
+    # is reported as an explicit red gate instead of quietly disappearing from
+    # the run summary.
+    if: always()
+    needs:
+      - database-security
+      - security-supply-chain
+      - lint-and-typecheck
+      - test
+      - build-android
+      - build-ios
+      - android-device-performance
+    steps:
+      - name: Require every gate to be conclusively green
+        shell: bash
+        env:
+          GATE_RESULTS: ${{ toJSON(needs) }}
+          IS_MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const results = JSON.parse(process.env.GATE_RESULTS);
+          const isMainPush = process.env.IS_MAIN_PUSH === 'true';
+
+          // These always run. A skip here means an upstream gate failed and the
+          // job never executed, which is not a pass.
+          const alwaysRequired = [
+            'database-security',
+            'security-supply-chain',
+            'lint-and-typecheck',
+            'test',
+          ];
+
+          // These are deliberately main-push only. Off main they are genuinely
+          // not applicable; on main they must succeed.
+          const mainOnly = ['build-android', 'build-ios', 'android-device-performance'];
+
+          const failures = [];
+          for (const job of alwaysRequired) {
+            const result = results[job]?.result;
+            if (result !== 'success') {
+              failures.push(`${job} is '${result ?? 'missing'}', expected 'success'`);
+            }
+          }
+          for (const job of mainOnly) {
+            const result = results[job]?.result;
+            if (isMainPush) {
+              if (result !== 'success') {
+                failures.push(`${job} is '${result ?? 'missing'}', expected 'success' on main`);
+              }
+            } else if (!['skipped', 'success'].includes(result)) {
+              failures.push(`${job} is '${result ?? 'missing'}', expected 'skipped' or 'success'`);
+            }
+          }
+
+          const summary = Object.entries(results)
+            .map(([job, value]) => `  ${job}: ${value.result}`)
+            .join('\n');
+          console.log(`Gate results:\n${summary}`);
+
+          if (failures.length > 0) {
+            console.error('::error::RELEASE_GATES_GREEN not met.');
+            for (const failure of failures) console.error(`::error::${failure}`);
+            process.exit(1);
+          }
+          console.log('RELEASE_GATES_GREEN');
+          NODE

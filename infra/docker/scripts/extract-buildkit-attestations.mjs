@@ -38,7 +38,17 @@ const validateProvenance = (statement) => {
         predicate.materials.length > 0,
     );
   }
-  return Boolean(predicate.buildDefinition && predicate.runDetails?.builder?.id);
+  // Full (mode=max) provenance is distinguished from mode=min by the resolved
+  // dependency list and the internal build config. builder.id is deliberately
+  // not used: it is empty for an unnamed local OCI export, so requiring it
+  // would pass in CI and fail locally for the same artifact.
+  return Boolean(
+    predicate.buildDefinition?.buildType &&
+      Array.isArray(predicate.buildDefinition.resolvedDependencies) &&
+      predicate.buildDefinition.resolvedDependencies.length > 0 &&
+      predicate.buildDefinition.internalParameters?.buildConfig &&
+      predicate.runDetails?.metadata,
+  );
 };
 
 const validateSpdx = (statement) =>
@@ -49,16 +59,40 @@ const validateSpdx = (statement) =>
 export const extractBuildkitAttestations = (layoutDirectory, outputDirectory) => {
   const layout = path.resolve(layoutDirectory);
   const output = path.resolve(outputDirectory);
-  const index = readJson(path.join(layout, 'index.json'));
-  if (index.schemaVersion !== 2 || !Array.isArray(index.manifests)) {
+  const rootIndex = readJson(path.join(layout, 'index.json'));
+  if (rootIndex.schemaVersion !== 2 || !Array.isArray(rootIndex.manifests)) {
     throw new Error('OCI layout index must use schema version 2 and contain manifests.');
   }
 
-  const attestationDescriptors = index.manifests.filter(
+  // `docker buildx build --output type=oci` nests the real manifest list one
+  // level below index.json, so descend until the attestation descriptors are
+  // visible instead of assuming a flat layout.
+  const indexMediaTypes = new Set([
+    'application/vnd.oci.image.index.v1+json',
+    'application/vnd.docker.distribution.manifest.list.v2+json',
+  ]);
+  const resolveManifestList = (manifests, depth = 0) => {
+    if (depth > 4) throw new Error('OCI layout nests image indexes too deeply.');
+    const hasAttestation = manifests.some(
+      (descriptor) =>
+        descriptor.annotations?.['vnd.docker.reference.type'] === attestationType,
+    );
+    if (hasAttestation) return manifests;
+    const nested = manifests.filter((descriptor) =>
+      indexMediaTypes.has(descriptor.mediaType),
+    );
+    if (nested.length !== 1) return manifests;
+    const child = JSON.parse(readBlob(layout, nested[0].digest).toString('utf8'));
+    if (!Array.isArray(child.manifests)) return manifests;
+    return resolveManifestList(child.manifests, depth + 1);
+  };
+  const manifestList = resolveManifestList(rootIndex.manifests);
+
+  const attestationDescriptors = manifestList.filter(
     (descriptor) =>
       descriptor.annotations?.['vnd.docker.reference.type'] === attestationType,
   );
-  const imageDescriptors = index.manifests.filter(
+  const imageDescriptors = manifestList.filter(
     (descriptor) =>
       descriptor.annotations?.['vnd.docker.reference.type'] !== attestationType,
   );
@@ -87,10 +121,20 @@ export const extractBuildkitAttestations = (layoutDirectory, outputDirectory) =>
     for (const layer of manifest.layers) {
       if (layer.mediaType !== 'application/vnd.in-toto+json') continue;
       const statement = JSON.parse(readBlob(layout, layer.digest).toString('utf8'));
-      if (statement._type !== 'https://in-toto.io/Statement/v0.1') {
-        throw new Error('BuildKit attestation is not an in-toto Statement v0.1 document.');
+      // BuildKit emits in-toto Statement v0.1 on older releases and v1 on
+      // current ones. Both are valid; rejecting v1 would fail every modern build.
+      if (
+        statement._type !== 'https://in-toto.io/Statement/v0.1' &&
+        statement._type !== 'https://in-toto.io/Statement/v1'
+      ) {
+        throw new Error('BuildKit attestation is not a supported in-toto Statement document.');
       }
-      if (!statementSubjectMatches(statement, imageDigest)) {
+      // An unnamed OCI export carries no image reference, so BuildKit emits an
+      // empty subject list. The attestation manifest was already bound to the
+      // image through its `vnd.docker.reference.digest` annotation above, so
+      // only enforce subject matching when the statement actually names one.
+      const subjects = Array.isArray(statement.subject) ? statement.subject : [];
+      if (subjects.length > 0 && !statementSubjectMatches(statement, imageDigest)) {
         throw new Error('BuildKit attestation subject does not match the built image digest.');
       }
       statements.push({ digest: layer.digest, statement });

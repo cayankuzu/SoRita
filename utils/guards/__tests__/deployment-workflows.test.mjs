@@ -96,6 +96,21 @@ test("Docker workflow builds, tests, scans and emits checksum-bound same-SHA evi
   assert.match(dockerValidation, /SORITA_DOCKER_REUSE_IMAGE: '1'/u);
   assert.doesNotMatch(dockerValidation, /--provenance=false/u);
   assert.match(dockerValidation, /TARGET_SHA: \$\{\{ github\.sha \}\}/u);
+  assert.match(
+    dockerValidation,
+    /docker\/setup-buildx-action@[0-9a-f]{40}/u,
+    "attested builds need a pinned Buildx setup action",
+  );
+  assert.match(
+    dockerValidation,
+    /driver:\s*docker-container/u,
+    "the default docker driver cannot produce attestations",
+  );
+  assert.match(
+    dockerValidation,
+    /docker buildx inspect --bootstrap/u,
+    "the resolved builder driver must be verified before building",
+  );
 });
 
 test("preview Worker deployment is protected, strict and deletes transient secrets", () => {
@@ -298,4 +313,32 @@ test("production and release-evidence workflows never execute Docker workloads",
   for (const source of [cloudflareProduction, easProduction, releaseEvidence]) {
     assert.doesNotMatch(source, /\bdocker\s+(?:build|buildx|compose|run)\b/iu);
   }
+});
+
+test("CI aggregates every required gate and treats a skip as not green", () => {
+  const ci = workflow("ci.yml");
+  const ciNeeds = ci
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim());
+  assert.match(ci, /release-gates:/u, "CI must expose a final aggregator job");
+  assert.match(ci, /if: always\(\)/u, "the aggregator must run even when a gate fails");
+  assert.match(ci, /RELEASE_GATES_GREEN/u);
+  for (const job of [
+    "database-security",
+    "security-supply-chain",
+    "lint-and-typecheck",
+    "test",
+    "build-android",
+    "build-ios",
+    "android-device-performance",
+  ]) {
+    assert.ok(
+      ciNeeds.includes(job),
+      `aggregator must require ${job}`,
+    );
+  }
+  // A skipped required job must never be accepted as a pass.
+  assert.match(ci, /expected 'success'/u);
 });

@@ -915,6 +915,155 @@ submission.
 - **Evidence path:**
   `artifacts/release-evidence/manual/push/provider-scheduler-receipts/`.
 
+## 22. GitHub main branch protection
+
+**Why:** `main` is currently unprotected. Verified on 2026-09-03:
+
+```bash
+gh api repos/cayankuzu/SoRita/branches/main/protection
+# {"message":"Branch not protected","status":"404"}
+gh api repos/cayankuzu/SoRita/rulesets
+# []
+```
+
+Without protection, a direct push bypasses every gate in this repository. That
+alone keeps release engineering below the quality bar, regardless of how green
+CI is, because nothing forces the gates to run before code lands.
+
+**Why this is manual:** applying protection changes repository governance and can
+lock an in-flight workflow out of `main`. It is the repository owner's decision,
+so it is prepared here rather than applied automatically.
+
+**Scope decision (KISS):** this is a single-maintainer project. Requiring two or
+three reviewers would only create a self-approval dead end. One approving review
+plus fail-closed status checks is the proportionate control. The point is that
+nothing reaches `main` without the gates having actually run and passed.
+
+### Required status checks
+
+These names are the exact check-run names GitHub reports, captured from the
+candidate run. They must match verbatim or the protection silently requires
+nothing.
+
+| Check | Workflow |
+|---|---|
+| `Release gates green` | `ci.yml` aggregator, fails on any skipped required job |
+| `Lint & Type Check` | `ci.yml` |
+| `Security & Supply Chain` | `ci.yml` |
+| `Database Migration & RLS` | `ci.yml` |
+| `Unit Tests` | `ci.yml` |
+| `Repository release gates` | `quality.yml` |
+| `Full-history secret scan` | `quality.yml` |
+| `Semgrep CE SAST` | `quality.yml` |
+| `Migration replay, RLS/IDOR and restore` | `database-validation.yml` |
+| `Tooling image, contracts, resilience and load` | `docker-validation.yml` |
+
+`Release gates green` is the important one. The other CI checks can report
+`skipped` when an upstream job fails, and GitHub treats a skipped required check
+as satisfied. The aggregator runs with `if: always()` and fails when any required
+job is not `success`, which closes that hole.
+
+### Apply
+
+Run as the repository owner. Review the payload before running.
+
+```bash
+cat > /tmp/sorita-main-protection.json <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "Release gates green",
+      "Lint & Type Check",
+      "Security & Supply Chain",
+      "Database Migration & RLS",
+      "Unit Tests",
+      "Repository release gates",
+      "Full-history secret scan",
+      "Semgrep CE SAST",
+      "Migration replay, RLS/IDOR and restore",
+      "Tooling image, contracts, resilience and load"
+    ]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1,
+    "require_last_push_approval": true
+  },
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+JSON
+
+gh api --method PUT repos/cayankuzu/SoRita/branches/main/protection \
+  --input /tmp/sorita-main-protection.json
+
+rm -f /tmp/sorita-main-protection.json
+```
+
+### Expected result
+
+```bash
+gh api repos/cayankuzu/SoRita/branches/main/protection \
+  --jq '{checks: .required_status_checks.contexts,
+         force_push: .allow_force_pushes.enabled,
+         deletions: .allow_deletions.enabled,
+         admins: .enforce_admins.enabled,
+         reviews: .required_pull_request_reviews.required_approving_review_count,
+         conversations: .required_conversation_resolution.enabled}'
+```
+
+All ten contexts listed, `force_push` and `deletions` false, `admins` true,
+`reviews` 1, `conversations` true.
+
+Then confirm a direct push is refused:
+
+```bash
+git push origin HEAD:main
+# expected: rejected, protected branch hook declined
+```
+
+### Release tag protection
+
+Add a tag ruleset so release tags cannot be moved or deleted after evidence is
+bound to them:
+
+```bash
+gh api --method POST repos/cayankuzu/SoRita/rulesets \
+  -f name='release-tags' \
+  -f target='tag' \
+  -f enforcement='active' \
+  -F 'conditions[ref_name][include][]=refs/tags/v*' \
+  -F 'conditions[ref_name][exclude][]=' \
+  -F 'rules[][type]=deletion' \
+  -F 'rules[][type]=non_fast_forward'
+```
+
+### Rollback
+
+```bash
+gh api --method DELETE repos/cayankuzu/SoRita/branches/main/protection
+```
+
+Removing protection is immediate and non-destructive to history. If a required
+check name changes, update the `contexts` list in the same call rather than
+deleting protection, otherwise `main` is briefly unguarded.
+
+### Evidence
+
+Store the verification output above under the candidate release evidence packet.
+Protection state is a provider fact, not a repository fact, so it must be
+re-verified per release rather than assumed from this document.
+
+
 ## Final external gate
 
 Production and store release remain `NO-GO` until every applicable section has:
