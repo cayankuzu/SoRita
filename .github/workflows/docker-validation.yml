@@ -74,7 +74,10 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/docker
           docker buildx inspect --bootstrap | tee artifacts/docker/buildx-inspect.log
-          driver="$(docker buildx inspect --bootstrap | awk -F': *' '/^Driver:/ {print $2; exit}')"
+          # Parse the saved log rather than re-running the command: awk's early
+          # exit would SIGPIPE the second `docker buildx inspect`, and pipefail
+          # would turn that into a spurious step failure.
+          driver="$(awk -F': *' '/^Driver:/ {print $2; exit}' artifacts/docker/buildx-inspect.log)"
           echo "Resolved Buildx driver: ${driver}"
           if [[ "${driver}" != "docker-container" ]]; then
             echo "::error::Buildx driver is '${driver}'; attestations require the docker-container driver." >&2
