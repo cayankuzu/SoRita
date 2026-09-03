@@ -1,0 +1,230 @@
+name: Docker Validation
+
+on:
+  push:
+    branches: [main, chore/final-aaa-mvp-hardening-docker-cloudflare-ota]
+    paths:
+      - 'infra/docker/**'
+      - 'infra/cloudflare/sorita-edge/**'
+      - 'utils/guards/check-docker-context.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-validation.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/docker/**'
+      - 'infra/cloudflare/sorita-edge/**'
+      - 'utils/guards/check-docker-context.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  NODE_VERSION: '24'
+  SORITA_DOCKER_IMAGE_TAG: ci
+  SORITA_DOCKER_REUSE_IMAGE: '1'
+
+jobs:
+  tooling-security-resilience:
+    name: Tooling image, contracts, resilience and load
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source without persisting credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install root lockfile without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Validate ignore, Compose and security contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/docker
+          npm run docker:config 2>&1 | tee artifacts/docker/config.log
+
+      - name: Lint the tooling Dockerfile
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: infra/docker/Dockerfile.tooling
+          failure-threshold: warning
+          format: json
+          no-color: true
+          output-file: artifacts/docker/hadolint.json
+
+      - name: Build attested image and prove config-rootfs reproducibility
+        shell: bash
+        env:
+          BUILDX_METADATA_PROVENANCE: max
+          BUILDX_METADATA_WARNINGS: '1'
+        run: |
+          set -euo pipefail
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct "$GITHUB_SHA")"
+          export TARGET_SHA="$GITHUB_SHA"
+          if [[ ! "$SOURCE_DATE_EPOCH" =~ ^[0-9]{10}$ ]]; then
+            echo 'Could not derive a ten-digit SOURCE_DATE_EPOCH from the checked-out commit.' >&2
+            exit 1
+          fi
+
+          docker buildx build \
+            --file infra/docker/Dockerfile.tooling \
+            --target tooling \
+            --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --metadata-file artifacts/docker/build-attested-metadata.json \
+            --output type=oci,dest=/tmp/sorita-tooling-attested.oci.tar \
+            --provenance=mode=max \
+            --sbom=true \
+            .
+
+          mkdir /tmp/sorita-tooling-attested-oci
+          tar -xf /tmp/sorita-tooling-attested.oci.tar -C /tmp/sorita-tooling-attested-oci
+          node infra/docker/scripts/extract-buildkit-attestations.mjs \
+            /tmp/sorita-tooling-attested-oci \
+            artifacts/docker
+
+          docker buildx build \
+            --file infra/docker/Dockerfile.tooling \
+            --target tooling \
+            --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
+            --tag "sorita-tooling:${SORITA_DOCKER_IMAGE_TAG}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --metadata-file artifacts/docker/build-loaded-metadata.json \
+            --load \
+            .
+          docker image inspect "sorita-tooling:${SORITA_DOCKER_IMAGE_TAG}" \
+            --format '{{json .}}' > artifacts/docker/image-inspect.json
+          node infra/docker/scripts/verify-image-reproducibility.mjs \
+            artifacts/docker/build-attested-metadata.json \
+            artifacts/docker/build-loaded-metadata.json \
+            artifacts/docker/reproducibility.json
+
+          node --input-type=module <<'NODE'
+          const { readFileSync } = await import('node:fs');
+          const metadata = JSON.parse(readFileSync('artifacts/docker/build-attested-metadata.json', 'utf8'));
+          if (!metadata['buildx.build.provenance']) {
+            throw new Error('Buildx metadata is missing full provenance.');
+          }
+          const loadedMetadata = JSON.parse(
+            readFileSync('artifacts/docker/build-loaded-metadata.json', 'utf8'),
+          );
+          const inspect = JSON.parse(readFileSync('artifacts/docker/image-inspect.json', 'utf8'));
+          if (inspect.Id !== loadedMetadata['containerimage.config.digest']) {
+            throw new Error('Loaded image ID does not match the reproducibility evidence digest.');
+          }
+          NODE
+
+      - name: Run deterministic Worker, Maps and Supabase database contract profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:test 2>&1 | tee artifacts/docker/test-profile.log
+
+      - name: Run root quality gates in the immutable tooling image
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:quality 2>&1 | tee artifacts/docker/quality.log
+
+      - name: Verify pinned PostgreSQL client tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:db-tools 2>&1 | tee artifacts/docker/db-tools.log
+
+      - name: Run deterministic network fault profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:resilience 2>&1 | tee artifacts/docker/resilience.log
+
+      - name: Run bounded local k6 smoke profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:load 2>&1 | tee artifacts/docker/load.log
+
+      - name: Run isolated container security contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run docker:security 2>&1 | tee artifacts/docker/security.log
+
+      - name: Scan tooling image and fail on HIGH or CRITICAL findings
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: sorita-tooling:ci
+          format: json
+          output: artifacts/docker/trivy.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+          timeout: 10m
+
+      - name: Generate SPDX image SBOM
+        if: always() && !cancelled()
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: sorita-tooling:ci
+          format: spdx-json
+          output-file: artifacts/docker/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+          dependency-snapshot: false
+
+      - name: Create same-SHA Docker evidence manifest
+        if: always() && !cancelled()
+        shell: bash
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+          const directory = 'artifacts/docker';
+          const files = readdirSync(directory).filter((name) => name !== 'manifest.json').sort();
+          const artifacts = files.map((name) => ({
+            path: name,
+            sha256: createHash('sha256').update(readFileSync(`${directory}/${name}`)).digest('hex'),
+          }));
+          if (artifacts.length < 6) throw new Error('Docker evidence is incomplete.');
+          writeFileSync(
+            `${directory}/manifest.json`,
+            `${JSON.stringify({ artifacts, commitSha: process.env.TARGET_SHA, generatedAt: new Date().toISOString(), schemaVersion: 1 }, null, 2)}\n`,
+          );
+          NODE
+
+      - name: Stop Compose and reject orphan resources
+        if: always()
+        run: npm run docker:down
+
+      - name: Upload checksum-bound Docker evidence
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docker-evidence-${{ github.sha }}
+          path: artifacts/docker
+          if-no-files-found: error
+          retention-days: 30

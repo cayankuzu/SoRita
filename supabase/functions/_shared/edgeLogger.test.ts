@@ -7,18 +7,14 @@ describe('edgeLogger', () => {
     vi.restoreAllMocks();
   });
 
-  it('builds request context without trusting proxy metadata', () => {
+  it('builds a PII-minimal request context without proxy metadata', () => {
     const generatedContext = createEdgeRequestContext(
       new Request('https://example.com/test', { method: 'POST' }),
       'media-assets',
     );
-    expect(generatedContext).toMatchObject({
-      clientIp: null,
-      method: 'POST',
-      origin: null,
-      route: 'media-assets',
-      userAgent: null,
-    });
+    expect(generatedContext).toMatchObject({ method: 'POST', origin: null, route: 'media-assets' });
+    expect(generatedContext).not.toHaveProperty('clientIp');
+    expect(generatedContext).not.toHaveProperty('userAgent');
     expect(generatedContext.requestId).toBeTruthy();
 
     expect(
@@ -34,12 +30,10 @@ describe('edgeLogger', () => {
         'auth-gateway',
       ),
     ).toEqual({
-      clientIp: '203.0.113.4',
       method: 'GET',
       origin: 'https://app.example.com',
-      requestId: 'request-1',
+      requestId: expect.any(String),
       route: 'auth-gateway',
-      userAgent: 'test-agent',
     });
   });
 
@@ -65,7 +59,7 @@ describe('edgeLogger', () => {
       authorization: '[redacted]',
       contact: '[redacted-email]',
       count: 2,
-      error: { message: 'failed for [redacted-email]', name: 'Error' },
+      error: '[redacted]',
       nullable: undefined,
       rows: [{ api_key: '[redacted]', nested: '[truncated]' }],
     });

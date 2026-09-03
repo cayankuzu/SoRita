@@ -4,6 +4,10 @@ import { AppState } from 'react-native';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
+  scheduleNavigationWhenReady,
+  type NavigationRetryHandle,
+} from '@/mobile/app/app-shell/notifications/pushNavigation';
+import {
   presentForegroundSystemPushNotification,
   syncSystemPushNotifications,
 } from '@/mobile/app/data/repositories/systemPushNotificationRepository';
@@ -19,12 +23,17 @@ const PUSH_REGISTRATION_RETRY_MS = [5000, 15000, 60000, 300000] as const;
 export function SystemPushNotificationsController() {
   const { booted, user } = useAuth();
   const userId = user?.id;
+  const currentUserIdRef = useRef<string | null>(userId ?? null);
   const subscribedUserIdRef = useRef<string | null>(null);
   const subscriptionInFlightUserIdRef = useRef<string | null>(null);
   const subscriptionRetryAttemptRef = useRef(0);
   const subscriptionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHandledMessageIdRef = useRef<string | null>(null);
   const appStateRef = useRef(AppState.currentState);
+  const navigationRetryRef = useRef<NavigationRetryHandle | null>(null);
+  const navigationRequestIdRef = useRef(0);
+
+  currentUserIdRef.current = userId ?? null;
 
   const clearSubscriptionRetry = useCallback(() => {
     if (subscriptionRetryTimeoutRef.current) {
@@ -58,20 +67,37 @@ export function SystemPushNotificationsController() {
       return;
     }
 
-    if (!rootNavigationRef.isReady()) {
-      setTimeout(() => {
-        openNotificationsScreen(messageId);
-      }, 350);
-      return;
-    }
+    navigationRetryRef.current?.cancel();
+    const requestId = navigationRequestIdRef.current + 1;
+    navigationRequestIdRef.current = requestId;
+    const expectedUserId = userId ?? null;
 
-    if (!userId) {
-      rootNavigationRef.navigate('Auth');
-      return;
-    }
+    const retryHandle = scheduleNavigationWhenReady({
+      isReady: () => rootNavigationRef.isReady(),
+      onExhausted: () => {
+        if (requestId === navigationRequestIdRef.current) {
+          logger.debug('push', 'System push tap navigation timed out before the app navigator was ready.');
+        }
+      },
+      onReady: () => {
+        if (requestId !== navigationRequestIdRef.current) {
+          return;
+        }
 
-    lastHandledMessageIdRef.current = messageId ?? null;
-    rootNavigationRef.navigate('Notifications');
+        if (!expectedUserId) {
+          rootNavigationRef.navigate('Auth');
+          return;
+        }
+
+        if (currentUserIdRef.current !== expectedUserId) {
+          return;
+        }
+
+        lastHandledMessageIdRef.current = messageId ?? null;
+        rootNavigationRef.navigate('Notifications');
+      },
+    });
+    navigationRetryRef.current = retryHandle;
   }, [userId]);
 
   const syncSubscription = useCallback(async function syncSubscription() {
@@ -123,6 +149,19 @@ export function SystemPushNotificationsController() {
     clearSubscriptionRetry();
     subscriptionRetryAttemptRef.current = 0;
   }, [clearSubscriptionRetry, userId]);
+
+  useEffect(() => {
+    lastHandledMessageIdRef.current = null;
+    navigationRequestIdRef.current += 1;
+    navigationRetryRef.current?.cancel();
+    navigationRetryRef.current = null;
+  }, [userId]);
+
+  useEffect(() => () => {
+    navigationRequestIdRef.current += 1;
+    navigationRetryRef.current?.cancel();
+    navigationRetryRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!booted || !userId || !notificationRuntime.supportsRemotePushRegistration) {

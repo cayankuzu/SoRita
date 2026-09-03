@@ -58,9 +58,22 @@ export const ROUTE_DEFINITIONS: Readonly<Record<ProxyPath, RouteDefinition>> = {
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
 const MAX_MEDIA_FILE_BYTES = 140_313_800;
-const MAX_PUBLIC_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_PROFILE_MEDIA_BYTES = 5 * 1024 * 1024;
 const MAX_MEDIA_DURATION_SECONDS = 183;
 const MAX_MEDIA_PATHS = 64;
+const mediaExtensionValues = [
+  '3gp',
+  'heic',
+  'jpg',
+  'jpeg',
+  'm4v',
+  'mov',
+  'mp4',
+  'png',
+  'webm',
+  'webp',
+] as const;
+const mediaExtensionSet = new Set<string>(mediaExtensionValues);
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const usernameSchema = z
@@ -227,15 +240,27 @@ const mediaContentTypes = [
 const mediaBucketSchema = z.enum(['profile-media', 'place-media', 'place-media-private']);
 const privateMediaBucketSchema = z.literal('place-media-private');
 const mediaPathSchema = z.string().trim().min(1).max(512);
+const mediaPrefixSchema = z
+  .string()
+  .trim()
+  .refine((value) => {
+    const normalized = value.replace(/^\/+|\/+$/g, '');
+    return /^[a-zA-Z0-9/_-]{1,160}$/.test(normalized) && !normalized.includes('..');
+  });
+const mediaExtensionSchema = z
+  .string()
+  .trim()
+  .max(8)
+  .refine((value) => mediaExtensionSet.has(value.toLowerCase()));
 const mediaControlPayloadSchema = z.discriminatedUnion('action', [
   z
     .object({
       action: z.literal('create-upload-url'),
       bucket: mediaBucketSchema,
       contentType: z.enum(mediaContentTypes),
-      extension: z.string().trim().min(1).max(8).optional(),
+      extension: mediaExtensionSchema.optional(),
       fileSizeBytes: z.number().int().positive().max(MAX_MEDIA_FILE_BYTES),
-      prefix: z.string().trim().min(1).max(160),
+      prefix: mediaPrefixSchema,
       uploadSessionId: z.string().uuid(),
     })
     .strict(),
@@ -275,7 +300,67 @@ const mediaControlPayloadSchema = z.discriminatedUnion('action', [
       uploadSessionId: z.string().uuid().optional(),
     })
     .strict(),
-]);
+]).superRefine((payload, context) => {
+  if (payload.action === 'create-upload-url' || payload.action === 'complete-upload') {
+    const maximumBytes = payload.bucket === 'profile-media'
+      ? MAX_PROFILE_MEDIA_BYTES
+      : MAX_MEDIA_FILE_BYTES;
+
+    if (payload.fileSizeBytes > maximumBytes) {
+      context.addIssue({
+        code: 'custom',
+        message: 'File size exceeds the bucket limit.',
+        path: ['fileSizeBytes'],
+      });
+    }
+
+    if (payload.bucket !== 'place-media-private' && !payload.contentType.startsWith('image/')) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Public media uploads must be images.',
+        path: ['contentType'],
+      });
+    }
+  }
+
+  if (payload.action !== 'complete-upload') {
+    return;
+  }
+
+  const expectsVideo = payload.mediaType === 'video';
+
+  if (payload.bucket !== 'place-media-private' && payload.mediaType !== 'photo') {
+    context.addIssue({
+      code: 'custom',
+      message: 'Public media uploads must be photos.',
+      path: ['mediaType'],
+    });
+  }
+
+  if (expectsVideo !== payload.contentType.startsWith('video/')) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Media type does not match content type.',
+      path: ['mediaType'],
+    });
+  }
+
+  if (expectsVideo && payload.durationSeconds === undefined) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Video duration is required.',
+      path: ['durationSeconds'],
+    });
+  }
+
+  if ((payload.width === undefined) !== (payload.height === undefined)) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Media dimensions must be provided together.',
+      path: ['width'],
+    });
+  }
+});
 
 const deleteUserPayloadSchema = z.object({}).strict();
 const publicAuthActions = [
@@ -360,18 +445,6 @@ export function validatePayload(route: RouteDefinition, payload: unknown): Contr
 
     const result = mediaControlPayloadSchema.safeParse(payload);
     if (!result.success) {
-      return { code: 'invalid_request', success: false };
-    }
-
-    if (
-      (result.data.action === 'create-upload-url' || result.data.action === 'complete-upload')
-      && result.data.bucket !== 'place-media-private'
-      && (
-        !result.data.contentType.startsWith('image/')
-        || result.data.fileSizeBytes > MAX_PUBLIC_IMAGE_BYTES
-        || (result.data.action === 'complete-upload' && result.data.mediaType !== 'photo')
-      )
-    ) {
       return { code: 'invalid_request', success: false };
     }
 

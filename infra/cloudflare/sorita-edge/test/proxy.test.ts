@@ -31,10 +31,17 @@ describe('origin proxy behavior', () => {
     await expect(response.json()).resolves.toEqual({ buildSha: TEST_BUILD_SHA, ok: true });
   });
 
-  it('streams successful JSON while replacing cache and cookie headers', async () => {
+  it('validates and reserializes successful JSON while replacing cache and cookie headers', async () => {
     const fetchFunction = toFetchFunction(() =>
       jsonOriginResponse(
-        { success: true },
+        {
+          session: {
+            accessToken: 'test-access-token',
+            providerSecret: 'must-not-cross-the-gateway',
+            refreshToken: 'test-refresh-token',
+          },
+          unexpectedRootField: 'must-not-cross-the-gateway',
+        },
         {
           headers: {
             'Cache-Control': 'public, max-age=86400',
@@ -50,10 +57,58 @@ describe('origin proxy behavior', () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ success: true });
+    const responseText = await response.text();
+    expect(JSON.parse(responseText)).toEqual({
+      session: {
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+      },
+    });
     expect(response.headers.get('cache-control')).toBe('private, no-store, max-age=0');
     expect(response.headers.has('set-cookie')).toBe(false);
     expect(response.headers.get('pragma')).toBe('no-cache');
+    expect(responseText).not.toContain('providerSecret');
+    expect(responseText).not.toContain('unexpectedRootField');
+  });
+
+  it('rejects oversized, malformed UTF-8, and schema-invalid success bodies', async () => {
+    const invalidResponses = [
+      new Response(JSON.stringify({ oversized: 'x'.repeat(64 * 1024) }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+      new Response(new Uint8Array([0xff, 0xfe]), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+      jsonOriginResponse({ session: { accessToken: 'missing-refresh-token' } }),
+    ];
+
+    for (const originResponse of invalidResponses) {
+      const response = await handleWorkerRequest(
+        createPublicLoginRequest(),
+        createTestEnv(),
+        createDependencies(toFetchFunction(() => originResponse.clone())),
+      );
+
+      expect(response.status).toBe(502);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      await expect(response.json()).resolves.toMatchObject({ code: 'invalid_origin_response' });
+    }
+  });
+
+  it('rejects an origin 4xx body that does not match the public error contract', async () => {
+    const response = await handleWorkerRequest(
+      createPublicLoginRequest(),
+      createTestEnv(),
+      createDependencies(toFetchFunction(() => jsonOriginResponse(
+        { debug: 'private origin detail' },
+        { status: 400 },
+      ))),
+    );
+
+    expect(response.status).toBe(502);
+    expect(await response.text()).not.toContain('private origin detail');
   });
 
   it('preserves a valid origin Retry-After but not the origin response body', async () => {
@@ -143,6 +198,7 @@ describe('origin proxy behavior', () => {
         headers: { Location: 'https://other.example' },
         status: 302,
       }),
+      new Response(null, { status: 204 }),
     ]) {
       const response = await handleWorkerRequest(
         createPublicLoginRequest(),

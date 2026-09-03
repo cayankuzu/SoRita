@@ -1,6 +1,6 @@
 # SoRita OTA Runtime And Release Contract
 
-Last repository verification: 2026-08-30. This document describes the checked-in contract; it is
+Last repository verification: 2026-08-31. This document describes the checked-in contract; it is
 not evidence that any provider-side build, update, channel, secret, or deployment exists.
 
 > **Production OTA release: NO-GO.** Do not publish to the production channel until every
@@ -10,14 +10,14 @@ not evidence that any provider-side build, update, channel, secret, or deploymen
 
 | Concern | Repository contract |
 | --- | --- |
-| App/runtime version | Expo app version `1.0.101`; `runtimeVersion.policy` is `appVersion`. |
+| App/runtime version | Expo app version `1.0.102`; `runtimeVersion.policy` is `appVersion`. |
 | Update URL | Derived only as `https://u.expo.dev/<EXPO_PUBLIC_EXPO_PROJECT_ID>`. Production config fails closed when the project ID is absent or malformed. |
 | Launch behavior | Updates are checked on load with zero launch wait. The cached or embedded update starts immediately; a newly downloaded update normally applies on the next cold start. |
 | Embedded fallback | `useEmbeddedUpdate` is enabled. This is a fallback mechanism, not proof that a remote rollback has been tested. |
 | Android native parity | `expo-updates` is enabled and the committed manifest references the checked-in update URL and runtime string resources. |
 | iOS native parity | `app.config.ts` is the prebuild/EAS source of truth. There is no checked-in `ios/` project, so the resulting signed iOS binary must be inspected and tested before release. |
 | Build channels | `development`, `preview`, and `production` EAS profiles use matching, isolated channel and EAS environment names. A channel is embedded in its binary and cannot be changed after that binary is built. |
-| Update code signing | No verified update-signing certificate/private-key chain is claimed. Never add `--private-key-path` to an update command until a matching public certificate has been embedded in new binaries and the signing ceremony is evidenced. |
+| Update code signing | No verified update-signing certificate/private-key chain is claimed. The current EAS Free plan reports this capability unavailable, and production workflow validation fails closed without a tracked valid certificate. Never add `--private-key-path` until a supported-plan ceremony is approved, a matching public certificate is embedded in new binaries and physical-device rejection tests are evidenced. |
 
 The app-version policy is intentionally simple: a native-runtime change requires an app-version
 change and new Android and iOS binaries. Changing a build number alone does not create a new OTA
@@ -27,12 +27,12 @@ look compatible, so the classifier and binary-source evidence remain mandatory.
 ## First OTA-capable binary is mandatory
 
 No OTA update can safely precede the binaries that contain its update URL, runtime, channel, and
-embedded fallback. Before the first preview or production OTA for runtime `1.0.101`, retain all of:
+embedded fallback. Before the first preview or production OTA for runtime `1.0.102`, retain all of:
 
 1. One immutable binary source SHA.
 2. An OTA-enabled Android build ID and signed AAB/installable artifact produced from that SHA.
 3. An OTA-enabled iOS build ID and signed IPA/TestFlight artifact produced from that same SHA.
-4. Inspection evidence showing runtime `1.0.101`, the expected EAS project, and the intended channel
+4. Inspection evidence showing runtime `1.0.102`, the expected EAS project, and the intended channel
    in each artifact.
 5. Real-device evidence that the embedded update starts offline, an update downloads, and the new
    update applies after a cold restart on both platforms.
@@ -40,7 +40,7 @@ embedded fallback. Before the first preview or production OTA for runtime `1.0.1
 The workflows bind this evidence to the native baseline using this exact non-secret format:
 
 ```text
-android=<build-id>;ios=<build-id>;runtime=1.0.101;source=<40-character-binary-source-sha>
+android=<build-id>;ios=<build-id>;runtime=1.0.102;source=<40-character-binary-source-sha>
 ```
 
 The complete value must match the environment-scoped approval secret:
@@ -151,7 +151,7 @@ Stop on missing data; absence of evidence is not a pass. Use
 
 ## Evidence gate
 
-| Evidence | Status on 2026-08-30 | Release effect |
+| Evidence | Status on 2026-08-31 | Release effect |
 | --- | --- | --- |
 | Local app/runtime/native parity tests | Verified locally | Necessary, not sufficient. |
 | Local classifier and workflow-contract tests | Verified locally | Necessary, not sufficient. |
@@ -159,7 +159,7 @@ Stop on missing data; absence of evidence is not a pass. Use
 | Protected GitHub production environment, required reviewers, and scoped secrets | **UNVERIFIED** | **NO-GO** |
 | OTA-enabled Android and iOS provider build records from one source SHA | **UNVERIFIED** | **NO-GO** |
 | Signed AAB/IPA provenance, signature verification, and retained artifact hashes | **UNVERIFIED** | **NO-GO** |
-| EAS Update code-signing certificate embedded in both binaries and secure private-key ceremony | **UNVERIFIED / not claimed** | **NO-GO for claiming signed OTA artifacts** |
+| EAS Update code-signing certificate embedded in both binaries and secure private-key ceremony | **BLOCKED on current Free plan / not claimed** | **NO-GO for production signed OTA** |
 | Preview update group and exact same-SHA production approval | **UNVERIFIED** | **NO-GO** |
 | Physical Android/iOS embedded, offline, download, cold-start, and rollback evidence | **UNVERIFIED** | **NO-GO** |
 | EAS, store, Sentry, Supabase, and Cloudflare dashboards/alerts | **UNVERIFIED** | **NO-GO** |

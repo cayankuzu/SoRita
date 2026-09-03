@@ -204,10 +204,19 @@ function isValidDeviceId(value: string | null) {
 }
 
 function getClientIdentifier(
-  requestContext: ReturnType<typeof createEdgeRequestContext>,
+  request: Request,
   deviceId: string,
 ) {
-  return `${deviceId}:${requestContext.clientIp ?? 'unknown-ip'}`;
+  const forwardedAddress = (
+    request.headers.get('cf-connecting-ip')
+    ?? request.headers.get('x-real-ip')
+    ?? request.headers.get('x-forwarded-for')?.split(',')[0]
+    ?? 'unknown-ip'
+  ).trim();
+
+  // This identifier is passed only to the server-side rate-limit hash RPC; it
+  // is never added to the Edge log context.
+  return `${deviceId}:${forwardedAddress.slice(0, 128)}`;
 }
 
 function inferAuthErrorCode(message: string | undefined) {
@@ -453,7 +462,7 @@ export function createAuthGatewayHandler({
       }
 
       const payload = parsedPayload.data;
-      const clientIdentifier = getClientIdentifier(requestContext, deviceId);
+      const clientIdentifier = getClientIdentifier(request, deviceId);
 
       const applyRateLimit = async (scope: string, maxRequests: number, windowMs: number) => {
         const result = await enforceRateLimit({

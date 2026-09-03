@@ -73,14 +73,14 @@ describe('app.config push notification extras', () => {
   });
 
   it('normalizes a validated HTTPS gateway URL', async () => {
-    process.env.EXPO_PUBLIC_EDGE_API_URL = '  https://api.example.com/edge/  ';
+    process.env.EXPO_PUBLIC_EDGE_API_URL = '  https://api.example.com/  ';
     process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
     process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = 'preview';
 
     const config = await loadAppConfig();
 
     expect(config.extra).toMatchObject({
-      edgeApiUrl: 'https://api.example.com/edge',
+      edgeApiUrl: 'https://api.example.com',
       edgeCutoverMode: 'gateway',
       releaseEnvironment: 'preview',
     });
@@ -99,7 +99,14 @@ describe('app.config push notification extras', () => {
     process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
     process.env.EXPO_PUBLIC_EDGE_API_URL = 'http://api.example.com';
 
-    await expect(loadAppConfig()).rejects.toThrow('Edge API URL must be an HTTPS base URL');
+    await expect(loadAppConfig()).rejects.toThrow('Edge API URL must be an HTTPS origin');
+  });
+
+  it('rejects gateway URLs with a path the Worker does not route', async () => {
+    process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE = 'gateway';
+    process.env.EXPO_PUBLIC_EDGE_API_URL = 'https://api.example.com/edge';
+
+    await expect(loadAppConfig()).rejects.toThrow('Edge API URL must be an HTTPS origin');
   });
 
   it('uses a recognized EAS build profile as release metadata when no override is set', async () => {

@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1.7
+
+# Node 24.18.0 LTS, resolved 2026-08-31. Dependabot updates the immutable digest.
+ARG NODE_IMAGE=node:24.18.0-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
+ARG SOURCE_DATE_EPOCH=0
+
+FROM ${NODE_IMAGE} AS root-dependencies
+ARG SOURCE_DATE_EPOCH
+ENV SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,id=sorita-root-npm,target=/root/.npm,sharing=locked \
+    npm ci --ignore-scripts --no-audit --no-fund
+
+FROM ${NODE_IMAGE} AS worker-dependencies
+ARG SOURCE_DATE_EPOCH
+ENV SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}
+WORKDIR /workspace/infra/cloudflare/sorita-edge
+COPY infra/cloudflare/sorita-edge/package.json infra/cloudflare/sorita-edge/package-lock.json ./
+RUN --mount=type=cache,id=sorita-worker-npm,target=/root/.npm,sharing=locked \
+    npm ci --ignore-scripts --no-audit --no-fund
+
+FROM ${NODE_IMAGE} AS tooling
+ARG SOURCE_DATE_EPOCH
+ENV CI=true \
+    EXPO_NO_TELEMETRY=1 \
+    NODE_ENV=test \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}
+WORKDIR /workspace
+COPY --from=root-dependencies --chown=node:node /workspace/node_modules ./node_modules
+COPY --from=worker-dependencies --chown=node:node /workspace/infra/cloudflare/sorita-edge/node_modules ./infra/cloudflare/sorita-edge/node_modules
+COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node .dockerignore ./
+COPY --chown=node:node App.tsx app.config.ts index.js ./
+COPY --chown=node:node babel.config.cjs eslint.config.js knip.json metro.config.cjs ./
+COPY --chown=node:node tsconfig.json tsconfig.tests.json vitest.config.ts vitest.setup.ts ./
+COPY --chown=node:node eas.json ./
+COPY --chown=node:node assets ./assets
+COPY --chown=node:node src ./src
+COPY --chown=node:node supabase/config.toml supabase/seed.sql ./supabase/
+COPY --chown=node:node supabase/functions ./supabase/functions
+COPY --chown=node:node supabase/migrations ./supabase/migrations
+COPY --chown=node:node supabase/tests ./supabase/tests
+COPY --chown=node:node quality ./quality
+COPY --chown=node:node release-evidence ./release-evidence
+COPY --chown=node:node docs ./docs
+COPY --chown=node:node .github/workflows ./.github/workflows
+COPY --chown=node:node android/app/build.gradle ./android/app/build.gradle
+COPY --chown=node:node android/app/src/main/AndroidManifest.xml ./android/app/src/main/AndroidManifest.xml
+COPY --chown=node:node android/app/src/main/res/values/strings.xml ./android/app/src/main/res/values/strings.xml
+COPY --chown=node:node infra/cloudflare/sorita-edge ./infra/cloudflare/sorita-edge
+COPY --chown=node:node infra/docker ./infra/docker
+COPY --chown=node:node utils ./utils
+USER node
+ENTRYPOINT ["node"]
+CMD ["infra/docker/scripts/run-test-profile.mjs", "--container"]

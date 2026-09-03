@@ -1,56 +1,135 @@
 # SoRita release readiness
 
-Son repo incelemesi: 2026-08-30
+Son repo incelemesi: 2026-09-03
 
-İncelenen branch: `chore/aaa-mvp-feature-freeze-cloudflare-ota`
+İncelenen branch: `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`
 
-Üretim kararı: `NO-GO`
+Başlangıç HEAD: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
+
+Candidate SHA: henüz yok; çalışma ağacı değiştirilmiş durumda
+
+Kaynak sürümü: `1.0.102`; Android `107`; iOS `87`
+
+Üretim kararı: **`NO-GO`**
 
 ## Kararın anlamı
 
-Bu belge mevcut çalışma ağacının yayın kapısıdır. Kaynakta bir kontrol, workflow veya runbook bulunması; ilgili CI koşusunun, sağlayıcı yapılandırmasının, signed binary'nin, cihaz testinin ya da dağıtımın gerçekleştiğini kanıtlamaz.
-
-İnceleme anında çalışma ağacı değiştirilmiş ve izlenmeyen dosyalar içeriyordu. Bu nedenle mevcut içerik HEAD commit'ine veya uzak branch'e eşit kabul edilemez; immutable candidate SHA ve temiz ağaç release manifest'i yoktur. Yerel kısmi geçişler değerli geliştirme kanıtıdır fakat üretim attestation'ı değildir.
+Kaynakta bir kontrol, workflow veya runbook bulunması; sağlayıcı
+yapılandırmasının, signed binary'nin, cihaz testinin ya da dağıtımın gerçekten
+tamamlandığını kanıtlamaz. Bu belgedeki yerel sonuçlar henüz immutable candidate
+SHA'ya bağlanmadığı için release attestation'ı değildir.
 
 Durum sözlüğü:
 
 - `VERIFIED (STATIC)`: Dosya/sözleşme repo içinde incelendi.
-- `VERIFIED (LOCAL)`: Komut bu çalışma ağacında geçti; canlı servis/cihaz kanıtı değildir.
-- `UNVERIFIED`: Gerekli dış veya aynı-SHA kanıt sunulmadı.
-- `NO-GO`: Yayın ilerlemesini durduran kapı.
+- `VERIFIED (LOCAL)`: Komut mevcut çalışma ağacında geçti; canlı servis/cihaz
+  kanıtı değildir.
+- `UNVERIFIED`: Gerekli dış veya aynı-SHA kanıt eklenmedi.
+- `BLOCKED`: Mevcut yetki/plan/ortam işi güvenli biçimde tamamlamaya izin vermiyor.
+- `NO-GO`: Release ilerlemesini durduran kapı.
 
-## Güncel repo tabanı
+## Güncel readiness özeti
 
-| Alan | 2026-08-30 gerçeği | Durum |
+| Alan | Güncel gerçek | Durum |
 | --- | --- | --- |
-| Ürün kapsamı | Snapshot 10 kök rota, 4 sekme, 13 ekran girişi, 10 bildirim türü, 6 Edge Function, 18 ürün tablosu ve 3 bucket donduruyor; dar isimli private operasyon tablolarını ayrı doğruluyor | `VERIFIED (LOCAL)` — `npm run feature-surface:check` 12/12 guard testiyle geçti |
-| Tam kalite kapısı | `npm run check:release`; Expo, lint, feature freeze, OTA/evidence araçları, typecheck, dead code, kritik akış kanıtı, performans, audit/license/provenance, test, security ve coverage içeriyor | Tanım `VERIFIED (STATIC)`; temiz immutable SHA üzerinde tam koşu `UNVERIFIED` |
-| Kalite CI | `.github/workflows/quality.yml`; root ve Worker kapıları, Semgrep ve full-history Gitleaks içeriyor | Tanım `VERIFIED (STATIC)`; başarılı uzak run ID `UNVERIFIED` |
-| Veritabanı CI | `.github/workflows/database-validation.yml`; reset, migration replay, DB lint, pgTAP RLS/IDOR ve ayrı DB'ye dump/restore içeriyor | Tanım `VERIFIED (STATIC)`; başarılı uzak run ID `UNVERIFIED` |
-| Release evidence | `.github/workflows/release-evidence.yml` aynı SHA Quality/Database run'larını doğrulayıp checksum manifest'i üretir | Workflow kasıtlı olarak eksik dış kanıtı `unverified` yazıp production verifier'ın reddettiğini kanıtlar; tam attestation yok |
-| Supabase değişiklikleri | 2026-08-30 auth/mass-assignment, hesap silme saga, private-cover yetkisi, moderation case ve Cloudflare origin nonce migration kaynakları çalışma ağacında | Kaynak `VERIFIED (STATIC)`; local reset ve staging/production apply `UNVERIFIED` |
-| Legacy private cover | Bounded dry-run/apply utility, unsafe-path rehome, public→private client rehome ve DB private-path guard kaynağı çalışma ağacında | Kaynak `VERIFIED (STATIC)`; aynı-SHA test, staging canlı erişim/rollback, Storage backup ve retention/deletion onayı `UNVERIFIED`; production apply `NO-GO` |
-| Cloudflare | Seçici Worker, testler, preview ve production canary workflow'ları kaynakta | Provider account/DNS/WAF/secrets/deploy/origin enforcement `UNVERIFIED`; `NO-GO` |
-| EAS/OTA | `appVersion` runtime, preview/production workflow, aynı-SHA binary kanıt kapısı ve kademeli rollout tanımlı | EAS owner/project/channel, update signing, binary ve yayın `UNVERIFIED`; `NO-GO` |
-| Android/iOS | Android native proje mevcut; iOS native proje checked-in değil ve EAS/prebuild gerekir | Release signing, Internal Track/TestFlight ve gerçek cihaz sonucu `UNVERIFIED`; `NO-GO` |
-| Observability/SLO | Sentry/metric/log kaynakları var; `docs/slo.md` rakamları provisional/unmeasured policy | Dashboard, alert, retention, owner ve burn testleri `UNVERIFIED`; `NO-GO` |
-| Backup/restore | CI yalnız izole yerel Postgres dump/restore tatbikatı tanımlar | Hosted backup/PITR, Storage object backup ve staging restore `UNVERIFIED`; `NO-GO` |
-| Moderasyon | Raporlama/block mevcut; çalışma ağacı service-role-only case/event/RPC ve CLI kaynağı ekliyor; admin panel yok | Kaynak `VERIFIED (STATIC)`; migration/CLI staging çalışması, onaylı operatör/policy/SLA/appeal ve store UGC kanıtı `UNVERIFIED`; `NO-GO` |
+| Ürün kapsamı | 10 kök rota, 4 sekme, 13 ekran girişi, 10 bildirim türü, 6 Edge Function, 18 ürün tablosu, 3 bucket, 3 Settings grubu, 19 CTA korunuyor | `VERIFIED (LOCAL)` — 12/12 feature-surface guard testi geçti; aynı-SHA CI bekliyor |
+| Sürüm/native | App `1.0.102`, Android 107, iOS 87; Gradle release channel profile/property allowlist ile ayrılıyor | `VERIFIED (STATIC)`; final merged-manifest, signed Android+iOS build ve provider identity `UNVERIFIED` |
+| Root kalite | `typecheck`, `lint` (tüm guard'lar dahil) ve 167 dosya/932 test geçti; `security:verify` 8 dosya/117 test geçti | `VERIFIED (LOCAL)`; temiz checkout'ta aynı-SHA `check:release` bekliyor |
+| Supabase | Güncel migration seti zero-reset edildi; lint boş; 6 dosya/180 pgTAP geçti; ayrı DB restore 22 public tablo doğruladı | `VERIFIED (LOCAL)`; hosted staging/apply/drift ve hosted restore `UNVERIFIED` |
+| Push | Startup izin prompt'u kaldırıldı; token capability/tombstone, account-switch, verified tap, background dedupe, delivery DLQ/health/requeue güçlendirildi | Kaynak ve hedefli test `VERIFIED (LOCAL)`; FCM/APNs/Expo credential, receipt/scheduler alarmı ve iki-platform cihaz matrisi `UNVERIFIED / NO-GO` |
+| Cloudflare | Bounded origin parsing/schema, request-owned JWKS, no-store ve fail-closed Worker sözleşmesi; 3 dosya/34 test ve iki dry-run geçti | `VERIFIED (LOCAL)`; account/DNS/TLS/WAF/secrets/deploy/origin enforcement/canary `UNVERIFIED / NO-GO` |
+| Docker | Build context'i bozan `+!App.tsx` diff artifact'ı düzeltildi; `docker:test` uçtan uca exit 0: container profili 34 Worker testi, temiz Supabase reset + migration replay, lint hatasız, 6 dosya/180 pgTAP, dump/restore parity (22 tablo, 70 routine, 50 RLS policy, 3 bucket); `docker:load:smoke` 122.370 istek 0 hata | `VERIFIED (LOCAL)`; aynı-SHA CI/SBOM/provenance `UNVERIFIED` |
+| OTA | Runtime/channel/build identity/OTA classifier ve otomatik rollback kapıları güçlendirildi; 38 OTA/EAS testi geçti | `VERIFIED (LOCAL)`; signed provider update ve device rollback yok |
+| OTA code signing | Workflow geçerli tracked RSA certificate olmadan fail-closed | Mevcut EAS Free planında özellik kullanılamıyor: `BLOCKED / NO-GO` |
+| Release evidence | Manifest v2 Docker ve OTA-signing durumunu kapsar; binary input'u provider build identity ile doğrulanır | `VERIFIED (STATIC/LOCAL)`; final same-SHA attestation ve başarılı remote run yok |
+| Android/iOS | Yeni native/runtime candidate iki platform yeni binary gerektirir | `1.0.102`/107 AAB ve iOS 87 same-SHA signed artifact `UNVERIFIED / NO-GO`; eski 1.0.101/106 artifact geçersiz |
+| Cihaz/store | Fiziksel Android+iOS push/auth/upload/offline/a11y/perf; Internal Track/TestFlight; privacy/UGC | `UNVERIFIED / NO-GO` |
+| Observability/SLO | Redacted log/request/DLQ sözleşmeleri kaynakta | Sentry source map, event, alert, owner ve ölçülmüş SLO `UNVERIFIED / NO-GO` |
+| Backup/restore | İzole yerel DB dump/restore geçti | Hosted backup/PITR, private Storage restore ve onaylı RPO/RTO `UNVERIFIED / NO-GO` |
 
-Detaylı ürün sözleşmesi [existing-feature-contract.md](./existing-feature-contract.md), başlangıç kanıt matrisi [aaa-mvp-baseline.md](./aaa-mvp-baseline.md), yeni özellik denetimi [no-new-feature-audit.md](./no-new-feature-audit.md), ağ/veri envanteri [network-and-data-inventory.md](./network-and-data-inventory.md) ve offline sözleşmesi [offline-and-concurrency-contract.md](./offline-and-concurrency-contract.md) içindedir.
+35 alanlı ayrıntılı kanıt tavanı ve karar tablosu
+[aaa-mvp-final-report.md](./aaa-mvp-final-report.md) içindedir. Hiçbir alana
+aynı-SHA runtime/operasyon kanıtı olmadan 9.80 verilmemiştir.
 
-## Repo kapıları
+## Çalıştırılmış yerel kanıt
 
-Temiz bir candidate checkout üzerinde:
+2026-09-03 tarihli tam gate taraması (bu çalışma ağacı):
+
+```text
+typecheck (app + tests):                     PASS
+lint + architecture/source-health/ui-copy/
+  ui-tokens/accessibility/feature-surface:   PASS
+feature-surface guard:                       12/12 PASS
+release-scorecard guard:                     7/7 PASS (35 kategori, hepsi 9.80 altı)
+OTA/EAS classifier + evidence testleri:      44/44 PASS
+deployment-workflows guard:                  15/15 PASS
+release-evidence guard:                      8/8 PASS
+ops CLI testleri:                            18/18 PASS
+root test suite:                             167 dosya / 932 test PASS
+security:verify:                             8 dosya / 117 test PASS
+dead-code (knip):                            temiz
+test:coverage:                               PASS — branches %90,08
+                                             statements %94,53, lines %94,74,
+                                             functions %94,10
+security:audit:prod:                         PASS — 0 critical, 0 high,
+                                             4 moderate, 1 gerekçeli acceptance
+
+docker:config:                               PASS (8 profil)
+docker:test (uçtan uca, exit 0):
+  - container profili Worker:                3 dosya / 34 test PASS
+  - Supabase temiz reset + migration replay: PASS
+  - db lint (error seviyesi):                results=[]
+  - pgTAP:                                   6 dosya / 180 test PASS
+  - dump + izole restore parity:             22 tablo, 70 routine,
+                                             50 RLS policy, 3 bucket PASS
+docker:load:smoke (exit 0):                  122.370 istek / 0 hata (%0,00)
+                                             24.474 iterasyon, 2.437,67/s
+                                             p90 1,08 ms, p95 1,64 ms
+                                             5 akışta no-store doğrulandı
+```
+
+`docker:load:smoke` deterministik mock upstream'e karşı çalışır. Latency
+değerleri harness ölçümüdür, kapasite kanıtı **değildir**. Bu profilin gerçek
+kanıtı, 122.370 istek boyunca beş temsilci akışın da `no-store` dönmesidir;
+yani shared cache üzerinden kullanıcılar arası sızıntı yüzeyi oluşmamaktadır.
+10.000 eşzamanlı kullanıcı hedefi bu commit'te **gösterilmemiştir**.
+
+### Bu geçişte bulunan ve düzeltilen kusurlar
+
+Bunlar devralınan bulgu listesinde yoktu; raporları okuyarak değil, gate'leri
+çalıştırarak bulundu.
+
+| # | Kusur | Etki | Durum |
+| --- | --- | --- | --- |
+| 1 | Üç `.dockerignore` dosyasında `+!App.tsx` diff artifact'ı | Docker build context `App.tsx`'i dışlıyordu; **tüm Docker kalite ortamı çalışmıyordu** | Düzeltildi; guard iki katmanda fail-closed |
+| 2 | `docker-validation.yml` yalnız `docker:worker` çalıştırıyordu | Temiz Supabase reset, migration replay, pgTAP ve dump/restore Docker hattında hiç koşmuyordu | `docker:test`'e çevrildi |
+| 3 | Production Worker deploy'u CORS allowlist'i doğrulamıyordu | `https://app.sorita.invalid` ile production version yüklenebilirdi | Bare HTTPS origin zorunlu; placeholder fail-closed |
+| 4 | Runtime-evidence fixture'ları kendi şemalarına göre bayattı | Evidence pipeline'ı doğrulanmamıştı; 8 testten 2'si kırıktı | v2 fixture'lara güncellendi |
+| 5 | Complexity bütçeleri backend'i kapsamıyordu | 2.095 satırlık `media-assets/handler.ts` bütçesizdi | Backend bütçe geçişi eklendi, ratchet'li |
+| 6 | İki HIGH production advisory açıktı; iki acceptance bayattı | `browserslist` OOM/prototype-write; artık ağaçta olmayan `image-size` için acceptance duruyordu | 3 advisory override ile **düzeltildi**; bayat acceptance'lar silindi; 1 moderate gerekçeli acceptance |
+| 7 | Branch coverage kendi eşiğinin altındaydı (%89,56 < %90) | Coverage kapısı kırıktı | Eşik düşürülmedi; push/auth/geocoding/origin-HMAC için gerçek testler eklendi → **%90,08** |
+
+Kusur 1 ve 3 için guard'lar hata yeniden üretilerek doğrulandı: bug geri
+konulduğunda guard fail etti, geri alındığında pass etti.
+
+Kusur 6 sonrası production audit durumu: **0 critical, 0 high, 4 moderate**,
+1 gerekçeli ve süreli acceptance. Acceptance kaydı artık owner, reason,
+exploitability ve expiry zorunlu tutar; eksikse build fail eder.
+
+
+## Temiz candidate repo kapısı
 
 ```powershell
 npm ci --ignore-scripts
 npm run check:release
+npm run docker:config
+npm run docker:test
+npm run docker:resilience
+npm run docker:load
 
 Push-Location infra/cloudflare/sorita-edge
 npm ci --ignore-scripts
 npm run check
-npm audit --audit-level=high
 npm run dry-run:preview
 npm run dry-run:production
 Pop-Location
@@ -59,90 +138,91 @@ git diff --exit-code
 git status --porcelain=v1 --untracked-files=all
 ```
 
-Güvenli beklenen sonuç: her komut sıfır exit code ile biter; son iki Git komutu hiçbir değişiklik üretmez. Bu koşu hedef SHA, Node/CLI sürümü ve log checksum'larıyla [release evidence contract](../release-evidence/README.md) içine alınmalıdır. Mevcut kirli çalışma ağacında bu attestation üretilemez.
+Güvenli beklenen sonuç: her komut sıfır exit code ile biter; son iki Git komutu
+çıktı üretmez. CI logları ve artifact checksum'ları aynı candidate SHA ile
+release-evidence manifestine bağlanır. Full-history secret scan ve repository
+release gates de aynı SHA'da geçmeden yayın ilerlemez.
 
-## Veritabanı ve backend kapısı
+## Supabase kapısı
 
-İzole yerel ve CI kapıları:
+Yerel zero-reset/lint/pgTAP/dump-restore geçti. Bu, bağlı hosted projeye mutation
+yetkisi vermez. Sonraki zorunlu zincir:
 
-```powershell
-supabase start
-supabase db reset --local
-supabase db lint --local --level error
-supabase test db --local
-```
+1. Ayrı bir staging project ref'inin yetkili owner tarafından doğrulanması.
+2. Migration history/drift ve `db push --dry-run` review.
+3. Forward-only apply; eski ve yeni push RPC overload'larıyla kabul testi.
+4. Anon/user-A/user-B/blocked/service-role RLS/IDOR, Auth, Storage, push
+   scheduler/receipt, account deletion ve Edge Function testi.
+5. İzole hosted restore ve Storage object recovery.
+6. Ayrı production change approval; production reset kesinlikle yok.
 
-Dump/restore tatbikatının exact Linux komutları [database-validation.yml](../.github/workflows/database-validation.yml) içindedir. `supabase db reset --linked` üretim veya staging üzerinde çalıştırılmaz.
-
-Sonraki kapı, aynı migration setinin ayrı staging projesinde tek yetkili operatör tarafından uygulanması; migration listesi/drift, RLS/IDOR, Edge Function, Storage policy, auth e-posta/deep-link, push, hesap silme sagası, moderation ledger ve origin nonce akışının doğrulanmasıdır. 2026-08-30 çalışma ağacı migration'larının yerel veya staging çalıştırma kanıtı bulunmadığından backend `NO-GO`dur.
+Linked mevcut projenin staging olduğu kanıtlanmadığı için migration push'u
+yapılmamıştır. Hosted Supabase release kapısı `NO-GO`dur.
 
 ## Cloudflare kapısı
 
-Preview workflow; Worker check/audit/dry-run, korumalı environment değişkenleri, secrets-file ve `/health` no-store sözleşmesi tanımlar. Production workflow; aynı SHA Quality/Database/Preview run ID'lerini, önceki Worker version ID'sini ve açık production onayını zorunlu kılar; önce %5 canary açar ve sonraki %25/%50/%100 adımlarını manuel bırakır.
+Worker check ve dry-run başarılı olsa da aşağıdaki provider kanıtları yoktur:
 
-Bunların hiçbiri dashboard gerçeğini kanıtlamaz. Özellikle şu kanıtlar yoktur:
+- least-privilege account/token ve protected preview/production environment;
+- owned custom domain, DNS/TLS ve istenmeyen public route kapatma;
+- gerçek WAF/body/method/bot/cache/rate-limit kuralları ve sanitized export;
+- ortama özel secrets/bindings ve selected-origin HMAC parity;
+- enforcement açıkken missing/invalid/expired/replayed direct-origin negatif
+  testi ve doğru imzalı edge pozitif testi;
+- preview deploy, production canary, health/SLO hold ve last-good rollback.
 
-- Gerçek account/zone, least-privilege API token, custom domain/DNS/TLS ve `workers.dev` kararı.
-- WAF/body/method/bot/cache bypass kuralları ve alarmları.
-- Ortama özel Rate Limiting namespace/binding ve secret kurulumu.
-- Kaynakta tanımlı seçili beş Supabase origin için Worker HMAC, timestamp ve atomik nonce enforcement'ın migration/deploy/secret/flag kanıtı; required flag öncesi eski binary uyumluluğu/retirement kararı.
-- Enforcement açıkken direct-origin negatif/replay testi, preview deploy, canlı canary ve rollback tatbikatı.
+Provider deploy yapılmadı. Cloudflare production `NO-GO`dur.
 
-Ayrıntı [cloudflare-architecture.md](./cloudflare-architecture.md), [cloudflare-route-matrix.md](./cloudflare-route-matrix.md) ve [cloudflare-threat-model.md](./cloudflare-threat-model.md) içindedir. Cloudflare production: `NO-GO`.
+## OTA, binary ve cihaz kapısı
 
-## Binary, cihaz ve store kapısı
+Bu çalışma native/config ve version değişikliği içerdiğinden
+`NATIVE_BUILD_REQUIRED` sınıfındadır. Production OTA kullanılamaz. Sıra:
 
-Aynı source SHA/runtime için imzalı Android ve iOS preview/store binary kimlikleri saklanmalıdır. Aşağıdakiler iki platformda gerçek cihaz kanıtı ister:
+1. Temiz immutable candidate SHA ve aynı-SHA kalite/DB/Docker evidence.
+2. EAS Update code signing desteği için onaylı plan/kurumsal karar; private key
+   repo dışında, public certificate yeni binary'lerde.
+3. Provider'dan sorgulanarak doğrulanan Android `1.0.102`/107 ve iOS 87 build
+   identity/artifact'ları.
+4. Preview update; doğru/wrong runtime, signed/unsigned/tampered, embedded/offline
+   startup ve rollback testleri fiziksel Android+iOS cihazlarda.
+5. Play Internal Track/TestFlight install, push lifecycle, auth/deep link,
+   private media/upload, offline/outbox, accessibility ve performance matrisi.
+6. Yalnız tüm kanıtlar aynı SHA'da ise production %5 → %20 → %50 → %100
+   rollout; her adımda onay/hold ve otomatik rollback.
 
-- Auth cold/warm start, kayıt, doğrulama ve gerçek parola reset deep link'i.
-- Feed/explore/map/profile/liste/yorum/sosyal/notification akışları ve iki kullanıcı izolasyonu.
-- Foreground/background/terminated push yönlendirmesi.
-- Kamera, galeri, fotoğraf/video upload, private media, düşük depolama/bellek ve kesintili ağ.
-- Offline outbox, app kill/restart, kullanıcı değişimi ve token refresh yarışları.
-- Small/large screen, klavye, Dynamic Type, VoiceOver, TalkBack, kontrast ve reduced motion.
-- Cold/warm start, first content, navigation, scroll/frame, bellek ve batarya ölçümü.
+Mevcut EAS Free planı signed OTA'yı desteklemediği için 2. adım çözülmeden
+production OTA doğrudan `BLOCKED / NO-GO`dur.
 
-Sonra aynı binary Android Internal Track ve TestFlight'ta install/update/smoke testinden geçmelidir. Store privacy/data-safety, UGC report/block/moderation, hesap silme ve iletişim bilgisi beyanları gerçek uygulama davranışıyla karşılaştırılmalıdır. Bunların tümü `UNVERIFIED` ve `NO-GO`dur.
+## Operasyon ve store kapısı
 
-## OTA ve rollout kapısı
+- SLO/observability: [observability-slo-runbook.md](./observability-slo-runbook.md)
+- Hosted backup/PITR: [backup-restore-runbook.md](./backup-restore-runbook.md)
+- Güvenlik olayı: [security-incident-response.md](./security-incident-response.md)
+- Push incident/rotation: [push-incident-and-credential-rotation-runbook.md](./push-incident-and-credential-rotation-runbook.md)
+- Dış işlemler ve kanıt yolları: [MANUAL_STEPS.md](./MANUAL_STEPS.md)
 
-[ota-runtime-and-release.md](./ota-runtime-and-release.md) runtime/binary sözleşmesini, [ota-rollback-runbook.md](./ota-rollback-runbook.md) rollback yollarını tanımlar. Preview ve production workflow'larının bulunması yayın kanıtı değildir.
-
-Production OTA yalnız şu zincirden sonra değerlendirilebilir:
-
-1. Temiz immutable SHA.
-2. Aynı SHA için başarılı Quality ve Database run ID'leri.
-3. Aynı runtime/source SHA'ya bağlı imzalı Android+iOS binary evidence ve provider doğrulaması.
-4. `OTA_SAFE` sınıflandırması ve tam release gate.
-5. Preview update + iki platform gerçek cihaz smoke/rollback.
-6. Onaylı SLO sorguları ve alert routing.
-7. Production %5 canary; her aşamada ayrı onayla %20/%50/%100.
-
-Hold süreleri ve SLO sahipliği onaylanmamıştır; rakam uydurulamaz. Bunlar belirlenene kadar canary promotion `NO-GO`dur.
-
-## Operasyon ve gizlilik kapısı
-
-- SLO/observability: [observability-slo-runbook.md](./observability-slo-runbook.md).
-- Hosted backup/PITR ve restore: [backup-restore-runbook.md](./backup-restore-runbook.md).
-- Güvenlik olayı: [security-incident-response.md](./security-incident-response.md).
-- Admin panel olmadan mevcut moderasyon: [moderation-without-admin-panel.md](./moderation-without-admin-panel.md).
-- Tüm yetkili dış işlemler: [MANUAL_STEPS.md](./MANUAL_STEPS.md).
-
-Formal retention süreleri, provider log retention, olay paging sahibi, moderation SLA/appeal, backup RPO/RTO ve store beyan onayları yoktur. Sahip bilinmeyen her işlem `OWNER_TBD` olarak kalır.
+Provider owner'ları, ölçülmüş SLO/RPO/RTO, alert routing, store privacy/data
+safety/UGC ve moderation SLA/appeal kanıtları yoktur. Bunlar uydurulamaz.
 
 ## GO için asgari kanıt paketi
 
-`GO` ancak tek bir candidate SHA için aşağıdakilerin tamamı checksum-bound evidence manifest'inde bulunduğunda verilebilir:
+`GO` ancak tek bir immutable candidate SHA için aşağıdakilerin tamamı
+checksum-bound manifestte bulunduğunda verilebilir:
 
-1. Temiz repo + başarılı Quality, Database ve release evidence koşuları.
-2. Staging Supabase deploy/drift/RLS/Edge/Storage ve izole restore kanıtı.
-3. Legacy private-list cover audit; gerekiyorsa staging migration, owner/unrelated access, Storage backup ve rollback kanıtı.
-4. Cloudflare preview, HMAC direct-origin negatif test, dashboard export ve rollback kanıtı veya onaylı `direct` mod kararı.
-5. İmzalı Android/iOS binary provenance ve gerçek cihaz matrisi.
-6. Internal Track/TestFlight smoke, privacy/UGC/store checklist onayı.
-7. Sentry/provider event alımı, source map, dashboard, alert routing ve provisional SLO ölçüm raporu.
-8. Hosted backup/PITR uygunluğu, Storage object recovery ve restore tatbikatı.
-9. OTA preview, canary aşama onayları ve gerçek rollback.
-10. Açık kritik/yüksek güvenlik, veri kaybı, gizlilik veya kullanıcılar arası izolasyon bulgusunun olmaması.
+1. Clean repo; Quality, Database, Docker, Security ve Release Evidence başarılı
+   remote run kimlikleri.
+2. Staging Supabase deploy/drift/RLS/Edge/Storage/push ve hosted restore.
+3. Cloudflare preview, dashboard export, origin direct-negative/replay, canary ve
+   rollback.
+4. Provider-doğrulamalı signed Android+iOS binary ve code-signing chain.
+5. Android+iOS fiziksel cihaz matrisi, Internal Track/TestFlight smoke.
+6. Push credential/ticket/receipt/invalid-token/scheduler/alert kanıtı.
+7. Sentry source maps/events/alerts ve ölçülmüş SLO.
+8. Hosted DB/PITR ve private Storage recovery.
+9. OTA preview, signature negatifleri, staged rollout ve rollback.
+10. Store privacy/data-safety/UGC ve named owner approvals; açık kritik/yüksek
+    güvenlik, gizlilik, veri kaybı veya kullanıcılar arası izolasyon bulgusu yok.
 
-Bu paket mevcut değildir. 2026-08-30 nihai yayın kararı: `NO-GO`.
+Bu paket mevcut değildir. 2026-08-31 nihai release kararı: **`NO-GO`**.
+
+IMPLEMENTATION COMPLETE, RELEASE NO-GO UNTIL LISTED MANUAL/RUNTIME EVIDENCE IS ATTACHED TO THE SAME COMMIT SHA.

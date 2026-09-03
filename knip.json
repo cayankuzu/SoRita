@@ -20,7 +20,7 @@
   "ignoreDependencies": [
     "@react-native-community/datetimepicker",
     "babel-plugin-module-resolver",
-    "expo-updates",
+    "cloudflare",
     "expo-video-thumbnails",
     "jose",
     "npm"

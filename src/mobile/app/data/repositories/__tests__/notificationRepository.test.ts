@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const fetchNotificationsMock = vi.fn();
 const fetchNotificationsCursorPageMock = vi.fn();
 const eqMock = vi.fn();
+const limitMock = vi.fn();
+const selectMock = vi.fn();
 const updateMock = vi.fn();
 const fromMock = vi.fn();
 const rpcMock = vi.fn();
@@ -24,6 +26,8 @@ describe('notificationRepository', () => {
     fetchNotificationsMock.mockReset();
     fetchNotificationsCursorPageMock.mockReset();
     eqMock.mockReset();
+    limitMock.mockReset();
+    selectMock.mockReset();
     updateMock.mockReset();
     fromMock.mockReset();
     rpcMock.mockReset();
@@ -119,6 +123,86 @@ describe('notificationRepository', () => {
     expect(fromMock).toHaveBeenCalledWith('notifications');
     expect(updateMock).toHaveBeenCalledWith({ read: true });
     expect(eqMock).toHaveBeenCalledWith('id', 'notification-1');
+  });
+
+  it('resolves detailed push navigation only from the recipient-owned notification row', async () => {
+    const recipientEqMock = vi.fn().mockReturnValue({ limit: limitMock });
+    const idEqMock = vi.fn().mockReturnValue({ eq: recipientEqMock });
+    limitMock.mockResolvedValue({
+      data: [{
+        actor_user_id: '22222222-2222-4222-8222-222222222222',
+        id: '11111111-1111-4111-8111-111111111111',
+        list_id: '33333333-3333-4333-8333-333333333333',
+        list_place_id: '44444444-4444-4444-8444-444444444444',
+        recipient_user_id: 'viewer-1',
+        type: 'comment',
+      }],
+      error: null,
+    });
+    selectMock.mockReturnValue({ eq: idEqMock });
+    fromMock.mockReturnValue({ select: selectMock, update: updateMock });
+    const repository = await import('@/mobile/app/data/repositories/notificationRepository');
+
+    await expect(repository.getVerifiedPushNotificationTarget(
+      '11111111-1111-4111-8111-111111111111',
+      'viewer-1',
+    )).resolves.toEqual({
+      actorUserId: '22222222-2222-4222-8222-222222222222',
+      id: '11111111-1111-4111-8111-111111111111',
+      listId: '33333333-3333-4333-8333-333333333333',
+      placeId: '44444444-4444-4444-8444-444444444444',
+      recipientUserId: 'viewer-1',
+      type: 'comment',
+    });
+
+    expect(selectMock).toHaveBeenCalledWith(
+      'id, recipient_user_id, actor_user_id, type, list_id, list_place_id',
+    );
+    expect(idEqMock).toHaveBeenCalledWith('id', '11111111-1111-4111-8111-111111111111');
+    expect(recipientEqMock).toHaveBeenCalledWith('recipient_user_id', 'viewer-1');
+    expect(limitMock).toHaveBeenCalledWith(1);
+  });
+
+  it('refuses unknown notification types when resolving a push route', async () => {
+    const recipientEqMock = vi.fn().mockReturnValue({ limit: limitMock });
+    const idEqMock = vi.fn().mockReturnValue({ eq: recipientEqMock });
+    limitMock.mockResolvedValue({
+      data: [{
+        id: '11111111-1111-4111-8111-111111111111',
+        recipient_user_id: 'viewer-1',
+        type: 'untrusted_new_type',
+      }],
+      error: null,
+    });
+    selectMock.mockReturnValue({ eq: idEqMock });
+    fromMock.mockReturnValue({ select: selectMock, update: updateMock });
+    const repository = await import('@/mobile/app/data/repositories/notificationRepository');
+
+    await expect(repository.getVerifiedPushNotificationTarget(
+      '11111111-1111-4111-8111-111111111111',
+      'viewer-1',
+    )).resolves.toBeNull();
+  });
+
+  it('fails closed if a returned notification row belongs to another recipient', async () => {
+    const recipientEqMock = vi.fn().mockReturnValue({ limit: limitMock });
+    const idEqMock = vi.fn().mockReturnValue({ eq: recipientEqMock });
+    limitMock.mockResolvedValue({
+      data: [{
+        id: '11111111-1111-4111-8111-111111111111',
+        recipient_user_id: 'another-viewer',
+        type: 'comment',
+      }],
+      error: null,
+    });
+    selectMock.mockReturnValue({ eq: idEqMock });
+    fromMock.mockReturnValue({ select: selectMock, update: updateMock });
+    const repository = await import('@/mobile/app/data/repositories/notificationRepository');
+
+    await expect(repository.getVerifiedPushNotificationTarget(
+      '11111111-1111-4111-8111-111111111111',
+      'viewer-1',
+    )).resolves.toBeNull();
   });
 
   it('propagates notification update failures', async () => {

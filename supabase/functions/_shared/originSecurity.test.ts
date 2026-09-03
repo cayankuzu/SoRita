@@ -136,4 +136,93 @@ describe('trusted Cloudflare origin security', () => {
     });
     expect(unavailable).toMatchObject({ ok: false, status: 500 });
   });
+
+  it('refuses to verify a function that is not on the trusted edge list', async () => {
+    const request = await signedRequest();
+
+    // Enforcement on: an untrusted function name is a configuration fault.
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc: vi.fn() },
+      bodyText,
+      config: { required: true, secret },
+      functionName: 'not-a-trusted-function',
+      nowMs,
+      request,
+    })).resolves.toMatchObject({ ok: false, status: 500 });
+
+    // Enforcement off: the same request is simply an invalid signature.
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc: vi.fn() },
+      bodyText,
+      config: { required: false, secret },
+      functionName: 'not-a-trusted-function',
+      nowMs,
+      request,
+    })).resolves.toMatchObject({ ok: false, status: 401 });
+  });
+
+  it('refuses to verify with a secret shorter than the minimum length', async () => {
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc: vi.fn() },
+      bodyText,
+      config: { required: true, secret: 'too-short' },
+      functionName,
+      nowMs,
+      request: await signedRequest(),
+    })).resolves.toMatchObject({ ok: false, status: 500 });
+  });
+
+  it('fails closed when any signed header is absent', async () => {
+    for (const header of [
+      'x-sorita-edge-timestamp',
+      'x-sorita-edge-nonce',
+      'x-sorita-edge-body-sha256',
+      'x-sorita-edge-signature',
+    ]) {
+      const request = await signedRequest();
+      request.headers.delete(header);
+
+      await expect(verifyTrustedEdgeOrigin({
+        adminClient: { rpc: vi.fn() },
+        bodyText,
+        config: { required: true, secret },
+        functionName,
+        nowMs,
+        request,
+      })).resolves.toMatchObject({ ok: false, status: 401 });
+    }
+  });
+
+  it('fails closed when replay protection is unreachable or answers with a non-boolean', async () => {
+    // No rpc surface at all: replay protection cannot run, so refuse.
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: {},
+      bodyText,
+      config: { required: true, secret },
+      functionName,
+      nowMs,
+      request: await signedRequest(),
+    })).resolves.toMatchObject({ ok: false, status: 500 });
+
+    // An unexpected payload shape must never be read as a successful claim.
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc: vi.fn().mockResolvedValue({ data: 'yes', error: null }) },
+      bodyText,
+      config: { required: true, secret },
+      functionName,
+      nowMs,
+      request: await signedRequest(),
+    })).resolves.toMatchObject({ ok: false, status: 500 });
+  });
+
+  it('accepts a single-row array claim result from the nonce store', async () => {
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc: vi.fn().mockResolvedValue({ data: [true], error: null }) },
+      bodyText,
+      config: { required: true, secret },
+      functionName,
+      nowMs,
+      request: await signedRequest(),
+    })).resolves.toEqual({ mode: 'cloudflare', ok: true });
+  });
 });

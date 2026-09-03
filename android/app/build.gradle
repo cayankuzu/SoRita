@@ -85,6 +85,23 @@ def resolveGoogleMapsApiKey = {
     ).toString().trim()
 }
 
+def resolveReleaseExpoUpdatesChannel = {
+    def candidate = (
+        System.getenv('EAS_BUILD_PROFILE') ?:
+        findProperty('soritaExpoUpdatesChannel') ?:
+        'production'
+    ).toString().trim().toLowerCase(Locale.ROOT)
+    def allowedChannels = ['development', 'preview', 'production'] as Set
+
+    if (!allowedChannels.contains(candidate)) {
+        throw new GradleException(
+            "Invalid Expo updates channel '${candidate}'. Expected development, preview, or production."
+        )
+    }
+
+    return candidate
+}
+
 def formatSha1 = { byte[] bytes ->
     bytes.collect { byte value -> String.format('%02X', value & 0xFF) }.join(':')
 }
@@ -266,9 +283,10 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 106
-        versionName "1.0.101"
+        versionCode 107
+        versionName "1.0.102"
         manifestPlaceholders = [
+            expoUpdatesChannel: "development",
             googleMapsApiKey: resolveGoogleMapsApiKey()
         ]
 
@@ -304,6 +322,11 @@ android {
         }
         release {
             buildConfigField "boolean", "USE_METRO", "false"
+            // EAS preview and production both compile the release variant. Do
+            // not collapse preview onto the production OTA channel. Local
+            // bundleRelease remains production unless an explicit, allowlisted
+            // -PsoritaExpoUpdatesChannel value is supplied.
+            manifestPlaceholders.expoUpdatesChannel = resolveReleaseExpoUpdatesChannel()
             if (resolveReleaseStoreFile() == null || !resolveReleaseStoreFile().exists()) {
                 throw new GradleException("Release signing config is missing. Create android/keystore.properties before building release.")
             }

@@ -7,6 +7,7 @@ import {
   jsonResponse,
   parseJsonBody,
 } from '../_shared/httpHelpers.ts';
+import { readBoundedRequestBody, sha256Hex } from '../_shared/requestSecurity.ts';
 
 type BroadcastRequestPayload = {
   dryRun?: boolean;
@@ -22,6 +23,7 @@ type BroadcastNotificationRepository = {
     idempotencyKey: string;
     message: string;
     pushTitle: string;
+    requestHash: string;
     recipientUserIds: string[];
   }) => Promise<number>;
 };
@@ -36,6 +38,11 @@ type AdminBroadcastNotificationHandlerConfig = {
 type AdminBroadcastNotificationHandlerDeps = {
   config: AdminBroadcastNotificationHandlerConfig;
   createRequestId?: () => string;
+  enforcePreAuthAbuseRateLimit: (request: Request) => Promise<{
+    allowed: boolean;
+    remaining: number;
+    retryAfterMs?: number;
+  }>;
   enforceAdminRateLimit: () => Promise<{
     allowed: boolean;
     remaining: number;
@@ -45,6 +52,7 @@ type AdminBroadcastNotificationHandlerDeps = {
 };
 
 const allowedOriginsFallback = '';
+const MAX_ADMIN_BROADCAST_BODY_BYTES = 16 * 1024;
 
 const requestBodySchema = z.object({
   dryRun: z.boolean().optional(),
@@ -83,12 +91,52 @@ function timingSafeEqual(left: string, right: string) {
   return diff === 0;
 }
 
+export function serializeCanonicalBroadcastRequest(params: {
+  message: string;
+  recipientUserIds: string[];
+  title: string;
+}) {
+  return JSON.stringify({
+    message: params.message,
+    recipientUserIds: Array.from(new Set(params.recipientUserIds)).sort(),
+    title: params.title,
+    version: 1,
+  });
+}
+
+function rateLimitResponse(params: {
+  allowedOrigins: string[];
+  code: string;
+  error: string;
+  rateLimit: { remaining: number; retryAfterMs?: number };
+  request: Request;
+  requestId: string;
+}) {
+  return jsonResponse(
+    params.request,
+    params.allowedOrigins,
+    429,
+    { code: params.code, error: params.error },
+    {
+      requestId: params.requestId,
+      extraHeaders: {
+        'Retry-After': Math.max(
+          1,
+          Math.ceil((params.rateLimit.retryAfterMs ?? 60_000) / 1000),
+        ).toString(),
+        'X-RateLimit-Remaining': params.rateLimit.remaining.toString(),
+      },
+    },
+  );
+}
+
 export function createAdminBroadcastNotificationHandler({
   config,
   createRequestId = () =>
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
       : `admin-broadcast-${Date.now()}`,
+  enforcePreAuthAbuseRateLimit,
   enforceAdminRateLimit,
   repository,
 }: AdminBroadcastNotificationHandlerDeps) {
@@ -126,41 +174,60 @@ export function createAdminBroadcastNotificationHandler({
       );
     }
 
-    const token = request.headers.get('x-admin-token')?.trim() ?? '';
-
-    if (!token || !timingSafeEqual(token, config.adminToken)) {
-      return jsonResponse(
-        request,
-        normalizedAllowedOrigins,
-        401,
-        { code: 'unauthorized', error: 'Unauthorized' },
-        { requestId },
-      );
-    }
-
     try {
-      const rateLimit = await enforceAdminRateLimit();
+      // This database-backed limiter executes before the admin token is
+      // inspected. Invalid token guessing cannot bypass the atomic abuse cap.
+      const preAuthRateLimit = await enforcePreAuthAbuseRateLimit(request);
 
-      if (!rateLimit.allowed) {
+      if (!preAuthRateLimit.allowed) {
+        return rateLimitResponse({
+          allowedOrigins: normalizedAllowedOrigins,
+          code: 'abuse_limited',
+          error: 'Too many requests',
+          rateLimit: preAuthRateLimit,
+          request,
+          requestId,
+        });
+      }
+
+      const token = request.headers.get('x-admin-token')?.trim() ?? '';
+
+      if (!token || !timingSafeEqual(token, config.adminToken)) {
         return jsonResponse(
           request,
           normalizedAllowedOrigins,
-          429,
-          { code: 'rate_limited', error: 'Too many broadcast requests' },
-          {
-            requestId,
-            extraHeaders: {
-              'Retry-After': Math.max(
-                1,
-                Math.ceil((rateLimit.retryAfterMs ?? 60_000) / 1000),
-              ).toString(),
-              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-            },
-          },
+          401,
+          { code: 'unauthorized', error: 'Unauthorized' },
+          { requestId },
         );
       }
 
-      const parsedPayload = requestBodySchema.safeParse(parseJsonBody(await request.text(), {}));
+      const rateLimit = await enforceAdminRateLimit();
+
+      if (!rateLimit.allowed) {
+        return rateLimitResponse({
+          allowedOrigins: normalizedAllowedOrigins,
+          code: 'rate_limited',
+          error: 'Too many broadcast requests',
+          rateLimit,
+          request,
+          requestId,
+        });
+      }
+
+      const bodyResult = await readBoundedRequestBody(request, MAX_ADMIN_BROADCAST_BODY_BYTES);
+
+      if (!bodyResult.ok) {
+        return jsonResponse(
+          request,
+          normalizedAllowedOrigins,
+          bodyResult.status,
+          { code: 'invalid_request_body', error: bodyResult.error },
+          { requestId },
+        );
+      }
+
+      const parsedPayload = requestBodySchema.safeParse(parseJsonBody(bodyResult.bodyText, {}));
 
       if (!parsedPayload.success) {
         return jsonResponse(
@@ -190,7 +257,7 @@ export function createAdminBroadcastNotificationHandler({
         );
       }
 
-      const recipientUserIds = await repository.fetchRecipientUserIds(payload.userIds);
+      const recipientUserIds = (await repository.fetchRecipientUserIds(payload.userIds)).sort();
 
       if (payload.dryRun) {
         return jsonResponse(
@@ -207,25 +274,16 @@ export function createAdminBroadcastNotificationHandler({
         );
       }
 
-      if (recipientUserIds.length === 0) {
-        return jsonResponse(
-          request,
-          normalizedAllowedOrigins,
-          200,
-          {
-            dryRun: false,
-            insertedCount: 0,
-            recipientCount: 0,
-            success: true,
-          },
-          { requestId },
-        );
-      }
-
+      const requestHash = await sha256Hex(serializeCanonicalBroadcastRequest({
+        message: payload.message,
+        recipientUserIds,
+        title: payload.title,
+      }));
       const insertedCount = await repository.insertNotifications({
         idempotencyKey: payload.idempotencyKey as string,
         message: payload.message,
         pushTitle: payload.title,
+        requestHash,
         recipientUserIds,
       });
 
@@ -254,7 +312,7 @@ export function createAdminBroadcastNotificationHandler({
       }
 
       logEdgeEvent('error', 'Unhandled admin-broadcast-notification error', requestContext, {
-        error: error instanceof Error ? error.message : 'Unknown admin broadcast error',
+        failure: error instanceof Error ? error.name : 'unknown',
       });
 
       return jsonResponse(

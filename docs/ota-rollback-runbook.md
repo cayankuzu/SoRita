@@ -1,6 +1,6 @@
 # SoRita OTA And Edge Rollback Runbook
 
-Last command verification: 2026-08-30 against the official EAS CLI reference and the repository's
+Last command verification: 2026-08-31 against the official EAS CLI reference and the repository's
 locked Wrangler `4.127.1` help output. No provider command in this runbook has been executed.
 
 > **Operational status: NO-GO / UNVERIFIED.** Provider dashboards, deployed versions, signed
@@ -103,7 +103,7 @@ eas update:roll-back-to-embedded \
   --platform all --json --non-interactive
 ```
 
-For the currently configured binary generation, the expected runtime is `1.0.101`; never substitute
+For the currently configured binary generation, the expected runtime is `1.0.102`; never substitute
 that value blindly for older installed binaries. If Android and iOS have different verified runtime
 or embedded-state evidence, contain each platform separately with `--platform android` or
 `--platform ios`.
@@ -222,7 +222,7 @@ Keep the release frozen until all applicable evidence is retained:
 | --- | --- | --- |
 | EAS/Cloudflare provider dashboards and current production IDs | **UNVERIFIED** | **NO-GO** |
 | Signed Android/iOS artifact hashes and provenance | **UNVERIFIED** | **NO-GO** |
-| EAS Update code-signing certificate/private-key chain | **UNVERIFIED / not claimed** | **NO-GO for signed-update claims** |
+| EAS Update code-signing certificate/private-key chain | **BLOCKED on current Free plan / not claimed** | **NO-GO for production signed OTA** |
 | Physical Android/iOS rollback and cold-start behavior | **UNVERIFIED** | **NO-GO** |
 | Cloudflare production route, binding, secret, and version state | **UNVERIFIED** | **NO-GO** |
 | Sentry/EAS/Cloudflare/Supabase alert and SLO recovery | **UNVERIFIED** | **NO-GO** |

@@ -47,7 +47,6 @@ type KidMissState = {
 };
 
 const jwksCache = new Map<string, JwksCacheEntry>();
-const jwksRefreshes = new Map<string, Promise<Jwks>>();
 const kidMissStates = new Map<string, KidMissState>();
 
 export type FetchFunction = typeof fetch;
@@ -201,10 +200,13 @@ async function fetchJwks(params: {
 }
 
 function cacheJwks(cacheKey: string, jwks: Jwks, nowMs: number): Jwks {
+  // Only resolved, structured-cloneable key data may cross request boundaries.
+  // Never cache a fetch/Response/stream/Promise created by another invocation.
+  const cachedJwks = structuredClone(jwks);
   jwksCache.delete(cacheKey);
   jwksCache.set(cacheKey, {
     freshUntilMs: nowMs + JWKS_FRESH_TTL_MS,
-    jwks,
+    jwks: cachedJwks,
     staleUntilMs: nowMs + JWKS_FRESH_TTL_MS + JWKS_STALE_GRACE_MS,
   });
 
@@ -219,7 +221,7 @@ function cacheJwks(cacheKey: string, jwks: Jwks, nowMs: number): Jwks {
     kidMissStates.delete(oldestKey);
   }
 
-  return jwks;
+  return cachedJwks;
 }
 
 function readCachedJwks(cacheKey: string): JwksCacheEntry | undefined {
@@ -237,38 +239,22 @@ function containsKeyId(jwks: Jwks, kid: string | undefined): boolean {
   return kid === undefined || jwks.keys.some((key) => key.kid === kid);
 }
 
-function refreshJwksSingleFlight(params: {
+async function refreshJwks(params: {
   cacheKey: string;
   fetchFunction: FetchFunction;
   jwksUrl: URL;
   nowMs: number;
   timeoutMs: number;
 }): Promise<Jwks> {
-  const existing = jwksRefreshes.get(params.cacheKey);
-
-  if (existing) {
-    return existing;
-  }
-
-  const pending = fetchJwks({
+  // A fetch Promise belongs to the request that created it. Concurrent Worker
+  // invocations intentionally perform independent refreshes instead of sharing
+  // request-scoped I/O through module state.
+  const jwks = await fetchJwks({
     fetchFunction: params.fetchFunction,
     jwksUrl: params.jwksUrl,
     timeoutMs: params.timeoutMs,
-  }).then((jwks) => cacheJwks(params.cacheKey, jwks, params.nowMs));
-  jwksRefreshes.set(params.cacheKey, pending);
-  void pending.then(
-    () => {
-      if (jwksRefreshes.get(params.cacheKey) === pending) {
-        jwksRefreshes.delete(params.cacheKey);
-      }
-    },
-    () => {
-      if (jwksRefreshes.get(params.cacheKey) === pending) {
-        jwksRefreshes.delete(params.cacheKey);
-      }
-    },
-  );
-  return pending;
+  });
+  return cacheJwks(params.cacheKey, jwks, params.nowMs);
 }
 
 function readKidMissState(cacheKey: string): KidMissState {
@@ -350,27 +336,6 @@ async function resolveKidMiss(params: {
   timeoutMs: number;
 }): Promise<Jwks> {
   const state = readKidMissState(params.cacheKey);
-  const inFlight = jwksRefreshes.get(params.cacheKey);
-
-  if (inFlight) {
-    try {
-      const jwks = await inFlight;
-
-      if (containsKeyId(jwks, params.kid)) {
-        return jwks;
-      }
-
-      rememberKidMiss(state, params.kid, params.nowMs, 'invalid');
-      throw new InvalidJwtError();
-    } catch (error) {
-      if (error instanceof InvalidJwtError) {
-        throw error;
-      }
-
-      rememberKidMiss(state, params.kid, params.nowMs, 'unavailable');
-      throw new JwtVerifierUnavailableError();
-    }
-  }
 
   if (params.nowMs < state.refreshNotBeforeMs) {
     const outcome = state.negativeKids.get(params.kid) ?? state.lastOutcome;
@@ -379,10 +344,9 @@ async function resolveKidMiss(params: {
   }
 
   state.negativeKids.clear();
-  state.refreshNotBeforeMs = params.nowMs + KID_MISS_REFRESH_COOLDOWN_MS;
 
   try {
-    const jwks = await refreshJwksSingleFlight(params);
+    const jwks = await refreshJwks(params);
 
     if (containsKeyId(jwks, params.kid)) {
       state.refreshNotBeforeMs = 0;
@@ -421,7 +385,7 @@ async function resolveJwks(params: {
   }
 
   try {
-    return await refreshJwksSingleFlight(params);
+    return await refreshJwks(params);
   } catch (error) {
     if (
       error instanceof JwtVerifierUnavailableError &&
@@ -508,7 +472,6 @@ export async function verifySupabaseJwt(params: {
 export const securityTestInternals = {
   clearJwksCache(): void {
     jwksCache.clear();
-    jwksRefreshes.clear();
     kidMissStates.clear();
   },
   getJwksCacheSize(): number {

@@ -16,11 +16,11 @@ describe('publicRuntimeConfigSchema', () => {
 
   it('accepts and normalizes explicit gateway configuration', () => {
     expect(publicRuntimeConfigSchema.parse({
-      edgeApiUrl: ' https://api.example.com/base/// ',
+      edgeApiUrl: ' https://api.example.com/ ',
       edgeCutoverMode: ' GATEWAY ',
       releaseEnvironment: ' PREVIEW ',
     })).toEqual({
-      edgeApiUrl: 'https://api.example.com/base',
+      edgeApiUrl: 'https://api.example.com',
       edgeCutoverMode: 'gateway',
       releaseEnvironment: 'preview',
     });
@@ -31,6 +31,7 @@ describe('publicRuntimeConfigSchema', () => {
     'https://user:password@api.example.com',
     'https://api.example.com?secret=value',
     'https://api.example.com/#fragment',
+    'https://api.example.com/edge',
     'not-a-url',
   ])('rejects an unsafe gateway base URL: %s', (edgeApiUrl) => {
     const result = publicRuntimeConfigSchema.safeParse({

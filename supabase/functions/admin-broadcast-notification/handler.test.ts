@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createAdminBroadcastNotificationHandler } from './handler';
+import {
+  createAdminBroadcastNotificationHandler,
+  serializeCanonicalBroadcastRequest,
+} from './handler';
+import { HttpRequestError } from '../_shared/httpHelpers';
 
 const IDEMPOTENCY_KEY = '00000000-0000-4000-8000-000000000001';
 
@@ -16,6 +20,10 @@ function createDeps(options?: {
     allowed: true,
     remaining: 4,
   });
+  const enforcePreAuthAbuseRateLimit = vi.fn().mockResolvedValue({
+    allowed: true,
+    remaining: 19,
+  });
 
   const handler = createAdminBroadcastNotificationHandler({
     config: {
@@ -25,6 +33,7 @@ function createDeps(options?: {
       supabaseUrl: 'https://example.supabase.co',
     },
     enforceAdminRateLimit,
+    enforcePreAuthAbuseRateLimit,
     repository: {
       fetchRecipientUserIds,
       insertNotifications,
@@ -34,6 +43,7 @@ function createDeps(options?: {
   return {
     fetchRecipientUserIds,
     enforceAdminRateLimit,
+    enforcePreAuthAbuseRateLimit,
     handler,
     insertNotifications,
     token: options?.invalidToken ? 'wrong-token' : 'secret-token',
@@ -41,8 +51,20 @@ function createDeps(options?: {
 }
 
 describe('admin-broadcast-notification handler', () => {
-  it('rejects missing or invalid authorization', async () => {
-    const { handler } = createDeps();
+  it('canonicalizes a resolved audience before idempotency hashing', () => {
+    expect(serializeCanonicalBroadcastRequest({
+      message: 'Body',
+      recipientUserIds: ['user-b', 'user-a', 'user-b'],
+      title: 'Title',
+    })).toBe(serializeCanonicalBroadcastRequest({
+      message: 'Body',
+      recipientUserIds: ['user-a', 'user-b'],
+      title: 'Title',
+    }));
+  });
+
+  it('rejects missing or invalid authorization after the pre-auth abuse guard', async () => {
+    const { enforceAdminRateLimit, enforcePreAuthAbuseRateLimit, handler } = createDeps();
 
     const missingAuthResponse = await handler(
       new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
@@ -70,6 +92,8 @@ describe('admin-broadcast-notification handler', () => {
     );
 
     expect(invalidAuthResponse.status).toBe(401);
+    expect(enforcePreAuthAbuseRateLimit).toHaveBeenCalledTimes(2);
+    expect(enforceAdminRateLimit).not.toHaveBeenCalled();
   });
 
   it('returns recipient counts in dry-run mode without inserting notifications', async () => {
@@ -133,6 +157,7 @@ describe('admin-broadcast-notification handler', () => {
       idempotencyKey: IDEMPOTENCY_KEY,
       message: 'Yeni guncelleme geldi.',
       pushTitle: 'SoRita duyuru',
+      requestHash: expect.stringMatching(/^[a-f0-9]{64}$/u),
       recipientUserIds: ['user-1', 'user-2'],
     });
   });
@@ -189,6 +214,33 @@ describe('admin-broadcast-notification handler', () => {
     expect(fetchRecipientUserIds).not.toHaveBeenCalled();
   });
 
+  it('rate limits token guessing before admin-token verification', async () => {
+    const {
+      enforceAdminRateLimit,
+      enforcePreAuthAbuseRateLimit,
+      fetchRecipientUserIds,
+      handler,
+    } = createDeps();
+    enforcePreAuthAbuseRateLimit.mockResolvedValue({
+      allowed: false,
+      remaining: 0,
+      retryAfterMs: 2_500,
+    });
+
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': 'incorrect-token' },
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toMatchObject({ code: 'abuse_limited' });
+    expect(response.headers.get('retry-after')).toBe('3');
+    expect(enforceAdminRateLimit).not.toHaveBeenCalled();
+    expect(fetchRecipientUserIds).not.toHaveBeenCalled();
+  });
+
   it('uses safe retry-after bounds when the limiter omits or zeroes its delay', async () => {
     const { enforceAdminRateLimit, handler, token } = createDeps();
 
@@ -215,7 +267,7 @@ describe('admin-broadcast-notification handler', () => {
     const endpoint = 'https://example.supabase.co/functions/v1/admin-broadcast-notification';
     const repository = {
       fetchRecipientUserIds: vi.fn().mockResolvedValue([]),
-      insertNotifications: vi.fn(),
+      insertNotifications: vi.fn().mockResolvedValue(0),
     };
     const createHandler = (configOverrides: Partial<{
       adminToken: string;
@@ -229,6 +281,7 @@ describe('admin-broadcast-notification handler', () => {
       },
       createRequestId: () => 'request-id',
       enforceAdminRateLimit: async () => ({ allowed: true, remaining: 4 }),
+      enforcePreAuthAbuseRateLimit: async () => ({ allowed: true, remaining: 19 }),
       repository,
     });
 
@@ -289,6 +342,13 @@ describe('admin-broadcast-notification handler', () => {
     expect(repository.fetchRecipientUserIds).toHaveBeenLastCalledWith([
       '550e8400-e29b-41d4-a716-446655440000',
     ]);
+    expect(repository.insertNotifications).toHaveBeenCalledWith({
+      idempotencyKey: IDEMPOTENCY_KEY,
+      message: 'Body',
+      pushTitle: 'Title',
+      requestHash: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      recipientUserIds: [],
+    });
 
     repository.fetchRecipientUserIds.mockRejectedValueOnce(new Error('repository failed'));
     const errorResponse = await handler(new Request(endpoint, {
@@ -305,6 +365,42 @@ describe('admin-broadcast-notification handler', () => {
     }));
     await expect(unknownErrorResponse.json()).resolves.toMatchObject({
       error: 'Internal server error',
+    });
+  });
+
+  it('bounds request bodies and returns a conflict for canonical request mismatches', async () => {
+    const { handler, insertNotifications, token } = createDeps();
+    const endpoint = 'https://example.supabase.co/functions/v1/admin-broadcast-notification';
+    const oversized = JSON.stringify({
+      idempotencyKey: IDEMPOTENCY_KEY,
+      message: 'x'.repeat(17_000),
+      title: 'Title',
+    });
+
+    const oversizedResponse = await handler(new Request(endpoint, {
+      method: 'POST',
+      headers: { 'content-length': String(oversized.length), 'x-admin-token': token },
+      body: oversized,
+    }));
+    expect(oversizedResponse.status).toBe(413);
+
+    insertNotifications.mockRejectedValueOnce(new HttpRequestError(
+      409,
+      'idempotency_key_payload_mismatch',
+      'The idempotency key was already used for a different broadcast request.',
+    ));
+    const mismatchResponse = await handler(new Request(endpoint, {
+      method: 'POST',
+      headers: { 'x-admin-token': token },
+      body: JSON.stringify({
+        idempotencyKey: IDEMPOTENCY_KEY,
+        message: 'Body',
+        title: 'Title',
+      }),
+    }));
+    expect(mismatchResponse.status).toBe(409);
+    await expect(mismatchResponse.json()).resolves.toMatchObject({
+      code: 'idempotency_key_payload_mismatch',
     });
   });
 });

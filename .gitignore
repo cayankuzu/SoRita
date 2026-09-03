@@ -22,6 +22,8 @@ credentials/
 *.p8
 *.p12
 *.mobileprovision
+AuthKey_*.p8
+.eas-submit/
 *service-account*.json
 *firebase-admin*.json
 *.aab
@@ -41,6 +43,7 @@ docs/*
 !docs/offline-and-concurrency-contract.md
 !docs/ota-runtime-and-release.md
 !docs/ota-rollback-runbook.md
+!docs/eas-credential-portability.md
 !docs/cloudflare-architecture.md
 !docs/cloudflare-route-matrix.md
 !docs/cloudflare-threat-model.md
@@ -51,6 +54,11 @@ docs/*
 !docs/moderation-without-admin-panel.md
 !docs/MANUAL_STEPS.md
 !docs/aaa-mvp-final-report.md
+!docs/push-current-contract.md
+!docs/push-provider-and-token-lifecycle.md
+!docs/push-outbox-retry-receipt-dlq.md
+!docs/push-real-device-matrix.md
+!docs/push-incident-and-credential-rotation-runbook.md
 !docs/data-retention.md
 !docs/release-readiness.md
 !docs/release-rollback-checklist.md

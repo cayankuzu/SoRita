@@ -1080,6 +1080,7 @@ export const tr = {
       accepted: 'Onaylandı',
       rejected: 'Reddedildi',
     },
+    systemPushFallbackBody: 'Yeni sistem bildirimi',
     title: 'Bildirimler',
     channelName: 'SoRita anlık bildirimleri',
     channelDescription:

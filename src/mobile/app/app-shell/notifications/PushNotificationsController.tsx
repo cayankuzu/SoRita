@@ -3,24 +3,20 @@ import { AppState } from 'react-native';
 import type { InfiniteData } from '@tanstack/react-query';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
-import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { isInfiniteData } from '@/mobile/app/data/query/queryDataHelpers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
-import {
-  ensureAndroidPushChannel,
-  registerDevicePushToken,
-  registerPushNotifications,
-  unregisterPushNotifications,
-} from '@/mobile/app/data/repositories/pushNotificationRepository';
+import { ensureAndroidPushChannel } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import {
   getNotificationsPage,
-  markNotificationRead,
   type MobileNotification,
 } from '@/mobile/app/data/repositories/notificationRepository';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
+import { normalizePushPayload } from '@/mobile/app/app-shell/notifications/pushNavigation';
+import { usePushRegistration } from '@/mobile/app/app-shell/notifications/usePushRegistration';
+import { useVerifiedPushTapNavigation } from '@/mobile/app/app-shell/notifications/useVerifiedPushTapNavigation';
 
 async function loadNotificationsModule() {
   return import('expo-notifications');
@@ -31,7 +27,6 @@ const NOTIFICATIONS_SYNC_PAGE_SIZE = 20;
 const NOTIFICATION_EVENT_DEDUPE_MS = 8000;
 const NOTIFICATION_SYNC_DEDUPE_MS = 1200;
 const REALTIME_BACKOFF_MS = [5000, 15000, 30000, 60000, 300000] as const;
-const PUSH_REGISTRATION_RETRY_MS = [5000, 15000, 60000, 300000] as const;
 
 export async function ensureForegroundNotificationPresentation() {
   if (!notificationRuntime.supportsNotificationObservers) {
@@ -56,24 +51,6 @@ export async function ensureForegroundNotificationPresentation() {
   }
 
   await notificationPresentationPromise;
-}
-
-type PushPayload = {
-  notificationId?: string;
-  type?: string;
-  userId?: string;
-  listId?: string;
-  placeId?: string;
-};
-
-function normalizePushPayload(data: Record<string, unknown> | undefined): PushPayload {
-  return {
-    notificationId: typeof data?.notificationId === 'string' ? data.notificationId : undefined,
-    type: typeof data?.type === 'string' ? data.type : undefined,
-    userId: typeof data?.userId === 'string' ? data.userId : undefined,
-    listId: typeof data?.listId === 'string' ? data.listId : undefined,
-    placeId: typeof data?.placeId === 'string' ? data.placeId : undefined,
-  };
 }
 
 function buildNotificationQueryKey(userId: string) {
@@ -203,44 +180,12 @@ function useNotificationsRealtimeSubscription(params: {
 
 export function PushNotificationsController() {
   const { booted, user } = useAuth();
-  const registeredTokenRef = useRef<string | null>(null);
-  const registeredUserIdRef = useRef<string | null>(null);
-  const registrationInFlightUserIdRef = useRef<string | null>(null);
-  const registrationRetryAttemptRef = useRef(0);
-  const registrationRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastHandledNotificationIdRef = useRef<string | null>(null);
+  const userId = user?.id;
   const lastHydrateAtRef = useRef(0);
   const recentNotificationEventsRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     void ensureForegroundNotificationPresentation();
-  }, []);
-
-  const clearRegistrationRetry = useCallback(() => {
-    if (registrationRetryTimeoutRef.current) {
-      clearTimeout(registrationRetryTimeoutRef.current);
-      registrationRetryTimeoutRef.current = null;
-    }
-  }, []);
-
-  const scheduleRegistrationRetry = useCallback((retry: () => void) => {
-    if (registrationRetryTimeoutRef.current) {
-      return;
-    }
-
-    const attempt = registrationRetryAttemptRef.current;
-    const delay = PUSH_REGISTRATION_RETRY_MS[
-      Math.min(attempt, PUSH_REGISTRATION_RETRY_MS.length - 1)
-    ];
-
-    registrationRetryAttemptRef.current = Math.min(
-      attempt + 1,
-      PUSH_REGISTRATION_RETRY_MS.length - 1,
-    );
-    registrationRetryTimeoutRef.current = setTimeout(() => {
-      registrationRetryTimeoutRef.current = null;
-      retry();
-    }, delay);
   }, []);
 
   const hydrateLatestNotifications = useCallback(async (
@@ -286,108 +231,11 @@ export function PushNotificationsController() {
   useNotificationsRealtimeSubscription({
     booted,
     hydrateLatestNotifications,
-    userId: user?.id,
+    userId,
   });
 
-  const syncPushRegistration = useCallback(async function syncPushRegistration() {
-    if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
-      return;
-    }
-
-    if (!user) {
-      clearRegistrationRetry();
-      registrationRetryAttemptRef.current = 0;
-      registeredTokenRef.current = null;
-      registeredUserIdRef.current = null;
-      registrationInFlightUserIdRef.current = null;
-      return;
-    }
-
-    if (
-      registeredUserIdRef.current === user.id ||
-      registrationInFlightUserIdRef.current === user.id
-    ) {
-      return;
-    }
-
-    try {
-      registrationInFlightUserIdRef.current = user.id;
-      const nextToken = await registerPushNotifications(user.id);
-
-      if (nextToken) {
-        clearRegistrationRetry();
-        registrationRetryAttemptRef.current = 0;
-        registeredTokenRef.current = nextToken;
-        registeredUserIdRef.current = user.id;
-      } else {
-        scheduleRegistrationRetry(() => {
-          void syncPushRegistration();
-        });
-      }
-    } catch (error) {
-      logger.warn('push', 'Push registration failed', error);
-      scheduleRegistrationRetry(() => {
-        void syncPushRegistration();
-      });
-    } finally {
-      if (registrationInFlightUserIdRef.current === user.id) {
-        registrationInFlightUserIdRef.current = null;
-      }
-    }
-  }, [booted, clearRegistrationRetry, scheduleRegistrationRetry, user]);
-
-  useEffect(() => () => {
-    clearRegistrationRetry();
-    registrationRetryAttemptRef.current = 0;
-  }, [clearRegistrationRetry, user?.id]);
-
-  const openPushTarget = useCallback(
-    (payload: PushPayload) => {
-      if (payload.notificationId && payload.notificationId === lastHandledNotificationIdRef.current) {
-        return;
-      }
-
-      if (user?.id && payload.notificationId) {
-        void markNotificationRead(payload.notificationId).catch((error) => {
-          logger.warn('push', 'Failed to mark notification as read from push tap', error);
-        }).finally(() => {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(user.id) });
-        });
-      }
-
-      if (!rootNavigationRef.isReady()) {
-        setTimeout(() => {
-          if (rootNavigationRef.isReady()) {
-            openPushTarget(payload);
-          }
-        }, 350);
-        return;
-      }
-
-      if (!user) {
-        rootNavigationRef.navigate('Auth');
-        return;
-      }
-
-      lastHandledNotificationIdRef.current = payload.notificationId ?? null;
-
-      if (payload.listId) {
-        rootNavigationRef.navigate('ListDetail', {
-          listId: payload.listId,
-          placeId: payload.placeId,
-        });
-        return;
-      }
-
-      if (payload.userId) {
-        rootNavigationRef.navigate('UserProfile', { userId: payload.userId });
-        return;
-      }
-
-      rootNavigationRef.navigate('Notifications');
-    },
-    [user],
-  );
+  const { syncPushRegistration } = usePushRegistration({ booted, userId });
+  const { openPushTarget } = useVerifiedPushTapNavigation(userId);
 
   useEffect(() => {
     if (!notificationRuntime.supportsNotificationObservers) {
@@ -405,7 +253,7 @@ export function PushNotificationsController() {
         }
 
         receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
-          if (!user?.id) {
+          if (!userId) {
             return;
           }
 
@@ -413,7 +261,7 @@ export function PushNotificationsController() {
             notification.request.content.data as Record<string, unknown> | undefined,
           );
 
-          void hydrateLatestNotifications(user.id, {
+          void hydrateLatestNotifications(userId, {
             notificationId: payload.notificationId,
             reason: 'push-received',
           });
@@ -436,11 +284,7 @@ export function PushNotificationsController() {
       receivedSubscription?.remove();
       responseSubscription?.remove();
     };
-  }, [hydrateLatestNotifications, openPushTarget, user?.id]);
-
-  useEffect(() => {
-    lastHandledNotificationIdRef.current = null;
-  }, [user?.id]);
+  }, [hydrateLatestNotifications, openPushTarget, userId]);
 
   useEffect(() => {
     if (!booted || !notificationRuntime.supportsNotificationObservers) {
@@ -458,20 +302,12 @@ export function PushNotificationsController() {
           response.notification.request.content.data as Record<string, unknown> | undefined,
         );
 
-        if (payload.notificationId && payload.notificationId === lastHandledNotificationIdRef.current) {
-          return;
-        }
-
         openPushTarget(payload);
       })
       .catch((error) => {
         logger.warn('push', 'Failed to inspect last notification response', error);
       });
   }, [booted, openPushTarget]);
-
-  useEffect(() => {
-    void syncPushRegistration();
-  }, [syncPushRegistration]);
 
   useEffect(() => {
     if (!booted) {
@@ -490,70 +326,15 @@ export function PushNotificationsController() {
         void syncPushRegistration();
       }
 
-      if (user?.id) {
-        void hydrateLatestNotifications(user.id, { force: true, reason: 'foreground' });
+      if (userId) {
+        void hydrateLatestNotifications(userId, { force: true, reason: 'foreground' });
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [booted, hydrateLatestNotifications, syncPushRegistration, user?.id]);
-
-  useEffect(() => {
-    if (!booted || !user || !notificationRuntime.supportsRemotePushRegistration) {
-      return;
-    }
-
-    let subscription: { remove: () => void } | null = null;
-    let cancelled = false;
-
-    void loadNotificationsModule()
-      .then((Notifications) => {
-        if (cancelled || typeof Notifications.addPushTokenListener !== 'function') {
-          return;
-        }
-
-        subscription = Notifications.addPushTokenListener((devicePushToken) => {
-          const previousToken = registeredTokenRef.current;
-          registeredUserIdRef.current = null;
-          void registerDevicePushToken(user.id, devicePushToken)
-            .then((nextToken) => {
-              if (!cancelled && nextToken) {
-                clearRegistrationRetry();
-                registrationRetryAttemptRef.current = 0;
-                registeredTokenRef.current = nextToken;
-                registeredUserIdRef.current = user.id;
-
-                if (previousToken && previousToken !== nextToken) {
-                  void unregisterPushNotifications(previousToken).catch((error) => {
-                    logger.warn('push', 'Failed to remove replaced Expo push token', error);
-                  });
-                }
-                return;
-              }
-
-              scheduleRegistrationRetry(() => {
-                void syncPushRegistration();
-              });
-            })
-            .catch((error) => {
-              logger.warn('push', 'Push token refresh registration failed', error);
-              scheduleRegistrationRetry(() => {
-                void syncPushRegistration();
-              });
-            });
-        });
-      })
-      .catch((error) => {
-        logger.warn('push', 'Failed to initialize push token listener', error);
-      });
-
-    return () => {
-      cancelled = true;
-      subscription?.remove();
-    };
-  }, [booted, clearRegistrationRetry, scheduleRegistrationRetry, syncPushRegistration, user]);
+  }, [booted, hydrateLatestNotifications, syncPushRegistration, userId]);
 
   return null;
 }

@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { exports } from 'cloudflare:workers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { handleWorkerRequest } from '../src/index';
 import {
@@ -136,7 +137,12 @@ describe('JWT verification and gateway identity', () => {
         jwksCalled = true;
       }
 
-      return jsonOriginResponse({ success: true });
+      return jsonOriginResponse({
+        session: {
+          accessToken: 'test-access-token',
+          refreshToken: 'test-refresh-token',
+        },
+      });
     });
     const response = await handleWorkerRequest(
       createJsonRequest(
@@ -211,7 +217,20 @@ describe('JWT verification and gateway identity', () => {
         return jsonOriginResponse(jwt.jwks);
       }
 
-      return jsonOriginResponse({ authorization: request.headers.get('authorization') });
+      const actor = request.headers.get('authorization') === `Bearer ${tokenA}`
+        ? 'user-a'
+        : 'user-b';
+      return jsonOriginResponse({
+        results: [
+          {
+            address: `${actor} address`,
+            lat: 41.0082,
+            lng: 28.9784,
+            name: actor,
+            placeId: actor,
+          },
+        ],
+      });
     });
     const requestBody = { action: 'search', query: 'Istanbul' };
     const responseA = await handleWorkerRequest(
@@ -225,8 +244,12 @@ describe('JWT verification and gateway identity', () => {
       createDependencies(fetchFunction),
     );
 
-    await expect(responseA.json()).resolves.toEqual({ authorization: `Bearer ${tokenA}` });
-    await expect(responseB.json()).resolves.toEqual({ authorization: `Bearer ${tokenB}` });
+    await expect(responseA.json()).resolves.toMatchObject({
+      results: [{ name: 'user-a', placeId: 'user-a' }],
+    });
+    await expect(responseB.json()).resolves.toMatchObject({
+      results: [{ name: 'user-b', placeId: 'user-b' }],
+    });
     expect(responseA.headers.get('cache-control')).toContain('no-store');
     expect(responseB.headers.get('cache-control')).toContain('no-store');
   });
@@ -274,7 +297,13 @@ describe('JWT verification and gateway identity', () => {
       }
 
       capturedOriginRequest = request;
-      return jsonOriginResponse({ results: [] });
+      return jsonOriginResponse({
+        result: {
+          isPointOfInterest: false,
+          lat: 41.0082,
+          lng: 28.9784,
+        },
+      });
     });
     const requestBody = { action: 'reverse', latitude: 41.0082, longitude: 28.9784 };
     const response = await handleWorkerRequest(
@@ -450,21 +479,23 @@ describe('bounded JWKS cache', () => {
     expect(fetchCalls).toBe(2);
   });
 
-  it('single-flights concurrent random-kid refreshes and bounds the negative cache', async () => {
+  it('keeps concurrent random-kid refreshes request-owned and bounds the negative cache', async () => {
     const fixture = await createJwtFixture({ kid: 'trusted-key' });
     const trustedToken = await fixture.signToken();
     let fetchCalls = 0;
-    let releaseRefresh: (() => void) | undefined;
-    const fetchFunction = toFetchFunction(() => {
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const fetchFunction = toFetchFunction(async () => {
       fetchCalls += 1;
 
       if (fetchCalls === 1) {
         return jsonOriginResponse(fixture.jwks);
       }
 
-      return new Promise<Response>((resolve) => {
-        releaseRefresh = () => resolve(jsonOriginResponse(fixture.jwks));
-      });
+      await refreshGate;
+      return jsonOriginResponse(fixture.jwks);
     });
     const baseParams = {
       audience: 'authenticated',
@@ -481,22 +512,29 @@ describe('bounded JWKS cache', () => {
     const attempts = randomKidTokens.map((token) =>
       verifySupabaseJwt({ ...baseParams, token }),
     );
-    await Promise.resolve();
+    const expectedFetchCalls = randomKidTokens.length + 1;
+    let allRefreshesStarted = false;
 
-    if (!releaseRefresh) {
-      throw new Error('The coalesced JWKS refresh did not start.');
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (fetchCalls === expectedFetchCalls) {
+        allRefreshesStarted = true;
+        break;
+      }
+
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
 
     releaseRefresh();
     const settled = await Promise.allSettled(attempts);
 
+    expect(allRefreshesStarted).toBe(true);
     expect(settled).toHaveLength(randomKidTokens.length);
     expect(
       settled.every(
         (result) => result.status === 'rejected' && result.reason instanceof InvalidJwtError,
       ),
     ).toBe(true);
-    expect(fetchCalls).toBe(2);
+    expect(fetchCalls).toBe(expectedFetchCalls);
     expect(securityTestInternals.getNegativeKidCount()).toBeLessThanOrEqual(
       securityTestInternals.MAX_NEGATIVE_KIDS_PER_ISSUER,
     );
@@ -507,7 +545,7 @@ describe('bounded JWKS cache', () => {
         token: replaceTokenKid(trustedToken, 'another-random-key'),
       }),
     ).rejects.toBeInstanceOf(InvalidJwtError);
-    expect(fetchCalls).toBe(2);
+    expect(fetchCalls).toBe(expectedFetchCalls);
   });
 
   it('bounds the issuer cache with LRU eviction', async () => {
@@ -529,5 +567,48 @@ describe('bounded JWKS cache', () => {
     expect(securityTestInternals.getJwksCacheSize()).toBe(
       securityTestInternals.MAX_JWKS_CACHE_ENTRIES,
     );
+  });
+});
+
+describe('Worker module JWKS isolation', () => {
+  beforeEach(() => {
+    securityTestInternals.clearJwksCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('uses the hardened JWKS verifier through the real default fetch export', async () => {
+    const supabaseOrigin = 'https://replace-local-project-ref.supabase.co';
+    const fixture = await createJwtFixture({ kid: 'integration-key' });
+    const token = await fixture.signToken({
+      expiresAtSeconds: Math.floor(Date.now() / 1_000) + 300,
+      issuer: `${supabaseOrigin}/auth/v1`,
+    });
+    let jwksCalls = 0;
+    let originCalls = 0;
+    const fetchFunction = toFetchFunction((request) => {
+      if (new URL(request.url).pathname.endsWith('/.well-known/jwks.json')) {
+        jwksCalls += 1;
+        return jsonOriginResponse(fixture.jwks);
+      }
+
+      originCalls += 1;
+      return jsonOriginResponse({ results: [] });
+    });
+    vi.stubGlobal('fetch', fetchFunction);
+
+    const response = await exports.default.fetch(
+      createJsonRequest(
+        '/v1/maps-geocoding',
+        { action: 'search', query: 'Istanbul' },
+        { origin: null, token },
+      ),
+    );
+
+    expect(jwksCalls).toBe(1);
+    expect(originCalls).toBe(1);
+    expect(response.status).toBe(200);
   });
 });

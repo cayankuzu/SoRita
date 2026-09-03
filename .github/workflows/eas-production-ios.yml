@@ -1,0 +1,243 @@
+name: EAS Production iOS Build and TestFlight
+run-name: Production iOS build and TestFlight for ${{ inputs.candidate_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Canonical full commit SHA on the default branch to build and submit
+        required: true
+        type: string
+      what_to_test:
+        description: Single-line TestFlight note (at most 200 characters)
+        required: true
+        type: string
+      confirm_testflight:
+        description: Build with remote EAS credentials and submit this exact SHA to TestFlight
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-production-ios
+  cancel-in-progress: false
+
+jobs:
+  build-and-submit:
+    name: Remote signed iOS build and protected TestFlight submit
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: production
+    env:
+      CI: "true"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_RELEASE_ENVIRONMENT: production
+      EXPO_PUBLIC_EXPO_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EXPO_PROJECT_ID }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      NODE_VERSION: "24"
+
+    steps:
+      - name: Check out the exact candidate SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Set up pinned EAS CLI
+        uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9.0.0
+        with:
+          eas-version: 23.0.0
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Validate immutable source, identity and explicit authorization
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CONFIRM_TESTFLIGHT: ${{ inputs.confirm_testflight }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TESTFLIGHT_NOTE: ${{ inputs.what_to_test }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::candidate_sha must be a canonical lower-case full commit SHA.'
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo '::error::Production iOS delivery must be dispatched from the default branch.'
+            exit 1
+          fi
+          if [[ "$CANDIDATE_SHA" != "$WORKFLOW_SHA" || "$(git rev-parse HEAD)" != "$CANDIDATE_SHA" ]]; then
+            echo '::error::The dispatch, workflow and checked-out source must be the exact same SHA.'
+            exit 1
+          fi
+          if [[ "$CONFIRM_TESTFLIGHT" != true ]]; then
+            echo '::error::Explicit TestFlight confirmation is required.'
+            exit 1
+          fi
+          if [[ -z "$EXPO_PUBLIC_EXPO_PROJECT_ID" || -z "$EXPO_PUBLIC_SUPABASE_URL" || -z "$EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" ]]; then
+            echo '::error::The protected production environment is missing required public build variables.'
+            exit 1
+          fi
+          if [[ -z "$TESTFLIGHT_NOTE" || "$TESTFLIGHT_NOTE" == *$'\n'* || ${#TESTFLIGHT_NOTE} -gt 200 ]]; then
+            echo '::error::what_to_test must be one non-empty line of at most 200 characters.'
+            exit 1
+          fi
+          git diff --quiet --exit-code
+          git diff --cached --quiet --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Install the immutable dependency tree
+        run: npm ci --ignore-scripts
+
+      - name: Validate credential portability policy
+        run: npm run eas:credentials:check
+
+      - name: Preflight the protected App Store Connect key and erase it
+        shell: bash
+        env:
+          EXPO_ASC_API_KEY_BASE64: ${{ secrets.EXPO_ASC_API_KEY_BASE64 }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+          EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          key_root="${RUNNER_TEMP}/sorita-eas-submit"
+          key_path="${key_root}/AuthKey.p8"
+          cleanup() {
+            chmod u+w -- "$key_path" 2>/dev/null || true
+            rm -f -- "$key_path"
+            rmdir -- "$key_root" 2>/dev/null || true
+          }
+          trap cleanup EXIT HUP INT TERM
+          node utils/eas/materialize-asc-api-key.mjs --output "$key_path"
+          [[ "$(stat -c '%a' "$key_path")" == 600 ]]
+
+      - name: Build signed iOS binary with frozen remote credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw_build="${RUNNER_TEMP}/eas-production-ios-build.json"
+          eas build \
+            --platform ios \
+            --profile production \
+            --freeze-credentials \
+            --non-interactive \
+            --wait \
+            --json > "$raw_build"
+          build_id="$(node --input-type=module - "$raw_build" <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const raw = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          const build = Array.isArray(raw) ? raw[0] : raw;
+          if (!build || typeof build.id !== 'string' || !/^[0-9a-f-]{36}$/iu.test(build.id)) {
+            throw new Error('EAS Build did not return a valid build ID.');
+          }
+          process.stdout.write(build.id);
+          NODE
+          )"
+          printf 'BUILD_ID=%s\n' "$build_id" >> "$GITHUB_ENV"
+
+      - name: Verify provider build identity and exact source SHA
+        shell: bash
+        env:
+          BUNDLE_ID: com.cayan.sorita.socialmap
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          build_view="${RUNNER_TEMP}/eas-production-ios-build-view.json"
+          sanitized_evidence="${RUNNER_TEMP}/eas-production-ios-build-evidence.json"
+          runtime_version="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version)")"
+          eas build:view "$BUILD_ID" --json > "$build_view"
+          node utils/eas/verify-production-ios-build.mjs \
+            --build-json "$build_view" \
+            --build-id "$BUILD_ID" \
+            --bundle-id "$BUNDLE_ID" \
+            --project-id "$EXPO_PUBLIC_EXPO_PROJECT_ID" \
+            --runtime "$runtime_version" \
+            --source "$CANDIDATE_SHA" \
+            --output "$sanitized_evidence"
+
+      - name: Submit the verified build with an ephemeral App Store Connect key
+        shell: bash
+        env:
+          EXPO_ASC_API_KEY_BASE64: ${{ secrets.EXPO_ASC_API_KEY_BASE64 }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+          EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
+          TESTFLIGHT_NOTE: ${{ inputs.what_to_test }}
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          key_root="${RUNNER_TEMP}/sorita-eas-submit"
+          key_path="${key_root}/AuthKey.p8"
+          cleanup() {
+            chmod u+w -- "$key_path" 2>/dev/null || true
+            rm -f -- "$key_path"
+            rmdir -- "$key_root" 2>/dev/null || true
+          }
+          trap cleanup EXIT HUP INT TERM
+          node utils/eas/materialize-asc-api-key.mjs --output "$key_path"
+          EXPO_ASC_API_KEY_PATH="$key_path" eas submit \
+            --platform ios \
+            --profile production \
+            --id "$BUILD_ID" \
+            --what-to-test "$TESTFLIGHT_NOTE" \
+            --non-interactive \
+            --wait
+
+      - name: Defense-in-depth credential cleanup
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          key_root="${RUNNER_TEMP}/sorita-eas-submit"
+          key_path="${key_root}/AuthKey.p8"
+          chmod u+w -- "$key_path" 2>/dev/null || true
+          rm -f -- "$key_path"
+          rmdir -- "$key_root" 2>/dev/null || true
+          if [[ -e "$key_path" || -L "$key_path" ]]; then
+            echo '::error::Ephemeral App Store Connect key cleanup failed.'
+            exit 1
+          fi
+
+      - name: Create sanitized same-SHA delivery receipt
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const build = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/eas-production-ios-build-evidence.json`, 'utf8'));
+          writeFileSync(`${process.env.RUNNER_TEMP}/eas-production-ios-testflight-receipt.json`, `${JSON.stringify({
+            build,
+            destination: 'testflight',
+            githubRunAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            githubRunId: Number(process.env.GITHUB_RUN_ID),
+            schemaVersion: 1,
+            sourceSha: process.env.CANDIDATE_SHA,
+            status: 'submitted',
+          }, null, 2)}\n`, { flag: 'wx' });
+          NODE
+
+      - name: Upload sanitized iOS delivery evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eas-production-ios-${{ inputs.candidate_sha }}
+          path: ${{ runner.temp }}/eas-production-ios-testflight-receipt.json
+          if-no-files-found: error
+          retention-days: 90

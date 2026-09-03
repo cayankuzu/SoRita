@@ -1,0 +1,157 @@
+name: sorita-verification
+
+x-tooling-build: &tooling-build
+  context: ../..
+  dockerfile: infra/docker/Dockerfile.tooling
+  target: tooling
+
+x-hardened-runner: &hardened-runner
+  read_only: true
+  user: "1000:1000"
+  restart: "no"
+  init: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=64m
+  pids_limit: 128
+  mem_limit: 768m
+  cpus: 1.5
+  networks:
+    - verification
+
+services:
+  maps-mock:
+    <<: *hardened-runner
+    profiles: [test, worker, maps-mock, resilience, load]
+    build: *tooling-build
+    image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
+    command: [infra/docker/mocks/maps-server.mjs]
+    environment:
+      MAPS_MOCK_HOST: 0.0.0.0
+      MAPS_MOCK_PORT: "8789"
+    expose:
+      - "8789"
+    healthcheck:
+      test: [CMD, node, infra/docker/scripts/wait-for-health.mjs, --once, http://127.0.0.1:8789/health]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 2s
+
+  test-runner:
+    <<: *hardened-runner
+    profiles: [test, worker]
+    build: *tooling-build
+    image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
+    command: [infra/docker/scripts/run-test-profile.mjs, --container]
+    environment:
+      MAPS_MOCK_BASE_URL: http://maps-mock:8789
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_docker_test
+      ORIGIN_HMAC_SECRET: synthetic-docker-origin-hmac-secret-32-bytes
+      IP_HASH_PEPPER: synthetic-docker-ip-hash-pepper-32-bytes
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+      - /home/node/.config:rw,noexec,nosuid,nodev,size=16m,uid=1000,gid=1000,mode=0700
+      - /workspace/infra/cloudflare/sorita-edge/.wrangler:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700
+      - /workspace/infra/cloudflare/sorita-edge/node_modules/.vite:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700
+      - /workspace/infra/cloudflare/sorita-edge/node_modules/.vite-temp:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700
+    depends_on:
+      maps-mock:
+        condition: service_healthy
+
+  quality-runner:
+    <<: *hardened-runner
+    profiles: [quality]
+    build: *tooling-build
+    image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
+    command: [infra/docker/scripts/run-quality-profile.mjs, --container]
+    environment:
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_docker_test
+      EXPO_PUBLIC_SUPABASE_URL: https://synthetic-project.supabase.co
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=128m
+      - /workspace/node_modules/.vite:rw,noexec,nosuid,nodev,size=128m,uid=1000,gid=1000,mode=0700
+      - /workspace/node_modules/.vite-temp:rw,noexec,nosuid,nodev,size=128m,uid=1000,gid=1000,mode=0700
+
+  security-runner:
+    <<: *hardened-runner
+    profiles: [security]
+    build: *tooling-build
+    image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
+    command: [infra/docker/scripts/run-security-profile.mjs, --container]
+
+  db-tools:
+    <<: *hardened-runner
+    profiles: [db-tools]
+    image: postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+    command: [sh, -ceu, 'psql --version && pg_dump --version && pg_restore --version']
+    user: "999:999"
+    mem_limit: 256m
+    cpus: 0.5
+
+  toxiproxy:
+    <<: *hardened-runner
+    profiles: [resilience]
+    image: ghcr.io/shopify/toxiproxy:2.12.0@sha256:9378ed52a28bc50edc1350f936f518f31fa95f0d15917d6eb40b8e376d1a214e
+    command: [-host=0.0.0.0]
+    user: "65532:65532"
+    expose:
+      - "8474"
+      - "8666"
+      - "8667"
+      - "8668"
+      - "8669"
+      - "8670"
+    healthcheck:
+      test: [CMD, /toxiproxy-cli, list]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 2s
+    mem_limit: 256m
+    cpus: 0.5
+
+  resilience-runner:
+    <<: *hardened-runner
+    profiles: [resilience]
+    build: *tooling-build
+    image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
+    command: [infra/docker/scripts/run-resilience-profile.mjs, --container]
+    environment:
+      TOXIPROXY_API_URL: http://toxiproxy:8474
+      TOXIPROXY_PROXY_HOST: toxiproxy
+    depends_on:
+      maps-mock:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_healthy
+
+  load-runner:
+    <<: *hardened-runner
+    profiles: [load]
+    image: grafana/k6:2.2.0@sha256:9bd01d6941fca969cb61bb57d2da5ee9b385fe2aa8881df3798c196564d6ace6
+    entrypoint: [k6]
+    user: "12345:12345"
+    command: [run, /scripts/representative-flows.k6.js]
+    environment:
+      VERIFICATION_MOCK_BASE_URL: http://maps-mock:8789
+      SORITA_LOAD_DURATION: ${SORITA_LOAD_DURATION:-10s}
+      SORITA_LOAD_VUS: ${SORITA_LOAD_VUS:-5}
+      SORITA_LOAD_P95_MS: ${SORITA_LOAD_P95_MS:-250}
+    volumes:
+      - ./load:/scripts:ro
+    depends_on:
+      maps-mock:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 1
+
+networks:
+  verification:
+    name: sorita-verification-internal
+    internal: true
+    labels:
+      com.sorita.scope: verification

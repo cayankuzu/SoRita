@@ -54,8 +54,10 @@ başlıklar edge cevabına taşınmaz. `2xx` ve `4xx` JSON gövdeleri stream edi
 - `204` dışındaki JSON olmayan cevap: `502 invalid_origin_response`.
 
 Worker hiçbir response'u `caches.default` ile yazmaz ve `fetch` için edge cache talep etmez. JWKS
-isteği `cache: no-store` ile yapılır ve Worker process'inde kalıcı key cache'i tutulmaz. Bu tercih,
-Supabase JWKS availability/latency bağımlılığı yaratır; canlı alarm ve SLO kanıtı gerektirir.
+isteği `cache: no-store` ile yapılır. Worker yalnız çözülmüş, structured-cloneable JWKS verisini
+sınırlı TTL/LRU ile bellekte tutar; request'e ait fetch Promise/Response/stream module-global
+durumda paylaşılmaz. Refresh gerektiğinde her eşzamanlı invocation kendi I/O'sunu yürütür; canlı
+alarm ve Supabase JWKS SLO kanıtı yine gereklidir.
 
 ### Cache değişmezleri
 

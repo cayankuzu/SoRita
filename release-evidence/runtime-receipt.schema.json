@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cayankuzu/SoRita/blob/main/release-evidence/runtime-receipt.schema.json",
+  "title": "SoRita machine probe receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "check",
+    "repository",
+    "commitSha",
+    "runtimeVersion",
+    "observedAt",
+    "result",
+    "probe",
+    "subjects",
+    "scenarios"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "check": {
+      "enum": [
+        "cloudflare-preview",
+        "signed-android-ios",
+        "ota-code-signing",
+        "physical-device-matrix",
+        "provider-dashboards",
+        "staging-restore",
+        "store-internal-tracks",
+        "ota-preview-rollback",
+        "backup-pitr",
+        "observability-alerts",
+        "security-review"
+      ]
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "runtimeVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "result": { "const": "pass" },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "sourcePath", "sourceSha256"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,63}$" },
+        "version": { "const": "2.0.0" },
+        "sourcePath": { "const": "utils/release-evidence/runtime-evidence.mjs" },
+        "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "id",
+          "platform",
+          "environment",
+          "sourceCommitSha",
+          "artifactSha256",
+          "providerRecordId"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "cloudflare-deployment",
+              "eas-build",
+              "code-signing-certificate",
+              "physical-device",
+              "provider-control-plane",
+              "supabase-restore",
+              "store-track",
+              "eas-update",
+              "supabase-backup",
+              "observability-alert",
+              "security-report"
+            ]
+          },
+          "id": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "platform": {
+            "enum": [
+              "android",
+              "ios",
+              "cross-platform",
+              "cloudflare",
+              "eas",
+              "supabase",
+              "sentry",
+              "github",
+              "database"
+            ]
+          },
+          "environment": { "enum": ["preview", "staging", "production"] },
+          "sourceCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+          "artifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "providerRecordId": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "binarySha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "appIdentifier": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "buildVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "deviceClass": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "osVersion": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "result", "subjectIds", "rawArtifact"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,95}$" },
+          "result": { "const": "pass" },
+          "subjectIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "measurements": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": ["number", "string", "boolean"]
+            }
+          },
+          "rawArtifact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "mediaType", "bytes", "sha256", "piiReview"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^raw/[a-z0-9][a-z0-9-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "mediaType": {
+                "enum": ["application/json", "text/plain", "image/png"]
+              },
+              "bytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "piiReview": { "const": "pass" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,7 +2,9 @@ name: Quality
 
 on:
   push:
-    branches: [main, chore/aaa-mvp-feature-freeze-cloudflare-ota]
+    branches:
+      - main
+      - chore/final-aaa-mvp-hardening-docker-cloudflare-ota
   pull_request:
     branches: [main]
   workflow_dispatch:

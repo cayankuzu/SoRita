@@ -13,6 +13,13 @@ const MAX_EDGE_ERROR_CODE_LENGTH = 128;
 const MAX_RETRY_AFTER_MS = 5 * 60_000;
 const MAX_IDEMPOTENCY_KEY_LENGTH = 200;
 const FUNCTION_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62})$/;
+const GATEWAY_FUNCTION_NAME_CONTRACT = [
+  ['auth-gateway', () => env.supabaseAuthGatewayFunctionName],
+  ['delete-user', () => env.supabaseDeleteUserFunctionName],
+  ['maps-geocoding', () => env.supabaseMapsFunctionName],
+  ['media-assets', () => env.supabaseMediaAssetsFunctionName],
+  ['moderation-reports', () => env.supabaseModerationReportsFunctionName],
+] as const;
 
 export type EdgeFunctionErrorCategory =
   | 'aborted'
@@ -100,13 +107,15 @@ function normalizeFunctionName(functionName: string) {
 }
 
 function getSelectedGatewayFunctionNames() {
-  return new Set([
-    env.supabaseAuthGatewayFunctionName,
-    env.supabaseDeleteUserFunctionName,
-    env.supabaseMapsFunctionName,
-    env.supabaseMediaAssetsFunctionName,
-    env.supabaseModerationReportsFunctionName,
-  ].map(normalizeFunctionName));
+  for (const [expectedName, readConfiguredName] of GATEWAY_FUNCTION_NAME_CONTRACT) {
+    if (normalizeFunctionName(readConfiguredName()) !== expectedName) {
+      throw configurationError(
+        'Gateway mode requires the canonical Edge Function route contract.',
+      );
+    }
+  }
+
+  return new Set<string>(GATEWAY_FUNCTION_NAME_CONTRACT.map(([expectedName]) => expectedName));
 }
 
 /**

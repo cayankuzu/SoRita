@@ -3,6 +3,12 @@
 Tarih: 2026-08-30
 Karar: `NO-GO`
 
+> Bu dosya değişmez başlangıç kontrol noktasıdır: app `1.0.101`, Android 106,
+> iOS 86. 2026-08-31 çalışma ağacının `1.0.102` / Android 107 / iOS 87 durumu
+> ve yerel test sonuçları [aaa-mvp-final-report.md](./aaa-mvp-final-report.md)
+> ile [release-readiness.md](./release-readiness.md) içindedir. Başlangıç değerleri
+> final değerlerle geriye dönük olarak değiştirilmez.
+
 ## Bu belgenin anlamı
 
 Bu başlangıç çizgisi, mevcut çalışma ağacında kanıtlanabilen durumu kaydeder. Sayısal kalite puanı üretmez ve kaynakta görülen bir yapılandırmayı çalışır dağıtım olarak kabul etmez.

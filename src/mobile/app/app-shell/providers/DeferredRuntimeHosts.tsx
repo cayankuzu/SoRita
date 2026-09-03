@@ -41,6 +41,19 @@ function DeferredPushNotificationsController() {
   return <PushNotificationsController />;
 }
 
+function DeferredPushTokenCleanupController() {
+  const { booted } = useAuth();
+
+  if (!booted) {
+    return null;
+  }
+
+  const { PushTokenCleanupController } = require('@/mobile/app/app-shell/notifications/PushTokenCleanupController') as
+    typeof import('@/mobile/app/app-shell/notifications/PushTokenCleanupController');
+
+  return <PushTokenCleanupController />;
+}
+
 function DeferredSystemPushNotificationsController() {
   const { booted, user } = useAuth();
 
@@ -106,6 +119,9 @@ const runtimeHostLoaders: RuntimeHostLoader[] = [
     load: () => require('@/mobile/app/platform/media/MediaMemoryController').MediaMemoryController,
   },
   { key: 'notification-presentation', load: () => NotificationPresentationController },
+  // This is revealed before token registration so a tombstoned old account
+  // cannot be rebound to the next account during a connectivity recovery.
+  { key: 'push-token-cleanup', load: () => DeferredPushTokenCleanupController },
   { key: 'push-notifications', load: () => DeferredPushNotificationsController },
   { key: 'system-notifications', load: () => DeferredSystemPushNotificationsController },
   {

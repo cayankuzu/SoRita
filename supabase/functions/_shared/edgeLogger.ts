@@ -1,7 +1,8 @@
 type EdgeLogLevel = 'info' | 'warn' | 'error';
 
-const SENSITIVE_KEY_PATTERN = /authorization|token|secret|password|cookie|apikey|api[_-]?key|signature|email/i;
+const SENSITIVE_KEY_PATTERN = /authorization|token|secret|password|cookie|apikey|api[_-]?key|signature|email|error|message|body|payload|content|ip|user[_-]?agent|recipient|device|push/i;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const SAFE_REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,128}$/u;
 
 function redactString(value: string) {
   return value.replace(EMAIL_PATTERN, '[redacted-email]');
@@ -14,7 +15,6 @@ function sanitizeDetails(value: unknown, depth = 0): unknown {
 
   if (value instanceof Error) {
     return {
-      message: redactString(value.message),
       name: value.name,
     };
   }
@@ -44,17 +44,28 @@ function sanitizeDetails(value: unknown, depth = 0): unknown {
 }
 
 export function createEdgeRequestContext(request: Request, route: string) {
-  const forwardedFor = request.headers.get('x-forwarded-for') ?? '';
-  const clientIp = forwardedFor.split(',')[0]?.trim() || null;
+  const requestedId = request.headers.get('x-request-id')?.trim() ?? '';
 
   return {
-    clientIp,
     method: request.method,
-    origin: request.headers.get('Origin'),
-    requestId: request.headers.get('x-request-id') ?? crypto.randomUUID(),
+    // Raw IP and user-agent values are intentionally excluded from logs.
+    origin: normalizeOrigin(request.headers.get('Origin')),
+    requestId: SAFE_REQUEST_ID_PATTERN.test(requestedId) ? requestedId : crypto.randomUUID(),
     route,
-    userAgent: request.headers.get('user-agent'),
   };
+}
+
+function normalizeOrigin(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const origin = new URL(value).origin;
+    return origin.length <= 255 ? origin : null;
+  } catch {
+    return null;
+  }
 }
 
 export function logEdgeEvent(

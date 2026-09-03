@@ -1,8 +1,33 @@
 # SoRita yeni özellik eklenmedi denetimi
 
-Tarih: 2026-08-30
+Tarih: 2026-09-03
+
+Branch: `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`
+
+Başlangıç HEAD: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
 Statik kapsam sonucu: `PASS`
 Üretim sonucu: `NO-GO`
+
+## Bu geçişte eklenenler ve neden ürün yüzeyi sayılmadıkları
+
+Bu geçiş yalnız iç kalite ve operasyon katmanına dokundu. Aşağıdaki eklerin
+hiçbiri son kullanıcıya görünmez; hiçbiri yeni bir kullanıcı işi, ekran, CTA,
+bildirim türü, izin, ürün tablosu veya bucket oluşturmaz.
+
+| Ekleme | Tür | Kullanıcıya görünür mü? |
+| --- | --- | --- |
+| `utils/guards/check-text-encoding.mjs` + testleri | CI guard | Hayır |
+| `utils/guards/check-release-scorecard.mjs` + testleri | CI guard | Hayır |
+| `quality/release-scorecard.json` | Kanıt artifact'ı | Hayır |
+| `check-docker-context.mjs` içindeki iki yeni kontrol | CI guard | Hayır |
+| `check-source-health.mjs` backend bütçe geçişi | CI guard | Hayır |
+| Production workflow CORS placeholder doğrulaması | Deploy gate | Hayır |
+| `docs/audit/`, `docs/ui-ux/` ve rapor dosyaları | Belge | Hayır |
+| Üç `.dockerignore` dosyasındaki diff artifact düzeltmesi | Build config | Hayır |
+
+Mevcut ekran, sekme, rota, modal, ayar satırı, bildirim türü, izin, tema ve dil
+kapsamı değişmedi. Yeni tema, dark mode, yeni locale, admin paneli veya yeni
+ürün yüzeyi eklenmedi.
 
 ## Denetim sorusu
 
@@ -16,7 +41,7 @@ Yanıt, [feature-surface.snapshot.json](../quality/feature-surface.snapshot.json
 npm run feature-surface:check
 ```
 
-2026-08-30 yerel sonucu:
+2026-09-03 yerel sonucu (bu geçişteki tüm değişikliklerden sonra tekrar çalıştırıldı):
 
 ```text
 10 root routes
@@ -67,6 +92,12 @@ Tam ad listeleri [existing-feature-contract.md](existing-feature-contract.md) ve
 | Seçici Cloudflare gateway ve direct/gateway cutover | Var olan beş mobil Edge Function | Mevcut ağ sınırı; yeni genel ürün API'si değil |
 | Preview/production OTA kanıt ve rollout workflow'ları | Var olan uygulama dağıtımı | Operasyonel yayın kontrolü |
 | Snapshot/guard ve release-evidence şeması | Mevcut kapsamın korunması | Test/kanıt altyapısı |
+| Push token capability, tombstone, arka plan dedupe ve güvenilir tap yönlendirmesi | Var olan 10 bildirim türü ve `Notifications`/mevcut detay rotaları | Mevcut teslim/lifecycle güvenlik ve yarış durumu düzeltmesi |
+| Push outbox receipt/DLQ/health/requeue migration ve CLI | Var olan push teslim operasyonu | İç operasyon/dayanıklılık; yeni bildirim türü veya admin paneli değil |
+| Deterministik Docker mock, Worker/DB/fault/load profilleri | Var olan map/edge/backend sözleşmelerinin test edilmesi | Yalnız test/CI altyapısı; mobil runtime veya yeni ürün servisi değil |
+| Bounded Cloudflare origin response doğrulaması ve request-owned JWKS fetch | Var olan beş seçici Edge Function geçidi | Mevcut ağ güvenliği/izolasyonu; yeni public ürün route'u değil |
+| EAS build kimliği ve OTA certificate fail-closed doğrulayıcıları | Var olan uygulama dağıtımı | Release güvenliği; yeni kullanıcı ayarı veya akışı değil |
+| `1.0.102` / Android 107 / iOS 87 sürüm artışı | Var olan native uygulama ve appVersion runtime | Release metadata; ürün kapsamı değişmez |
 
 Cloudflare Worker'ın `/health` rotası operasyonel sağlık kontrolüdür. Guard'daki dar kapsamlı iç altyapı istisnaları kullanıcıya görünür ürün yüzeyi sayılmaz; yine de yeni ürün davranışına dönüşürlerse bu rapor otomatik onay vermez.
 
@@ -85,9 +116,14 @@ Snapshot değişikliğinin aynı PR içinde yapılması otomatik olarak meşru k
 
 ## Kanıt sınırı
 
-- Statik yeni-özellik denetimi: `VERIFIED (LOCAL)`.
+- Statik yeni-özellik denetimi: `VERIFIED (LOCAL, PRE-COMMIT)`.
 - Ekranların gerçek cihazda yalnız mevcut özellikleri gösterdiği: `UNVERIFIED`.
 - Remote config, canlı veritabanı veya dağıtılmış backend'in snapshot dışı davranış üretmediği: `UNVERIFIED`.
 - Cloudflare, Supabase ve EAS'teki gerçek deploy içeriğinin bu çalışma ağacıyla aynı SHA olduğu: `UNVERIFIED`.
 
-Sonuç: Bu çalışma ağacında statik olarak yeni ürün yüzeyi tespit edilmedi. Bu dar denetim `PASS`tir; eksik runtime ve yayın kanıtları nedeniyle genel üretim kararı `NO-GO`dur.
+Sonuç: Bu çalışma ağacında statik olarak yeni ürün yüzeyi tespit edilmedi. Yeni
+push modülleri yalnız mevcut bildirim türlerini işler; Docker/Cloudflare/EAS
+ekleri iç test ve release altyapısıdır. Bu dar denetim `PASS`tir. Çalışma ağacı
+henüz candidate commit olmadığı ve runtime/provider kanıtları eksik olduğu için
+genel üretim kararı `NO-GO`dur; aynı guard temiz candidate SHA üzerinde tekrar
+çalıştırılmalıdır.

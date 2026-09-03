@@ -30,14 +30,15 @@ const optionalHttpsBaseUrl = trimmedString
         url.protocol === 'https:' &&
         !url.username &&
         !url.password &&
+        url.pathname === '/' &&
         !url.search &&
         !url.hash
       );
     } catch {
       return false;
     }
-  }, 'Edge API URL must be an HTTPS base URL without credentials, query, or fragment.')
-  .transform((value) => value.replace(/\/+$/, ''));
+  }, 'Edge API URL must be an HTTPS origin without credentials, path, query, or fragment.')
+  .transform((value) => (value ? new URL(value).origin : value));
 
 export const publicRuntimeConfigSchema = z
   .object({

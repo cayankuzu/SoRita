@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cayankuzu/SoRita/blob/main/release-evidence/runtime-manifest.schema.json",
+  "title": "SoRita provider and physical-device evidence packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "commitSha",
+    "runtimeVersion",
+    "generatedAt",
+    "workflow",
+    "checks",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "runtimeVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "runId", "runAttempt"],
+      "properties": {
+        "path": { "const": ".github/workflows/runtime-evidence.yml" },
+        "runId": { "type": "integer", "minimum": 1 },
+        "runAttempt": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cloudflare-preview",
+        "signed-android-ios",
+        "ota-code-signing",
+        "physical-device-matrix",
+        "provider-dashboards",
+        "staging-restore",
+        "store-internal-tracks",
+        "ota-preview-rollback",
+        "backup-pitr",
+        "observability-alerts",
+        "security-review"
+      ],
+      "properties": {
+        "cloudflare-preview": { "const": "pass" },
+        "signed-android-ios": { "const": "pass" },
+        "ota-code-signing": { "const": "pass" },
+        "physical-device-matrix": { "const": "pass" },
+        "provider-dashboards": { "const": "pass" },
+        "staging-restore": { "const": "pass" },
+        "store-internal-tracks": { "const": "pass" },
+        "ota-preview-rollback": { "const": "pass" },
+        "backup-pitr": { "const": "pass" },
+        "observability-alerts": { "const": "pass" },
+        "security-review": { "const": "pass" }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "path", "mediaType", "bytes", "sha256"],
+        "properties": {
+          "check": {
+            "enum": [
+              "cloudflare-preview",
+              "signed-android-ios",
+              "ota-code-signing",
+              "physical-device-matrix",
+              "provider-dashboards",
+              "staging-restore",
+              "store-internal-tracks",
+              "ota-preview-rollback",
+              "backup-pitr",
+              "observability-alerts",
+              "security-review"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^evidence/[a-z0-9][a-z0-9-]*\\.json$"
+          },
+          "mediaType": { "const": "application/vnd.sorita.runtime-probe+json" },
+          "bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    }
+  }
+}

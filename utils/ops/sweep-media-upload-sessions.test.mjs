@@ -2,10 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  formatOperationalError,
   parseArguments,
   requireRuntimeEnvironment,
   runMediaUploadSweep,
 } from './sweep-media-upload-sessions.mjs';
+
+test('formats structured provider errors without leaking bearer or Supabase secrets', () => {
+  const formatted = formatOperationalError({
+    code: 'PGRST202',
+    details: 'Bearer eyJabc.def.ghi and sb_secret_do_not_log',
+    message: 'Could not find the function public.list_stale_media_upload_sessions',
+  });
+
+  assert.match(formatted, /PGRST202/u);
+  assert.match(formatted, /list_stale_media_upload_sessions/u);
+  assert.doesNotMatch(formatted, /eyJabc|sb_secret_do_not_log/u);
+  assert.match(formatted, /\[REDACTED\]/u);
+});
 
 test('parses bounded dry-run and apply arguments', () => {
   assert.deepEqual(parseArguments([]), {

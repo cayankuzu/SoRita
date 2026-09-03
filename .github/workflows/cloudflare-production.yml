@@ -39,8 +39,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CI: 'true'
-  NODE_VERSION: '24'
+  CI: "true"
+  NODE_VERSION: "24"
   WORKER_DIRECTORY: infra/cloudflare/sorita-edge
 
 jobs:
@@ -162,14 +162,16 @@ jobs:
             exit 1
           fi
 
-          artifact_name="partial-release-evidence-${TARGET_SHA}"
+          artifact_name="final-release-evidence-${TARGET_SHA}"
           artifact_rows="${RUNNER_TEMP}/release-evidence-artifacts.jsonl"
+          artifact_selection="${RUNNER_TEMP}/release-evidence-artifact.json"
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_EVIDENCE_RUN_ID}/artifacts?per_page=100" \
             --paginate \
             --jq '.artifacts[] | @json' \
             > "$artifact_rows"
-          ARTIFACT_NAME="$artifact_name" ARTIFACT_ROWS="$artifact_rows" node <<'NODE'
-          const { readFileSync } = require('node:fs');
+          ARTIFACT_NAME="$artifact_name" ARTIFACT_ROWS="$artifact_rows" \
+            ARTIFACT_SELECTION="$artifact_selection" node <<'NODE'
+          const { readFileSync, writeFileSync } = require('node:fs');
           const rows = readFileSync(process.env.ARTIFACT_ROWS, 'utf8')
             .split(/\r?\n/u)
             .filter(Boolean)
@@ -189,13 +191,31 @@ jobs:
           if (!/^sha256:[a-f0-9]{64}$/u.test(artifact.digest ?? '')) {
             throw new Error('Release evidence artifact is missing its GitHub SHA-256 digest.');
           }
+          writeFileSync(
+            process.env.ARTIFACT_SELECTION,
+            `${JSON.stringify({ id: artifact.id, digest: artifact.digest }, null, 2)}\n`,
+          );
           NODE
 
           mkdir -p artifacts/release-evidence
-          gh run download "$RELEASE_EVIDENCE_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name "$artifact_name" \
-            --dir artifacts/release-evidence
+          IFS=$'\t' read -r artifact_id expected_digest < <(
+            node -e "const a=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(a.id+'\\t'+a.digest+'\\n')" \
+              "$artifact_selection"
+          )
+          archive_file="${RUNNER_TEMP}/${artifact_name}.zip"
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --output "$archive_file" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip"
+          actual_digest="sha256:$(sha256sum "$archive_file" | awk '{print $1}')"
+          if [[ "$actual_digest" != "$expected_digest" ]]; then
+            echo '::error::Downloaded release evidence artifact digest does not match GitHub metadata.'
+            exit 1
+          fi
+          unzip -q "$archive_file" -d artifacts/release-evidence
           test -f "$RELEASE_MANIFEST"
           npm run release-evidence:verify -- --manifest "$RELEASE_MANIFEST"
 
@@ -242,6 +262,7 @@ jobs:
             exit 1
           fi
           node -e "for (const name of ['EDGE_HEALTH_URL','EDGE_SUPABASE_URL']) { const value=process.env[name]; const url=new URL(value); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || value.includes('replace-')) throw new Error(name + ' must be a non-placeholder HTTPS URL'); }"
+          node -e "const raw=process.env.EDGE_CORS_ALLOWLIST; const entries=raw.split(',').map((entry)=>entry.trim()).filter(Boolean); if (entries.length === 0) throw new Error('EDGE_CORS_ALLOWLIST must list at least one origin'); for (const entry of entries) { const url=new URL(entry); if (url.protocol !== 'https:') throw new Error('EDGE_CORS_ALLOWLIST entries must be https origins: ' + entry); if (url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error('EDGE_CORS_ALLOWLIST entries must be bare origins: ' + entry); if (entry.includes('replace-') || /\.(invalid|example|test|localhost)\$/u.test(url.hostname) || url.hostname === 'localhost') throw new Error('EDGE_CORS_ALLOWLIST still contains a placeholder origin: ' + entry); }"
 
       - name: Install and re-check the isolated Worker
         working-directory: ${{ env.WORKER_DIRECTORY }}
@@ -318,6 +339,7 @@ jobs:
             --env production \
             --message "5% canary sha:${GITHUB_SHA}" \
             --yes
+          echo 'CANARY_ROUTED=true' >> "$GITHUB_ENV"
           npx wrangler deployments status --env production --json > "${RUNNER_TEMP}/cloudflare-production-after.json"
 
       - name: Verify health and record hold/promotion/rollback commands
@@ -385,18 +407,36 @@ jobs:
             echo "Rollback: \`npx wrangler versions deploy ${PREVIOUS_VERSION_ID}@100% --env production --yes\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Automatically roll back a failed or cancelled canary
+        if: (failure() || cancelled()) && env.CANARY_ROUTED == 'true'
+        working-directory: ${{ env.WORKER_DIRECTORY }}
+        shell: bash
+        env:
+          PREVIOUS_VERSION_ID: ${{ inputs.previous_version_id }}
+        run: |
+          set -euo pipefail
+          npx wrangler versions deploy \
+            "${PREVIOUS_VERSION_ID}@100%" \
+            --env production \
+            --message "automatic rollback after failed canary sha:${GITHUB_SHA}" \
+            --yes
+          npx wrangler deployments status --env production --json \
+            > "${RUNNER_TEMP}/cloudflare-production-rollback.json"
+
       - name: Remove transient secret material
         if: always()
         shell: bash
         run: rm -f -- "${RUNNER_TEMP}/sorita-edge-production-secrets.json"
 
       - name: Upload non-secret deployment evidence
+        if: always() && !cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cloudflare-production-${{ github.sha }}
           path: |
             ${{ runner.temp }}/cloudflare-production-before.json
             ${{ runner.temp }}/cloudflare-production-after.json
+            ${{ runner.temp }}/cloudflare-production-rollback.json
             ${{ runner.temp }}/cloudflare-production-versions.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90

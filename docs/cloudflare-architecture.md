@@ -104,8 +104,9 @@ Detaylı sözleşme [cloudflare-route-matrix.md](./cloudflare-route-matrix.md), 
 
 Tüm `4xx/5xx` cevaplar örnekleme oranından bağımsız loglanır. Checked-in Supabase URL'leri,
 `.invalid` CORS origin'leri ve rate namespace ID'leri placeholder'dır. Production ayarında
-`workers_dev: true` bulunması nihai ingress kararı değildir; özel domain/route ve `workers.dev`
-politikası yetkili operatörce belirlenip kanıtlanmalıdır.
+`workers_dev: false` ve `preview_urls: false` production için fail-closed kapıdır. Kaynakta bilinmeyen bir hostname
+uydurulmaz; onaylı özel domain/route eklenene kadar production Worker'ın erişilebilir ingress'i
+yoktur ve deploy NO-GO kalır.
 
 ## Direct-origin kademeli kapatma planı
 

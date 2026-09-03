@@ -11,6 +11,7 @@ import {
   TEST_ORIGIN,
   TEST_BUILD_SHA,
   TEST_REQUEST_ID,
+  TEST_SUPABASE_ORIGIN,
   TEST_USER_B_ID,
   TEST_USER_ID,
   toFetchFunction,
@@ -91,7 +92,14 @@ describe('route, method, CORS, body, and action contracts', () => {
   });
 
   it('allows native requests without Origin and enforces the exact browser allowlist', async () => {
-    const fetchFunction = toFetchFunction(() => jsonOriginResponse({ success: true }));
+    const fetchFunction = toFetchFunction(() =>
+      jsonOriginResponse({
+        session: {
+          accessToken: 'test-access-token',
+          refreshToken: 'test-refresh-token',
+        },
+      }),
+    );
     const nativeResponse = await handleWorkerRequest(
       createJsonRequest(
         '/v1/auth-gateway',
@@ -237,6 +245,104 @@ describe('route, method, CORS, body, and action contracts', () => {
     ).toMatchObject({ success: false });
   });
 
+  it('keeps media limits and metadata relationships aligned with the origin contract', () => {
+    const route = ROUTE_DEFINITIONS['/v1/media-assets'];
+    const uploadSessionId = '30000000-0000-4000-8000-000000000003';
+    const validPrivateVideo = {
+      action: 'complete-upload',
+      bucket: 'place-media-private',
+      contentType: 'video/mp4',
+      durationSeconds: 12,
+      fileSizeBytes: 8 * 1024 * 1024,
+      height: 1_080,
+      mediaType: 'video',
+      objectPath: `${TEST_USER_ID}/video.mp4`,
+      uploadSessionId,
+      width: 1_920,
+    };
+
+    expect(
+      validatePayload(route, {
+        action: 'create-upload-url',
+        bucket: 'place-media-private',
+        contentType: 'image/jpeg',
+        extension: 'JPEG',
+        fileSizeBytes: 1_024,
+        prefix: '/lists/cover/',
+        uploadSessionId,
+      }),
+    ).toMatchObject({ action: 'create-upload-url', success: true });
+    expect(validatePayload(route, validPrivateVideo)).toMatchObject({
+      action: 'complete-upload',
+      success: true,
+    });
+    expect(
+      validatePayload(route, {
+        action: 'complete-upload',
+        bucket: 'place-media',
+        contentType: 'image/jpeg',
+        fileSizeBytes: 6 * 1024 * 1024,
+        mediaType: 'photo',
+        objectPath: `${TEST_USER_ID}/place.jpg`,
+        uploadSessionId,
+      }),
+    ).toMatchObject({ action: 'complete-upload', success: true });
+
+    for (const payload of [
+      {
+        action: 'create-upload-url',
+        bucket: 'place-media-private',
+        contentType: 'image/jpeg',
+        extension: 'gif',
+        fileSizeBytes: 1_024,
+        prefix: 'cover',
+        uploadSessionId,
+      },
+      {
+        action: 'create-upload-url',
+        bucket: 'place-media-private',
+        contentType: 'image/jpeg',
+        fileSizeBytes: 1_024,
+        prefix: '../escape',
+        uploadSessionId,
+      },
+      {
+        action: 'create-upload-url',
+        bucket: 'profile-media',
+        contentType: 'image/jpeg',
+        fileSizeBytes: 5 * 1024 * 1024 + 1,
+        prefix: 'avatar',
+        uploadSessionId,
+      },
+      {
+        action: 'create-upload-url',
+        bucket: 'place-media-private',
+        contentType: 'image/jpeg',
+        fileSizeBytes: 140_313_801,
+        prefix: 'cover',
+        uploadSessionId,
+      },
+      {
+        ...validPrivateVideo,
+        durationSeconds: undefined,
+      },
+      {
+        ...validPrivateVideo,
+        height: undefined,
+      },
+      {
+        ...validPrivateVideo,
+        contentType: 'image/jpeg',
+      },
+      {
+        ...validPrivateVideo,
+        bucket: 'place-media',
+      },
+    ]) {
+      expect(validatePayload(route, payload)).toMatchObject({ success: false });
+    }
+  });
+
   it('rejects non-JSON, malformed JSON, unknown fields, and invalid actions', async () => {
     const requests = [
       new Request('https://edge.example/v1/auth-gateway', {
@@ -278,7 +384,12 @@ describe('route, method, CORS, body, and action contracts', () => {
       }
 
       originCalled = true;
-      return jsonOriginResponse({ signedUrl: 'https://storage.example/signed' });
+      return jsonOriginResponse({
+        expiresInSeconds: 300,
+        signedUrl:
+          `${TEST_SUPABASE_ORIGIN}/storage/v1/object/sign/place-media-private/`
+          + `${TEST_USER_ID}/asset.jpg?token=test-token`,
+      });
     });
     const response = await handleWorkerRequest(
       createJsonRequest(

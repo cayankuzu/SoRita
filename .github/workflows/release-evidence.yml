@@ -16,6 +16,14 @@ on:
         description: Successful Database Validation workflow run ID for candidate_sha
         required: true
         type: string
+      docker_run_id:
+        description: Successful Docker Validation workflow run ID for candidate_sha
+        required: true
+        type: string
+      runtime_evidence_run_id:
+        description: Successful Provider and Device Runtime Evidence run ID; leave blank for an explicit partial NO-GO packet
+        required: false
+        type: string
       channel:
         description: Intended release channel (metadata only; this workflow never deploys)
         required: true
@@ -36,14 +44,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CI: 'true'
-  NODE_VERSION: '24'
+  CI: "true"
+  NODE_VERSION: "24"
 
 jobs:
   repository-evidence:
     name: Build checksum-bound repository evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out the requested immutable commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -89,11 +97,12 @@ jobs:
           git status --porcelain=v1 --untracked-files=all | tee /tmp/initial-status.txt
           test ! -s /tmp/initial-status.txt
 
-      - name: Verify successful same-SHA Quality and Database runs
+      - name: Verify successful same-SHA Quality, Database and Docker runs
         shell: bash
         env:
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           DATABASE_RUN_ID: ${{ inputs.database_run_id }}
+          DOCKER_RUN_ID: ${{ inputs.docker_run_id }}
           GH_TOKEN: ${{ github.token }}
           QUALITY_RUN_ID: ${{ inputs.quality_run_id }}
         run: |
@@ -124,6 +133,114 @@ jobs:
 
           verify_and_record "$QUALITY_RUN_ID" quality.yml quality-run.json
           verify_and_record "$DATABASE_RUN_ID" database-validation.yml database-run.json
+          verify_and_record "$DOCKER_RUN_ID" docker-validation.yml docker-run.json
+
+      - name: Download and verify exact database and Docker evidence artifacts
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          DATABASE_RUN_ID: ${{ inputs.database_run_id }}
+          DOCKER_RUN_ID: ${{ inputs.docker_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          download_and_verify_artifact() {
+            local run_id="$1"
+            local artifact_name="$2"
+            local destination="$3"
+            local metadata_file="$4"
+            local response_file="${RUNNER_TEMP}/${artifact_name}.json"
+            local selected_file="artifacts/release-evidence/${metadata_file}"
+            local archive_file="artifacts/release-evidence/${artifact_name}.zip"
+
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "$response_file"
+            ARTIFACT_NAME="$artifact_name" RUN_ID="$run_id" RESPONSE_FILE="$response_file" \
+              SELECTED_FILE="$selected_file" TARGET_SHA="$CANDIDATE_SHA" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const payload = JSON.parse(readFileSync(process.env.RESPONSE_FILE, 'utf8'));
+          const matches = (payload.artifacts ?? []).filter((artifact) =>
+            artifact.name === process.env.ARTIFACT_NAME &&
+            String(artifact.workflow_run?.id) === process.env.RUN_ID,
+          );
+          if (matches.length !== 1) throw new Error('Expected exactly one same-run evidence artifact.');
+          const artifact = matches[0];
+          if (artifact.expired) throw new Error('Evidence artifact is expired.');
+          if (artifact.workflow_run?.head_sha?.toLowerCase() !== process.env.TARGET_SHA.toLowerCase()) {
+            throw new Error('Evidence artifact is not bound to the candidate SHA.');
+          }
+          if (!/^sha256:[a-f0-9]{64}$/u.test(artifact.digest ?? '')) {
+            throw new Error('Evidence artifact is missing a canonical GitHub digest.');
+          }
+          writeFileSync(process.env.SELECTED_FILE, `${JSON.stringify({
+            id: artifact.id,
+            name: artifact.name,
+            digest: artifact.digest,
+            sizeInBytes: artifact.size_in_bytes,
+            workflowRun: artifact.workflow_run,
+          }, null, 2)}\n`);
+          process.stdout.write(`${artifact.id}\t${artifact.digest}\n`);
+          NODE
+
+            local artifact_id expected_digest
+            IFS=$'\t' read -r artifact_id expected_digest < <(
+              node --input-type=module -e \
+                "const a=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(a.id+'\\t'+a.digest+'\\n')" \
+                "$selected_file"
+            )
+            curl --fail --silent --show-error --location \
+              --proto '=https' --proto-redir '=https' --tlsv1.2 \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              --output "$archive_file" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip"
+            local actual_digest
+            actual_digest="sha256:$(sha256sum "$archive_file" | awk '{print $1}')"
+            if [[ "$actual_digest" != "$expected_digest" ]]; then
+              echo "::error::Artifact digest mismatch for ${artifact_name}."
+              exit 1
+            fi
+            mkdir -p "$destination"
+            unzip -q "$archive_file" -d "$destination"
+          }
+
+          download_and_verify_artifact \
+            "$DATABASE_RUN_ID" "database-evidence-${CANDIDATE_SHA}" \
+            artifacts/release-evidence/database-evidence database-artifact.json
+          download_and_verify_artifact \
+            "$DOCKER_RUN_ID" "docker-evidence-${CANDIDATE_SHA}" \
+            artifacts/release-evidence/docker-evidence docker-artifact.json
+
+          TARGET_SHA="$CANDIDATE_SHA" node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+          for (const directory of [
+            'artifacts/release-evidence/database-evidence',
+            'artifacts/release-evidence/docker-evidence',
+          ]) {
+            const manifestPath = `${directory}/manifest.json`;
+            if (!existsSync(manifestPath)) throw new Error(`Missing inner evidence manifest: ${directory}`);
+            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+            if (manifest.schemaVersion !== 1 || manifest.commitSha?.toLowerCase() !== process.env.TARGET_SHA.toLowerCase()) {
+              throw new Error(`Invalid inner evidence identity: ${directory}`);
+            }
+            const expectedNames = (manifest.artifacts ?? []).map((artifact) => artifact.path).sort();
+            const actualNames = readdirSync(directory).filter((name) => name !== 'manifest.json').sort();
+            if (JSON.stringify(expectedNames) !== JSON.stringify(actualNames)) {
+              throw new Error(`Inner evidence file set mismatch: ${directory}`);
+            }
+            for (const artifact of manifest.artifacts) {
+              if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/u.test(artifact.path)) {
+                throw new Error(`Unsafe inner artifact path: ${artifact.path}`);
+              }
+              const filePath = `${directory}/${artifact.path}`;
+              if (!statSync(filePath).isFile()) throw new Error(`Inner artifact is not a file: ${filePath}`);
+              const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
+              if (digest !== artifact.sha256) throw new Error(`Inner artifact checksum mismatch: ${filePath}`);
+            }
+          }
+          NODE
 
       - name: Install the root lockfile without lifecycle scripts
         run: npm ci --ignore-scripts
@@ -136,7 +253,91 @@ jobs:
           npm run release-evidence:test 2>&1 | tee artifacts/release-evidence/manifest-tests.log
           git diff --exit-code
 
+      - name: Download and verify exact provider and device runtime evidence
+        if: inputs.runtime_evidence_run_id != ''
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          RUNTIME_EVIDENCE_RUN_ID: ${{ inputs.runtime_evidence_run_id }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RUNTIME_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo '::error::runtime_evidence_run_id must be numeric.'
+            exit 1
+          fi
+
+          run_fields="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUNTIME_EVIDENCE_RUN_ID}" --jq '[.status,.conclusion,.head_sha,.event,(.workflow_id|tostring),(.run_attempt|tostring),.head_repository.full_name,.repository.full_name] | @tsv')"
+          expected_workflow_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/runtime-evidence.yml" --jq '.id')"
+          IFS=$'\t' read -r run_status conclusion evidence_sha event_name workflow_id run_attempt head_repository repository <<< "$run_fields"
+          if [[ "$run_status" != completed || "$conclusion" != success || "${evidence_sha,,}" != "${CANDIDATE_SHA,,}" || "$event_name" != workflow_dispatch || "$workflow_id" != "$expected_workflow_id" || "$head_repository" != "$GITHUB_REPOSITORY" || "$repository" != "$GITHUB_REPOSITORY" ]]; then
+            echo '::error::Runtime evidence must be a successful same-repository runtime-evidence workflow_dispatch for the exact candidate SHA.'
+            exit 1
+          fi
+
+          artifact_name="runtime-evidence-${CANDIDATE_SHA}"
+          response_file="${RUNNER_TEMP}/runtime-evidence-artifacts.json"
+          metadata_file="artifacts/release-evidence/runtime-artifact.json"
+          archive_file="artifacts/release-evidence/${artifact_name}.zip"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUNTIME_EVIDENCE_RUN_ID}/artifacts?per_page=100" > "$response_file"
+          ARTIFACT_NAME="$artifact_name" RESPONSE_FILE="$response_file" \
+            RUN_ID="$RUNTIME_EVIDENCE_RUN_ID" TARGET_SHA="$CANDIDATE_SHA" \
+            METADATA_FILE="$metadata_file" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const payload = JSON.parse(readFileSync(process.env.RESPONSE_FILE, 'utf8'));
+          const matches = (payload.artifacts ?? []).filter((artifact) =>
+            artifact.name === process.env.ARTIFACT_NAME &&
+            String(artifact.workflow_run?.id) === process.env.RUN_ID,
+          );
+          if (matches.length !== 1) throw new Error('Expected exactly one same-run runtime evidence artifact.');
+          const artifact = matches[0];
+          if (artifact.expired) throw new Error('Runtime evidence artifact is expired.');
+          if (artifact.workflow_run?.head_sha?.toLowerCase() !== process.env.TARGET_SHA.toLowerCase()) {
+            throw new Error('Runtime evidence artifact is not bound to the candidate SHA.');
+          }
+          if (!/^sha256:[a-f0-9]{64}$/u.test(artifact.digest ?? '')) {
+            throw new Error('Runtime evidence artifact is missing a canonical GitHub digest.');
+          }
+          writeFileSync(process.env.METADATA_FILE, `${JSON.stringify({
+            id: artifact.id,
+            name: artifact.name,
+            digest: artifact.digest,
+            sizeInBytes: artifact.size_in_bytes,
+            workflowRun: artifact.workflow_run,
+          }, null, 2)}\n`);
+          process.stdout.write(`${artifact.id}\t${artifact.digest}\n`);
+          NODE
+
+          IFS=$'\t' read -r artifact_id expected_digest < <(
+            node --input-type=module -e \
+              "const a=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(a.id+'\\t'+a.digest+'\\n')" \
+              "$metadata_file"
+          )
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --output "$archive_file" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip"
+          actual_digest="sha256:$(sha256sum "$archive_file" | awk '{print $1}')"
+          if [[ "$actual_digest" != "$expected_digest" ]]; then
+            echo '::error::Runtime evidence artifact digest mismatch.'
+            exit 1
+          fi
+          mkdir -p artifacts/release-evidence/runtime-evidence
+          unzip -q "$archive_file" -d artifacts/release-evidence/runtime-evidence
+          node utils/release-evidence/runtime-evidence.mjs verify \
+            --directory artifacts/release-evidence/runtime-evidence \
+            --repository "https://github.com/${GITHUB_REPOSITORY}" \
+            --commit "$CANDIDATE_SHA" \
+            --runtime "$REQUESTED_RUNTIME_VERSION" \
+            --run-id "$RUNTIME_EVIDENCE_RUN_ID" \
+            --run-attempt "$run_attempt"
+
       - name: Generate a deliberately partial NO-GO manifest
+        if: inputs.runtime_evidence_run_id == ''
         shell: bash
         env:
           RELEASE_CHANNEL: ${{ inputs.channel }}
@@ -144,19 +345,35 @@ jobs:
           RELEASE_RUNTIME_VERSION: ${{ inputs.runtime_version }}
         run: |
           set -euo pipefail
+          artifact_args=(
+            --artifact artifacts/release-evidence/quality-run.json
+            --artifact artifacts/release-evidence/database-run.json
+            --artifact artifacts/release-evidence/docker-run.json
+            --artifact artifacts/release-evidence/database-artifact.json
+            --artifact artifacts/release-evidence/docker-artifact.json
+            --artifact "artifacts/release-evidence/database-evidence-${{ inputs.candidate_sha }}.zip"
+            --artifact "artifacts/release-evidence/docker-evidence-${{ inputs.candidate_sha }}.zip"
+            --artifact artifacts/release-evidence/feature-surface.log
+            --artifact artifacts/release-evidence/manifest-tests.log
+          )
+          while IFS= read -r artifact; do
+            artifact_args+=(--artifact "$artifact")
+          done < <(find \
+            artifacts/release-evidence/database-evidence \
+            artifacts/release-evidence/docker-evidence \
+            -type f -print | sort)
           node utils/release-evidence/manifest.mjs create \
             --manifest artifacts/release-evidence/manifest.json \
-            --artifact artifacts/release-evidence/quality-run.json \
-            --artifact artifacts/release-evidence/database-run.json \
-            --artifact artifacts/release-evidence/feature-surface.log \
-            --artifact artifacts/release-evidence/manifest-tests.log \
+            "${artifact_args[@]}" \
             --result quality=pass \
             --result database-local=pass \
+            --result docker-validation=pass \
             --result feature-surface=pass \
             --result evidence-tool=pass \
             --result sast-secret-scan=pass \
             --result cloudflare-preview=unverified \
             --result signed-android-ios=unverified \
+            --result ota-code-signing=unverified \
             --result physical-device-matrix=unverified \
             --result provider-dashboards=unverified \
             --result staging-restore=unverified \
@@ -166,7 +383,64 @@ jobs:
             --result observability-alerts=unverified \
             --result security-review=unverified
 
+      - name: Generate the final checksum-bound production attestation
+        if: inputs.runtime_evidence_run_id != ''
+        shell: bash
+        env:
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_ENVIRONMENT: ${{ inputs.channel }}
+          RELEASE_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_CHANNEL" != production || "$RELEASE_ENVIRONMENT" != production ]]; then
+            echo '::error::Final runtime attestation is only valid for the production channel and environment.'
+            exit 1
+          fi
+          artifact_args=(
+            --artifact artifacts/release-evidence/quality-run.json
+            --artifact artifacts/release-evidence/database-run.json
+            --artifact artifacts/release-evidence/docker-run.json
+            --artifact artifacts/release-evidence/database-artifact.json
+            --artifact artifacts/release-evidence/docker-artifact.json
+            --artifact artifacts/release-evidence/runtime-artifact.json
+            --artifact "artifacts/release-evidence/database-evidence-${{ inputs.candidate_sha }}.zip"
+            --artifact "artifacts/release-evidence/docker-evidence-${{ inputs.candidate_sha }}.zip"
+            --artifact "artifacts/release-evidence/runtime-evidence-${{ inputs.candidate_sha }}.zip"
+            --artifact artifacts/release-evidence/feature-surface.log
+            --artifact artifacts/release-evidence/manifest-tests.log
+          )
+          while IFS= read -r artifact; do
+            artifact_args+=(--artifact "$artifact")
+          done < <(find \
+            artifacts/release-evidence/database-evidence \
+            artifacts/release-evidence/docker-evidence \
+            artifacts/release-evidence/runtime-evidence \
+            -type f -print | sort)
+          node utils/release-evidence/manifest.mjs create \
+            --manifest artifacts/release-evidence/manifest.json \
+            "${artifact_args[@]}" \
+            --result quality=pass \
+            --result database-local=pass \
+            --result docker-validation=pass \
+            --result feature-surface=pass \
+            --result evidence-tool=pass \
+            --result sast-secret-scan=pass \
+            --result cloudflare-preview=pass \
+            --result signed-android-ios=pass \
+            --result ota-code-signing=pass \
+            --result physical-device-matrix=pass \
+            --result provider-dashboards=pass \
+            --result staging-restore=pass \
+            --result store-internal-tracks=pass \
+            --result ota-preview-rollback=pass \
+            --result backup-pitr=pass \
+            --result observability-alerts=pass \
+            --result security-review=pass
+          node utils/release-evidence/manifest.mjs verify \
+            --manifest artifacts/release-evidence/manifest.json
+
       - name: Confirm incomplete evidence cannot pass the production verifier
+        if: inputs.runtime_evidence_run_id == ''
         shell: bash
         run: |
           set -euo pipefail
@@ -177,9 +451,19 @@ jobs:
           echo 'Incomplete external/runtime evidence was correctly rejected; production remains NO-GO.'
 
       - name: Upload checksum-bound partial evidence
+        if: inputs.runtime_evidence_run_id == ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: partial-release-evidence-${{ inputs.candidate_sha }}
+          path: artifacts/release-evidence
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload checksum-bound final release evidence
+        if: inputs.runtime_evidence_run_id != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: final-release-evidence-${{ inputs.candidate_sha }}
           path: artifacts/release-evidence
           if-no-files-found: error
           retention-days: 90

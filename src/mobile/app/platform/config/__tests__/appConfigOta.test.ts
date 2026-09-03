@@ -36,24 +36,25 @@ describe('app.config EAS Update safety', () => {
       enabled: true,
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,
+      requestHeaders: { 'expo-channel-name': 'preview' },
       useEmbeddedUpdate: true,
       url: `https://u.expo.dev/${projectId}`,
     });
   });
 
-  it('keeps package identities and native build numbers unchanged', async () => {
+  it('keeps package identities and the expected native build numbers aligned', async () => {
     const config = await loadAppConfig();
 
     expect(config).toMatchObject({
       scheme: 'sorita',
-      version: '1.0.101',
+      version: '1.0.102',
       android: {
         package: 'com.cayan.sorita.socialmap',
-      versionCode: 106,
+        versionCode: 107,
       },
       ios: {
         bundleIdentifier: 'com.cayan.sorita.socialmap',
-      buildNumber: '86',
+        buildNumber: '87',
       },
     });
   });
@@ -78,7 +79,22 @@ describe('app.config EAS Update safety', () => {
     );
     expect(manifest).toContain('android:name="expo.modules.updates.EXPO_UPDATE_URL"');
     expect(manifest).toContain('android:name="expo.modules.updates.EXPO_RUNTIME_VERSION"');
-    expect(androidStrings).toContain('>1.0.101</string>');
+    expect(manifest).toContain(
+      'android:name="expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY"',
+    );
+    expect(manifest).toContain('${expoUpdatesChannel}');
+    const androidGradle = readFileSync(
+      resolve(process.cwd(), 'android/app/build.gradle'),
+      'utf8',
+    );
+    expect(androidGradle).toContain('expoUpdatesChannel: "development"');
+    expect(androidGradle).toContain("System.getenv('EAS_BUILD_PROFILE')");
+    expect(androidGradle).toContain("findProperty('soritaExpoUpdatesChannel')");
+    expect(androidGradle).toContain("['development', 'preview', 'production'] as Set");
+    expect(androidGradle).toContain(
+      'manifestPlaceholders.expoUpdatesChannel = resolveReleaseExpoUpdatesChannel()',
+    );
+    expect(androidStrings).toContain('>1.0.102</string>');
     expect(androidStrings).toContain(`>https://u.expo.dev/${projectId}</string>`);
     expect(easConfig.build).toMatchObject({
       development: { channel: 'development', environment: 'development' },

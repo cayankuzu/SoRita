@@ -2,7 +2,9 @@ name: Database Validation
 
 on:
   push:
-    branches: [main, chore/aaa-mvp-feature-freeze-cloudflare-ota]
+    branches:
+      - main
+      - chore/final-aaa-mvp-hardening-docker-cloudflare-ota
     paths:
       - 'supabase/**'
       - '.github/workflows/database-validation.yml'
@@ -36,22 +38,47 @@ jobs:
         with:
           version: 2.116.0
 
+      - name: Initialize same-SHA database evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/database
+          printf '%s\n' "$GITHUB_SHA" > artifacts/database/commit-sha.txt
+          supabase --version > artifacts/database/supabase-cli-version.txt
+
       - name: Start an isolated local Supabase stack
-        run: supabase start
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! supabase start >"${RUNNER_TEMP}/supabase-start.log" 2>&1; then
+            echo '::error::The isolated Supabase stack failed to start. Raw output is not uploaded because it can contain local credentials.'
+            exit 1
+          fi
+          printf 'supabase-local-stack=healthy\n' > artifacts/database/stack-health.log
 
       - name: Reset and replay every forward-only migration
-        run: supabase db reset --local
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --local 2>&1 | tee artifacts/database/migration-replay.log
 
       - name: Lint the resulting database schema
-        run: supabase db lint --local --level error
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db lint --local --level error --fail-on error 2>&1 | tee artifacts/database/database-lint.log
 
       - name: Run pgTAP RLS, IDOR and invariant tests
-        run: supabase test db --local
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase test db --local 2>&1 | tee artifacts/database/pgtap.log
 
       - name: Dump and restore into a separate database
         shell: bash
         run: |
           set -euo pipefail
+          exec > >(tee artifacts/database/dump-restore.log) 2>&1
           db_container='supabase_db_SoRita'
           docker inspect "$db_container" >/dev/null
           docker exec "$db_container" pg_dump \
@@ -83,6 +110,53 @@ jobs:
             --username supabase_admin \
             sorita_restore_drill
 
+      - name: Create the same-SHA database evidence manifest
+        if: always() && !cancelled()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+          const directory = 'artifacts/database';
+          const required = [
+            'commit-sha.txt',
+            'database-lint.log',
+            'dump-restore.log',
+            'migration-replay.log',
+            'pgtap.log',
+            'stack-health.log',
+            'supabase-cli-version.txt',
+          ];
+          if (process.env.JOB_STATUS === 'success') {
+            const missing = required.filter((name) => !existsSync(`${directory}/${name}`));
+            if (missing.length > 0) throw new Error(`Database evidence is incomplete: ${missing.join(', ')}`);
+          }
+          const artifacts = readdirSync(directory)
+            .filter((name) => name !== 'manifest.json')
+            .sort()
+            .map((name) => ({
+              path: name,
+              sha256: createHash('sha256').update(readFileSync(`${directory}/${name}`)).digest('hex'),
+            }));
+          writeFileSync(
+            `${directory}/manifest.json`,
+            `${JSON.stringify({ artifacts, commitSha: process.env.TARGET_SHA, generatedAt: new Date().toISOString(), schemaVersion: 1 }, null, 2)}\n`,
+          );
+          NODE
+
       - name: Stop and remove the ephemeral local stack
         if: always()
         run: supabase stop --no-backup
+
+      - name: Upload checksum-bound database evidence
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: database-evidence-${{ github.sha }}
+          path: artifacts/database
+          if-no-files-found: error
+          retention-days: 30

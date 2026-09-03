@@ -29,8 +29,15 @@ const CURRENT_INTERNAL_TABLES = new Set([
   // Service-only state machine for existing media uploads; it has no user-facing
   // route, screen, notification, or product data contract.
   'private.media_upload_sessions',
+  // Operational state for the existing push-delivery pipeline. These tables
+  // are service-only and deliberately add no route, notification type, or
+  // user-facing data contract.
+  'private.push_delivery_dead_letters',
+  'private.push_delivery_requeue_audits',
+  'private.push_delivery_worker_health',
   'private.push_delivery_jobs',
   'private.system_broadcast_deliveries',
+  'private.system_broadcast_requests',
   'public.account_deletion_jobs',
   'public.request_nonces',
 ]);

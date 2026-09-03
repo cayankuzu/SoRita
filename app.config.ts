@@ -118,16 +118,17 @@ if (rawEdgeApiUrl) {
       parsedEdgeApiUrl.protocol !== 'https:' ||
       parsedEdgeApiUrl.username ||
       parsedEdgeApiUrl.password ||
+      parsedEdgeApiUrl.pathname !== '/' ||
       parsedEdgeApiUrl.search ||
       parsedEdgeApiUrl.hash
     ) {
       throw new Error('unsafe_url');
     }
 
-    edgeApiUrl = rawEdgeApiUrl.replace(/\/+$/, '');
+    edgeApiUrl = parsedEdgeApiUrl.origin;
   } catch {
     throw new Error(
-      'Invalid public runtime configuration: Edge API URL must be an HTTPS base URL without credentials, query, or fragment.',
+      'Invalid public runtime configuration: Edge API URL must be an HTTPS origin without credentials, path, query, or fragment.',
     );
   }
 }
@@ -152,7 +153,7 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-  version: '1.0.101',
+  version: '1.0.102',
   newArchEnabled: true,
   orientation: 'default',
   scheme: appScheme,
@@ -174,7 +175,12 @@ const config: SoRitaExpoConfig = {
     checkAutomatically: 'ON_LOAD',
     fallbackToCacheTimeout: 0,
     useEmbeddedUpdate: true,
-    ...(expoUpdatesUrl ? { url: expoUpdatesUrl } : {}),
+    ...(expoUpdatesUrl
+      ? {
+          requestHeaders: { 'expo-channel-name': releaseEnvironment },
+          url: expoUpdatesUrl,
+        }
+      : {}),
   },
   plugins: [
     'expo-image',
@@ -277,7 +283,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 106,
+    versionCode: 107,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -305,7 +311,7 @@ const config: SoRitaExpoConfig = {
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '86',
+    buildNumber: '87',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
       CFBundleDevelopmentRegion: 'tr',

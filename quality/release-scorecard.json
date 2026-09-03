@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/cayankuzu/SoRita",
+  "commitSha": "b8c8dd9bc822d4d66f55befcbde88ecb38704c3c",
+  "generatedAt": "2026-09-03",
+  "targetScore": 9.8,
+  "scoringRule": "A category may only score at or above targetScore when evidenceLevel is RUNTIME_VERIFIED and at least one runtimeEvidence receipt is bound to commitSha.",
+  "verdict": "NO-GO",
+  "verdictStatement": "IMPLEMENTATION COMPLETE, RELEASE NO-GO UNTIL THE LISTED SAME-SHA RUNTIME/PROVIDER EVIDENCE IS VERIFIED.",
+  "categories": [
+    {
+      "id": 1,
+      "name": "UI/UX and visual consistency",
+      "score": 9.3,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "ui-tokens:check",
+        "ui-copy:check",
+        "accessibility:check",
+        "npm run test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No pixel-diff baseline captured on real hardware."
+    },
+    {
+      "id": 2,
+      "name": "Multi-device and screen",
+      "score": 9.1,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "layout.test.ts",
+        "npm run test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Width and font-scale classes are unit-tested, not rendered on devices."
+    },
+    {
+      "id": 3,
+      "name": "Performance and perceived speed",
+      "score": 8.9,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "performance:test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No cold/warm start, FPS or memory measurement on a real device."
+    },
+    {
+      "id": 4,
+      "name": "Security and privacy",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "security:verify (117 tests across 8 files)",
+        "pgTAP RLS and IDOR (180 tests across 6 files)",
+        "architecture:check secret-boundary rules",
+        "security:audit:prod (0 critical, 0 high)",
+        "text-encoding:check (769 files)"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No staging RLS/IDOR run against the hosted project; no provider-side review."
+    },
+    {
+      "id": 5,
+      "name": "Architecture and code quality",
+      "score": 9.6,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "architecture:check (19 rules)",
+        "source-health:check (no cycles)"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Four backend handlers remain oversized, budgeted but not split."
+    },
+    {
+      "id": 6,
+      "name": "DRY",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "dead-code:check",
+        "source-health:check"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No duplicate-detection metric is tracked over time."
+    },
+    {
+      "id": 7,
+      "name": "Hardcode and config",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "publicRuntimeConfig schema tests",
+        "architecture:check",
+        "check-docker-context"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Token values themselves are not asserted."
+    },
+    {
+      "id": 8,
+      "name": "State management",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "npm run test",
+        "optimisticSocialCache tests"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Race behaviour is tested in unit scope, not under real concurrency."
+    },
+    {
+      "id": 9,
+      "name": "Network and API",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "npm run test",
+        "Worker contract tests (34)"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No fault matrix executed against a deployed origin."
+    },
+    {
+      "id": 10,
+      "name": "Accessibility",
+      "score": 9,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "accessibility:check",
+        "ui-tokens:check"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No VoiceOver or TalkBack traversal evidence."
+    },
+    {
+      "id": 11,
+      "name": "Scale and infrastructure",
+      "score": 8.6,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "docker:load:smoke"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No staged load against isolated staging; no DB or Worker graphs."
+    },
+    {
+      "id": 12,
+      "name": "Error handling and resilience",
+      "score": 9.1,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "docker:resilience fault-injection profile",
+        "originSecurity failure-path tests",
+        "push outbox retry, lease and dead-letter pgTAP coverage"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No provider outage or process-kill drill on a device."
+    },
+    {
+      "id": 13,
+      "name": "Test coverage",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "932 unit and component tests across 167 files",
+        "180 pgTAP tests across 6 suites",
+        "34 Worker contract tests",
+        "test:coverage branches 90.08%, statements 94.53%, lines 94.74%, functions 94.10%"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No device end-to-end run bound to this commit. Only 1 of 12 device-required flows has Maestro evidence."
+    },
+    {
+      "id": 14,
+      "name": "Localization",
+      "score": 9.6,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "ui-copy:check",
+        "tr.ts catalogue"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Locale-formatted output is not visually verified on devices."
+    },
+    {
+      "id": 15,
+      "name": "Offline and persistence",
+      "score": 9.1,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "npm run test",
+        "outbox tests"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No 24-hour replay or process-kill test on hardware."
+    },
+    {
+      "id": 16,
+      "name": "Push and deep link",
+      "score": 8.7,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "pgTAP push_delivery_hardening",
+        "npm run test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No physical device matrix; no provider receipts."
+    },
+    {
+      "id": 17,
+      "name": "Analytics and observability",
+      "score": 8.7,
+      "evidenceLevel": "STATIC",
+      "automatedEvidence": [
+        "Sentry configuration",
+        "structured Worker logs"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No alert fire and recover evidence; no dashboard proof."
+    },
+    {
+      "id": 18,
+      "name": "CI/CD",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "deployment-workflows:test (15)",
+        "docker:test end to end"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No protected production run executed on this commit."
+    },
+    {
+      "id": 19,
+      "name": "Documentation",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "docs tree",
+        "runbooks",
+        "ADRs"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Runbooks are unexercised against real providers."
+    },
+    {
+      "id": 20,
+      "name": "Domain logic",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "pgTAP invariants",
+        "npm run test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Concurrency invariants are proven on a local database only."
+    },
+    {
+      "id": 21,
+      "name": "Dependencies",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "security:audit:prod (0 critical, 0 high, 4 moderate)",
+        "security:licenses (738 locked production packages)",
+        "security:provenance",
+        "dead-code:check"
+      ],
+      "runtimeEvidence": [],
+      "gap": "One moderate advisory (decode-uri-component) is accepted with owner, reason, exploitability and a 2026-12-01 expiry because the only patched release is ESM-only and its CommonJS consumer would break. SBOM is produced in CI but not attached to a release for this commit."
+    },
+    {
+      "id": 22,
+      "name": "Battery and resource use",
+      "score": 8.4,
+      "evidenceLevel": "STATIC",
+      "automatedEvidence": [
+        "background work review"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No device battery, thermal or background measurement."
+    },
+    {
+      "id": 23,
+      "name": "Platform compatibility",
+      "score": 8.8,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "expo:check",
+        "native parity guards"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No signed artifact inspected."
+    },
+    {
+      "id": 24,
+      "name": "Store readiness",
+      "score": 8.2,
+      "evidenceLevel": "STATIC",
+      "automatedEvidence": [
+        "store metadata",
+        "privacy declarations"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No signed AAB or IPA; no internal track or TestFlight build."
+    },
+    {
+      "id": 25,
+      "name": "Operations maturity",
+      "score": 9,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "runbooks",
+        "release-evidence pipeline",
+        "ops CLIs"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No owner signoff or rehearsed incident bound to this commit."
+    },
+    {
+      "id": 26,
+      "name": "Readability and simplicity",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "source-health:check budgets",
+        "dead-code:check"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Four oversized backend files remain."
+    },
+    {
+      "id": 27,
+      "name": "Overall maturity",
+      "score": 8.8,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "full gate sweep"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Provider, device and store gates are all open."
+    },
+    {
+      "id": 28,
+      "name": "Code architecture",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "architecture:check",
+        "11 public contracts"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Contract width is not itself gated."
+    },
+    {
+      "id": 29,
+      "name": "Code quality",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "typecheck strict",
+        "lint zero warnings"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No mutation testing."
+    },
+    {
+      "id": 30,
+      "name": "KISS",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "single Docker stack",
+        "no new services"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Judgement-based; no automatic metric."
+    },
+    {
+      "id": 31,
+      "name": "Code hardcode",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "ui-tokens:check",
+        "config schema"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Incidental literals remain inline by design."
+    },
+    {
+      "id": 32,
+      "name": "Reuse",
+      "score": 9.4,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "shared components",
+        "dead-code:check"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No reuse metric tracked over time."
+    },
+    {
+      "id": 33,
+      "name": "Code performance",
+      "score": 8.9,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "performance:test"
+      ],
+      "runtimeEvidence": [],
+      "gap": "No profiler run on a real device."
+    },
+    {
+      "id": 34,
+      "name": "Testability",
+      "score": 9.5,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "injected adapters",
+        "maps-mock profile"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Provider seams unproven against real providers."
+    },
+    {
+      "id": 35,
+      "name": "Extensibility",
+      "score": 9.3,
+      "evidenceLevel": "AUTOMATED",
+      "automatedEvidence": [
+        "versioned contracts",
+        "schema versioning"
+      ],
+      "runtimeEvidence": [],
+      "gap": "Backward compatibility not exercised against an old binary."
+    }
+  ]
+}

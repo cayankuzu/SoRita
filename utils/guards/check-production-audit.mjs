@@ -3,22 +3,41 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// Temporary, time-bounded production advisory acceptances.
+//
+// Every entry must carry an owner, a reason the fix is not simply applied, an
+// honest exploitability assessment and an expiry. The guard below rejects any
+// acceptance that omits one of these, so an advisory cannot be silenced by
+// adding a bare URL.
 const acceptedAdvisories = new Map([
   [
-    'https://github.com/advisories/GHSA-w3rx-r6r6-pgpr',
+    'https://github.com/advisories/GHSA-vcc3-ghjq-m6fr',
     {
-      dependency: 'image-size',
-      reviewBy: '2026-09-15',
-    },
-  ],
-  [
-    'https://github.com/advisories/GHSA-5p2g-fcmc-qvqq',
-    {
-      dependency: 'image-size',
-      reviewBy: '2026-09-15',
+      dependency: 'decode-uri-component',
+      owner: 'mobile-platform',
+      reason:
+        'Only decode-uri-component 0.5.0 leaves the vulnerable range, and it is ESM-only while its consumer query-string@7 is CommonJS and calls require(). Forcing it breaks deep-link parsing at runtime. The supported fix is a React Navigation major upgrade, which needs a new native binary and is out of scope for a hardening pass.',
+      exploitability:
+        'Local denial of service only. Requires the user to open a crafted sorita:// deep link; worst case is CPU exhaustion in the user own app process, recovered by relaunch. No data disclosure, no privilege escalation, no cross-user or server impact. The linking config exposes four routes behind a single custom scheme.',
+      reviewBy: '2026-12-01',
     },
   ],
 ]);
+
+const REQUIRED_ACCEPTANCE_FIELDS = ['dependency', 'owner', 'reason', 'exploitability', 'reviewBy'];
+
+for (const [url, acceptance] of acceptedAdvisories) {
+  for (const field of REQUIRED_ACCEPTANCE_FIELDS) {
+    if (typeof acceptance[field] !== 'string' || acceptance[field].trim() === '') {
+      console.error(`[production-audit] Acceptance ${url} is missing ${field}.`);
+      process.exit(1);
+    }
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(acceptance.reviewBy)) {
+    console.error(`[production-audit] Acceptance ${url} has an invalid reviewBy date.`);
+    process.exit(1);
+  }
+}
 
 function run(command, args, shell = false) {
   return spawnSync(command, args, {
@@ -79,6 +98,9 @@ if (unexpectedAdvisories.length > 0) {
 }
 
 const activeAcceptedAdvisories = advisories.filter((advisory) => acceptedAdvisories.has(advisory.url));
+const activeAcceptedDependencies = new Set(
+  activeAcceptedAdvisories.map((advisory) => advisory.dependency),
+);
 
 if (activeAcceptedAdvisories.length > 0) {
   const today = new Date().toISOString().slice(0, 10);
@@ -89,27 +111,39 @@ if (activeAcceptedAdvisories.length > 0) {
   if (expired.length > 0) {
     fail('A temporary advisory acceptance expired; re-evaluate the upstream dependency.');
   }
+}
 
-  const imageSizeVulnerability = vulnerabilities['image-size'];
-  if (!imageSizeVulnerability || imageSizeVulnerability.isDirect) {
-    fail('The image-size acceptance is valid only for the transitive Metro build dependency.');
+// Compensating controls run only for the dependencies that are actually still
+// vulnerable. Scoping them this way means resolving one advisory cannot make an
+// unrelated control fail, and a control cannot be skipped while its advisory is
+// still live.
+function assertTransitiveOnly(dependencyName, expectedParents) {
+  const vulnerability = vulnerabilities[dependencyName];
+  if (!vulnerability || vulnerability.isDirect) {
+    fail(`The ${dependencyName} acceptance is valid only for a transitive dependency.`);
   }
 
-  const explanationResult = runNpm(['explain', 'image-size', '--json']);
+  const explanationResult = runNpm(['explain', dependencyName, '--json']);
   let explanation;
 
   try {
     explanation = JSON.parse(explanationResult.stdout);
   } catch {
-    fail('Could not verify the image-size dependency path.', explanationResult.stderr);
+    fail(`Could not verify the ${dependencyName} dependency path.`, explanationResult.stderr);
   }
 
-  const onlyMetroDependents = explanation.every((entry) =>
-    (entry.dependents ?? []).every((dependent) => dependent.from?.name === 'metro'),
+  const onlyExpectedDependents = explanation.every((entry) =>
+    (entry.dependents ?? []).every((dependent) => expectedParents.includes(dependent.from?.name)),
   );
-  if (!onlyMetroDependents) {
-    fail('image-size is no longer isolated to Metro build-time asset processing.');
+  if (!onlyExpectedDependents) {
+    fail(
+      `${dependencyName} is no longer isolated to ${expectedParents.join(', ')}; re-evaluate the acceptance.`,
+    );
   }
+}
+
+if (activeAcceptedDependencies.has('image-size')) {
+  assertTransitiveOnly('image-size', ['metro']);
 
   const assetGuardResult = run(process.execPath, ['utils/guards/check-metro-assets.mjs']);
   if (assetGuardResult.status !== 0) {
@@ -118,8 +152,15 @@ if (activeAcceptedAdvisories.length > 0) {
   process.stdout.write(assetGuardResult.stdout);
 }
 
+if (activeAcceptedDependencies.has('decode-uri-component')) {
+  // The accepted exposure is deep-link query parsing reached through
+  // query-string. If it becomes reachable from anywhere else, the exploitability
+  // assessment no longer holds and the acceptance must be re-reviewed.
+  assertTransitiveOnly('decode-uri-component', ['query-string']);
+}
+
 const counts = audit.metadata?.vulnerabilities ?? {};
 console.log(
   `[production-audit] OK (${counts.critical ?? 0} critical, ${counts.high ?? 0} high, ` +
-    `${counts.moderate ?? 0} moderate; ${activeAcceptedAdvisories.length} temporary build-only advisories accepted)`,
+    `${counts.moderate ?? 0} moderate; ${activeAcceptedAdvisories.length} time-bounded advisory acceptances active)`,
 );

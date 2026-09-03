@@ -33,13 +33,13 @@ The media route permits only `create-upload-url`, `complete-upload`, `create-rea
 ## Security behavior
 
 - Supabase JWTs are verified cryptographically against `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`. Verification requires an allowed asymmetric algorithm, the exact `${SUPABASE_URL}/auth/v1` issuer, configured audience, valid signature, `exp`, `nbf`, and a UUID `sub`.
-- JWKS data has a bounded ten-minute fresh TTL and five-minute stale-on-network-error grace. A `kid` miss forces one coalesced refresh; a bounded negative cache and cooldown prevent random-`kid` refresh amplification. Stale keys never bypass signature, issuer, audience, time, or subject validation.
+- JWKS data has a bounded ten-minute fresh TTL and five-minute stale-on-network-error grace. Only resolved, structured-cloneable key data is cached across requests; fetch promises, responses, and streams are never shared between Worker invocations. Concurrent refreshes remain request-owned, while a bounded negative cache and cooldown limit sequential random-`kid` refresh amplification. Stale keys never bypass signature, issuer, audience, time, or subject validation.
 - Deployment gate: the Supabase project must use an asymmetric ES256 or RS256 signing key. Legacy shared-secret tokens are intentionally rejected because they cannot be verified from the public JWKS endpoint.
 - The Worker forwards the original user bearer token and the environment's publishable/anon key. There is no service-role binding.
 - Every proxied request first consumes a coarse HMAC-hashed `CF-Connecting-IP` key before request-body or JWT/JWKS work. A second action-level check uses the verified user ID when available, otherwise another hashed-IP key. Binding failures return `503` and never reach the origin.
 - Cloudflare's Rate Limiting API is deliberately a coarse abuse-control layer. It is per-location and eventually consistent. Exact login lockouts and business quotas remain atomic Supabase/Postgres responsibilities.
 - JSON is read as a bounded byte stream even when `Content-Length` is absent. Compressed bodies, non-JSON content, unknown methods, paths, actions, and fields fail closed.
-- Every response, including health, errors, preflights, and upstream responses, is `Cache-Control: private, no-store`. Origin cookies and cache headers are never forwarded.
+- Every response, including health, errors, preflights, and upstream responses, is `Cache-Control: private, no-store`. Origin cookies and cache headers are never forwarded. Origin JSON bodies are byte-bounded, UTF-8/JSON parsed, validated against the selected route/action response contract, and reserialized before they reach a client.
 - `/health` returns the immutable 40-character `BUILD_SHA`; preview and canary workflows require it to equal the exact candidate commit.
 - Mutations are attempted exactly once. There are no automatic origin retries. Origin timeouts return `504`; origin redirects, malformed responses, and `5xx` bodies are converted to sanitized `502` responses. `429 Retry-After` is retained.
 - Browser requests require an exact `Origin` match from `CORS_ALLOWLIST`. Native requests without `Origin` are allowed. CORS is not treated as authentication.
@@ -70,13 +70,13 @@ The matching `ORIGIN_HMAC_SECRET` must be installed as a Cloudflare Worker secre
 
 ## Environments and configuration
 
-`wrangler.jsonc` defines `development`, `preview`, and `production` with distinct Worker names, `workers.dev` routes, upstream placeholders, log sample rates, and Rate Limiting namespace IDs. Bindings are repeated because Wrangler bindings and variables are non-inheritable.
+`wrangler.jsonc` defines `development`, `preview`, and `production` with distinct Worker names, upstream placeholders, log sample rates, and Rate Limiting namespace IDs. Development and preview may use `workers.dev`; production explicitly disables both `workers.dev` and preview URLs and intentionally has no checked-in route. That absence is a fail-closed deployment gate: production has no reachable ingress until the approved custom route/domain is added. Bindings are repeated because Wrangler bindings and variables are non-inheritable.
 
 Before any deployment:
 
 1. Replace every `.invalid` browser origin and `replace-*-project-ref` Supabase URL with the approved environment-specific values.
 2. Allocate Rate Limiting namespace IDs that are unique in the Cloudflare account. Namespace IDs in the checked-in file are reserved placeholders, not globally guaranteed values.
-3. For production, configure the approved stable custom API domain/route and decide whether to disable `workers.dev`. Do not guess a production hostname in source control.
+3. For production, add the approved stable custom API domain/route while keeping `workers_dev: false` and `preview_urls: false`. Do not guess a production hostname in source control or temporarily enable a personal `workers.dev` endpoint.
 4. Configure WAF/body/method/bot protection separately. The Worker binding is the second rate-limit layer, not a WAF replacement.
 5. Verify that the origin HMAC validator is deployed in observation mode before enforcing origin bypass protection.
 

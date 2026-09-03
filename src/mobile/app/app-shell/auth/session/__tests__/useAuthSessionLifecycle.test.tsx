@@ -22,6 +22,7 @@ const loggerErrorMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const isPasswordRecoverySessionExchangeActiveMock = vi.fn();
 const purgeAuthenticatedUserStateMock = vi.fn();
+const stageActivePushTokenCleanupForAuthTransitionMock = vi.fn();
 
 function dispatchAuthChange<TSession>(
   handler: ((event: string, session: TSession) => void) | null,
@@ -85,6 +86,10 @@ vi.mock('@/mobile/app/app-shell/auth/session/authUserStatePurge', () => ({
   purgeAuthenticatedUserState: purgeAuthenticatedUserStateMock,
 }));
 
+vi.mock('@/mobile/app/data/repositories/pushNotificationRepository', () => ({
+  stageActivePushTokenCleanupForAuthTransition: stageActivePushTokenCleanupForAuthTransitionMock,
+}));
+
 describe('useAuthSessionLifecycle', () => {
   beforeEach(() => {
     clearCurrentUserStateMock.mockReset();
@@ -105,11 +110,13 @@ describe('useAuthSessionLifecycle', () => {
     loggerWarnMock.mockReset();
     isPasswordRecoverySessionExchangeActiveMock.mockReset();
     purgeAuthenticatedUserStateMock.mockReset();
+    stageActivePushTokenCleanupForAuthTransitionMock.mockReset();
     isPasswordRecoverySessionExchangeActiveMock.mockReturnValue(false);
     refreshSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     signOutMock.mockResolvedValue(undefined);
     restorePersistedVisibleDataSnapshotMock.mockResolvedValue(null);
     purgeAuthenticatedUserStateMock.mockResolvedValue(undefined);
+    stageActivePushTokenCleanupForAuthTransitionMock.mockResolvedValue(null);
 
     vi.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     vi.spyOn(AppState, 'addEventListener').mockImplementation(() => ({
@@ -239,6 +246,41 @@ describe('useAuthSessionLifecycle', () => {
 
     hook.unmount();
     expect(unsubscribeMock).toHaveBeenCalled();
+  });
+
+  it('stages the prior device token capability before a signed-in account changes', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const userA = { id: 'user-a', email: 'a@example.com' };
+    const userB = { id: 'user-b', email: 'b@example.com' };
+    let authChangeHandler: ((event: string, session: { user: typeof userA } | null) => void) | null = null;
+
+    getActiveOrPersistedSessionMock.mockResolvedValue({ user: userA });
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getVerifiedAuthUserMock.mockResolvedValue(userA);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: 'user-a', email: 'a@example.com', name: 'A', username: 'user_a',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockImplementation((callback) => {
+      authChangeHandler = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(setUser).toHaveBeenCalled());
+
+    getVerifiedAuthUserMock.mockResolvedValue(userB);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: 'user-b', email: 'b@example.com', name: 'B', username: 'user_b',
+    });
+    dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: userB });
+
+    await waitFor(() => {
+      expect(stageActivePushTokenCleanupForAuthTransitionMock).toHaveBeenCalledOnce();
+      expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-a');
+    });
   });
 
   it('alerts and signs the user out when the authenticated account is missing', async () => {
@@ -389,5 +431,79 @@ describe('useAuthSessionLifecycle', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  async function mountWithExpiringSession(refreshResult: unknown) {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const immediateUser = { id: 'user-1', email: 'user@example.com', name: 'Ada', username: 'ada' };
+    const nowMs = Date.UTC(2026, 0, 1, 12, 0, 0);
+    const expiringSession = {
+      expires_at: Math.floor((nowMs + 60_000) / 1000),
+      user: authUser,
+    };
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+    const unsubscribeMock = vi.fn();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs);
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    getActiveOrPersistedSessionMock.mockResolvedValue(expiringSession);
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue(immediateUser);
+    syncAuthenticatedUserMock.mockResolvedValue(immediateUser);
+    refreshSessionMock.mockResolvedValue(refreshResult);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: unsubscribeMock } },
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser);
+    });
+
+    dispatchAppStateChange(appStateHandler, 'active');
+
+    return { hook, setTimeoutSpy, setUser, unsubscribeMock };
+  }
+
+  it('retries later and keeps the session when the pre-expiry refresh fails', async () => {
+    const { hook, setTimeoutSpy, setUser } = await mountWithExpiringSession({
+      data: { session: null },
+      error: new Error('refresh failed'),
+    });
+
+    await waitFor(() => {
+      expect(refreshSessionMock).toHaveBeenCalledTimes(1);
+    });
+
+    // A failed refresh must not sign the user out; it schedules a bounded retry.
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 60_000);
+    expect(setUser).not.toHaveBeenCalledWith(null);
+    expect(persistAuthSessionMock).not.toHaveBeenCalledWith(null);
+
+    hook.unmount();
+  });
+
+  it('signs the user out when a successful refresh returns no account', async () => {
+    const { hook, setUser } = await mountWithExpiringSession({
+      data: { session: { expires_at: 0, user: null } },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+    });
+
+    expect(setUser).toHaveBeenCalledWith(null);
+
+    hook.unmount();
   });
 });

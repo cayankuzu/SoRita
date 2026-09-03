@@ -54,12 +54,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Set up pinned EAS CLI
+        uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9.0.0
+        with:
+          eas-version: 23.0.0
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Verify source and OTA-enabled preview binaries
         shell: bash
         env:
           BASE_SHA: ${{ inputs.base_sha }}
           OTA_BINARY_EVIDENCE: ${{ inputs.ota_binary_evidence }}
-          OTA_BINARY_GATE: ${{ secrets.EAS_PREVIEW_OTA_BINARY_READY }}
           TARGET_SHA: ${{ github.sha }}
           UPDATE_MESSAGE: ${{ inputs.message }}
         run: |
@@ -88,14 +94,31 @@ jobs:
             echo '::error::Evidence must bind OTA-enabled Android and iOS builds to this runtime and binary source SHA.'
             exit 1
           fi
-          if [[ -z "$OTA_BINARY_GATE" ]] || [[ "$OTA_BINARY_GATE" != "$OTA_BINARY_EVIDENCE" ]]; then
-            echo '::error::EAS_PREVIEW_OTA_BINARY_READY does not approve the supplied binary evidence.'
-            exit 1
-          fi
           if [[ "$UPDATE_MESSAGE" == *$'\n'* ]] || (( ${#UPDATE_MESSAGE} > 200 )); then
             echo '::error::The release note must be one line and no longer than 200 characters.'
             exit 1
           fi
+
+          if [[ "$OTA_BINARY_EVIDENCE" =~ ^android=([^;]+)\;ios=([^;]+)\;runtime=([^;]+)\;source=([^;]+)$ ]]; then
+            android_build_id="${BASH_REMATCH[1]}"
+            ios_build_id="${BASH_REMATCH[2]}"
+          else
+            echo '::error::Unable to parse OTA binary evidence.'
+            exit 1
+          fi
+          mkdir -p artifacts/eas-preview
+          eas build:view "$android_build_id" --json > "${RUNNER_TEMP}/eas-preview-android-build.json"
+          eas build:view "$ios_build_id" --json > "${RUNNER_TEMP}/eas-preview-ios-build.json"
+          node utils/eas/verify-build-evidence.mjs \
+            --android-json "${RUNNER_TEMP}/eas-preview-android-build.json" \
+            --app-identifier com.cayan.sorita.socialmap \
+            --evidence "$OTA_BINARY_EVIDENCE" \
+            --ios-json "${RUNNER_TEMP}/eas-preview-ios-build.json" \
+            --output artifacts/eas-preview/builds.json \
+            --profile preview \
+            --project-id "$EXPO_PUBLIC_EXPO_PROJECT_ID" \
+            --runtime "$runtime_version" \
+            --source "$BASE_SHA"
 
       - name: Classify the commit range
         id: classify
@@ -119,12 +142,13 @@ jobs:
       - name: Run the complete release quality gate
         run: npm run check:release
 
-      - name: Set up pinned EAS CLI
-        uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9.0.0
-        with:
-          eas-version: 23.0.0
-          packager: npm
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Require a valid tracked OTA code-signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx expo config --json > "${RUNNER_TEMP}/expo-preview-config.json"
+          node utils/eas/check-update-code-signing.mjs \
+            --config "${RUNNER_TEMP}/expo-preview-config.json"
 
       - name: Publish to the isolated preview channel
         shell: bash
@@ -150,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           node <<'NODE'
-          const { appendFileSync, readFileSync } = require('node:fs');
+          const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
           const payload = JSON.parse(readFileSync(process.env.RESULT_PATH, 'utf8'));
           const updates = Array.isArray(payload) ? payload : payload.updates;
           if (!Array.isArray(updates) || updates.length === 0) {
@@ -160,6 +184,16 @@ jobs:
           if (groups.length !== 1 || !/^[A-Za-z0-9-]{8,128}$/.test(groups[0])) {
             throw new Error('EAS returned an unexpected preview update group.');
           }
+          const sanitizedUpdates = updates.map((update) => ({
+            group: groups[0],
+            id: update.id ?? update.updateId ?? null,
+            platform: update.platform ?? null,
+            runtimeVersion: update.runtimeVersion ?? null,
+          }));
+          writeFileSync(
+            'artifacts/eas-preview/update.json',
+            `${JSON.stringify({ commitSha: process.env.TARGET_SHA, group: groups[0], updates: sanitizedUpdates }, null, 2)}\n`,
+          );
           appendFileSync(
             process.env.GITHUB_STEP_SUMMARY,
             [
@@ -172,6 +206,14 @@ jobs:
             ].join('\n'),
           );
           NODE
+
+      - name: Upload sanitized preview build and update evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eas-preview-${{ github.sha }}
+          path: artifacts/eas-preview
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Remove transient update material
         if: always()

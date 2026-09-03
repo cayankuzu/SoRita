@@ -25,7 +25,7 @@ on:
         required: true
         type: string
       ota_binary_evidence:
-        description: 'Store builds: android=<id>;ios=<id>;runtime=<version>;source=<base_sha>'
+        description: "Store builds: android=<id>;ios=<id>;runtime=<version>;source=<base_sha>"
         required: true
         type: string
       message:
@@ -54,14 +54,14 @@ jobs:
     timeout-minutes: 60
     environment: production
     env:
-      CI: 'true'
-      EXPO_NO_TELEMETRY: '1'
+      CI: "true"
+      EXPO_NO_TELEMETRY: "1"
       EXPO_PUBLIC_RELEASE_ENVIRONMENT: production
       EXPO_PUBLIC_EXPO_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EXPO_PROJECT_ID }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       NODE_OPTIONS: --max-old-space-size=6144
-      NODE_VERSION: '24'
+      NODE_VERSION: "24"
 
     steps:
       - name: Check out the exact workflow SHA
@@ -77,6 +77,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Set up pinned EAS CLI
+        uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9.0.0
+        with:
+          eas-version: 23.0.0
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Verify source, approval, and OTA-enabled store binaries
         shell: bash
         env:
@@ -84,7 +91,6 @@ jobs:
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           OTA_BINARY_EVIDENCE: ${{ inputs.ota_binary_evidence }}
-          OTA_BINARY_GATE: ${{ secrets.EAS_PRODUCTION_OTA_BINARY_READY }}
           TARGET_SHA: ${{ github.sha }}
           UPDATE_MESSAGE: ${{ inputs.message }}
         run: |
@@ -121,14 +127,31 @@ jobs:
             echo '::error::Evidence must bind OTA-enabled Android and iOS store builds to this runtime and binary source SHA.'
             exit 1
           fi
-          if [[ -z "$OTA_BINARY_GATE" ]] || [[ "$OTA_BINARY_GATE" != "$OTA_BINARY_EVIDENCE" ]]; then
-            echo '::error::EAS_PRODUCTION_OTA_BINARY_READY does not approve the supplied binary evidence.'
-            exit 1
-          fi
           if [[ "$UPDATE_MESSAGE" == *$'\n'* ]] || (( ${#UPDATE_MESSAGE} > 200 )); then
             echo '::error::The release note must be one line and no longer than 200 characters.'
             exit 1
           fi
+
+          if [[ "$OTA_BINARY_EVIDENCE" =~ ^android=([^;]+)\;ios=([^;]+)\;runtime=([^;]+)\;source=([^;]+)$ ]]; then
+            android_build_id="${BASH_REMATCH[1]}"
+            ios_build_id="${BASH_REMATCH[2]}"
+          else
+            echo '::error::Unable to parse OTA binary evidence.'
+            exit 1
+          fi
+          mkdir -p artifacts/eas-update-production
+          eas build:view "$android_build_id" --json > "${RUNNER_TEMP}/eas-production-android-build.json"
+          eas build:view "$ios_build_id" --json > "${RUNNER_TEMP}/eas-production-ios-build.json"
+          node utils/eas/verify-build-evidence.mjs \
+            --android-json "${RUNNER_TEMP}/eas-production-android-build.json" \
+            --app-identifier com.cayan.sorita.socialmap \
+            --evidence "$OTA_BINARY_EVIDENCE" \
+            --ios-json "${RUNNER_TEMP}/eas-production-ios-build.json" \
+            --output artifacts/eas-update-production/builds.json \
+            --profile production \
+            --project-id "$EXPO_PUBLIC_EXPO_PROJECT_ID" \
+            --runtime "$runtime_version" \
+            --source "$BASE_SHA"
 
       - name: Verify successful preview and CI gates for the same SHA
         shell: bash
@@ -199,14 +222,16 @@ jobs:
             exit 1
           fi
 
-          artifact_name="partial-release-evidence-${TARGET_SHA}"
+          artifact_name="final-release-evidence-${TARGET_SHA}"
           artifact_rows="${RUNNER_TEMP}/release-evidence-artifacts.jsonl"
+          artifact_selection="${RUNNER_TEMP}/release-evidence-artifact.json"
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_EVIDENCE_RUN_ID}/artifacts?per_page=100" \
             --paginate \
             --jq '.artifacts[] | @json' \
             > "$artifact_rows"
-          ARTIFACT_NAME="$artifact_name" ARTIFACT_ROWS="$artifact_rows" node <<'NODE'
-          const { readFileSync } = require('node:fs');
+          ARTIFACT_NAME="$artifact_name" ARTIFACT_ROWS="$artifact_rows" \
+            ARTIFACT_SELECTION="$artifact_selection" node <<'NODE'
+          const { readFileSync, writeFileSync } = require('node:fs');
           const rows = readFileSync(process.env.ARTIFACT_ROWS, 'utf8')
             .split(/\r?\n/u)
             .filter(Boolean)
@@ -226,13 +251,31 @@ jobs:
           if (!/^sha256:[a-f0-9]{64}$/u.test(artifact.digest ?? '')) {
             throw new Error('Release evidence artifact is missing its GitHub SHA-256 digest.');
           }
+          writeFileSync(
+            process.env.ARTIFACT_SELECTION,
+            `${JSON.stringify({ id: artifact.id, digest: artifact.digest }, null, 2)}\n`,
+          );
           NODE
 
           mkdir -p artifacts/release-evidence
-          gh run download "$RELEASE_EVIDENCE_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name "$artifact_name" \
-            --dir artifacts/release-evidence
+          IFS=$'\t' read -r artifact_id expected_digest < <(
+            node -e "const a=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(a.id+'\\t'+a.digest+'\\n')" \
+              "$artifact_selection"
+          )
+          archive_file="${RUNNER_TEMP}/${artifact_name}.zip"
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --output "$archive_file" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip"
+          actual_digest="sha256:$(sha256sum "$archive_file" | awk '{print $1}')"
+          if [[ "$actual_digest" != "$expected_digest" ]]; then
+            echo '::error::Downloaded release evidence artifact digest does not match GitHub metadata.'
+            exit 1
+          fi
+          unzip -q "$archive_file" -d artifacts/release-evidence
           test -f "$RELEASE_MANIFEST"
           npm run release-evidence:verify -- --manifest "$RELEASE_MANIFEST"
 
@@ -284,12 +327,13 @@ jobs:
       - name: Re-run the complete release quality gate
         run: npm run check:release
 
-      - name: Set up pinned EAS CLI
-        uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9.0.0
-        with:
-          eas-version: 23.0.0
-          packager: npm
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Require a valid tracked OTA code-signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx expo config --json > "${RUNNER_TEMP}/expo-production-config.json"
+          node utils/eas/check-update-code-signing.mjs \
+            --config "${RUNNER_TEMP}/expo-production-config.json"
 
       - name: Publish an initial 5% production rollout
         shell: bash
@@ -307,6 +351,32 @@ jobs:
             --json \
             --non-interactive \
             > "${RUNNER_TEMP}/eas-production-update.json"
+          echo 'EAS_ROLLOUT_STARTED=true' >> "$GITHUB_ENV"
+          mkdir -p artifacts/eas-update-production
+          RESULT_PATH="${RUNNER_TEMP}/eas-production-update.json" \
+            SANITIZED_PATH="artifacts/eas-update-production/update.json" \
+            node <<'NODE'
+          const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
+          const payload = JSON.parse(readFileSync(process.env.RESULT_PATH, 'utf8'));
+          const updates = Array.isArray(payload) ? payload : payload.updates;
+          if (!Array.isArray(updates) || updates.length === 0) throw new Error('EAS returned no production updates.');
+          const groups = [...new Set(updates.map((update) => update.group ?? update.groupId).filter(Boolean))];
+          if (groups.length !== 1 || !/^[A-Za-z0-9-]{8,128}$/.test(groups[0])) {
+            throw new Error('EAS returned an unexpected production update group.');
+          }
+          const group = groups[0];
+          appendFileSync(process.env.GITHUB_ENV, `EAS_PRODUCTION_UPDATE_GROUP=${group}\n`);
+          const sanitizedUpdates = updates.map((update) => ({
+            group,
+            id: update.id ?? update.updateId ?? null,
+            platform: update.platform ?? null,
+            runtimeVersion: update.runtimeVersion ?? null,
+          }));
+          writeFileSync(
+            process.env.SANITIZED_PATH,
+            `${JSON.stringify({ commitSha: process.env.GITHUB_SHA, group, rolloutPercentage: 5, updates: sanitizedUpdates }, null, 2)}\n`,
+          );
+          NODE
 
       - name: Record staged-rollout and rollback instructions
         shell: bash
@@ -317,16 +387,8 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const { appendFileSync, readFileSync } = require('node:fs');
-          const payload = JSON.parse(readFileSync(process.env.RESULT_PATH, 'utf8'));
-          const updates = Array.isArray(payload) ? payload : payload.updates;
-          if (!Array.isArray(updates) || updates.length === 0) {
-            throw new Error('EAS returned no production updates.');
-          }
-          const groups = [...new Set(updates.map((update) => update.group ?? update.groupId).filter(Boolean))];
-          if (groups.length !== 1 || !/^[A-Za-z0-9-]{8,128}$/.test(groups[0])) {
-            throw new Error('EAS returned an unexpected production update group.');
-          }
-          const group = groups[0];
+          const group = process.env.EAS_PRODUCTION_UPDATE_GROUP;
+          if (!/^[A-Za-z0-9-]{8,128}$/.test(group ?? '')) throw new Error('Production update group is unavailable.');
           appendFileSync(
             process.env.GITHUB_STEP_SUMMARY,
             [
@@ -348,6 +410,35 @@ jobs:
             ].join('\n'),
           );
           NODE
+
+      - name: Automatically stop a failed or cancelled production rollout
+        if: (failure() || cancelled()) && env.EAS_ROLLOUT_STARTED == 'true'
+        shell: bash
+        env:
+          RESULT_PATH: ${{ runner.temp }}/eas-production-update.json
+        run: |
+          set -euo pipefail
+          group="${EAS_PRODUCTION_UPDATE_GROUP:-}"
+          if [[ -z "$group" && -f "$RESULT_PATH" ]]; then
+            group="$(node -e "const p=JSON.parse(require('node:fs').readFileSync(process.env.RESULT_PATH,'utf8')); const u=Array.isArray(p)?p:p.updates; const g=[...new Set((u||[]).map(x=>x.group||x.groupId).filter(Boolean))]; if(g.length!==1)process.exit(2); process.stdout.write(g[0]);")"
+          fi
+          if [[ ! "$group" =~ ^[A-Za-z0-9-]{8,128}$ ]]; then
+            echo '::error::Unable to resolve the published rollout group for automatic rollback.'
+            exit 1
+          fi
+          eas update:revert-update-rollout --group "$group" --non-interactive \
+            2>&1 | tee "${RUNNER_TEMP}/eas-production-rollback.log"
+
+      - name: Upload sanitized OTA and rollback evidence
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eas-production-${{ github.sha }}
+          path: |
+            artifacts/eas-update-production/update.json
+            ${{ runner.temp }}/eas-production-rollback.log
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Remove transient update material
         if: always()

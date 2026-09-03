@@ -34,3 +34,16 @@ export type NotificationCursor = {
 export type NotificationPage = MobileNotification[] & {
   nextCursor?: NotificationCursor;
 };
+
+/**
+ * Minimal recipient-owned notification metadata used to resolve an incoming
+ * push tap. It deliberately excludes message text and any provider payload.
+ */
+export type VerifiedPushNotificationTarget = {
+  actorUserId?: string | null;
+  id: string;
+  listId?: string | null;
+  placeId?: string | null;
+  recipientUserId: string;
+  type: MobileNotification['type'];
+};

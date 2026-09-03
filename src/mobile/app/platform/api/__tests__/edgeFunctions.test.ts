@@ -60,6 +60,11 @@ describe('Edge Function transport', () => {
     envMock.edgeConfigValid = true;
     envMock.edgeCutoverMode = 'direct';
     envMock.releaseEnvironment = 'development';
+    envMock.supabaseAuthGatewayFunctionName = 'auth-gateway';
+    envMock.supabaseDeleteUserFunctionName = 'delete-user';
+    envMock.supabaseMapsFunctionName = 'maps-geocoding';
+    envMock.supabaseMediaAssetsFunctionName = 'media-assets';
+    envMock.supabaseModerationReportsFunctionName = 'moderation-reports';
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -78,11 +83,11 @@ describe('Edge Function transport', () => {
   });
 
   it('routes only selected existing functions through the configured gateway', () => {
-    envMock.edgeApiUrl = 'https://api.example.com/edge';
+    envMock.edgeApiUrl = 'https://api.example.com';
     envMock.edgeCutoverMode = 'gateway';
 
     expect(getFunctionUrl('maps-geocoding')).toBe(
-      'https://api.example.com/edge/v1/maps-geocoding',
+      'https://api.example.com/v1/maps-geocoding',
     );
     expect(getFunctionUrl('internal-unselected')).toBe(
       'https://project.supabase.co/functions/v1/internal-unselected',
@@ -105,6 +110,16 @@ describe('Edge Function transport', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example.com/v1/auth-gateway');
+  });
+
+  it('fails closed when gateway function-name overrides diverge from Worker routes', () => {
+    envMock.edgeApiUrl = 'https://api.example.com';
+    envMock.edgeCutoverMode = 'gateway';
+    envMock.supabaseMapsFunctionName = 'custom-maps';
+
+    expect(() => getFunctionUrl('custom-maps')).toThrow(
+      'Gateway mode requires the canonical Edge Function route contract.',
+    );
   });
 
   it('adds request correlation and an optional idempotency key to POST requests', async () => {

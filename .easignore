@@ -24,6 +24,8 @@ android/app/build/
 *.p8
 *.p12
 *.mobileprovision
+AuthKey_*.p8
+.eas-submit/
 *service-account*.json
 *firebase-admin*.json
 SoRita_web/

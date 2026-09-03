@@ -105,10 +105,11 @@ describe('pushNotificationRepository', () => {
         name: androidNotificationChannelName,
       }),
     );
-    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
+    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', expect.objectContaining({
+      input_cleanup_secret: expect.stringMatching(/^[a-f0-9]{64}$/u),
       input_platform: 'android',
       input_token: 'ExponentPushToken[test]',
-    });
+    }));
     expect(token).toBe('ExponentPushToken[test]');
   });
 
@@ -122,10 +123,11 @@ describe('pushNotificationRepository', () => {
       projectId: 'project-id',
       devicePushToken,
     });
-    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
+    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', expect.objectContaining({
+      input_cleanup_secret: expect.stringMatching(/^[a-f0-9]{64}$/u),
       input_platform: 'android',
       input_token: 'ExponentPushToken[test]',
-    });
+    }));
     expect(token).toBe('ExponentPushToken[test]');
   });
 
@@ -173,20 +175,19 @@ describe('pushNotificationRepository', () => {
     );
   });
 
-  it('requests permissions when needed and stops when permission stays denied', async () => {
+  it('never opens a permission prompt from startup registration', async () => {
     getPermissionsAsyncMock.mockResolvedValue({ granted: false, canAskAgain: true, ios: null });
-    requestPermissionsAsyncMock.mockResolvedValue({ granted: false, canAskAgain: false, ios: null });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
     await expect(repository.registerPushNotifications('viewer-1')).resolves.toBeNull();
-    expect(requestPermissionsAsyncMock).toHaveBeenCalled();
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
     expect(warnMock).toHaveBeenCalledWith(
       'push',
       'Push notification permission was not granted.',
     );
   });
 
-  it('upgrades provisional ios permissions to full alerts when possible', async () => {
+  it('registers an already provisional ios permission without opening a system prompt', async () => {
     const { Platform } = await import('react-native');
     Platform.OS = 'ios';
     getPermissionsAsyncMock.mockResolvedValue({
@@ -200,34 +201,20 @@ describe('pushNotificationRepository', () => {
         allowsDisplayInNotificationCenter: true,
       },
     });
-    requestPermissionsAsyncMock.mockResolvedValue({
-      granted: true,
-      canAskAgain: false,
-      ios: {
-        status: 2,
-        allowsAlert: true,
-        allowsSound: true,
-        allowsDisplayOnLockScreen: true,
-        allowsDisplayInNotificationCenter: true,
-      },
-    });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
     await expect(repository.registerPushNotifications('viewer-1')).resolves.toBe('ExponentPushToken[test]');
     expect(setNotificationChannelAsyncMock).not.toHaveBeenCalled();
-    expect(requestPermissionsAsyncMock).toHaveBeenCalledWith({
-      ios: {
-        allowAlert: true,
-        allowBadge: true,
-        allowSound: true,
-        allowProvisional: false,
-        provideAppNotificationSettings: true,
-      },
-    });
-    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', {
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
+    expect(warnMock).toHaveBeenCalledWith(
+      'push',
+      'iOS notification permission is limited. Notifications may arrive quietly until alerts, sounds, lock screen, and notification center are enabled in Settings.',
+    );
+    expect(rpcMock).toHaveBeenCalledWith('upsert_user_push_token', expect.objectContaining({
+      input_cleanup_secret: expect.stringMatching(/^[a-f0-9]{64}$/u),
       input_platform: 'ios',
       input_token: 'ExponentPushToken[test]',
-    });
+    }));
   });
 
   it('keeps ios registration active but warns when permission stays quiet', async () => {
@@ -327,7 +314,10 @@ describe('pushNotificationRepository', () => {
   it('removes every push token for the authenticated user during logout', async () => {
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
-    await repository.unregisterAllPushNotifications();
+    await repository.unregisterAllPushNotifications({
+      cleanupSecret: 'a'.repeat(64),
+      token: 'ExponentPushToken[test]',
+    });
 
     expect(rpcMock).toHaveBeenCalledWith('remove_all_user_push_tokens');
   });
@@ -336,6 +326,142 @@ describe('pushNotificationRepository', () => {
     rpcMock.mockResolvedValue({ error: new Error('remove all failed') });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
-    await expect(repository.unregisterAllPushNotifications()).rejects.toThrow('remove all failed');
+    await expect(repository.unregisterAllPushNotifications({
+      cleanupSecret: 'a'.repeat(64),
+      token: 'ExponentPushToken[test]',
+    })).rejects.toThrow('remove all failed');
+  });
+
+  const quietPermissionWarning =
+    'iOS notification permission is limited. Notifications may arrive quietly until alerts, sounds, lock screen, and notification center are enabled in Settings.';
+
+  async function registerOnIos(iosPermissions: unknown, granted = false) {
+    const { Platform } = await import('react-native');
+    Platform.OS = 'ios';
+    getPermissionsAsyncMock.mockResolvedValue({
+      granted,
+      canAskAgain: false,
+      ios: iosPermissions,
+    });
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+    return repository.registerPushNotifications('viewer-1');
+  }
+
+  it('registers an ephemeral ios permission without a system prompt', async () => {
+    await expect(
+      registerOnIos({
+        status: 4,
+        allowsAlert: true,
+        allowsSound: true,
+        allowsDisplayOnLockScreen: true,
+        allowsDisplayInNotificationCenter: true,
+      }),
+    ).resolves.toBe('ExponentPushToken[test]');
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('registers a fully authorized ios permission without the quiet warning', async () => {
+    await expect(
+      registerOnIos(
+        {
+          status: 2,
+          allowsAlert: true,
+          allowsSound: true,
+          allowsDisplayOnLockScreen: true,
+          allowsDisplayInNotificationCenter: true,
+        },
+        true,
+      ),
+    ).resolves.toBe('ExponentPushToken[test]');
+    expect(warnMock).not.toHaveBeenCalledWith('push', quietPermissionWarning);
+  });
+
+  it.each([
+    ['alerts', 'allowsAlert'],
+    ['sound', 'allowsSound'],
+    ['lock screen', 'allowsDisplayOnLockScreen'],
+    ['notification center', 'allowsDisplayInNotificationCenter'],
+  ])('warns when authorized ios permission has %s disabled', async (_label, disabledKey) => {
+    const iosPermissions = {
+      status: 2,
+      allowsAlert: true,
+      allowsSound: true,
+      allowsDisplayOnLockScreen: true,
+      allowsDisplayInNotificationCenter: true,
+      [disabledKey]: false,
+    };
+
+    await expect(registerOnIos(iosPermissions, true)).resolves.toBe('ExponentPushToken[test]');
+    expect(warnMock).toHaveBeenCalledWith('push', quietPermissionWarning);
+  });
+
+  it('falls back to the platform grant when ios permission detail is absent', async () => {
+    await expect(registerOnIos(null, true)).resolves.toBe('ExponentPushToken[test]');
+    expect(warnMock).not.toHaveBeenCalledWith('push', quietPermissionWarning);
+  });
+
+  it('skips device push token registration when push delivery is unavailable', async () => {
+    const { notificationRuntime } = await import('@/mobile/app/platform/notifications/runtime');
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+    const devicePushToken = { type: 'android' as const, data: 'native-fcm-token' };
+
+    notificationRuntime.featureEnabled = false;
+    await expect(repository.registerDevicePushToken('viewer-1', devicePushToken)).resolves.toBeNull();
+
+    notificationRuntime.featureEnabled = true;
+    notificationRuntime.isExpoGo = true;
+    await expect(repository.registerDevicePushToken('viewer-1', devicePushToken)).resolves.toBeNull();
+
+    notificationRuntime.isExpoGo = false;
+    notificationRuntime.supportsRemotePushRegistration = false;
+    await expect(repository.registerDevicePushToken('viewer-1', devicePushToken)).resolves.toBeNull();
+
+    expect(getExpoPushTokenAsyncMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('skips device push token registration when the project id is missing', async () => {
+    const { env } = await import('@/mobile/app/platform/config/env');
+    env.expoProjectId = '';
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(
+      repository.registerDevicePushToken('viewer-1', { type: 'android', data: 'native-fcm-token' }),
+    ).resolves.toBeNull();
+    expect(warnMock).toHaveBeenCalledWith(
+      'push',
+      'Expo project id is missing. Push token registration skipped.',
+    );
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('warns when a refreshed device push token cannot be converted', async () => {
+    getExpoPushTokenAsyncMock.mockResolvedValue({ data: '' });
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(
+      repository.registerDevicePushToken('viewer-1', { type: 'android', data: 'native-fcm-token' }),
+    ).resolves.toBeNull();
+    expect(warnMock).toHaveBeenCalledWith('push', 'Expo push token could not be resolved.');
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('does not stage an account-switch cleanup for an unknown or absent token', async () => {
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(
+      repository.prepareRegisteredPushTokenAccountSwitchCleanup(null),
+    ).resolves.toBeNull();
+    await expect(
+      repository.prepareRegisteredPushTokenAccountSwitchCleanup('ExponentPushToken[other]'),
+    ).resolves.toBeNull();
+  });
+
+  it('stages nothing for an auth transition when no capability was ever bound', async () => {
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(
+      repository.stageActivePushTokenCleanupForAuthTransition(),
+    ).resolves.toBeNull();
   });
 });

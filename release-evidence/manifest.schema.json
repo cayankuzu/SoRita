@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/cayankuzu/SoRita/blob/main/release-evidence/manifest.schema.json",
   "title": "SoRita immutable release evidence manifest",
   "type": "object",
@@ -16,7 +16,7 @@
     "artifacts"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "repository": { "type": ["string", "null"] },
     "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "ref": { "type": ["string", "null"] },
@@ -38,11 +38,13 @@
       "required": [
         "quality",
         "database-local",
+        "docker-validation",
         "feature-surface",
         "evidence-tool",
         "sast-secret-scan",
         "cloudflare-preview",
         "signed-android-ios",
+        "ota-code-signing",
         "physical-device-matrix",
         "provider-dashboards",
         "staging-restore",
@@ -55,11 +57,13 @@
       "properties": {
         "quality": { "enum": ["pass", "fail", "unverified"] },
         "database-local": { "enum": ["pass", "fail", "unverified"] },
+        "docker-validation": { "enum": ["pass", "fail", "unverified"] },
         "feature-surface": { "enum": ["pass", "fail", "unverified"] },
         "evidence-tool": { "enum": ["pass", "fail", "unverified"] },
         "sast-secret-scan": { "enum": ["pass", "fail", "unverified"] },
         "cloudflare-preview": { "enum": ["pass", "fail", "unverified"] },
         "signed-android-ios": { "enum": ["pass", "fail", "unverified"] },
+        "ota-code-signing": { "enum": ["pass", "fail", "unverified"] },
         "physical-device-matrix": { "enum": ["pass", "fail", "unverified"] },
         "provider-dashboards": { "enum": ["pass", "fail", "unverified"] },
         "staging-restore": { "enum": ["pass", "fail", "unverified"] },

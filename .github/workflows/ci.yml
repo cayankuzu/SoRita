@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, chore/final-aaa-mvp-hardening-docker-cloudflare-ota]
   pull_request:
     branches: [main]
 
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
   NODE_OPTIONS: --max-old-space-size=6144
   EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
@@ -21,11 +21,13 @@ jobs:
     name: Database Migration & RLS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: supabase/setup-cli@v3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          version: latest
+          persist-credentials: false
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.116.0
 
       - name: Start isolated Supabase stack
         run: supabase start
@@ -37,7 +39,7 @@ jobs:
         run: supabase db lint --local --level error
 
       - name: Run pgTAP RLS and IDOR matrix
-        run: supabase test db
+        run: supabase test db --local
 
       - name: Backup and restore the local database into an isolated database
         run: |
@@ -50,6 +52,10 @@ jobs:
           docker exec "$DB_CONTAINER" psql --username supabase_admin --dbname sorita_restore_drill --set ON_ERROR_STOP=1 --command "select count(*) from pg_catalog.pg_tables where schemaname = 'public';"
           docker exec "$DB_CONTAINER" dropdb --username supabase_admin sorita_restore_drill
 
+      - name: Stop and remove the ephemeral local stack
+        if: always()
+        run: supabase stop --no-backup
+
   security-supply-chain:
     name: Security & Supply Chain
     runs-on: ubuntu-latest
@@ -57,11 +63,12 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -78,19 +85,19 @@ jobs:
         run: npm run security:licenses
 
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           path: .
           format: cyclonedx-json
           output-file: sbom.cdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-cyclonedx
           path: sbom.cdx.json
@@ -99,9 +106,11 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -134,9 +143,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [database-security, lint-and-typecheck, security-supply-chain]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -179,16 +190,18 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_EAS_PREVIEW_BUILDS == 'true'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
-          eas-version: latest
+          eas-version: 23.0.0
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
@@ -202,9 +215,11 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_ANDROID_DEVICE_BENCHMARKS == 'true'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -218,7 +233,7 @@ jobs:
         run: npm run android:performance:test
 
       - name: Upload benchmark reports and generated profiles
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-device-performance
           path: |
@@ -231,16 +246,18 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_EAS_PREVIEW_BUILDS == 'true'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
-          eas-version: latest
+          eas-version: 23.0.0
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci

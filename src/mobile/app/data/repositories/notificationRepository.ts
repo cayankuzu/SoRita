@@ -7,6 +7,7 @@ import {
   type NotificationCursor,
   type NotificationPage,
 } from '@/mobile/app/data/repositories/notifications/notificationQueryHelpers';
+import type { VerifiedPushNotificationTarget } from '@/mobile/app/data/contracts/notification';
 
 export type {
   MobileNotification,
@@ -91,6 +92,57 @@ export async function markNotificationRead(notificationId: string) {
   if (error) {
     throw error;
   }
+}
+
+/**
+ * Resolve a push target from the recipient-owned row, rather than routing from
+ * an untrusted provider payload. The select is intentionally metadata-only.
+ */
+export async function getVerifiedPushNotificationTarget(
+  notificationId: string,
+  recipientUserId: string,
+): Promise<VerifiedPushNotificationTarget | null> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, recipient_user_id, actor_user_id, type, list_id, list_place_id')
+    .eq('id', notificationId)
+    .eq('recipient_user_id', recipientUserId)
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  const row = Array.isArray(data) ? data[0] : null;
+
+  if (
+    !row
+    || typeof row.id !== 'string'
+    || typeof row.recipient_user_id !== 'string'
+    || row.recipient_user_id !== recipientUserId
+    || typeof row.type !== 'string'
+  ) {
+    return null;
+  }
+
+  const type = row.type as VerifiedPushNotificationTarget['type'];
+  const knownTypes: readonly string[] = [
+    'comment', 'comment_like', 'comment_reply', 'follow', 'follow_request',
+    'like', 'list_liked', 'place_added', 'place_quote', 'system_announcement',
+  ];
+
+  if (!knownTypes.includes(type)) {
+    return null;
+  }
+
+  return {
+    actorUserId: typeof row.actor_user_id === 'string' ? row.actor_user_id : null,
+    id: row.id,
+    listId: typeof row.list_id === 'string' ? row.list_id : null,
+    placeId: typeof row.list_place_id === 'string' ? row.list_place_id : null,
+    recipientUserId: row.recipient_user_id,
+    type,
+  };
 }
 
 export async function markAllNotificationsRead(userId: string) {

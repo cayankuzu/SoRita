@@ -315,16 +315,35 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
     const userId = user?.id;
     let remoteSignOutError: unknown;
     let localCleanupError: Error | null = null;
+    let preparedPushCleanup: Awaited<ReturnType<
+      typeof import('@/mobile/app/data/repositories/pushNotificationRepository').preparePushNotificationLogoutCleanup
+    >> = null;
+    let pushNotificationRepository: Awaited<ReturnType<typeof loadPushNotificationRepository>> | null = null;
+
+    // A logout must not discard the only capability that can revoke an Expo
+    // token after authentication is gone. Network failures after this point are
+    // safe because the tombstone is encrypted and retried anonymously.
+    if (userId) {
+      try {
+        pushNotificationRepository = await loadPushNotificationRepository();
+        preparedPushCleanup = await pushNotificationRepository.preparePushNotificationLogoutCleanup();
+      } catch (error) {
+        logger.warn('auth', 'Push cleanup could not be prepared; logout was kept fail-closed.', {
+          error: error instanceof Error ? error.name : 'unknown',
+        });
+        throw error;
+      }
+    }
 
     try {
       try {
-        const [{ unregisterAllPushNotifications }, { unregisterSystemPushNotifications }] =
+        const [resolvedPushNotificationRepository, { unregisterSystemPushNotifications }] =
           await Promise.all([
-            loadPushNotificationRepository(),
+            pushNotificationRepository ?? loadPushNotificationRepository(),
             loadSystemPushNotificationRepository(),
           ]);
         await Promise.all([
-          unregisterAllPushNotifications().catch((err) => {
+          resolvedPushNotificationRepository.unregisterAllPushNotifications(preparedPushCleanup).catch((err) => {
             logger.debug('auth', 'Failed to unregister push notifications during logout', err);
           }),
           unregisterSystemPushNotifications().catch((err) => {

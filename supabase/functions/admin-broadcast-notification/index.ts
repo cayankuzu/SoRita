@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { createAdminBroadcastNotificationHandler } from './handler.ts';
+import { HttpRequestError } from '../_shared/httpHelpers.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
 import { sha256Hex } from '../_shared/requestSecurity.ts';
 
@@ -21,6 +22,19 @@ const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
     persistSession: false,
   },
 });
+
+function resolvePreAuthRateLimitSource(request: Request) {
+  const candidate = (
+    request.headers.get('cf-connecting-ip')
+    ?? request.headers.get('x-real-ip')
+    ?? request.headers.get('x-forwarded-for')?.split(',')[0]
+    ?? ''
+  ).trim();
+
+  // Do not use raw IP values outside this function or log them. Malformed
+  // forwarding headers deliberately collapse into one conservative bucket.
+  return /^[0-9A-Fa-f:.]{3,64}$/u.test(candidate) ? candidate : 'unknown';
+}
 
 function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = [];
@@ -85,19 +99,32 @@ const repository = {
     idempotencyKey: string;
     message: string;
     pushTitle: string;
+    requestHash: string;
     recipientUserIds: string[];
   }) {
     let insertedCount = 0;
+    const recipientChunks = chunkArray(params.recipientUserIds, 500);
 
-    for (const recipientChunk of chunkArray(params.recipientUserIds, 500)) {
+    // An empty live audience still creates the canonical idempotency claim.
+    // Otherwise the same key could later be reused with a different request
+    // after a profile query briefly returned no recipients.
+    for (const recipientChunk of recipientChunks.length ? recipientChunks : [[]]) {
       const { data, error } = await adminClient.rpc('insert_system_broadcast_notifications', {
         p_idempotency_key: params.idempotencyKey,
         p_message: params.message,
         p_push_title: params.pushTitle,
+        p_request_hash: params.requestHash,
         p_recipient_user_ids: recipientChunk,
       });
 
       if (error) {
+        if (error.message.includes('idempotency_key_payload_mismatch')) {
+          throw new HttpRequestError(
+            409,
+            'idempotency_key_payload_mismatch',
+            'The idempotency key was already used for a different broadcast request.',
+          );
+        }
         throw new Error(error.message);
       }
 
@@ -120,6 +147,20 @@ const handleAdminBroadcastNotificationRequest = createAdminBroadcastNotification
     allowedOrigins,
     supabaseServiceRoleKey,
     supabaseUrl,
+  },
+  enforcePreAuthAbuseRateLimit: async (request) => {
+    const tokenFingerprint = await adminTokenFingerprint;
+    const sourceFingerprint = await sha256Hex(
+      `${tokenFingerprint}:admin-broadcast-preauth:${resolvePreAuthRateLimitSource(request)}`,
+    );
+
+    return enforceRateLimit({
+      adminClient,
+      identifier: sourceFingerprint,
+      maxRequests: 20,
+      scope: 'admin-broadcast-notification-preauth',
+      windowMs: 60_000,
+    });
   },
   enforceAdminRateLimit: async () =>
     enforceRateLimit({

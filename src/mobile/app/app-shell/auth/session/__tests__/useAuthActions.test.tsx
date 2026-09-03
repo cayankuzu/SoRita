@@ -15,6 +15,7 @@ const syncAuthenticatedUserMock = vi.fn();
 const createTrackedAuthRedirectMock = vi.fn();
 const discardPendingAuthRedirectStateMock = vi.fn();
 const unregisterAllPushNotificationsMock = vi.fn();
+const preparePushNotificationLogoutCleanupMock = vi.fn();
 const unregisterSystemPushNotificationsMock = vi.fn();
 const savePendingSignupMediaMock = vi.fn();
 const callJsonEdgeFunctionMock = vi.fn();
@@ -63,6 +64,7 @@ vi.mock('@/mobile/app/app-shell/auth/session/authRedirectState', () => ({
 }));
 
 vi.mock('@/mobile/app/data/repositories/pushNotificationRepository', () => ({
+  preparePushNotificationLogoutCleanup: preparePushNotificationLogoutCleanupMock,
   unregisterAllPushNotifications: unregisterAllPushNotificationsMock,
 }));
 
@@ -123,6 +125,7 @@ describe('useAuthActions', () => {
     createTrackedAuthRedirectMock.mockReset();
     discardPendingAuthRedirectStateMock.mockReset();
     unregisterAllPushNotificationsMock.mockReset();
+    preparePushNotificationLogoutCleanupMock.mockReset();
     unregisterSystemPushNotificationsMock.mockReset();
     savePendingSignupMediaMock.mockReset();
     callJsonEdgeFunctionMock.mockReset();
@@ -198,6 +201,7 @@ describe('useAuthActions', () => {
     resetPasswordForEmailMock.mockResolvedValue({ error: null });
     signOutMock.mockResolvedValue(undefined);
     unregisterAllPushNotificationsMock.mockResolvedValue(undefined);
+    preparePushNotificationLogoutCleanupMock.mockResolvedValue(null);
     unregisterSystemPushNotificationsMock.mockResolvedValue(undefined);
     purgeAuthenticatedUserStateMock.mockResolvedValue(undefined);
   });
@@ -606,7 +610,8 @@ describe('useAuthActions', () => {
     );
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
     expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
-    expect(unregisterAllPushNotificationsMock).toHaveBeenCalledWith();
+    expect(preparePushNotificationLogoutCleanupMock).toHaveBeenCalledOnce();
+    expect(unregisterAllPushNotificationsMock).toHaveBeenCalledWith(null);
     expect(unregisterSystemPushNotificationsMock).toHaveBeenCalledTimes(1);
     expect(signOutMock).toHaveBeenCalled();
     expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-1');
@@ -765,6 +770,25 @@ describe('useAuthActions', () => {
     expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith(null);
     anonymous.unmount();
     hook.unmount();
+  });
+
+  it('keeps the authenticated session when a durable push cleanup tombstone cannot be prepared', async () => {
+    const setUser = vi.fn();
+    const preparationError = new Error('secure storage unavailable');
+    preparePushNotificationLogoutCleanupMock.mockRejectedValueOnce(preparationError);
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' }, setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toBe(preparationError);
+
+    expect(unregisterAllPushNotificationsMock).not.toHaveBeenCalled();
+    expect(unregisterSystemPushNotificationsMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalledWith(null);
+    expect(purgeAuthenticatedUserStateMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalledWith(null);
   });
 
   it('finishes local cleanup before surfacing a remote sign-out failure', async () => {

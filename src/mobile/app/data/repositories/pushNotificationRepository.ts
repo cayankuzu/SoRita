@@ -12,6 +12,14 @@ import {
   androidNotificationChannelName,
 } from '@/mobile/app/platform/notifications/channels';
 import { env } from '@/mobile/app/platform/config/env';
+import {
+  clearPushTokenCleanupTombstone,
+  flushPendingPushTokenCleanupTombstones,
+  getActivePushTokenCleanupCapability,
+  rememberActivePushTokenCleanupCapability,
+  stagePushTokenCleanupTombstone,
+  type PushTokenCleanupCapability,
+} from '@/mobile/app/platform/notifications/pushTokenCleanup';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 
 type PushPermissionResult = {
@@ -103,32 +111,12 @@ function buildPushPermissionResult(
   };
 }
 
-async function getPushPermissionState(): Promise<PushPermissionResult> {
+async function getExistingPushPermissionState(): Promise<PushPermissionResult> {
   const Notifications = await loadNotificationsModule();
-  const existingPermissions = buildPushPermissionResult(
+  return buildPushPermissionResult(
     await Notifications.getPermissionsAsync(),
     Notifications,
   );
-
-  if (existingPermissions.granted && existingPermissions.allowsInterruptions) {
-    return existingPermissions;
-  }
-
-  if (!existingPermissions.canAskAgain) {
-    return existingPermissions;
-  }
-
-  const requestedPermissions = await Notifications.requestPermissionsAsync({
-    ios: {
-      allowAlert: true,
-      allowBadge: true,
-      allowSound: true,
-      allowProvisional: false,
-      provideAppNotificationSettings: true,
-    },
-  });
-
-  return buildPushPermissionResult(requestedPermissions, Notifications);
 }
 
 function getExpoProjectId() {
@@ -156,17 +144,113 @@ async function resolveCurrentExpoPushToken() {
 }
 
 async function upsertExpoPushToken(userId: string, expoPushToken: string) {
+  const capability = await rememberActivePushTokenCleanupCapability(expoPushToken);
   const { error } = await supabase.rpc('upsert_user_push_token', {
+    input_cleanup_secret: capability.cleanupSecret,
     input_token: expoPushToken,
     input_platform: Platform.OS,
+  });
+
+  if (error) {
+    // Do not leave a locally remembered capability for a token whose server
+    // binding failed. A future successful registration will create a fresh one.
+    await clearPushTokenCleanupTombstone(capability).catch(() => undefined);
+    throw error;
+  }
+
+  logger.info('push', `Push token registered for ${userId}`);
+  return expoPushToken;
+}
+
+async function resolveActiveOrCurrentPushTokenCapability() {
+  const activeCapability = await getActivePushTokenCleanupCapability();
+
+  if (activeCapability) {
+    return activeCapability;
+  }
+
+  const token = await resolveCurrentExpoPushToken();
+
+  if (!token) {
+    return null;
+  }
+
+  // Devices upgrading from the pre-capability client bind an existing token
+  // while the authenticated session is still valid, before allowing logout.
+  const capability = await rememberActivePushTokenCleanupCapability(token);
+  const { error } = await supabase.rpc('upsert_user_push_token', {
+    input_cleanup_secret: capability.cleanupSecret,
+    input_platform: Platform.OS,
+    input_token: token,
   });
 
   if (error) {
     throw error;
   }
 
-  logger.info('push', `Push token registered for ${userId}`);
-  return expoPushToken;
+  return capability;
+}
+
+/**
+ * Persist a revocation capability before local auth state can be discarded.
+ * If this cannot be durably stored/bound, callers must not complete logout.
+ */
+export async function preparePushNotificationLogoutCleanup() {
+  if (notificationRuntime.isExpoGo || !notificationRuntime.featureEnabled) {
+    return null;
+  }
+
+  const capability = await resolveActiveOrCurrentPushTokenCapability();
+
+  if (!capability) {
+    return null;
+  }
+
+  await stagePushTokenCleanupTombstone(capability);
+  return capability;
+}
+
+async function stageProvidedPushTokenCleanup(token: string | null | undefined) {
+  if (!token) {
+    return null;
+  }
+
+  const activeCapability = await getActivePushTokenCleanupCapability();
+
+  if (!activeCapability || activeCapability.token !== token) {
+    return null;
+  }
+
+  await stagePushTokenCleanupTombstone(activeCapability);
+  return activeCapability;
+}
+
+/**
+ * Capture the capability for the token currently associated with this device
+ * before a different authenticated account can bind it. Unlike logout this
+ * never resolves or re-binds a token: callers use it only when they already
+ * know the previously registered token.
+ */
+export async function prepareRegisteredPushTokenAccountSwitchCleanup(
+  token: string | null | undefined,
+) {
+  return stageProvidedPushTokenCleanup(token);
+}
+
+/**
+ * Used by auth lifecycle transitions where the old session may already be
+ * gone. It never resolves/re-binds a token under the next account; it only
+ * stages a capability that was already bound by a prior registration.
+ */
+export async function stageActivePushTokenCleanupForAuthTransition() {
+  const activeCapability = await getActivePushTokenCleanupCapability();
+
+  if (!activeCapability) {
+    return null;
+  }
+
+  await stagePushTokenCleanupTombstone(activeCapability);
+  return activeCapability;
 }
 
 export async function registerPushNotifications(userId: string) {
@@ -194,7 +278,11 @@ export async function registerPushNotifications(userId: string) {
     return null;
   }
 
-  const permissions = await getPushPermissionState();
+  // Registration runs during startup/foreground recovery and therefore must
+  // never open an OS permission prompt. A user-initiated product surface may
+  // request permission separately; this background path only observes the
+  // current state and registers when permission already exists.
+  const permissions = await getExistingPushPermissionState();
 
   if (!permissions.granted) {
     logger.warn('push', 'Push notification permission was not granted.');
@@ -255,6 +343,8 @@ export async function unregisterPushNotifications(expoPushToken: string | null |
     return;
   }
 
+  const capability = await stageProvidedPushTokenCleanup(token);
+
   const { error } = await supabase.rpc('remove_user_push_token', {
     input_token: token,
   });
@@ -263,19 +353,30 @@ export async function unregisterPushNotifications(expoPushToken: string | null |
     throw error;
   }
 
+  if (capability) {
+    await clearPushTokenCleanupTombstone(capability);
+  }
+
   logger.info('push', 'Push token unregistered');
 }
 
-export async function unregisterAllPushNotifications() {
+export async function unregisterAllPushNotifications(preparedCapability?: PushTokenCleanupCapability | null) {
   if (notificationRuntime.isExpoGo || !notificationRuntime.featureEnabled) {
     return;
   }
 
+  const capability = preparedCapability ?? await preparePushNotificationLogoutCleanup();
   const { error } = await supabase.rpc('remove_all_user_push_tokens');
 
   if (error) {
     throw error;
   }
 
+  if (capability) {
+    await clearPushTokenCleanupTombstone(capability);
+  }
+
   logger.info('push', 'All push tokens unregistered for the current user');
 }
+
+export { flushPendingPushTokenCleanupTombstones };

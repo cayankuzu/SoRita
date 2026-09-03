@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sorita-edge-local",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-30",
+  "compatibility_date": "2026-08-31",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "observability": {
@@ -114,7 +114,11 @@
     },
     "production": {
       "name": "sorita-edge-production",
-      "workers_dev": true,
+      // Production ingress is deliberately fail-closed. Add the reviewed
+      // custom route/domain before deployment; never expose a fallback
+      // workers.dev hostname or invent a route in this repository.
+      "workers_dev": false,
+      "preview_urls": false,
       "vars": {
         "BUILD_SHA": "0000000000000000000000000000000000000000",
         "ENVIRONMENT": "production",

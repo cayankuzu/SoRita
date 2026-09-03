@@ -1,7 +1,9 @@
 # Manual External Steps and Evidence Register
 
-> Snapshot: 2026-08-30. No external provider action in this document has been
-> proved on the current dirty branch. Unless a section includes attached
+> Snapshot: 2026-08-31. Branch:
+> `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`; source version
+> `1.0.102`, Android `107`, iOS `87`. No external provider action in this
+> document has been proved for an immutable candidate SHA. Unless a section includes attached
 > evidence from the exact immutable candidate SHA, its status is `UNVERIFIED`.
 > All production-impacting sections are `NO-GO`. Operational and approval owner
 > is `OWNER_TBD` unless an accountable person accepts it in the evidence record.
@@ -121,6 +123,7 @@ submission.
 
   Perform any bounded rate/bot probe only against preview with an approved
   request count; do not load-test production from this runbook.
+
 - **Expected safe result:** Health remains available; an unauthenticated dynamic
   route is rejected; dynamic/auth responses are not shared-cacheable; approved
   app traffic succeeds; the bounded abusive pattern is logged/challenged/blocked
@@ -132,9 +135,11 @@ submission.
 
 ## 4. Supabase staging, migrations and Edge Functions
 
-- **Current status:** `UNVERIFIED / NO-GO`. Local migration validation is
-  automatable, but hosted staging identity, parity, migration history and
-  deployed Function versions are not evidenced.
+- **Current status:** `VERIFIED (LOCAL) / UNVERIFIED HOSTED / NO-GO`. The
+  current migration set passed an isolated local zero-reset, DB lint
+  (`results: []`), 6 files/180 pgTAP tests and a separate dump/restore check of
+  22 public tables. This is pre-commit local evidence. Hosted staging identity,
+  parity, migration history and deployed Function versions are not evidenced.
 - **Why:** Schema/RLS/Function changes must be exercised outside production and
   bound to the exact candidate before release.
 - **Panel/location:** Supabase Dashboard → staging project → Database, Auth,
@@ -211,6 +216,7 @@ submission.
   In staging, repeat against every selected Function with intentionally missing,
   invalid, expired and replayed origin signatures using an approved harness;
   never place the real secret on the command line.
+
 - **Expected safe result:** Secret **names** and the enforcement flag exist
   without values being printed; source tests/migration state pass; every
   unsigned/invalid/expired/replayed direct-origin request is rejected after
@@ -227,9 +233,11 @@ submission.
 
 ## 6. EAS owner, project, environments and channels
 
-- **Current status:** `UNVERIFIED / NO-GO`. Repository profiles name
-  development/preview/production channels, but provider ownership, project link,
-  environment isolation and channel-to-branch state are not proved.
+- **Current status:** `PARTIALLY VERIFIED (LOCAL SESSION) / NO-GO`. An
+  interactive local EAS session can resolve the operator and project, and the
+  repository profiles name development/preview/production channels. A protected
+  automation token, environment isolation, channel-to-branch state and
+  same-SHA provider evidence are not proved.
 - **Why:** A wrong project owner or channel can publish an update to unintended
   binaries/users.
 - **Panel/location:** Expo Dashboard → project → Overview, Access, Environment
@@ -265,8 +273,11 @@ submission.
 
 ## 7. EAS Update code signing
 
-- **Current status:** `UNVERIFIED / NO-GO`. No checked-in, exercised EAS Update
-  code-signing configuration or device verification evidence was found.
+- **Current status:** **`BLOCKED / NO-GO`**. The current EAS account reports the
+  Free plan, which does not provide EAS Update code signing. No tracked public
+  certificate, secure private-key ceremony or device rejection evidence exists.
+  The production OTA workflow now fails closed when the certificate/metadata is
+  absent or invalid; this guard is not a signed update.
 - **Why:** OTA-capable binaries must authenticate update manifests/assets using
   an approved certificate/key lifecycle and reject invalid signatures.
 - **Panel/location:** Expo project settings and approved offline/managed signing
@@ -274,23 +285,36 @@ submission.
 - **Variable/configuration names only:** `EXPO_TOKEN`,
   `updates.codeSigningCertificate`, `updates.codeSigningMetadata`,
   `updates.codeSigningMetadata.alg`, `updates.codeSigningMetadata.keyid`.
-- **Authorized action:** Define certificate ownership, expiry and rotation;
-  generate/store the private key outside the repository; configure only the
-  public certificate reference in an approved code change; create new preview
-  binaries; and prove signed, unsigned, tampered and rotated-key behavior before
-  any production binary or OTA rollout.
+- **Authorized action:** The accountable Expo organization owner chooses and
+  records one of two safe outcomes: (a) approve a plan that supports EAS Update
+  code signing, define certificate ownership/expiry/rotation, generate/store the
+  private key outside the repository, commit only the public certificate and
+  metadata, then create new preview binaries; or (b) keep production OTA
+  disabled and release only through separately verified store binaries. Never
+  bypass the workflow certificate check or claim signed OTA on the Free plan.
 - **Verification command/check:**
 
   ```powershell
   npx expo config --type public | Select-String -Pattern 'codeSigning|runtimeVersion|updates'
   eas build:list --profile preview --limit 5 --json
   eas channel:view preview --json
+
+  $evidenceConfig = Join-Path $env:TEMP 'sorita-public-expo-config.json'
+  npx expo config --type public --json | Set-Content -LiteralPath $evidenceConfig -Encoding utf8
+  node utils/eas/check-update-code-signing.mjs --config $evidenceConfig
+  Remove-Item -LiteralPath $evidenceConfig -Force
   ```
 
   Complete the acceptance/rejection tests on physical iOS and Android devices.
-- **Expected safe result:** Public certificate metadata and runtime are present;
-  a valid preview update installs; unsigned/tampered/wrong-key updates are
-  rejected; no private signing key appears in config, logs or artifacts.
+
+- **Expected safe result:** On the current Free-plan/unconfigured state the
+  repository verifier exits non-zero and production publication remains
+  blocked. After an approved supported-plan ceremony, public certificate
+  metadata and runtime are present; the verifier passes; a valid preview update
+  installs; unsigned/tampered/wrong-key updates are rejected; no private signing
+  key appears in config, logs or artifacts. If outcome (b) is selected, no EAS
+  Update production group is published and that limitation is explicit in the
+  release record.
 - **Rollback:** Stop the rollout, revert the update rollout where supported, and
   distribute a binary trusted by the last uncompromised certificate. Follow the
   approved key-compromise procedure; do not commit the private key as a shortcut.
@@ -299,9 +323,11 @@ submission.
 
 ## 8. Android application signing
 
-- **Current status:** `UNVERIFIED / NO-GO`. Gradle supports environment-provided
-  release signing and fingerprint checking, but secure key custody, Play Console
-  association and a store-installable candidate are not proved.
+- **Current status:** `UNVERIFIED / NO-GO`. Source version `1.0.102` and Android
+  `versionCode 107` are prepared. Gradle supports environment-provided release
+  signing and fingerprint checking, but a clean same-SHA 107 bundle, secure key
+  custody, Play Console association and store installation are not proved. Any
+  older `1.0.101`/106 local artifact is not candidate evidence.
 - **Why:** A production Android artifact must be signed by the approved upload
   key, map to the intended Play application and remain recoverable.
 - **Panel/location:** Approved secret/signing-key store; Google Play Console →
@@ -333,9 +359,11 @@ submission.
 
 ## 9. iOS signing and App Store Connect credentials
 
-- **Current status:** `UNVERIFIED / NO-GO`. The repository has no checked-in iOS
-  native directory and the production profile requests local credentials;
-  certificate/profile/API-key custody and App Store association are not proved.
+- **Current status:** `UNVERIFIED / NO-GO`. Production build profiles now use
+  frozen EAS-managed remote signing credentials, and the protected workflow
+  materializes its submit key only under `RUNNER_TEMP`; provider custody,
+  certificate/profile validity and App Store association are not yet proved by
+  a same-SHA run.
 - **Why:** Store builds and submissions must use the intended team, bundle,
   distribution certificate, provisioning profile and narrowly scoped App Store
   Connect credential.
@@ -344,14 +372,12 @@ submission.
   EAS credentials/build view.
 - **Variable/configuration names only:** `EXPO_TOKEN`,
   `submit.production.ios.ascAppId`, `submit.production.ios.appleTeamId`,
-  `submit.production.ios.ascApiKeyPath`,
-  `submit.production.ios.ascApiKeyIssuerId`,
-  `submit.production.ios.ascApiKeyId`, `EXPO_ASC_API_KEY_PATH`,
+  `submit.production.ios.bundleIdentifier`, `EXPO_ASC_API_KEY_BASE64`,
   `EXPO_ASC_KEY_ID`, `EXPO_ASC_ISSUER_ID`.
-- **Authorized action:** Verify the checked-in identifier keys against the
-  intended Apple account without copying their values, move private material to
-  approved secure custody, review access scope, generate the exact store build
-  and record certificate/profile expiry and recovery ownership.
+- **Authorized action:** Store the least-privilege API key only in the protected
+  GitHub `production` environment, verify the tracked app/team/bundle identity,
+  dispatch `.github/workflows/eas-production-ios.yml` from the exact candidate
+  SHA and retain only its sanitized receipt.
 - **Verification command/check:**
 
   ```powershell
@@ -431,6 +457,7 @@ submission.
 
   The `xcrun` command requires the approved macOS test host. Manual journey
   results must be attached per device/build, not inferred from device discovery.
+
 - **Expected safe result:** Each approved matrix cell identifies device/OS,
   immutable build/runtime, tester, UTC time and pass/fail; offline and concurrent
   operations follow the documented contract; no private data enters artifacts.
@@ -467,6 +494,7 @@ submission.
 
   Compare the installed version/build and certificate with the immutable build
   record and Play App integrity page.
+
 - **Expected safe result:** Play accepts the intended application/package and
   signing lineage; an approved tester installs the exact candidate; critical
   journeys pass; provider warnings and review state are recorded.
@@ -487,11 +515,10 @@ submission.
   Information, Users and Access; EAS build/submit records.
 - **Variable/configuration names only:** `EXPO_TOKEN`,
   `submit.production.ios.ascAppId`, `submit.production.ios.appleTeamId`,
-  `submit.production.ios.ascApiKeyPath`,
-  `submit.production.ios.ascApiKeyIssuerId`,
-  `submit.production.ios.ascApiKeyId`, `EXPO_ASC_API_KEY_PATH`,
+  `submit.production.ios.bundleIdentifier`, `EXPO_ASC_API_KEY_BASE64`,
   `EXPO_ASC_KEY_ID`, `EXPO_ASC_ISSUER_ID`.
-- **Authorized action:** Submit the exact signed candidate, answer export
+- **Authorized action:** Dispatch the protected exact-SHA iOS build/submit
+  workflow, answer export
   compliance/app metadata truthfully, wait for processing/review where required,
   assign only approved testers and install via TestFlight on physical devices.
 - **Verification command/check:**
@@ -503,6 +530,7 @@ submission.
 
   Compare App Store Connect build metadata with the candidate SHA/runtime and
   record device journey results.
+
 - **Expected safe result:** Apple associates the build with the intended app/team;
   processing succeeds without unresolved compliance warnings; approved testers
   install the exact build and complete the real-device matrix.
@@ -543,6 +571,7 @@ submission.
 
   Compare the results and provider configuration with each store answer and the
   real-device evidence.
+
 - **Expected safe result:** Every declared data type/purpose/sharing/retention
   behavior has a source/provider/policy reference; report/block and deletion
   paths work on physical devices; unresolved moderation lifecycle gaps are
@@ -581,6 +610,7 @@ submission.
 
   Validate RLS/Auth/Storage/Function journeys with synthetic accounts and compare
   aggregate counts/checksums through approved read-only queries.
+
 - **Expected safe result:** The isolated restore reaches the selected restore
   point, passes integrity/security journeys, restores Storage through its
   separate procedure and records observed recovery/data-loss intervals. No
@@ -722,6 +752,7 @@ submission.
   with an owner account and an unrelated/anonymous client. Include legacy paths
   containing encoded spaces and a public list toggled to private without a new
   cover selection.
+
 - **Expected safe result:** The count is zero; owners can load their covers
   through the private path; unrelated and anonymous clients cannot; object and
   database audit counts reconcile. A non-zero count is a release-blocking gap,
@@ -820,6 +851,7 @@ submission.
   Exercise staged pending, finalizing, finalized-referenced, retained, late-write
   and failed-cleanup sessions. Run a second sweep after the lease/eligibility
   boundary to prove retry and reconciliation behavior.
+
 - **Expected safe result:** Only eligible unreferenced paths are removed;
   referenced finalized media remains readable; every claimed row records a
   terminal/retryable result; bounded failures make the workflow fail and alert;
@@ -830,6 +862,58 @@ submission.
 - **Owner:** `OWNER_TBD`.
 - **Evidence path:**
   `artifacts/release-evidence/manual/storage/media-upload-sweeper/`.
+
+## 21. Push provider credentials, scheduler, receipts and alarms
+
+- **Current status:** **`UNVERIFIED / NO-GO`**. Client/source and isolated DB
+  tests passed locally, but FCM/APNs/Expo credential ownership, environment
+  parity, hosted scheduler execution, provider ticket/receipt reconciliation,
+  invalid-token cleanup and alert delivery are not evidenced.
+- **Why:** Source tests cannot prove that production credentials target the
+  intended package/bundle/project, that jobs continue running, or that permanent
+  provider errors revoke tokens without leaking payload data.
+- **Panel/location:** Expo/EAS Credentials; Firebase Console / Google Cloud IAM;
+  Apple Developer APNs keys; Supabase staging Functions/Database/Cron; approved
+  alert destination and secret manager.
+- **Variable/configuration names only:** `EXPO_TOKEN`, FCM V1 service identity
+  reference, APNs key reference/team/key IDs, Expo project association,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `SYSTEM_BROADCAST_ADMIN_TOKEN`. Never record key files, token values, device
+  tokens, cleanup secrets or payload bodies.
+- **Authorized action:** On isolated staging, verify package/bundle/project and
+  APNs sandbox/production parity; install credentials through the provider's
+  approved secret path; apply the reviewed migration; confirm `pg_cron` or
+  provision one least-privilege external scheduler; send only bounded synthetic
+  messages to approved test devices; reconcile tickets/receipts; prove permanent
+  invalid-token cleanup, transient retry, DLQ, pause/resume and alert delivery.
+  Keep broadcast dry-run and explicit audience guards enabled. Do not perform a
+  production bulk send for verification.
+- **Verification command/check:**
+
+  ```powershell
+  eas credentials --platform android
+  eas credentials --platform ios
+  npm run ops:push-delivery:health
+  npm run ops:push-delivery:requeue -- requeue --dead-letter-id <staging-uuid> --requeue-key <stable-uuid> --confirm REQUEUE_PUSH_DELIVERY_DLQ
+  ```
+
+  Run the scenarios in
+  [`push-real-device-matrix.md`](./push-real-device-matrix.md) on the exact
+  Android/iOS candidate. Sanitize all provider output before retention.
+
+- **Expected safe result:** Credential metadata matches the intended
+  app/environment; scheduler health is current; bounded synthetic sends produce
+  correlated ticket and receipt outcomes; a transient error retries within the
+  bounded policy; an unregistered token is revoked; a terminal job reaches a
+  redacted DLQ record and alerts the accountable owner; no secret/token/payload
+  appears in logs or evidence.
+- **Rollback:** Pause the scheduler/broadcast path, revoke the newly introduced
+  credential if compromised, restore the prior approved credential reference,
+  keep DLQ rows for audit and confirm core mutations continue without push.
+  Never blindly requeue the full backlog.
+- **Owner:** `OWNER_TBD`.
+- **Evidence path:**
+  `artifacts/release-evidence/manual/push/provider-scheduler-receipts/`.
 
 ## Final external gate
 

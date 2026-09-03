@@ -1,5 +1,10 @@
 import { findRoute, type RouteDefinition, validatePayload } from './contracts';
 import {
+  getOriginSuccessResponseContract,
+  ORIGIN_ERROR_RESPONSE_MAX_BYTES,
+  originErrorResponseSchema,
+} from './responseContracts';
+import {
   createOriginSignature,
   hashIpAddress,
   InvalidJwtError,
@@ -530,11 +535,16 @@ async function enforceCoarseIpRateLimit(params: {
 }
 
 async function fetchOrigin(params: {
+  action: string;
+  allowedOrigin?: string;
   bodyText: string;
+  cfRay?: string;
   config: RuntimeConfig;
   fetchFunction: FetchFunction;
   headers: Headers;
   originUrl: URL;
+  requestId: string;
+  route: RouteDefinition;
 }): Promise<Response> {
   const controller = new AbortController();
   let timedOut = false;
@@ -544,16 +554,28 @@ async function fetchOrigin(params: {
   }, params.config.originTimeoutMs);
 
   try {
-    return await params.fetchFunction(params.originUrl, {
+    const response = await params.fetchFunction(params.originUrl, {
       body: params.bodyText,
       headers: params.headers,
       method: 'POST',
       redirect: 'manual',
       signal: controller.signal,
     });
-  } catch {
+    return await translateOriginResponse(response, {
+      action: params.action,
+      allowedOrigin: params.allowedOrigin,
+      cfRay: params.cfRay,
+      requestId: params.requestId,
+      route: params.route,
+      supabaseOrigin: params.config.supabaseOrigin,
+    });
+  } catch (error) {
     if (timedOut || controller.signal.aborted) {
       throw new GatewayError(504, 'origin_timeout', 'Upstream request timed out.');
+    }
+
+    if (error instanceof GatewayError) {
+      throw error;
     }
 
     throw new GatewayError(502, 'origin_unavailable', 'Upstream service is unavailable.');
@@ -576,16 +598,129 @@ function readRetryAfter(response: Response): string | undefined {
   return Number.isFinite(Date.parse(value)) ? value : undefined;
 }
 
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The response is already being rejected. Cancellation is best-effort and
+    // must not replace the stable gateway error contract.
+  }
+}
+
+async function readBoundedOriginJson(response: Response, maximumBytes: number): Promise<unknown> {
+  const contentLengthValue = response.headers.get('content-length');
+
+  if (contentLengthValue) {
+    const contentLength = Number(contentLengthValue);
+
+    if (
+      !/^\d+$/.test(contentLengthValue)
+      || !Number.isSafeInteger(contentLength)
+      || contentLength > maximumBytes
+    ) {
+      await cancelResponseBody(response);
+      throw new GatewayError(
+        502,
+        'invalid_origin_response',
+        'Upstream service returned an invalid response.',
+      );
+    }
+  }
+
+  const reader = response.body?.getReader();
+
+  if (!reader) {
+    throw new GatewayError(
+      502,
+      'invalid_origin_response',
+      'Upstream service returned an invalid response.',
+    );
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const result = await reader.read();
+
+    if (result.done) {
+      break;
+    }
+
+    if (!result.value) {
+      continue;
+    }
+
+    totalBytes += result.value.byteLength;
+
+    if (totalBytes > maximumBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+        // The bounded rejection below remains authoritative.
+      }
+      throw new GatewayError(
+        502,
+        'invalid_origin_response',
+        'Upstream service returned an invalid response.',
+      );
+    }
+
+    chunks.push(result.value);
+  }
+
+  if (totalBytes === 0) {
+    throw new GatewayError(
+      502,
+      'invalid_origin_response',
+      'Upstream service returned an invalid response.',
+    );
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  let bodyText: string;
+
+  try {
+    bodyText = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes);
+  } catch {
+    throw new GatewayError(
+      502,
+      'invalid_origin_response',
+      'Upstream service returned an invalid response.',
+    );
+  }
+
+  try {
+    return JSON.parse(bodyText) as unknown;
+  } catch {
+    throw new GatewayError(
+      502,
+      'invalid_origin_response',
+      'Upstream service returned an invalid response.',
+    );
+  }
+}
+
 async function translateOriginResponse(
   response: Response,
   params: {
+    action: string;
     allowedOrigin?: string;
     cfRay?: string;
     requestId: string;
+    route: RouteDefinition;
+    supabaseOrigin: string;
   },
 ): Promise<Response> {
   if (response.status === 429) {
-    await response.body?.cancel();
+    await cancelResponseBody(response);
     return jsonResponse(
       {
         code: 'rate_limited',
@@ -598,25 +733,80 @@ async function translateOriginResponse(
   }
 
   if (response.status >= 500 || (response.status >= 300 && response.status < 400)) {
-    await response.body?.cancel();
+    await cancelResponseBody(response);
     throw new GatewayError(502, 'origin_unavailable', 'Upstream service is unavailable.');
   }
 
-  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+  if (response.status >= 200 && response.status < 300 && response.status !== 200) {
+    await cancelResponseBody(response);
+    throw new GatewayError(
+      502,
+      'invalid_origin_response',
+      'Upstream service returned an invalid response.',
+    );
+  }
 
-  if (response.status !== 204 && !contentType.includes('application/json')) {
-    await response.body?.cancel();
+  const contentType = response.headers.get('content-type')?.trim().toLowerCase() ?? '';
+
+  if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/.test(contentType)) {
+    await cancelResponseBody(response);
     throw new GatewayError(502, 'invalid_origin_response', 'Upstream service returned an invalid response.');
   }
 
-  const headers = createSecureHeaders({
-    allowedOrigin: params.allowedOrigin,
-    cfRay: params.cfRay,
-    contentType: response.status === 204 ? undefined : 'application/json; charset=utf-8',
-    requestId: params.requestId,
-  });
+  if (response.status === 200) {
+    const contract = getOriginSuccessResponseContract({
+      action: params.action,
+      route: params.route,
+      supabaseOrigin: params.supabaseOrigin,
+    });
 
-  return new Response(response.body, { headers, status: response.status });
+    if (!contract) {
+      await cancelResponseBody(response);
+      throw new GatewayError(
+        502,
+        'invalid_origin_response',
+        'Upstream service returned an invalid response.',
+      );
+    }
+
+    const payload = await readBoundedOriginJson(response, contract.maximumBytes);
+    const parsed = contract.schema.safeParse(payload);
+
+    if (!parsed.success) {
+      throw new GatewayError(
+        502,
+        'invalid_origin_response',
+        'Upstream service returned an invalid response.',
+      );
+    }
+
+    return jsonResponse(parsed.data, 200, params);
+  }
+
+  if (response.status >= 400 && response.status < 500) {
+    const retryAfter = readRetryAfter(response);
+    const payload = await readBoundedOriginJson(response, ORIGIN_ERROR_RESPONSE_MAX_BYTES);
+    const parsed = originErrorResponseSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      throw new GatewayError(
+        502,
+        'invalid_origin_response',
+        'Upstream service returned an invalid response.',
+      );
+    }
+
+    const translated = jsonResponse(parsed.data, response.status, params);
+
+    if ((response.status === 409 || response.status === 423) && retryAfter) {
+      translated.headers.set('Retry-After', retryAfter);
+    }
+
+    return translated;
+  }
+
+  await cancelResponseBody(response);
+  throw new GatewayError(502, 'invalid_origin_response', 'Upstream service returned an invalid response.');
 }
 
 async function proxyRequest(params: {
@@ -744,17 +934,17 @@ async function proxyRequest(params: {
   }
 
   forwardValidatedClientHeaders(params.request, originHeaders);
-  const originResponse = await fetchOrigin({
+  return fetchOrigin({
+    action: contract.action,
+    allowedOrigin: params.allowedOrigin,
     bodyText,
+    cfRay: params.cfRay,
     config: params.config,
     fetchFunction: params.dependencies.fetchFunction,
     headers: originHeaders,
     originUrl,
-  });
-  return translateOriginResponse(originResponse, {
-    allowedOrigin: params.allowedOrigin,
-    cfRay: params.cfRay,
     requestId: params.requestId,
+    route: params.route,
   });
 }
 

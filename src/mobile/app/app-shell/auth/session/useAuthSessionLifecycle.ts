@@ -70,6 +70,28 @@ async function transitionAuthScope(previousUserId: string | null, nextUserId: st
   return nextUserId;
 }
 
+async function stagePushTokenCleanupForAuthTransition(
+  previousUserId: string | null,
+  nextUserId: string | null,
+) {
+  if (!previousUserId || previousUserId === nextUserId) {
+    return;
+  }
+
+  try {
+    const { stageActivePushTokenCleanupForAuthTransition } = await import(
+      '@/mobile/app/data/repositories/pushNotificationRepository'
+    );
+    await stageActivePushTokenCleanupForAuthTransition();
+  } catch (error) {
+    // A forced/expired session cannot be resurrected. Keep any existing
+    // secure tombstone intact; the signed-out cleanup host will retry it.
+    logger.warn('auth', 'Could not stage push cleanup during auth transition.', {
+      error: error instanceof Error ? error.name : 'unknown',
+    });
+  }
+}
+
 export function useAuthSessionLifecycle({
   setBooted,
   setUser,
@@ -83,19 +105,16 @@ export function useAuthSessionLifecycle({
     let sessionRevalidationInFlight: Promise<void> | null = null;
     let bootstrapFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
     let activeAuthUserId: string | null = null;
-
     const setBootedIfMounted = () => {
       if (mounted) {
         setBooted(true);
       }
     };
-
     const setUserIfMounted = (nextUser: User | null) => {
       if (mounted) {
         setUser(nextUser);
       }
     };
-
     const clearSignedOutState = () => {
       stopScheduledSessionRevalidation();
       clearCurrentUserState();
@@ -109,6 +128,7 @@ export function useAuthSessionLifecycle({
       }
 
       hasShownMissingAccountAlert = true;
+      await stagePushTokenCleanupForAuthTransition(activeAuthUserId, null);
       await persistAuthSession(null);
       await supabase.auth.signOut().catch((err) => { logger.debug('auth', 'Failed to sign out after missing account', err); });
       activeAuthUserId = await transitionAuthScope(activeAuthUserId, null);
@@ -124,6 +144,7 @@ export function useAuthSessionLifecycle({
 
     const syncAuthState = async (authUser: SupabaseAuthUser | null, session: Session | null) => {
       try {
+        await stagePushTokenCleanupForAuthTransition(activeAuthUserId, authUser?.id ?? null);
         activeAuthUserId = await transitionAuthScope(activeAuthUserId, authUser?.id ?? null);
 
         if (!authUser) {
@@ -195,7 +216,9 @@ export function useAuthSessionLifecycle({
         const session = await getActiveOrPersistedSession();
 
         if (!session?.user) {
+          await stagePushTokenCleanupForAuthTransition(activeAuthUserId, null);
           await persistAuthSession(null);
+          activeAuthUserId = await transitionAuthScope(activeAuthUserId, null);
           clearSignedOutState();
           return;
         }
@@ -212,7 +235,9 @@ export function useAuthSessionLifecycle({
           }
 
           if (!data.session?.user) {
+            await stagePushTokenCleanupForAuthTransition(activeAuthUserId, null);
             await persistAuthSession(null);
+            activeAuthUserId = await transitionAuthScope(activeAuthUserId, null);
             clearSignedOutState();
             return;
           }
@@ -331,7 +356,9 @@ export function useAuthSessionLifecycle({
         await syncAuthState(session?.user ?? null, session);
       } catch (error) {
         logger.error('auth', 'Failed to bootstrap auth state', error);
+        await stagePushTokenCleanupForAuthTransition(activeAuthUserId, null);
         await persistAuthSession(null);
+        activeAuthUserId = await transitionAuthScope(activeAuthUserId, null);
         clearSignedOutState();
       } finally {
         isBootstrapping = false;

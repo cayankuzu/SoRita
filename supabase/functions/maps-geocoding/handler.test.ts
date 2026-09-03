@@ -461,4 +461,87 @@ describe('maps-geocoding handler', () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toMatchObject({ code: 'unexpected' });
   });
+
+  it('derives placeId and name fallbacks for sparse geocoding entries', async () => {
+    const { handler } = createDeps();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ places: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        results: [
+          // No place_id and no address components: the coordinate pair becomes
+          // the identity and the first address segment becomes the name.
+          {
+            formatted_address: 'Bagdat Caddesi, Istanbul',
+            geometry: { location: { lat: 11, lng: 12 } },
+          },
+          // No formatted_address either: the raw query is the last fallback.
+          {
+            geometry: { location: { lat: 13, lng: 14 } },
+          },
+        ],
+        status: 'OK',
+      }), { status: 200 })));
+
+    const response = await handler(await signedRequest({ action: 'search', query: 'Moda' }));
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      results: Array<{ address: string; name: string; placeId: string }>;
+    };
+
+    expect(body.results).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Bagdat Caddesi', placeId: '11,12' }),
+      expect.objectContaining({ address: '', name: 'Moda', placeId: '13,14' }),
+    ]));
+  });
+
+  it('treats subpremise results as points of interest and falls back to the address segment', async () => {
+    const { handler } = createDeps();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      results: [{
+        // A point of interest with no establishment component: the name must
+        // fall back to the first address segment rather than disappearing.
+        address_components: [{ long_name: 'Kadikoy', types: ['locality'] }],
+        formatted_address: 'Daire 3, Kadikoy',
+        geometry: { location: { lat: 41.1, lng: 29.1 } },
+        types: ['SUBPREMISE'],
+      }],
+      status: 'OK',
+    }), { status: 200 })));
+
+    const response = await handler(await signedRequest({ action: 'reverse', latitude: 40, longitude: 29 }));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      result: {
+        address: 'Daire 3, Kadikoy',
+        isPointOfInterest: true,
+        lat: 41.1,
+        lng: 29.1,
+        name: 'Daire 3',
+      },
+    });
+  });
+
+  it('falls back to the requested coordinates when the provider omits geometry', async () => {
+    const { handler } = createDeps();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      results: [{
+        address_components: [{ long_name: 'Moda Sahne', types: ['establishment'] }],
+        formatted_address: 'Moda Sahne, Kadikoy',
+        types: ['ESTABLISHMENT'],
+      }],
+      status: 'OK',
+    }), { status: 200 })));
+
+    const response = await handler(await signedRequest({ action: 'reverse', latitude: 40.5, longitude: 29.5 }));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      result: {
+        address: 'Moda Sahne, Kadikoy',
+        isPointOfInterest: true,
+        lat: 40.5,
+        lng: 29.5,
+        name: 'Moda Sahne',
+      },
+    });
+  });
 });

@@ -1,0 +1,112 @@
+name: Provider and Device Runtime Evidence
+run-name: Runtime evidence for ${{ inputs.candidate_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full immutable commit SHA observed by every provider and device probe
+        required: true
+        type: string
+      runtime_version:
+        description: App runtime version observed by every provider and device probe
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-evidence-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  NODE_VERSION: "24"
+  RUNTIME_EVIDENCE_SOURCE_ROOT: ${{ vars.RUNTIME_EVIDENCE_SOURCE_ROOT }}
+
+jobs:
+  seal-runtime-evidence:
+    name: Seal protected provider and physical-device probe receipts
+    runs-on: [self-hosted, macOS, sorita-runtime-evidence]
+    environment: production-evidence
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact candidate SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Validate immutable source and protected probe source
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::candidate_sha must be a canonical lower-case full commit SHA.'
+            exit 1
+          fi
+          if [[ "$CANDIDATE_SHA" != "$WORKFLOW_SHA" || "$(git rev-parse HEAD)" != "$CANDIDATE_SHA" ]]; then
+            echo '::error::Runtime evidence must run from and check out the exact candidate SHA.'
+            exit 1
+          fi
+          expected_runtime_version="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version)")"
+          if [[ "$REQUESTED_RUNTIME_VERSION" != "$expected_runtime_version" ]]; then
+            echo '::error::runtime_version must match the immutable candidate package version.'
+            exit 1
+          fi
+          if [[ -z "$RUNTIME_EVIDENCE_SOURCE_ROOT" || "$RUNTIME_EVIDENCE_SOURCE_ROOT" != /* ]]; then
+            echo '::error::The protected production-evidence environment must define an absolute RUNTIME_EVIDENCE_SOURCE_ROOT.'
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+            echo '::error::Runtime evidence sealing requires a clean candidate checkout.'
+            exit 1
+          fi
+
+      - name: Install the exact root lockfile without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Canonicalize fresh machine probe receipts
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+        run: |
+          set -euo pipefail
+          source_directory="${RUNTIME_EVIDENCE_SOURCE_ROOT%/}/${CANDIDATE_SHA}"
+          test -d "$source_directory"
+          node utils/release-evidence/runtime-evidence.mjs stage \
+            --source "$source_directory" \
+            --directory artifacts/runtime-evidence \
+            --repository "https://github.com/${GITHUB_REPOSITORY}" \
+            --commit "$CANDIDATE_SHA" \
+            --runtime "$REQUESTED_RUNTIME_VERSION" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
+          node utils/release-evidence/runtime-evidence.mjs verify \
+            --directory artifacts/runtime-evidence \
+            --repository "https://github.com/${GITHUB_REPOSITORY}" \
+            --commit "$CANDIDATE_SHA" \
+            --runtime "$REQUESTED_RUNTIME_VERSION" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
+
+      - name: Upload the checksum-bound runtime evidence packet
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runtime-evidence-${{ inputs.candidate_sha }}
+          path: artifacts/runtime-evidence
+          if-no-files-found: error
+          retention-days: 30

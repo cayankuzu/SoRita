@@ -9,6 +9,28 @@ import { createClient } from '@supabase/supabase-js';
 const APPLY_CONFIRMATION = 'SWEEP_STALE_MEDIA_UPLOADS';
 const DEFAULT_LIMIT = 100;
 const DEFAULT_MAX_BATCHES = 10;
+const MAX_OPERATIONAL_ERROR_LENGTH = 800;
+
+const redactOperationalText = (value) => String(value)
+  .replace(/\b(?:sb_(?:secret|publishable)_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/gu, '[REDACTED]')
+  .slice(0, MAX_OPERATIONAL_ERROR_LENGTH);
+
+export function formatOperationalError(error) {
+  if (error instanceof Error) return redactOperationalText(error.message);
+  if (!error || typeof error !== 'object') return redactOperationalText(error);
+
+  const safeFields = {};
+  for (const field of ['code', 'message', 'details', 'hint']) {
+    const value = error[field];
+    if (typeof value === 'string' && value.trim()) {
+      safeFields[field] = redactOperationalText(value.trim());
+    }
+  }
+
+  return Object.keys(safeFields).length > 0
+    ? JSON.stringify(safeFields)
+    : 'Supabase operation failed without a safe diagnostic message';
+}
 
 function fail(message) {
   throw new Error(message);
@@ -231,7 +253,7 @@ export async function main(argv = process.argv.slice(2), environment = process.e
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch((error) => {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(`${formatOperationalError(error)}\n`);
     process.exitCode = 1;
   });
 }

@@ -151,9 +151,70 @@ if (cycles.size > 0) {
   violations.push(...[...cycles].map((cycle) => `dependency cycle: ${cycle}`));
 }
 
+// Backend roots carry the same file-size discipline as the mobile app. Limits
+// are ratcheted to the measured size at adoption so existing debt is recorded
+// explicitly and can only shrink, never grow silently.
+const BACKEND_ROOTS = [
+  path.join(ROOT, 'supabase', 'functions'),
+  path.join(ROOT, 'infra', 'cloudflare', 'sorita-edge', 'src'),
+];
+const BACKEND_DEFAULT_MAX_LINES = 600;
+const BACKEND_HOTSPOT_LIMITS = new Map(Object.entries({
+  'supabase/functions/media-assets/handler.ts': 2_100,
+  'infra/cloudflare/sorita-edge/src/index.ts': 1_080,
+  'supabase/functions/auth-gateway/handler.ts': 930,
+  'supabase/functions/moderation-reports/handler.ts': 770,
+}));
+
+function walkBackend(directory) {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return ['__tests__', '.wrangler', 'node_modules'].includes(entry.name)
+        ? []
+        : walkBackend(entryPath);
+    }
+    if (!/\.ts$/.test(entry.name)) return [];
+    if (entry.name.endsWith('.d.ts') || entry.name.endsWith('.test.ts')) return [];
+    return [entryPath];
+  });
+}
+
+const backendFiles = BACKEND_ROOTS.flatMap((root) => walkBackend(root));
+for (const filePath of backendFiles) {
+  const relativePath = portable(filePath);
+  const lineCount = fs.readFileSync(filePath, 'utf8').split(/\r?\n/).length;
+  const limit = BACKEND_HOTSPOT_LIMITS.get(relativePath) ?? BACKEND_DEFAULT_MAX_LINES;
+  if (lineCount > limit) {
+    violations.push(`${relativePath}: ${lineCount} lines (limit ${limit})`);
+  }
+}
+
+for (const [relativePath, limit] of BACKEND_HOTSPOT_LIMITS) {
+  const absolutePath = path.join(ROOT, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    violations.push(`stale backend budget for missing file: ${relativePath}`);
+    continue;
+  }
+  const lineCount = fs.readFileSync(absolutePath, 'utf8').split(/\r?\n/).length;
+  if (lineCount <= BACKEND_DEFAULT_MAX_LINES) {
+    violations.push(
+      `${relativePath} no longer needs a raised budget (${lineCount} lines); remove its exemption`,
+    );
+  }
+  if (limit - lineCount > 100) {
+    violations.push(
+      `${relativePath} budget ${limit} is far above its ${lineCount} lines; ratchet it down`,
+    );
+  }
+}
+
 if (violations.length > 0) {
   console.error(`[source-health] Failed:\n- ${violations.join('\n- ')}`);
   process.exit(1);
 }
 
-console.log(`[source-health] OK (${files.length} files, no cycles, file/function budgets respected)`);
+console.log(
+  `[source-health] OK (${files.length} app files, ${backendFiles.length} backend files, no cycles, file/function budgets respected)`,
+);
