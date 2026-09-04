@@ -26,6 +26,24 @@ const repositoryRoot = path.resolve(
 const TRACKED_ROOTS = ['docs', 'quality', 'release-evidence'];
 const TRACKED_EXTENSIONS = new Set(['.md', '.json']);
 
+// The containerised quality profile runs this same lint chain from a build
+// context that carries no .git directory and no git binary. This check is only
+// meaningful next to a real work tree, and it still runs in the host lint job,
+// so skipping here loses no coverage while a hard failure would block the
+// container for the wrong reason.
+function hasGitWorkTree() {
+  try {
+    const output = execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return output.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function collect(directory) {
   const absolute = path.join(repositoryRoot, directory);
   if (!existsSync(absolute)) return [];
@@ -62,6 +80,11 @@ function untrackedPaths(candidates) {
 }
 
 function main() {
+  if (!hasGitWorkTree()) {
+    console.log('[docs-tracked] SKIPPED (no git work tree; enforced in the host lint job)');
+    return;
+  }
+
   const candidates = TRACKED_ROOTS.flatMap((root) => collect(root)).map((entry) =>
     entry.replaceAll('\\', '/'),
   );
