@@ -48,3 +48,27 @@ CVE-2026-56858 exp:2026-12-01
 CVE-2026-56859 exp:2026-12-01
 CVE-2026-56860 exp:2026-12-01
 CVE-2026-56862 exp:2026-12-01
+
+# -----------------------------------------------------------------------------
+# Dependencies bundled inside npm, shipped by the pinned Node base image
+# -----------------------------------------------------------------------------
+# Packages:      brace-expansion, ip-address, tar
+# Owner:         release-engineering
+# Reason:        These are npm's own vendored dependencies inside
+#                node:24.20.0-bookworm-slim, which ships npm 11.19.0. They are
+#                not resolvable from this repository's lockfile. Trivy reports a
+#                fixed version because one exists in the ecosystem, not because
+#                it can be applied here. The clean fix is a base image bump once
+#                Node ships an npm with patched bundles; upgrading npm to 12.x
+#                inside the image would swap the entire CI toolchain for a major
+#                version to patch a build-time-only binary.
+# Exploitability: Build-time only, never shipped. npm here installs from this
+#                repository's own pinned lockfile, so the ReDoS, address-parsing
+#                and archive-extraction paths are never fed untrusted input.
+#                Production dependencies are gated separately by
+#                security:audit:prod (--omit=dev), currently 0 critical, 0 high.
+# Re-evaluate:   at the next Node base image bump, and no later than the expiry.
+CVE-2026-14257 exp:2026-11-01
+CVE-2026-69152 exp:2026-11-01
+CVE-2026-69192 exp:2026-11-01
+CVE-2026-73566 exp:2026-11-01
