@@ -342,3 +342,32 @@ test("CI aggregates every required gate and treats a skip as not green", () => {
   // A skipped required job must never be accepted as a pass.
   assert.match(ci, /expected 'success'/u);
 });
+
+test("every workflow file parses, so a bad edit cannot fail with zero logs", async () => {
+  // A workflow with a duplicate key does not fail a job; GitHub refuses to
+  // create any job at all, producing a 0-second red run with no logs to read.
+  // The other assertions in this file read workflows as text and would not
+  // notice. Parsing them here does.
+  const { readdirSync } = await import("node:fs");
+  const yaml = await import("yaml");
+  const directory = resolve(process.cwd(), ".github/workflows");
+  const files = readdirSync(directory).filter((name) => name.endsWith(".yml"));
+
+  assert.ok(files.length > 0, "expected workflow files to exist");
+
+  for (const file of files) {
+    const source = workflow(file);
+    let parsed;
+    assert.doesNotThrow(() => {
+      // uniqueKeys defaults to true, which is what catches duplicates.
+      parsed = yaml.parse(source, { uniqueKeys: true });
+    }, `${file} is not valid YAML`);
+    assert.ok(parsed?.jobs, `${file} declares no jobs`);
+    for (const [id, job] of Object.entries(parsed.jobs)) {
+      assert.ok(
+        Array.isArray(job.steps) || job.uses,
+        `${file} job ${id} has neither steps nor a reusable workflow`,
+      );
+    }
+  }
+});

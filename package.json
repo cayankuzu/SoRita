@@ -168,7 +168,8 @@
     "msw": "^2.13.3",
     "react-test-renderer": "^19.2.0",
     "typescript": "^5.9.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "yaml": "2.9.0"
   },
   "overrides": {
     "@babel/core": "7.29.7",
