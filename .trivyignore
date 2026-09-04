@@ -1,0 +1,50 @@
+# Trivy ignore list for the CI tooling image.
+#
+# Scope: this file applies to the build-time tooling image only. That image is
+# never shipped, never reaches a user device, and never serves traffic. The
+# dependencies that reach production are gated separately and independently by
+# `npm run security:audit:prod`, which runs with --omit=dev and currently
+# reports 0 critical and 0 high.
+#
+# Every entry carries an expiry. When it lapses, Trivy reports the finding again
+# and the gate goes red until someone re-evaluates. Entries are not permitted
+# without a reason and an expiry.
+#
+# -----------------------------------------------------------------------------
+# Go standard library, compiled into the esbuild binary
+# -----------------------------------------------------------------------------
+# Package:       node_modules/@esbuild/linux-x64/bin/esbuild
+# Owner:         release-engineering
+# Reason:        esbuild is a transitive devDependency of vitest via vite 6.4.3,
+#                which declares esbuild ^0.25.0. 0.25.12 is already the newest
+#                release in that range, so the Go stdlib cannot be advanced
+#                without a vite major upgrade. Forcing an out-of-range override
+#                risks breaking the build toolchain to patch a binary that never
+#                ships.
+# Exploitability: Build-time only. esbuild runs inside an ephemeral, non-root,
+#                read-only, network-isolated CI container, over this
+#                repository's own first-party source. These stdlib CVEs require
+#                processing untrusted input, which does not occur here.
+# Re-evaluate:   when vite is upgraded to a release accepting esbuild >= 0.26.
+CVE-2025-61726 exp:2026-12-01
+CVE-2025-61729 exp:2026-12-01
+CVE-2025-68121 exp:2026-12-01
+CVE-2026-25679 exp:2026-12-01
+CVE-2026-27145 exp:2026-12-01
+CVE-2026-32280 exp:2026-12-01
+CVE-2026-32281 exp:2026-12-01
+CVE-2026-32283 exp:2026-12-01
+CVE-2026-33811 exp:2026-12-01
+CVE-2026-33814 exp:2026-12-01
+CVE-2026-33818 exp:2026-12-01
+CVE-2026-39820 exp:2026-12-01
+CVE-2026-39821 exp:2026-12-01
+CVE-2026-39822 exp:2026-12-01
+CVE-2026-39836 exp:2026-12-01
+CVE-2026-42499 exp:2026-12-01
+CVE-2026-42504 exp:2026-12-01
+CVE-2026-56853 exp:2026-12-01
+CVE-2026-56858 exp:2026-12-01
+CVE-2026-56859 exp:2026-12-01
+CVE-2026-56860 exp:2026-12-01
+CVE-2026-56862 exp:2026-12-01

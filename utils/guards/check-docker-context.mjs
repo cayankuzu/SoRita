@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -136,6 +136,38 @@ for (const [relativePath, lineSet] of ignoreLineSets) {
     assert.ok(
       isReIncluded(lineSet, source),
       `${relativePath} does not re-include the Dockerfile COPY source ${source}`,
+    );
+  }
+}
+
+// Every Trivy suppression must expire. A permanent ignore is indistinguishable
+// from deleting the finding, so entries carry `exp:` and a lapsed entry stops
+// suppressing anything, turning the gate red until someone re-evaluates.
+const trivyIgnorePath = path.join(repositoryRoot, '.trivyignore');
+if (existsSync(trivyIgnorePath)) {
+  const entries = readFileSync(trivyIgnorePath, 'utf8')
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+
+  const today = new Date().toISOString().slice(0, 10);
+  for (const entry of entries) {
+    const match = /^([A-Z]+-\d{4}-\d+)\s+exp:(\d{4}-\d{2}-\d{2})$/u.exec(entry);
+    assert.ok(
+      match,
+      `.trivyignore entry must be "<ID> exp:YYYY-MM-DD": ${entry}`,
+    );
+    assert.ok(
+      match[2] > today,
+      `.trivyignore suppression for ${match[1]} expired on ${match[2]}; re-evaluate it`,
+    );
+  }
+
+  const documented = readFileSync(trivyIgnorePath, 'utf8');
+  for (const required of ['Owner:', 'Reason:', 'Exploitability:']) {
+    assert.ok(
+      documented.includes(required),
+      `.trivyignore must document ${required}`,
     );
   }
 }

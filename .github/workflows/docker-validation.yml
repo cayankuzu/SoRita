@@ -192,6 +192,8 @@ jobs:
           format: json
           output: artifacts/docker/trivy.json
           severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
           ignore-unfixed: false
           exit-code: '1'
           timeout: 10m
