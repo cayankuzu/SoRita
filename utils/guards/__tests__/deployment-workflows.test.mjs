@@ -92,7 +92,7 @@ test("Docker workflow builds, tests, scans and emits checksum-bound same-SHA evi
   assert.match(dockerValidation, /--provenance=mode=max/u);
   assert.match(dockerValidation, /--sbom=true/u);
   assert.match(dockerValidation, /extract-buildkit-attestations\.mjs/u);
-  assert.match(dockerValidation, /verify-image-reproducibility\.mjs/u);
+  assert.match(dockerValidation, /record-image-build-evidence\.mjs/u);
   assert.match(dockerValidation, /SORITA_DOCKER_REUSE_IMAGE: '1'/u);
   assert.doesNotMatch(dockerValidation, /--provenance=false/u);
   assert.match(dockerValidation, /TARGET_SHA: \$\{\{ github\.sha \}\}/u);

@@ -157,10 +157,16 @@ export const extractBuildkitAttestations = (layoutDirectory, outputDirectory) =>
   );
 
   const summary = {
+    // The OCI export reports an index digest, not an image config digest, so
+    // the config digest is resolved from the image manifest here. That is the
+    // value that is genuinely comparable with `containerimage.config.digest`
+    // from a `--load` build; comparing an index or attestation digest against
+    // it would be comparing two different things.
+    imageConfigDigest: imageManifest.config.digest,
     imageDigest,
     provenance: { digest: provenance.digest, predicateType: provenance.statement.predicateType },
     sbom: { digest: sbom.digest, predicateType: sbom.statement.predicateType },
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
   writeFileSync(
     path.join(output, 'buildkit-attestation-summary.json'),

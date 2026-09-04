@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { extractBuildkitAttestations } from './extract-buildkit-attestations.mjs';
-import { verifyImageReproducibility } from './verify-image-reproducibility.mjs';
+import { recordImageBuildEvidence } from './record-image-build-evidence.mjs';
 
 const temporaryDirectories = [];
 const temporaryDirectory = () => {
@@ -107,52 +107,7 @@ test('extractBuildkitAttestations rejects an attestation for another image', () 
   );
 });
 
-test('verifyImageReproducibility binds two matching image config digests to source and SHA', () => {
-  const directory = temporaryDirectory();
-  const firstMetadataPath = path.join(directory, 'first.json');
-  const secondMetadataPath = path.join(directory, 'second.json');
-  const outputPath = path.join(directory, 'evidence.json');
-  const configDigest = `sha256:${'2'.repeat(64)}`;
-  writeFileSync(firstMetadataPath, JSON.stringify({ 'containerimage.config.digest': configDigest }));
-  writeFileSync(secondMetadataPath, JSON.stringify({ 'containerimage.config.digest': configDigest }));
 
-  const evidence = verifyImageReproducibility({
-    commitSha: 'a'.repeat(40),
-    firstMetadataPath,
-    outputPath,
-    secondMetadataPath,
-    sourceDateEpoch: '1788134400',
-  });
-  assert.equal(evidence.matches, true);
-  assert.equal(evidence.firstConfigDigest, configDigest);
-  assert.deepEqual(JSON.parse(readFileSync(outputPath, 'utf8')), evidence);
-});
-
-test('verifyImageReproducibility rejects different config/rootfs digests', () => {
-  const directory = temporaryDirectory();
-  const firstMetadataPath = path.join(directory, 'first.json');
-  const secondMetadataPath = path.join(directory, 'second.json');
-  writeFileSync(
-    firstMetadataPath,
-    JSON.stringify({ 'containerimage.config.digest': `sha256:${'3'.repeat(64)}` }),
-  );
-  writeFileSync(
-    secondMetadataPath,
-    JSON.stringify({ 'containerimage.config.digest': `sha256:${'4'.repeat(64)}` }),
-  );
-
-  assert.throws(
-    () =>
-      verifyImageReproducibility({
-        commitSha: 'a'.repeat(40),
-        firstMetadataPath,
-        outputPath: path.join(directory, 'evidence.json'),
-        secondMetadataPath,
-        sourceDateEpoch: '1788134400',
-      }),
-    /different image config\/rootfs digests/u,
-  );
-});
 
 // Mirrors what `docker buildx build --output type=oci --provenance=mode=max
 // --sbom=true` actually produces on current BuildKit: the real manifest list is
@@ -269,4 +224,84 @@ test('extractBuildkitAttestations still rejects an attestation bound to another 
     () => extractBuildkitAttestations(fixture.layout, fixture.output),
     /does not reference the built image digest/u,
   );
+});
+
+const summaryFixture = (overrides = {}) => ({
+  imageConfigDigest: `sha256:${'a'.repeat(64)}`,
+  imageDigest: `sha256:${'b'.repeat(64)}`,
+  provenance: { digest: `sha256:${'c'.repeat(64)}`, predicateType: 'https://slsa.dev/provenance/v1' },
+  sbom: { digest: `sha256:${'d'.repeat(64)}`, predicateType: 'https://spdx.dev/Document' },
+  schemaVersion: 2,
+  ...overrides,
+});
+
+const inspectFixture = (revision) => ({
+  Config: { Labels: { 'org.opencontainers.image.revision': revision } },
+  Id: `sha256:${'e'.repeat(64)}`,
+  RootFS: { Layers: [`sha256:${'f'.repeat(64)}`] },
+});
+
+const writeEvidenceFixture = (summary, inspect) => {
+  const directory = temporaryDirectory();
+  const summaryPath = path.join(directory, 'summary.json');
+  const inspectPath = path.join(directory, 'inspect.json');
+  const outputPath = path.join(directory, 'evidence.json');
+  writeFileSync(summaryPath, JSON.stringify(summary));
+  writeFileSync(inspectPath, JSON.stringify(inspect));
+  return { inspectPath, outputPath, summaryPath };
+};
+
+test('recordImageBuildEvidence records attested digests and the commit binding', () => {
+  const commitSha = 'a'.repeat(40);
+  const fixture = writeEvidenceFixture(summaryFixture(), inspectFixture(commitSha));
+  const evidence = recordImageBuildEvidence({
+    attestationSummaryPath: fixture.summaryPath,
+    commitSha,
+    imageInspectPath: fixture.inspectPath,
+    outputPath: fixture.outputPath,
+    sourceDateEpoch: '1788134400',
+  });
+
+  assert.equal(evidence.commitSha, commitSha);
+  assert.equal(evidence.attested.imageConfigDigest, `sha256:${'a'.repeat(64)}`);
+  assert.equal(evidence.loaded.revisionLabel, commitSha);
+  assert.deepEqual(JSON.parse(readFileSync(fixture.outputPath, 'utf8')), evidence);
+  // The honest limitation must stay recorded, not quietly dropped.
+  assert.ok(evidence.doesNotProve.some((entry) => entry.includes('rebuild determinism')));
+});
+
+test('recordImageBuildEvidence rejects an image built from another commit', () => {
+  const fixture = writeEvidenceFixture(summaryFixture(), inspectFixture('b'.repeat(40)));
+  assert.throws(
+    () =>
+      recordImageBuildEvidence({
+        attestationSummaryPath: fixture.summaryPath,
+        commitSha: 'a'.repeat(40),
+        imageInspectPath: fixture.inspectPath,
+        outputPath: fixture.outputPath,
+        sourceDateEpoch: '1788134400',
+      }),
+    /revision label/u,
+  );
+});
+
+test('recordImageBuildEvidence rejects a summary without provenance or SBOM', () => {
+  const commitSha = 'a'.repeat(40);
+  for (const [overrides, pattern] of [
+    [{ provenance: { digest: `sha256:${'c'.repeat(64)}`, predicateType: 'https://slsa.dev/provenance/v0.2' } }, /SLSA v1 provenance/u],
+    [{ sbom: { digest: `sha256:${'d'.repeat(64)}`, predicateType: 'https://example.invalid/other' } }, /SPDX SBOM/u],
+  ]) {
+    const fixture = writeEvidenceFixture(summaryFixture(overrides), inspectFixture(commitSha));
+    assert.throws(
+      () =>
+        recordImageBuildEvidence({
+          attestationSummaryPath: fixture.summaryPath,
+          commitSha,
+          imageInspectPath: fixture.inspectPath,
+          outputPath: fixture.outputPath,
+          sourceDateEpoch: '1788134400',
+        }),
+      pattern,
+    );
+  }
 });

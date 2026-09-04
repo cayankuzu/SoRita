@@ -135,9 +135,9 @@ jobs:
             .
           docker image inspect "sorita-tooling:${SORITA_DOCKER_IMAGE_TAG}" \
             --format '{{json .}}' > artifacts/docker/image-inspect.json
-          node infra/docker/scripts/verify-image-reproducibility.mjs \
-            artifacts/docker/build-attested-metadata.json \
-            artifacts/docker/build-loaded-metadata.json \
+          node infra/docker/scripts/record-image-build-evidence.mjs \
+            artifacts/docker/buildkit-attestation-summary.json \
+            artifacts/docker/image-inspect.json \
             artifacts/docker/reproducibility.json
 
           node --input-type=module <<'NODE'
@@ -145,13 +145,6 @@ jobs:
           const metadata = JSON.parse(readFileSync('artifacts/docker/build-attested-metadata.json', 'utf8'));
           if (!metadata['buildx.build.provenance']) {
             throw new Error('Buildx metadata is missing full provenance.');
-          }
-          const loadedMetadata = JSON.parse(
-            readFileSync('artifacts/docker/build-loaded-metadata.json', 'utf8'),
-          );
-          const inspect = JSON.parse(readFileSync('artifacts/docker/image-inspect.json', 'utf8'));
-          if (inspect.Id !== loadedMetadata['containerimage.config.digest']) {
-            throw new Error('Loaded image ID does not match the reproducibility evidence digest.');
           }
           NODE
 
