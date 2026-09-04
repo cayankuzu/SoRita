@@ -8,7 +8,7 @@ export const colors = {
   focus: '#2563eb',
   text: '#0f172a',
   textMuted: '#475569',
-  textSoft: '#64748b',
+  textSoft: '#5a6a80',
   textDisabled: '#94a3b8',
   textInverse: '#ffffff',
   onPrimary: '#ffffff',
@@ -87,15 +87,15 @@ export const layout = {
 };
 
 export const typography = {
-  display: { fontSize: 24, lineHeight: 29, fontWeight: '800' as const },
+  display: { fontSize: 24, lineHeight: 30, fontWeight: '800' as const },
   title: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
   section: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
   bodyText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
   labelText: { fontSize: 12, lineHeight: 17, fontWeight: '700' as const },
   captionText: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
   metadataText: { fontSize: 12, lineHeight: 15, fontWeight: '600' as const },
-  compactCardTitleText: { fontSize: 11, lineHeight: 14, fontWeight: '700' as const },
-  compactCardMetaText: { fontSize: 10, lineHeight: 13, fontWeight: '600' as const },
+  compactCardTitleText: { fontSize: 12, lineHeight: 16, fontWeight: '700' as const },
+  compactCardMetaText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
   screenTitle: 18,
   sectionTitle: 16,
   body: 13,
@@ -182,6 +182,12 @@ export const touch = {
   ios: 44,
   android: 48,
 } as const;
+
+// Icon-sized controls stay visually small on purpose; this is the invisible
+// padding they need so the *effective* target still reaches the platform
+// minimum. Callers pass the painted box, not a magic number.
+export const hitSlopFor = (renderedSize: number, minimum: number = touch.ios) =>
+  Math.max(0, Math.ceil((minimum - renderedSize) / 2));
 
 export const controlSize = {
   compact: 32,

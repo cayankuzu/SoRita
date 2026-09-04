@@ -18,7 +18,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, layout } from '@/mobile/app/shared/theme/tokens';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import {
   getMapMarkers,
@@ -272,7 +272,6 @@ function ListGridTileComponent({
                 accessibilityLabel={tr.cards.focusMiniMap}
                 accessibilityRole="button"
                 delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
-                hitSlop={8}
                 onPressIn={() => {
                   handledLongPressRef.current = false;
                 }}
@@ -290,6 +289,7 @@ function ListGridTileComponent({
                   handledLongPressRef.current = true;
                   deactivateMap();
                 }}
+                hitSlop={hitSlopFor(20)}
                 style={[
                   styles.titleActionButton,
                   isMapInteractive ? styles.titleActionButtonActive : null,

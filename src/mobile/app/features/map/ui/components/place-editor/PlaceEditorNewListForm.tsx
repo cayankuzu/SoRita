@@ -12,7 +12,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -136,6 +136,7 @@ export function PlaceEditorNewListForm({
             accessibilityState={{ disabled: isCreatingList || isPickingListCover }}
             disabled={isCreatingList || isPickingListCover}
             onPress={() => onNewListCoverImageChange('')}
+            hitSlop={hitSlopFor(30)}
             style={styles.coverClearInline}
           >
             <X color={colors.onPrimary} size={14} />

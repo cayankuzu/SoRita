@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const workspace = fileURLToPath(new URL('../..', import.meta.url));
 const sourceRoot = join(workspace, 'src/mobile/app');
+const MIN_FONT_SIZE = 12;
 const violations = [];
 
 async function collectFiles(directory) {
@@ -40,11 +41,25 @@ for (const path of await collectFiles(sourceRoot)) {
     }
 
     const fontSizeMatch = line.match(/fontSize:\s*(\d+(?:\.\d+)?)/);
-    if (fontSizeMatch && Number(fontSizeMatch[1]) < 12) {
-      violations.push(`${relative(workspace, path)}:${index + 1} text below 12px`);
+    if (fontSizeMatch && Number(fontSizeMatch[1]) < MIN_FONT_SIZE) {
+      violations.push(`${relative(workspace, path)}:${index + 1} text below ${MIN_FONT_SIZE}px`);
     }
   });
 }
+
+// The theme file is exempt from the raw-colour rule because it is where the
+// palette is declared, but its type scale still ships to every screen: a
+// sub-12px token used to slip through while hand-written styles were blocked.
+const themeTokens = join(sourceRoot, 'shared/theme/tokens.ts');
+const themeSource = await readFile(themeTokens, 'utf8');
+themeSource.split(/\r?\n/).forEach((line, index) => {
+  const fontSizeMatch = line.match(/fontSize:\s*(\d+(?:\.\d+)?)/);
+  if (fontSizeMatch && Number(fontSizeMatch[1]) < MIN_FONT_SIZE) {
+    violations.push(
+      `${relative(workspace, themeTokens)}:${index + 1} token declares text below ${MIN_FONT_SIZE}px`,
+    );
+  }
+});
 
 if (violations.length > 0) {
   console.error('[ui-tokens] UI styles must use theme tokens and readable type:');
@@ -52,4 +67,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('[ui-tokens] OK (no raw UI colors or sub-12px text)');
+console.log(`[ui-tokens] OK (no raw UI colors, no sub-${MIN_FONT_SIZE}px text in styles or tokens)`);

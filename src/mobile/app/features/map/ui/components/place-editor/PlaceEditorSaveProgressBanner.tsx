@@ -4,7 +4,7 @@ import { Ellipsis } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorSaveProgressBannerProps = {
   detail?: string;
@@ -37,6 +37,7 @@ export function PlaceEditorSaveProgressBanner({
               accessibilityLabel={tr.common.contentActionsTitle}
               accessibilityRole="button"
               onPress={onMenuPress}
+              hitSlop={hitSlopFor(24)}
               style={styles.saveProgressMenuButton}
             >
               <Ellipsis color={isFailed ? colors.danger : colors.textMuted} size={16} />

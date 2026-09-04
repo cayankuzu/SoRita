@@ -26,7 +26,7 @@ import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLigh
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { t } from '@/mobile/app/shared/i18n';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -319,6 +319,7 @@ export function ListEditorModal({
               accessibilityState={{ disabled: loading }}
               disabled={loading}
               onPress={handleRequestClose}
+              hitSlop={hitSlopFor(30)}
               style={styles.closeButton}
             >
               <X color={colors.textMuted} size={16} />
