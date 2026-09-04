@@ -17,7 +17,8 @@
         "ui-tokens:check",
         "ui-copy:check",
         "accessibility:check",
-        "npm run test"
+        "npm run test",
+        "marketing:check"
       ],
       "runtimeEvidence": [],
       "gap": "No pixel-diff baseline captured on real hardware."
@@ -92,10 +93,12 @@
       "automatedEvidence": [
         "publicRuntimeConfig schema tests",
         "architecture:check",
-        "check-docker-context"
+        "check-docker-context",
+        "tokens.test.ts token-value assertions",
+        "native-parity:check"
       ],
       "runtimeEvidence": [],
-      "gap": "Token values themselves are not asserted."
+      "gap": "Config parity is asserted for identity, version and scheme only; the rest of the Expo/native surface is unchecked by design under ADR 0004."
     },
     {
       "id": 8,
@@ -128,10 +131,12 @@
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
         "accessibility:check",
-        "ui-tokens:check"
+        "ui-tokens:check",
+        "tokens.test.ts contrast matrix",
+        "touch-targets:check"
       ],
       "runtimeEvidence": [],
-      "gap": "No VoiceOver or TalkBack traversal evidence."
+      "gap": "Contrast and effective touch targets are asserted statically; no VoiceOver or TalkBack traversal evidence exists."
     },
     {
       "id": 11,
@@ -384,10 +389,11 @@
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
         "ui-tokens:check",
-        "config schema"
+        "config schema",
+        "tokens.test.ts token-value assertions"
       ],
       "runtimeEvidence": [],
-      "gap": "Incidental literals remain inline by design."
+      "gap": "Card padding is still written as raw literals in 18 places while spacing.card goes unused; the scale decision is open (docs/audit/ui-ux-design-system-audit.md, A1)."
     },
     {
       "id": 32,
