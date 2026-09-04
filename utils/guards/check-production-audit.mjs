@@ -64,18 +64,45 @@ function fail(message, details = '') {
   process.exit(1);
 }
 
-const auditResult = runNpm(['audit', '--omit=dev', '--json']);
-let audit;
-
-try {
-  audit = JSON.parse(auditResult.stdout);
-} catch {
-  fail('npm audit did not return valid JSON.', auditResult.stderr || auditResult.stdout);
+// `npm audit` needs the registry advisory API. A transient registry problem
+// returns an empty error object after a long stall, which previously failed the
+// release gate with no usable detail. Retry a bounded number of times so a blip
+// does not read as a vulnerability finding, but never treat an unreachable
+// registry as a pass: exhausting the retries still fails closed.
+function runAuditWithRetries(attempts = 3) {
+  let last = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = runNpm(['audit', '--omit=dev', '--json']);
+    let parsed;
+    try {
+      parsed = JSON.parse(result.stdout);
+    } catch {
+      parsed = null;
+    }
+    if (parsed && !parsed.error) return parsed;
+    last = { parsed, result };
+    if (attempt < attempts) {
+      const waitMs = 5_000 * attempt;
+      console.warn(
+        `[production-audit] audit attempt ${attempt} of ${attempts} did not complete; retrying in ${waitMs / 1000}s.`,
+      );
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+    }
+  }
+  if (!last.parsed) {
+    fail(
+      'npm audit did not return valid JSON after retries.',
+      last.result.stderr || last.result.stdout,
+    );
+  }
+  fail(
+    'npm audit could not complete after retries; the registry advisory API was unreachable.',
+    JSON.stringify(last.parsed.error),
+  );
+  return null;
 }
 
-if (audit.error) {
-  fail('npm audit could not complete.', JSON.stringify(audit.error));
-}
+const audit = runAuditWithRetries();
 
 const vulnerabilities = audit.vulnerabilities ?? {};
 const advisories = Object.entries(vulnerabilities).flatMap(([dependency, vulnerability]) =>

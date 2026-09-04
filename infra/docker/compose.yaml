@@ -64,11 +64,13 @@ services:
 
   quality-runner:
     <<: *hardened-runner
+    mem_limit: 4g
     profiles: [quality]
     build: *tooling-build
     image: sorita-tooling:${SORITA_DOCKER_IMAGE_TAG:-local}
     command: [infra/docker/scripts/run-quality-profile.mjs, --container]
     environment:
+      NODE_OPTIONS: --max-old-space-size=3584
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_docker_test
       EXPO_PUBLIC_SUPABASE_URL: https://synthetic-project.supabase.co
     tmpfs:
