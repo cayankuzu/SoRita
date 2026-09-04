@@ -89,3 +89,6 @@ supabase/.branches/
 tmp-*.png
 typecheck*.log
 vitest*.log
+
+# Local audit scratch output; not a tracked artifact.
+_audit_out.txt
