@@ -79,6 +79,8 @@ docs/*
 !docs/audit/**
 !docs/ui-ux/
 !docs/ui-ux/**
+!docs/marketing/
+!docs/marketing/**
 expo-export/
 expo-export-*/
 mobile-web/
