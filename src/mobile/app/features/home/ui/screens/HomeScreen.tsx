@@ -29,7 +29,7 @@ import {
   MEDIA_PREFETCH_AHEAD_CARD_COUNT,
   MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
 } from '@/mobile/app/shared/performance/budgets';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   primaryCta: {
     alignSelf: 'center',
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     paddingHorizontal: 18,
     backgroundColor: colors.primary,

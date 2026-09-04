@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   background: '#f8fafc',
   surface: '#ffffff',
@@ -183,10 +185,24 @@ export const touch = {
   android: 48,
 } as const;
 
+/**
+ * The painted minimum for a control that carries its whole target in its box
+ * rather than in `hitSlop`. `IconButton` derived this locally while every other
+ * control hardcoded 44 — the iOS number — so those controls were 4dp short of
+ * Material's floor on Android. One derivation, one place.
+ */
+export const minTouchSize = Platform.OS === 'ios' ? touch.ios : touch.android;
+
 // Icon-sized controls stay visually small on purpose; this is the invisible
 // padding they need so the *effective* target still reaches the platform
 // minimum. Callers pass the painted box, not a magic number.
-export const hitSlopFor = (renderedSize: number, minimum: number = touch.ios) =>
+//
+// The default is the Android floor, which is the larger of the two, so one
+// control does not have two behaviours. Defaulting to `touch.ios` left every
+// caller that took the default 4dp short on Android — and every caller took the
+// default. A slightly generous target on iOS costs nothing; a short one on
+// Android is a control the user has to aim at.
+export const hitSlopFor = (renderedSize: number, minimum: number = touch.android) =>
   Math.max(0, Math.ceil((minimum - renderedSize) / 2));
 
 export const controlSize = {

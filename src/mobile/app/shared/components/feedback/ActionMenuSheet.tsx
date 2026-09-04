@@ -9,7 +9,7 @@ import { X } from 'lucide-react-native';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type ActionMenuSheetItem = {
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   action: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',

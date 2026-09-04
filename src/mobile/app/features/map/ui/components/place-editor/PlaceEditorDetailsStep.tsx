@@ -11,7 +11,7 @@ import { PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorDetailsStepProps = {
   bestTimes: string[];
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',

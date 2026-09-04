@@ -12,7 +12,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 
 type ReportActionSheetProps = {
   visible: boolean;
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   option: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,

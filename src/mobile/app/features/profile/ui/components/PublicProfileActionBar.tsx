@@ -10,7 +10,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 
 type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   followButton: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     paddingHorizontal: 10,
     backgroundColor: colors.primary,

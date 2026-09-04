@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationCategoryTabsProps = {
   tabs: Array<{ key: string; label: string }>;
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     alignSelf: 'center',
-    height: 44,
+    height: minTouchSize,
     paddingHorizontal: 10,
     borderRadius: radius.pill,
     alignItems: 'center',
