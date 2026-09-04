@@ -467,7 +467,7 @@ export function ProfileScreen() {
         bio={freshUser.bio}
         profilePhoto={freshUser.profilePhoto}
         coverPhoto={freshUser.coverPhoto}
-        coverBackgroundColor={colors.ownProfileCover}
+        coverBackgroundColor={colors.coverFallback}
         stats={[]}
         detailsContent={
           <ProfileConnectionsSummary

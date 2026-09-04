@@ -32,17 +32,14 @@ export const colors = {
   primaryBg: '#eff6ff',
   dangerBg: '#fef2f2',
   dangerBorder: '#fecaca',
-  dangerBorderSubtle: 'rgba(239, 68, 68, 0.22)',
   warningBg: '#fffbeb',
   warningBorder: '#fde68a',
   purpleBg: '#f5f3ff',
   infoBorder: '#bfdbfe',
   successBorder: '#a7f3d0',
-  successBorderSubtle: 'rgba(16, 185, 129, 0.22)',
-  profileCoverFallback: '#dbeafe',
-  ownProfileCover: '#dbeafe',
-  publicProfileCover: '#dbeafe',
-  userCoverFallback: '#dbeafe',
+  // One fallback behind every cover image - profile, public profile and
+  // discovery tile all render the same placeholder.
+  coverFallback: '#dbeafe',
   darkOverlay: 'rgba(15, 23, 42, 0.7)',
   lightboxOverlay: 'rgba(15, 23, 42, 0.92)',
   lightboxChrome: 'rgba(5, 10, 19, 0.78)',
@@ -102,7 +99,6 @@ export const typography = {
   sectionTitle: 16,
   body: 13,
   caption: 12,
-  micro: 12,
 };
 
 export const fontWeight = {
