@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   background: '#f8fafc',
   surface: '#ffffff',
@@ -8,7 +10,7 @@ export const colors = {
   focus: '#2563eb',
   text: '#0f172a',
   textMuted: '#475569',
-  textSoft: '#64748b',
+  textSoft: '#5a6a80',
   textDisabled: '#94a3b8',
   textInverse: '#ffffff',
   onPrimary: '#ffffff',
@@ -30,17 +32,14 @@ export const colors = {
   primaryBg: '#eff6ff',
   dangerBg: '#fef2f2',
   dangerBorder: '#fecaca',
-  dangerBorderSubtle: 'rgba(239, 68, 68, 0.22)',
   warningBg: '#fffbeb',
   warningBorder: '#fde68a',
   purpleBg: '#f5f3ff',
   infoBorder: '#bfdbfe',
   successBorder: '#a7f3d0',
-  successBorderSubtle: 'rgba(16, 185, 129, 0.22)',
-  profileCoverFallback: '#dbeafe',
-  ownProfileCover: '#dbeafe',
-  publicProfileCover: '#dbeafe',
-  userCoverFallback: '#dbeafe',
+  // One fallback behind every cover image - profile, public profile and
+  // discovery tile all render the same placeholder.
+  coverFallback: '#dbeafe',
   darkOverlay: 'rgba(15, 23, 42, 0.7)',
   lightboxOverlay: 'rgba(15, 23, 42, 0.92)',
   lightboxChrome: 'rgba(5, 10, 19, 0.78)',
@@ -87,20 +86,19 @@ export const layout = {
 };
 
 export const typography = {
-  display: { fontSize: 24, lineHeight: 29, fontWeight: '800' as const },
+  display: { fontSize: 24, lineHeight: 30, fontWeight: '800' as const },
   title: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
   section: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
   bodyText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
   labelText: { fontSize: 12, lineHeight: 17, fontWeight: '700' as const },
   captionText: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
   metadataText: { fontSize: 12, lineHeight: 15, fontWeight: '600' as const },
-  compactCardTitleText: { fontSize: 11, lineHeight: 14, fontWeight: '700' as const },
-  compactCardMetaText: { fontSize: 10, lineHeight: 13, fontWeight: '600' as const },
+  compactCardTitleText: { fontSize: 12, lineHeight: 16, fontWeight: '700' as const },
+  compactCardMetaText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
   screenTitle: 18,
   sectionTitle: 16,
   body: 13,
   caption: 12,
-  micro: 12,
 };
 
 export const fontWeight = {
@@ -182,6 +180,26 @@ export const touch = {
   ios: 44,
   android: 48,
 } as const;
+
+/**
+ * The painted minimum for a control that carries its whole target in its box
+ * rather than in `hitSlop`. `IconButton` derived this locally while every other
+ * control hardcoded 44 — the iOS number — so those controls were 4dp short of
+ * Material's floor on Android. One derivation, one place.
+ */
+export const minTouchSize = Platform.OS === 'ios' ? touch.ios : touch.android;
+
+// Icon-sized controls stay visually small on purpose; this is the invisible
+// padding they need so the *effective* target still reaches the platform
+// minimum. Callers pass the painted box, not a magic number.
+//
+// The default is the Android floor, which is the larger of the two, so one
+// control does not have two behaviours. Defaulting to `touch.ios` left every
+// caller that took the default 4dp short on Android — and every caller took the
+// default. A slightly generous target on iOS costs nothing; a short one on
+// Android is a control the user has to aim at.
+export const hitSlopFor = (renderedSize: number, minimum: number = touch.android) =>
+  Math.max(0, Math.ceil((minimum - renderedSize) / 2));
 
 export const controlSize = {
   compact: 32,

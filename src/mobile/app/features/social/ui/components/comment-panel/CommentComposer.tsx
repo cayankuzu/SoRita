@@ -12,7 +12,7 @@ import type { ReplyTarget } from '@/mobile/app/features/social/ui/components/com
 import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
 
 const QUICK_REACTIONS = [
@@ -149,6 +149,7 @@ export function CommentComposer({
             disabled={submitting}
             accessibilityLabel={tr.cards.quickReactionLabel(reaction)}
             accessibilityRole="button"
+            hitSlop={hitSlopFor(30)}
             style={({ pressed }) => [
               styles.reactionButton,
               pressed ? styles.reactionButtonPressed : null,

@@ -9,7 +9,7 @@ import { Check, X } from 'lucide-react-native';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, radius } from '@/mobile/app/shared/theme/tokens';
 
 type AuthImagePickerProps = {
   uri?: string;
@@ -71,7 +71,7 @@ export function AuthImagePicker({
               <InstantPressable
                 accessibilityLabel={tr.mediaPicker.clearSelection(placeholderText)}
                 accessibilityRole="button"
-                hitSlop={10}
+                hitSlop={hitSlopFor(24)}
                 onPress={(event) => {
                   event.stopPropagation();
                   onClear();

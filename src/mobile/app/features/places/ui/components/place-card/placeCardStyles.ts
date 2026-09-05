@@ -349,7 +349,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   timestampText: {
     ...typography.metadataText,
-    color: colors.textDisabled,
+    color: colors.textSoft,
   },
   tagSection: {
     gap: 4,

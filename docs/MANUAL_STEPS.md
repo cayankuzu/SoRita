@@ -820,11 +820,33 @@ submission.
 
 ## 20. Durable media-upload cleanup schedule
 
-- **Current status:** **`UNVERIFIED / NO-GO` for hosted operation**. The
-  repository defines `.github/workflows/media-upload-sweeper.yml`, a dry-run
-  inventory and a bounded leased cleanup command. No protected environment,
-  secret provisioning, successful scheduled run, failure alert or reconciliation
-  evidence exists for a hosted project.
+- **Current status:** **`FAILING IN PRODUCTION`** (observed 2026-09-05). This is
+  worse than unverified: the hourly schedule is enabled and has failed on every
+  run. Runs `33859428833`, `33883299965`, `33905712137`, `33921290662` and
+  `33931857686` on `main` all end the same way:
+
+  ```
+  PGRST202: Could not find the function
+  public.claim_stale_media_upload_sessions(p_lease_id, p_lease_seconds, p_limit)
+  in the schema cache
+  ```
+
+  The function is not missing from the repository - migration
+  `20260830173000_durable_media_upload_sessions_and_state_guards.sql` defines it
+  with a matching signature (`p_lease_id uuid`, `p_limit integer default 100`,
+  `p_lease_seconds integer default 90`; PostgREST resolves named arguments
+  regardless of order). **That migration has not been applied to the hosted
+  project.** `utils/ops/sweep-media-upload-sessions.test.mjs` passes because it
+  stubs the RPC, so no local gate can see this.
+
+  Consequence: abandoned upload sessions have never been swept. Nothing is being
+  deleted incorrectly - the job dies before it claims anything - but orphaned
+  storage objects and ledger rows accumulate for as long as this stays red.
+
+  The authorized action below already required the schedule to be enabled only
+  *after* a same-SHA migration; the schedule was enabled first. Either apply the
+  migration to the hosted project or disable the schedule until it is applied -
+  an hourly red job trains the on-call channel to ignore it.
 - **Why:** Abandoned uploads and late writes must remain eligible for repeated
   cleanup without deleting referenced media. A checked-in schedule alone does
   not prove that cleanup is running or monitored.

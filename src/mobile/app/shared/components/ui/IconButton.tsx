@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Platform,
   StyleProp,
   StyleSheet,
   View,
@@ -10,7 +9,7 @@ import {
 import type { GestureResponderEvent, AccessibilityRole } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, semanticColors, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, semanticColors } from '@/mobile/app/shared/theme/tokens';
 
 type IconButtonProps = {
   accessibilityHint?: string;
@@ -32,8 +31,6 @@ type IconButtonProps = {
   style?: StyleProp<ViewStyle>;
   variant?: 'danger' | 'ghost' | 'inverse' | 'surface';
 };
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 export function IconButton({
   accessibilityHint,
@@ -88,15 +85,15 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   frame: {
-    minWidth: MIN_TOUCH_SIZE,
-    minHeight: MIN_TOUCH_SIZE,
+    minWidth: minTouchSize,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   frameSmall: {
-    minWidth: MIN_TOUCH_SIZE,
-    minHeight: MIN_TOUCH_SIZE,
+    minWidth: minTouchSize,
+    minHeight: minTouchSize,
   },
   ghost: {
     backgroundColor: 'transparent',

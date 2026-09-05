@@ -5,7 +5,7 @@ import { Check } from 'lucide-react-native';
 import type { LegalDocumentId } from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalConsentCardProps = {
   accepted: boolean;
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   checkboxRow: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,

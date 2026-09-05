@@ -29,7 +29,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type PlaceEditorModalProps = React.ComponentProps<
@@ -303,6 +303,7 @@ export function MapScreen() {
                     accessibilityLabel={tr.common.close}
                     accessibilityRole="button"
                     onPress={clearSearch}
+                    hitSlop={hitSlopFor(24)}
                     style={styles.clearButton}
                   >
                     <X color={colors.textSoft} size={14} />

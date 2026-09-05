@@ -567,7 +567,7 @@ export function UserProfileScreen() {
         bio={profileUser.bio}
         profilePhoto={profileUser.profilePhoto}
         coverPhoto={profileUser.coverPhoto}
-        coverBackgroundColor={colors.publicProfileCover}
+        coverBackgroundColor={colors.coverFallback}
         stats={[]}
         detailsContent={
           <ProfileConnectionsSummary
@@ -671,7 +671,7 @@ export function UserProfileScreen() {
             bio={profileUser.bio}
             profilePhoto={profileUser.profilePhoto}
             coverPhoto={profileUser.coverPhoto}
-            coverBackgroundColor={colors.publicProfileCover}
+            coverBackgroundColor={colors.coverFallback}
             stats={[]}
             onBackPress={() => navigation.goBack()}
             onProfilePhotoPress={() =>

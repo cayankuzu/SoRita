@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   countText: {
     ...typography.metadataText,
     fontWeight: "700",
-    color: colors.textDisabled,
+    color: colors.textSoft,
   },
   countTextActive: {
     color: colors.primary,

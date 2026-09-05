@@ -85,7 +85,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   heroPlaceholderLabel: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.primaryDark,
   },
@@ -115,7 +115,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   coverHintText: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.onPrimary,
   },
@@ -159,7 +159,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderColor: colors.dangerBorder,
   },
   heroMetaChipText: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.text,
   },
@@ -170,7 +170,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     color: colors.danger,
   },
   heroTimestamp: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     lineHeight: 15,
     color: colors.textSoft,
   },
@@ -202,7 +202,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     minWidth: 0,
   },
   ownerEyebrow: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.textSoft,
   },
@@ -224,7 +224,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   ownerBadgeText: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.primaryDark,
   },
@@ -238,7 +238,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: 6,
   },
   descriptionCardLabel: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.textSoft,
   },
@@ -257,7 +257,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: 10,
   },
   mapCardEyebrow: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.textSoft,
   },
@@ -290,7 +290,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     flex: 1,
   },
   sectionEyebrow: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.textSoft,
   },
@@ -337,7 +337,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   highlightPillText: {
-    fontSize: typography.micro,
+    fontSize: typography.caption,
     fontWeight: '700',
     color: colors.primaryDark,
   },

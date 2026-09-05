@@ -303,7 +303,7 @@ export const discoveryTileStyles = StyleSheet.create({
   },
   userCover: {
     height: 50,
-    backgroundColor: colors.userCoverFallback,
+    backgroundColor: colors.coverFallback,
   },
   userAvatarWrap: {
     marginTop: -18,

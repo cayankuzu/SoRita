@@ -5,6 +5,17 @@
 - Scope: the frozen product surface only. No screen, tab, route, modal or CTA was
   added, removed or renamed while producing this matrix.
 
+## Corrections since `b8c8dd9b`
+
+The body of this matrix is still the 2026-09-03 reading and has not been
+re-verified wholesale. The rows below were re-checked against the current
+candidate and were wrong; they are corrected here rather than silently edited
+into the table, so the provenance of each claim stays visible.
+
+| Row | Was | Is | Evidence |
+|---|---|---|---|
+| ExploreScreen / Empty | `-` | `Y` | `ExploreScreen.tsx:308` renders `ExploreResultsPage`, which renders `EmptyState` per tab and distinguishes a fruitless search (`explore.empty.noResult` / `tryDifferentSearch`) from an unpopulated tab (`noList`, `noPlace`, `noPhoto`, `noUser`). Verified 2026-09-04. |
+
 ## How this was measured
 
 Each screen file under `src/mobile/app/features/**/ui/screens` was read together
@@ -37,7 +48,7 @@ The feedback stack is mounted once, in `RootNavigator`.
 | AuthScreen | - | - | - | - | Y | - | Y |
 | AuthCallbackScreen | Y | - | - | - | Y | - | Y |
 | ResetPasswordScreen | Y | - | - | - | Y | - | Y |
-| ExploreScreen | Y | Y | Y | - | Y | - | - |
+| ExploreScreen | Y | Y | Y | Y | Y | - | - |
 | HomeScreen | Y | Y | Y | Y | Y | - | - |
 | MapScreen | Y | Y | - | - | Y | Y | - |
 | LocationPlaceCardsScreen | Y | Y | Y | Y | Y | Y | - |
