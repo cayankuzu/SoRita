@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, chore/final-aaa-mvp-hardening-docker-cloudflare-ota]
+    branches: [main, chore/final-release-candidate-aaa]
   pull_request:
     branches: [main]
 

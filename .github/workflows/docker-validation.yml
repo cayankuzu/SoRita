@@ -2,7 +2,7 @@ name: Docker Validation
 
 on:
   push:
-    branches: [main, chore/final-aaa-mvp-hardening-docker-cloudflare-ota]
+    branches: [main, chore/final-release-candidate-aaa]
     paths:
       - 'infra/docker/**'
       - 'infra/cloudflare/sorita-edge/**'

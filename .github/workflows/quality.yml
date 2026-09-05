@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - chore/final-aaa-mvp-hardening-docker-cloudflare-ota
+      - chore/final-release-candidate-aaa
   pull_request:
     branches: [main]
   workflow_dispatch:

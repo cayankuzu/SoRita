@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - chore/final-aaa-mvp-hardening-docker-cloudflare-ota
+      - chore/final-release-candidate-aaa
     paths:
       - 'supabase/**'
       - '.github/workflows/database-validation.yml'
