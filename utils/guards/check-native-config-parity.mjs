@@ -38,12 +38,12 @@ function pick(source, pattern, label, file) {
 // Expo side. These are plain literals in app.config.ts, so a static read is
 // both sufficient and safer than evaluating the module.
 const expoScheme = pick(appConfig, /const appScheme = '([^']+)'/, 'appScheme', appConfigPath);
-const expoVersion = pick(appConfig, /\n  version: '([^']+)'/, 'version', appConfigPath);
-const expoPackage = pick(appConfig, /\n    package: '([^']+)'/, 'android.package', appConfigPath);
-const expoVersionCode = pick(appConfig, /\n    versionCode: (\d+)/, 'android.versionCode', appConfigPath);
+const expoVersion = pick(appConfig, /\n {2}version: '([^']+)'/, 'version', appConfigPath);
+const expoPackage = pick(appConfig, /\n {4}package: '([^']+)'/, 'android.package', appConfigPath);
+const expoVersionCode = pick(appConfig, /\n {4}versionCode: (\d+)/, 'android.versionCode', appConfigPath);
 const expoBundleId = pick(
   appConfig,
-  /\n    bundleIdentifier: '([^']+)'/,
+  /\n {4}bundleIdentifier: '([^']+)'/,
   'ios.bundleIdentifier',
   appConfigPath,
 );
