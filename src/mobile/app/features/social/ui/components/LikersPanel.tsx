@@ -16,9 +16,16 @@ import type { FeedActionLiker } from '@/mobile/app/features/social/ui/components
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
 type LikersPanelProps = {
   likeCount: number;
@@ -33,8 +40,8 @@ const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 function matchesLiker(liker: FeedActionLiker, query: string) {
   return (
-    liker.name.toLowerCase().includes(query) ||
-    liker.username.toLowerCase().includes(query)
+    normalizeSearchText(liker.name).includes(query) ||
+    normalizeSearchText(liker.username).includes(query)
   );
 }
 
@@ -48,7 +55,7 @@ export function LikersPanel({
 }: LikersPanelProps) {
   const { height, width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
-  const q = searchQuery.trim().toLowerCase();
+  const q = normalizeSearchText(searchQuery);
   const filteredLikers = useMemo(
     () => (q ? likers.filter((liker) => matchesLiker(liker, q)) : likers),
     [likers, q],
@@ -66,6 +73,7 @@ export function LikersPanel({
   return (
     <FlatList
       {...listProps}
+      accessibilityState={{ busy: refreshing }}
       style={styles.panel}
       contentContainerStyle={[
         styles.panelContent,
@@ -73,6 +81,8 @@ export function LikersPanel({
       ]}
       data={filteredLikers}
       keyExtractor={(item) => item.id}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      keyboardShouldPersistTaps="handled"
       renderItem={({ item }) => (
         <Pressable
           accessibilityLabel={`${item.name}, @${item.username}`}
@@ -99,7 +109,7 @@ export function LikersPanel({
           <View style={styles.panelHeader}>
             <View style={styles.panelTitleRow}>
               <Users color={colors.danger} size={14} />
-              <Text style={styles.panelTitle}>
+              <Text accessibilityRole="header" style={styles.panelTitle}>
                 {tr.cards.likedBy}
                 {likeCount > 0 ? ` (${likeCount})` : ''}
               </Text>
@@ -125,13 +135,32 @@ export function LikersPanel({
                 autoCapitalize="none"
                 autoCorrect={false}
                 accessibilityLabel={tr.cards.likersSearchPlaceholder}
+                returnKeyType="search"
               />
+              {searchQuery ? (
+                <IconButton
+                  accessibilityLabel={tr.common.clear}
+                  onPress={() => setSearchQuery('')}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <X color={colors.textSoft} size={14} />
+                </IconButton>
+              ) : null}
             </View>
+          ) : null}
+
+          {q ? (
+            <Text accessibilityLiveRegion="polite" style={styles.searchResultCount}>
+              {tr.profile.connections.resultCount(filteredLikers.length)}
+            </Text>
           ) : null}
         </View>
       }
       ListEmptyComponent={
-        <Text style={styles.panelMuted}>{q ? tr.cards.likersSearchNoResult : tr.cards.noLikes}</Text>
+        <Text accessibilityLiveRegion={q ? 'polite' : 'none'} style={styles.panelMuted}>
+          {q ? tr.cards.likersSearchNoResult : tr.cards.noLikes}
+        </Text>
       }
       refreshControl={
         onRefresh ? (
@@ -173,8 +202,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   panelTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   searchWrap: {
@@ -192,20 +221,28 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 12,
+    ...typography.compactBodyText,
     paddingVertical: 6,
   },
+  searchResultCount: {
+    marginBottom: 8,
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
+    color: colors.textSoft,
+  },
   panelMuted: {
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
   },
   separator: {
     height: 8,
   },
   likerRow: {
+    minHeight: MIN_TOUCH_SIZE,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 6,
   },
   likerBody: {
     flex: 1,

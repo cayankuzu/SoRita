@@ -126,6 +126,35 @@ describe('admin-broadcast-notification handler', () => {
     expect(insertNotifications).not.toHaveBeenCalled();
   });
 
+  it('keeps an explicitly empty audience empty instead of broadcasting globally', async () => {
+    const { fetchRecipientUserIds, handler, insertNotifications, token } = createDeps();
+    insertNotifications.mockResolvedValueOnce(0);
+
+    const response = await handler(
+      new Request('https://example.supabase.co/functions/v1/admin-broadcast-notification', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: JSON.stringify({
+          idempotencyKey: IDEMPOTENCY_KEY,
+          message: 'Body',
+          title: 'Title',
+          userIds: [],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      insertedCount: 0,
+      recipientCount: 0,
+      success: true,
+    });
+    expect(fetchRecipientUserIds).not.toHaveBeenCalled();
+    expect(insertNotifications).toHaveBeenCalledWith(expect.objectContaining({
+      recipientUserIds: [],
+    }));
+  });
+
   it('inserts notifications for resolved recipients', async () => {
     const { fetchRecipientUserIds, handler, insertNotifications, token } = createDeps();
 

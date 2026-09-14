@@ -25,7 +25,7 @@ import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/Sta
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { formatLocationPlaceCardsCount } from '@/mobile/app/shared/utils/format';
 import { getMarkerColorByVisibility } from '@/mobile/app/shared/utils/markerColors';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -148,7 +148,14 @@ export function LocationPlaceCardsScreen() {
           }
           ListFooterComponent={
             isFetchingNextPage ? (
-              <View style={styles.listFooter}>
+              <View
+                accessible
+                accessibilityLabel={tr.common.loading}
+                accessibilityRole="progressbar"
+                accessibilityState={{ busy: true }}
+                accessibilityLiveRegion="polite"
+                style={styles.listFooter}
+              >
                 <ActivityIndicator color={colors.primary} size="small" />
               </View>
             ) : null
@@ -165,7 +172,13 @@ export function LocationPlaceCardsScreen() {
                 ]}
               >
                 {isHighlighted ? (
-                  <View style={styles.highlightPill}>
+                  <View
+                    accessible
+                    accessibilityLabel={tr.map.selectedPlaceCard}
+                    accessibilityLiveRegion="polite"
+                    accessibilityState={{ selected: true }}
+                    style={styles.highlightPill}
+                  >
                     <Text style={styles.highlightPillText}>{tr.map.selectedPlaceCard}</Text>
                   </View>
                 ) : null}
@@ -252,7 +265,7 @@ const styles = StyleSheet.create({
   },
   highlightPillText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

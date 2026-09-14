@@ -29,7 +29,7 @@ node utils/release-evidence/manifest.mjs create \
   --result security-review=unverified \
   --environment preview \
   --channel preview \
-  --runtime-version 1.0.102
+  --runtime-version 1.0.106
 ```
 
 Verify the same files against the current clean commit:
@@ -60,7 +60,7 @@ state, and artifact paths outside the repository.
   `.github/workflows/runtime-evidence.yml` run from the same repository, exact candidate SHA, and
   `workflow_dispatch` event. It downloads exactly one `runtime-evidence-<sha>` artifact, compares
   the downloaded archive with GitHub's SHA-256 artifact digest, verifies the inner manifest,
-  receipts, identities, freshness, file sizes, and checksums, and only then uploads
+  detached Ed25519 signatures, receipts, identities, freshness, file sizes, and checksums, and only then uploads
   `final-release-evidence-<sha>`.
 
 Production Cloudflare and EAS workflows accept only the `final-release-evidence-<sha>` artifact.
@@ -73,14 +73,37 @@ The partial artifact therefore cannot become a deployment approval by changing a
 `production-evidence` environment. The dispatcher can supply only the candidate SHA and runtime
 version; there is no result/status input.
 
-The protected runner's probe harness writes one fresh JSON receipt per check below
-`$RUNTIME_EVIDENCE_SOURCE_ROOT/<candidate-sha>/`. The workflow never copies that directory as an
-opaque archive. Instead, `runtime-evidence.mjs stage` reads the eleven exact receipt names,
-validates them against [`runtime-receipt.schema.json`](./runtime-receipt.schema.json), requires the
-fixed probe ID and subject matrix, rejects stale (>72 hours), mismatched, oversized, symlinked,
-duplicate, or extra-shaped data, and rewrites only canonical sanitized JSON. It then creates a
-[`runtime-manifest.schema.json`](./runtime-manifest.schema.json) packet bound to the current GitHub
-run ID and attempt.
+The external probe harness writes one fresh canonical JSON receipt and one sibling detached
+signature per check below `$RUNTIME_EVIDENCE_SOURCE_ROOT/<candidate-sha>/`: `<check>.json` and
+`<check>.sig`. Receipt schema v3 records the real external producer `id`, semantic `version`, source
+tree SHA-256, executed artifact SHA-256, immutable HTTPS build-provenance URI, unique execution ID,
+and signing-key ID. It no longer misidentifies the repository validator as the probe source.
+
+The harness serializes the receipt with the RFC 8785 JSON Canonicalization Scheme rules (object keys
+sorted by UTF-16 code units, ECMAScript JSON primitive serialization, no insignificant whitespace or
+trailing newline). It signs these exact bytes with Ed25519 after the binary domain separator
+`sorita-runtime-evidence-receipt-v3` followed by one NUL byte. The `.sig` file is the canonical
+base64 encoding of the 64-byte detached signature followed by one LF. The signed receipt contains
+the byte count and SHA-256 of every raw scenario artifact, so a valid signature binds the parsed JSON
+semantics and the retained raw evidence bytes.
+
+The private signing key is not a repository file, GitHub secret, workflow environment value, or
+credential available to the Actions runner identity. A separately administered harness identity
+must run the probes and sign through protected OS/KMS/Secure Enclave storage. It alone has write
+access to the source directory; the `sorita-runtime-evidence` Actions account has read-only access and
+cannot invoke the signer as an oracle. The protected `production-evidence` GitHub environment holds
+only `RUNTIME_EVIDENCE_SOURCE_ROOT`, the public
+`RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64`, and
+`RUNTIME_EVIDENCE_EXPECTED_KEY_ID` (`sha256:<lowercase SHA-256 of SPKI DER>`).
+
+`runtime-evidence.mjs stage` validates the eleven exact receipt/signature pairs against
+[`runtime-receipt.schema.json`](./runtime-receipt.schema.json), requires canonical JSON, verifies the
+Ed25519 signature and expected key fingerprint, fixed probe and subject matrices, one consistent
+harness identity, and unique execution IDs, and rejects stale (>72 hours), mismatched, oversized,
+symlinked, duplicate, or extra-shaped data. Runtime manifest schema v2 records independent paths,
+byte counts, and SHA-256 values for every receipt and signature, bound to the current GitHub run ID
+and attempt. `release-evidence.yml` independently repeats signature verification using the same
+protected public-key variables. Legacy unsigned receipt schema v2 is rejected fail-closed.
 
 The required probe subjects include both physical platforms, both store tracks, signed EAS builds,
 the OTA certificate, Cloudflare preview, staging restore, backup/restore, preview rollback on both
@@ -91,3 +114,9 @@ same-name artifact from another run are not accepted.
 Until the protected runner/harness produces all fresh receipts for the same candidate, only the
 partial NO-GO artifact can exist. This is intentional: repository automation does not invent
 provider or physical-device proof.
+
+For key rotation, add the new public SPKI and matching derived key ID to the protected environment
+only after the external harness has switched. Rotation invalidates any not-yet-promoted packet under
+the prior single-key contract; generate fresh same-candidate receipts rather than copying or
+re-signing old evidence. Preserve the approved public-key fingerprint, harness build provenance, KMS
+identity/ACL review, and rotation time as sanitized manual evidence.

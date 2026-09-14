@@ -1,6 +1,7 @@
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceMedia } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import { normalizePersistablePlaceIdentity } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlacePhotoUrls, normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { normalizeSafeExternalUrl } from '@/mobile/app/shared/utils/safeLinks';
@@ -61,13 +62,9 @@ function resolvePlaceEditorName({
   placeAddress,
   placeName,
 }: Pick<PlaceEditorSnapshot, 'address' | 'name' | 'placeAddress' | 'placeName'>) {
-  return (
-    name.trim() ||
-    placeName?.trim() ||
-    address.trim() ||
-    placeAddress?.trim() ||
-    tr.placeEditor.placeNamePlaceholder
-  );
+  return [name, placeName, address, placeAddress]
+    .map(normalizePersistablePlaceIdentity)
+    .find(Boolean) || '';
 }
 
 export function buildPreviewPlace({
@@ -101,7 +98,7 @@ export function buildPreviewPlace({
       name,
       placeAddress,
       placeName,
-    }),
+    }) || tr.placeEditor.placeNamePlaceholder,
     title: trimPreservingLineBreaks(title) || undefined,
     menuUrl: normalizeSafeExternalUrl(menuUrl || '') || undefined,
     lat,
@@ -174,6 +171,7 @@ export function buildPlaceSavePayload(snapshot: PlaceEditorSnapshot): Omit<Place
     snapshot.media,
     snapshot.photos ?? snapshot.existingPlace?.photos,
   );
+  const persistableAddress = normalizePersistablePlaceIdentity(snapshot.address);
 
   return {
     name: resolvePlaceEditorName(snapshot),
@@ -181,7 +179,7 @@ export function buildPlaceSavePayload(snapshot: PlaceEditorSnapshot): Omit<Place
     menuUrl: normalizeSafeExternalUrl(snapshot.menuUrl || '') || undefined,
     lat: snapshot.lat,
     lng: snapshot.lng,
-    address: snapshot.address.trim() || undefined,
+    address: persistableAddress || undefined,
     notes: trimPreservingLineBreaks(snapshot.notes) || undefined,
     rating: snapshot.rating,
     category: snapshot.selectedCategories[0] || undefined,

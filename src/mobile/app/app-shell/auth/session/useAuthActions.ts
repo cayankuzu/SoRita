@@ -1,17 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { Session, User as SupabaseAuthUser } from '@supabase/supabase-js';
+import { isAuthSessionMissingError } from '@supabase/supabase-js';
 
 import type {
   AuthActionResult,
   RegisterData,
 } from '@/mobile/app/app-shell/auth/authTypes';
-import {
-  persistAuthSession,
-  persistResolvedAuthUser,
-  resolveImmediateAuthUser,
-  syncAuthenticatedUser,
-} from '@/mobile/app/app-shell/auth/session/authSessionSupport';
+import { persistAuthSession } from '@/mobile/app/app-shell/auth/session/authSessionSupport';
 import { purgeAuthenticatedUserState } from '@/mobile/app/app-shell/auth/session/authUserStatePurge';
 import type { User } from '@/mobile/app/data/contracts/entities';
 import {
@@ -71,30 +66,177 @@ function toAuthActionResult(error: unknown): AuthActionResult {
   return { success: false, code: 'unexpected' };
 }
 
-async function hydrateAuthenticatedUser(params: {
-  session: Session;
-  authUser: SupabaseAuthUser;
-  setUser: Dispatch<SetStateAction<User | null>>;
-}) {
-  await persistAuthSession(params.session);
-  const immediateUser = resolveImmediateAuthUser(params.authUser);
-  params.setUser(immediateUser);
-  await persistResolvedAuthUser(immediateUser);
-  void syncAuthenticatedUser(params.authUser)
-    .then((nextUser) => {
-      if (nextUser) {
-        params.setUser(nextUser);
-      }
-    })
-    .catch((syncError) => {
-      logger.warn('auth', 'Failed to sync authenticated user after login', syncError);
-    });
-}
-
 type UseAuthActionsParams = {
   user: User | null;
   setUser: Dispatch<SetStateAction<User | null>>;
 };
+
+const ANY_AUTHENTICATED_OWNER = Symbol('any-authenticated-owner');
+
+type ExpectedAuthOwnerTransition = {
+  fromUserId: string | null;
+  sourceGeneration: number;
+  toUserId: string | null | typeof ANY_AUTHENTICATED_OWNER;
+};
+
+type AuthActionCoordinator = {
+  expectedOwnerTransitions: ExpectedAuthOwnerTransition[];
+  generation: number;
+  ownerUserId: string | null;
+  queue: Promise<void>;
+};
+
+type AuthActionCommitResult<T> =
+  | { status: 'committed'; value: T }
+  | { status: 'superseded' };
+
+function beginAuthAction(coordinator: AuthActionCoordinator) {
+  coordinator.generation += 1;
+  return coordinator.generation;
+}
+
+function isAuthActionCurrent(coordinator: AuthActionCoordinator, generation: number) {
+  return coordinator.generation === generation;
+}
+
+function beginExpectedAuthOwnerTransition(
+  coordinator: AuthActionCoordinator,
+  sourceGeneration: number,
+  toUserId: ExpectedAuthOwnerTransition['toUserId'],
+) {
+  if (toUserId !== ANY_AUTHENTICATED_OWNER && coordinator.ownerUserId === toUserId) {
+    return null;
+  }
+
+  const transition: ExpectedAuthOwnerTransition = {
+    fromUserId: coordinator.ownerUserId,
+    sourceGeneration,
+    toUserId,
+  };
+  coordinator.expectedOwnerTransitions.push(transition);
+  return transition;
+}
+
+function finishExpectedAuthOwnerTransition(
+  coordinator: AuthActionCoordinator,
+  transition: ExpectedAuthOwnerTransition | null,
+) {
+  if (!transition) {
+    return;
+  }
+
+  const transitionIndex = coordinator.expectedOwnerTransitions.indexOf(transition);
+
+  if (transitionIndex >= 0) {
+    coordinator.expectedOwnerTransitions.splice(transitionIndex, 1);
+  }
+}
+
+function pruneOlderExpectedAuthOwnerTransitions(
+  coordinator: AuthActionCoordinator,
+  sourceGeneration: number,
+) {
+  for (let index = coordinator.expectedOwnerTransitions.length - 1; index >= 0; index -= 1) {
+    if (coordinator.expectedOwnerTransitions[index].sourceGeneration < sourceGeneration) {
+      coordinator.expectedOwnerTransitions.splice(index, 1);
+    }
+  }
+}
+
+function retargetExpectedAuthOwnerTransition(
+  coordinator: AuthActionCoordinator,
+  transition: ExpectedAuthOwnerTransition | null,
+  toUserId: string,
+) {
+  if (!transition || !coordinator.expectedOwnerTransitions.includes(transition)) {
+    return;
+  }
+
+  pruneOlderExpectedAuthOwnerTransitions(coordinator, transition.sourceGeneration);
+  transition.toUserId = toUserId;
+
+  if (coordinator.ownerUserId === toUserId) {
+    finishExpectedAuthOwnerTransition(coordinator, transition);
+  }
+}
+
+function consumeExpectedAuthOwnerTransition(
+  coordinator: AuthActionCoordinator,
+  toUserId: string | null,
+) {
+  const transitionIndex = coordinator.expectedOwnerTransitions.findIndex(
+    (transition) =>
+      transition.fromUserId === coordinator.ownerUserId &&
+      transition.sourceGeneration <= coordinator.generation &&
+      (transition.toUserId === toUserId ||
+        transition.toUserId === ANY_AUTHENTICATED_OWNER ||
+        (toUserId === null && transition.toUserId !== null)),
+  );
+
+  if (transitionIndex < 0) {
+    return false;
+  }
+
+  const previousOwnerUserId = coordinator.ownerUserId;
+  const transition = coordinator.expectedOwnerTransitions[transitionIndex];
+  pruneOlderExpectedAuthOwnerTransitions(coordinator, transition.sourceGeneration);
+
+  if (
+    transition.toUserId === ANY_AUTHENTICATED_OWNER ||
+    (toUserId === null && transition.toUserId !== null)
+  ) {
+    transition.fromUserId = toUserId;
+  } else {
+    finishExpectedAuthOwnerTransition(coordinator, transition);
+  }
+
+  for (const pendingTransition of coordinator.expectedOwnerTransitions) {
+    if (
+      pendingTransition.sourceGeneration > transition.sourceGeneration &&
+      pendingTransition.fromUserId === previousOwnerUserId
+    ) {
+      pendingTransition.fromUserId = toUserId;
+    }
+  }
+
+  return true;
+}
+
+function enqueueAuthActionCommit<T>(
+  coordinator: AuthActionCoordinator,
+  generation: number,
+  operation: () => Promise<T>,
+  options: { terminal?: boolean } = {},
+): Promise<AuthActionCommitResult<T>> {
+  const result = coordinator.queue.then(async () => {
+    if (!options.terminal && !isAuthActionCurrent(coordinator, generation)) {
+      return { status: 'superseded' } as const;
+    }
+
+    return { status: 'committed', value: await operation() } as const;
+  });
+  coordinator.queue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+async function removeLocalSupabaseSessionAfterRemoteSignOutFailure() {
+  try {
+    const localSignOutResult = await supabase.auth.signOut({ scope: 'local' });
+
+    if (localSignOutResult?.error) {
+      logger.error('auth', 'Local Supabase sign-out failed after a remote sign-out failure.', {
+        error: localSignOutResult.error.name,
+      });
+    }
+  } catch (error) {
+    logger.error('auth', 'Local Supabase sign-out threw after a remote sign-out failure.', {
+      error: error instanceof Error ? error.name : 'unknown',
+    });
+  }
+}
 
 function useAuthenticatedPasswordReset(user: User | null) {
   return useCallback(
@@ -139,37 +281,81 @@ function useAuthenticatedPasswordReset(user: User | null) {
 }
 
 export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
+  const authActionCoordinator = useRef<AuthActionCoordinator>({
+    expectedOwnerTransitions: [],
+    generation: 0,
+    ownerUserId: user?.id ?? null,
+    queue: Promise.resolve(),
+  }).current;
+  const renderedOwnerUserId = user?.id ?? null;
+
+  if (authActionCoordinator.ownerUserId !== renderedOwnerUserId) {
+    const isExpectedTransition = consumeExpectedAuthOwnerTransition(
+      authActionCoordinator,
+      renderedOwnerUserId,
+    );
+    authActionCoordinator.ownerUserId = renderedOwnerUserId;
+
+    if (!isExpectedTransition) {
+      authActionCoordinator.expectedOwnerTransitions.length = 0;
+      authActionCoordinator.generation += 1;
+    }
+  }
+
   const refreshUser = useCallback(async () => {
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
+    const generation = authActionCoordinator.generation;
+    const commitResult = await enqueueAuthActionCommit(
+      authActionCoordinator,
+      generation,
+      async () => {
+        const { data, error } = await supabase.auth.refreshSession();
 
-    if (error || !authUser) {
-      const localCleanup = await Promise.allSettled([
-        persistAuthSession(null),
-        purgeAuthenticatedUserState(user?.id ?? null),
-      ]);
-      setUser(null);
+        if (!isAuthActionCurrent(authActionCoordinator, generation)) {
+          return;
+        }
 
-      if (localCleanup.some((result) => result.status === 'rejected')) {
-        logger.error('auth', 'Local auth cleanup was incomplete while refreshing the user.', {
-          failedOperations: localCleanup.flatMap((result, index) =>
-            result.status === 'rejected'
-              ? [index === 0 ? 'persisted-auth-session' : 'authenticated-user-state']
-              : []),
-        });
-        throw new Error('Local auth cleanup was incomplete.');
-      }
+        if (isAuthSessionMissingError(error) || (!error && !data.session)) {
+          const expectedTransition = beginExpectedAuthOwnerTransition(
+            authActionCoordinator,
+            generation,
+            null,
+          );
+          let signOutResult;
 
+          try {
+            signOutResult = await supabase.auth.signOut({ scope: 'local' });
+          } catch (signOutError) {
+            finishExpectedAuthOwnerTransition(authActionCoordinator, expectedTransition);
+            throw signOutError;
+          }
+
+          if (signOutResult?.error) {
+            finishExpectedAuthOwnerTransition(authActionCoordinator, expectedTransition);
+            throw signOutResult.error;
+          }
+
+          // Local sign-out emits SIGNED_OUT, keeping fail-closed cleanup inside
+          // the same lifecycle queue as every other auth transition.
+          return;
+        }
+
+        if (error) {
+          throw error;
+        }
+
+        // refreshSession emits TOKEN_REFRESHED. The lifecycle event queue owns
+        // profile/cache/persistence work and rejects stale generations.
+      },
+    );
+
+    if (commitResult.status === 'superseded') {
       return;
     }
-
-    setUser(await syncAuthenticatedUser(authUser));
-  }, [setUser, user?.id]);
+  }, [authActionCoordinator]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthActionResult> => {
+      const generation = beginAuthAction(authActionCoordinator);
       const normalizedEmail = normalizeEmailInput(email).trim();
 
       try {
@@ -183,10 +369,45 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
           email: normalizedEmail,
           password,
         });
-        const { data, error } = await supabase.auth.setSession({
-          access_token: response.session.accessToken,
-          refresh_token: response.session.refreshToken,
-        });
+        const commitResult = await enqueueAuthActionCommit(
+          authActionCoordinator,
+          generation,
+          async () => {
+            const expectedTransition = beginExpectedAuthOwnerTransition(
+              authActionCoordinator,
+              generation,
+              ANY_AUTHENTICATED_OWNER,
+            );
+
+            try {
+              const authResult = await supabase.auth.setSession({
+                access_token: response.session.accessToken,
+                refresh_token: response.session.refreshToken,
+              });
+
+              if (authResult.error || !authResult.data.user) {
+                finishExpectedAuthOwnerTransition(authActionCoordinator, expectedTransition);
+              } else {
+                retargetExpectedAuthOwnerTransition(
+                  authActionCoordinator,
+                  expectedTransition,
+                  authResult.data.user.id,
+                );
+              }
+
+              return authResult;
+            } catch (setSessionError) {
+              finishExpectedAuthOwnerTransition(authActionCoordinator, expectedTransition);
+              throw setSessionError;
+            }
+          },
+        );
+
+        if (commitResult.status === 'superseded') {
+          return { success: false, code: 'unexpected' };
+        }
+
+        const { data, error } = commitResult.value;
 
         if (error || !data.session || !data.user) {
           return {
@@ -196,17 +417,15 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
           };
         }
 
-        await hydrateAuthenticatedUser({
-          session: data.session,
-          authUser: data.user,
-          setUser,
-        });
+        // setSession publishes the auth event consumed by useAuthSessionLifecycle.
+        // That lifecycle is the single owner of persistence and user hydration,
+        // so an older login cannot bypass its generation/owner guards here.
         return { success: true };
       } catch (error) {
         return toAuthActionResult(error);
       }
     },
-    [setUser],
+    [authActionCoordinator],
   );
 
   const register = useCallback(async (data: RegisterData): Promise<AuthActionResult> => {
@@ -312,83 +531,102 @@ export function useAuthActions({ user, setUser }: UseAuthActionsParams) {
   const requestPasswordReset = useAuthenticatedPasswordReset(user);
 
   const logout = useCallback(async () => {
+    const generation = beginAuthAction(authActionCoordinator);
     const userId = user?.id;
-    let remoteSignOutError: unknown;
-    let localCleanupError: Error | null = null;
-    let preparedPushCleanup: Awaited<ReturnType<
-      typeof import('@/mobile/app/data/repositories/pushNotificationRepository').preparePushNotificationLogoutCleanup
-    >> = null;
-    let pushNotificationRepository: Awaited<ReturnType<typeof loadPushNotificationRepository>> | null = null;
 
-    // A logout must not discard the only capability that can revoke an Expo
-    // token after authentication is gone. Network failures after this point are
-    // safe because the tombstone is encrypted and retried anonymously.
-    if (userId) {
-      try {
-        pushNotificationRepository = await loadPushNotificationRepository();
-        preparedPushCleanup = await pushNotificationRepository.preparePushNotificationLogoutCleanup();
-      } catch (error) {
-        logger.warn('auth', 'Push cleanup could not be prepared; logout was kept fail-closed.', {
-          error: error instanceof Error ? error.name : 'unknown',
-        });
-        throw error;
-      }
-    }
+    const commitResult = await enqueueAuthActionCommit(
+      authActionCoordinator,
+      generation,
+      async () => {
+        let preparedPushCleanup: Awaited<ReturnType<
+          typeof import('@/mobile/app/data/repositories/pushNotificationRepository').preparePushNotificationLogoutCleanup
+        >> = null;
+        let pushNotificationRepository: Awaited<ReturnType<typeof loadPushNotificationRepository>> | null = null;
+        let remoteSignOutError: unknown;
+        let localCleanupError: Error | null = null;
 
-    try {
-      try {
-        const [resolvedPushNotificationRepository, { unregisterSystemPushNotifications }] =
-          await Promise.all([
-            pushNotificationRepository ?? loadPushNotificationRepository(),
-            loadSystemPushNotificationRepository(),
-          ]);
-        await Promise.all([
-          resolvedPushNotificationRepository.unregisterAllPushNotifications(preparedPushCleanup).catch((err) => {
-            logger.debug('auth', 'Failed to unregister push notifications during logout', err);
-          }),
-          unregisterSystemPushNotifications().catch((err) => {
-            logger.debug('auth', 'Failed to unregister system push notifications during logout', err);
-          }),
-        ]);
-      } catch (error) {
-        logger.debug('auth', 'Failed to load push cleanup during logout', error);
-      }
-
-      try {
-        const signOutResult = await supabase.auth.signOut();
-
-        if (signOutResult?.error) {
-          remoteSignOutError = signOutResult.error;
+        // Preparation reads the active auth capability, so it belongs to the
+        // same serialized commit as sign-out and local cleanup.
+        if (userId) {
+          try {
+            pushNotificationRepository = await loadPushNotificationRepository();
+            preparedPushCleanup = await pushNotificationRepository.preparePushNotificationLogoutCleanup();
+          } catch (error) {
+            logger.warn('auth', 'Push cleanup could not be prepared; logout was kept fail-closed.', {
+              error: error instanceof Error ? error.name : 'unknown',
+            });
+            throw error;
+          }
         }
-      } catch (error) {
-        remoteSignOutError = error;
-      }
-    } finally {
-      const localCleanup = await Promise.allSettled([
-        persistAuthSession(null),
-        purgeAuthenticatedUserState(userId ?? null),
-      ]);
-      const failedOperations = localCleanup.flatMap((result, index) =>
-        result.status === 'rejected'
-          ? [index === 0 ? 'persisted-auth-session' : 'authenticated-user-state']
-          : []);
 
-      if (failedOperations.length > 0) {
-        logger.error('auth', 'Local logout cleanup was incomplete.', { failedOperations });
-        localCleanupError = new Error('Local logout cleanup was incomplete.');
-      }
+        try {
+          try {
+            const [resolvedPushNotificationRepository, { unregisterSystemPushNotifications }] =
+              await Promise.all([
+                pushNotificationRepository ?? loadPushNotificationRepository(),
+                loadSystemPushNotificationRepository(),
+              ]);
+            await Promise.all([
+              resolvedPushNotificationRepository.unregisterAllPushNotifications(preparedPushCleanup).catch((err) => {
+                logger.debug('auth', 'Failed to unregister push notifications during logout', err);
+              }),
+              unregisterSystemPushNotifications().catch((err) => {
+                logger.debug('auth', 'Failed to unregister system push notifications during logout', err);
+              }),
+            ]);
+          } catch (error) {
+            logger.debug('auth', 'Failed to load push cleanup during logout', error);
+          }
 
-      setUser(null);
+          try {
+            beginExpectedAuthOwnerTransition(
+              authActionCoordinator,
+              generation,
+              null,
+            );
+            const signOutResult = await supabase.auth.signOut();
+
+            if (signOutResult?.error) {
+              remoteSignOutError = signOutResult.error;
+              await removeLocalSupabaseSessionAfterRemoteSignOutFailure();
+            }
+          } catch (error) {
+            remoteSignOutError = error;
+            await removeLocalSupabaseSessionAfterRemoteSignOutFailure();
+          }
+        } finally {
+          const localCleanup = await Promise.allSettled([
+            persistAuthSession(null),
+            purgeAuthenticatedUserState(userId ?? null),
+          ]);
+          const failedOperations = localCleanup.flatMap((result, index) =>
+            result.status === 'rejected'
+              ? [index === 0 ? 'persisted-auth-session' : 'authenticated-user-state']
+              : []);
+
+          if (failedOperations.length > 0) {
+            logger.error('auth', 'Local logout cleanup was incomplete.', { failedOperations });
+            localCleanupError = new Error('Local logout cleanup was incomplete.');
+          }
+
+          setUser(null);
+        }
+
+        if (remoteSignOutError) {
+          throw remoteSignOutError;
+        }
+
+        if (localCleanupError) {
+          throw localCleanupError;
+        }
+      },
+      { terminal: true },
+    );
+
+    if (commitResult.status === 'superseded') {
+      return;
     }
-
-    if (remoteSignOutError) {
-      throw remoteSignOutError;
-    }
-
-    if (localCleanupError) {
-      throw localCleanupError;
-    }
-  }, [setUser, user?.id]);
+  }, [authActionCoordinator, setUser, user?.id]);
 
   return useMemo(
     () => ({

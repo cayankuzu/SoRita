@@ -16,6 +16,8 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type FeedActionBarProps = {
   comments?: FeedActionComment[];
+  commentsErrorMessage?: string | null;
+  commentsInitialLoading?: boolean;
   commentCount?: number;
   currentUserName?: string;
   currentUserPhoto?: string;
@@ -28,6 +30,7 @@ export type FeedActionBarProps = {
   location?: FeedActionLocation;
   onAddressCopied?: () => void;
   onAddToListPress?: () => void;
+  onCommentsRefresh?: () => Promise<void> | void;
   onCommentsLoadMore?: () => Promise<void> | void;
   onCommentsVisibilityChange?: (visible: boolean) => void;
   onCommentDelete?: (commentId: string) => Promise<void> | void;
@@ -85,6 +88,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
     onCommentSubmit: props.onCommentSubmit,
     onCommentUpdate: props.onCommentUpdate,
     onLikePress: props.onLikePress,
+    onCommentsRefresh: props.onCommentsRefresh,
     onRefresh: props.onRefresh,
     onReportSubmit: props.onReportSubmit,
     onUserPress: props.onUserPress,
@@ -185,7 +189,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
             onCommentsVisibilityChange?.(true);
           }
         }}
-        onLikePress={() => void state.handleLikePress()}
+        onLikePress={() => state.handleLikePress()}
         onLikersPress={() => state.setShowLikers(true)}
         onOverflowPress={() => setShowSecondaryActions(true)}
         onSharePress={props.onSharePress}
@@ -208,6 +212,8 @@ export function FeedActionBar(props: FeedActionBarProps) {
       {hasVisibleOverlay ? (
         <DeferredFeedActionOverlays
           comments={comments}
+          commentsErrorMessage={props.commentsErrorMessage}
+          commentsInitialLoading={props.commentsInitialLoading}
           currentUserName={props.currentUserName}
           currentUserPhoto={props.currentUserPhoto}
           hasNextCommentsPage={props.hasNextCommentsPage}

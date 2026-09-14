@@ -54,4 +54,30 @@ describe('CommentComposer', () => {
 
     expect(onCommentTextChange).toHaveBeenCalledWith('❤️');
   });
+
+  it('announces an in-flight comment submission', async () => {
+    const { CommentComposer } = await import('../CommentComposer');
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <CommentComposer
+          commentText="Merhaba"
+          composerInset={10}
+          submitting
+          onCancelEdit={vi.fn()}
+          onCancelReply={vi.fn()}
+          onCommentTextChange={onCommentTextChange}
+          onSubmit={onSubmit}
+        />,
+      );
+    });
+
+    expect(renderer.root.find(
+      (node) => node.props.accessibilityLiveRegion === 'polite',
+    )).toBeDefined();
+    expect(renderer.root.find(
+      (node) => node.props.accessibilityState?.busy === true,
+    )).toBeDefined();
+  });
 });

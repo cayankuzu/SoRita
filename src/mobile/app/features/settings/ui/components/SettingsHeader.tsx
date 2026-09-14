@@ -1,13 +1,11 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
-
-const HEADER_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
+import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsHeaderProps = {
   title: string;
@@ -29,9 +27,11 @@ export function SettingsHeader({
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
         <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
-      <Text style={styles.headerTitle}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.headerTitle}>{title}</Text>
       {actionLabel && onAction ? (
         <InstantPressable
+          accessibilityLabel={actionLabel}
+          accessibilityRole="button"
           style={[
             styles.headerAction,
             actionVariant === 'ghost' ? styles.headerActionGhost : null,
@@ -58,41 +58,39 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.md,
   },
   headerTitle: {
+    ...typography.section,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
     color: colors.text,
   },
   headerAction: {
-    minHeight: HEADER_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
   },
   headerActionGhost: {
     backgroundColor: colors.surfaceMuted,
   },
   headerActionText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.onPrimary,
   },
   headerActionTextGhost: {
     color: colors.textMuted,
   },
   headerSpacer: {
-    width: HEADER_TOUCH_SIZE,
+    width: minTouchSize,
   },
 });

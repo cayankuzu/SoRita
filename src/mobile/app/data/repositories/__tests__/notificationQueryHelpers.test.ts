@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const fromMock = vi.fn();
 const rpcMock = vi.fn();
 const abortSignalMock = vi.fn();
+const getSessionMock = vi.fn();
 
 type QueryResult = { data: unknown; error: unknown };
 
@@ -21,6 +22,7 @@ function thenable(result: () => QueryResult, extras: Record<string, unknown> = {
 
 vi.mock('@/mobile/app/platform/supabase/client', () => ({
   supabase: {
+    auth: { getSession: getSessionMock },
     from: fromMock,
     rpc: rpcMock,
   },
@@ -49,6 +51,10 @@ describe('notificationQueryHelpers', () => {
     notificationResult = { data: [], error: null };
     profileResult = { data: [], error: null };
     rpcResult = { data: [], error: null };
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'viewer' } } },
+      error: null,
+    });
 
     fromMock.mockImplementation((table: string) => {
       if (table === 'user_blocks') {
@@ -146,6 +152,73 @@ describe('notificationQueryHelpers', () => {
     await expect(fetchNotificationsPage('viewer', 10, 5)).resolves.toEqual([
       expect.objectContaining({ id: 'n4' }),
     ]);
+  });
+
+  it('fails closed when a notification page contains another recipient', async () => {
+    notificationResult.data = [notificationRow({ recipient_user_id: 'another-viewer' })];
+    const { fetchNotificationsCursorPage, fetchNotificationsPage } = await import(
+      '@/mobile/app/data/repositories/notifications/notificationQueryHelpers'
+    );
+
+    await expect(fetchNotificationsPage('viewer', 0, 20)).rejects.toThrow(
+      'Notification response owner mismatch.',
+    );
+    expect(fromMock).not.toHaveBeenCalledWith('public_profile_summaries');
+
+    rpcResult.data = [notificationRow({ recipient_user_id: 'another-viewer' })];
+    await expect(fetchNotificationsCursorPage({ pageSize: 20, userId: 'viewer' })).rejects.toThrow(
+      'Notification response owner mismatch.',
+    );
+  });
+
+  it('rejects every page path before querying when the session owner mismatches', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'another-viewer' } } },
+      error: null,
+    });
+    const helpers = await import(
+      '@/mobile/app/data/repositories/notifications/notificationQueryHelpers'
+    );
+
+    await expect(helpers.fetchNotifications('viewer')).rejects.toThrow(
+      'Notification session owner mismatch.',
+    );
+    await expect(helpers.fetchNotificationsPage('viewer', 0, 20)).rejects.toThrow(
+      'Notification session owner mismatch.',
+    );
+    await expect(helpers.fetchNotificationsCursorPage({ pageSize: 20, userId: 'viewer' }))
+      .rejects.toThrow('Notification session owner mismatch.');
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects empty direct, ranged and cursor pages when the session owner changes in flight', async () => {
+    const helpers = await import(
+      '@/mobile/app/data/repositories/notifications/notificationQueryHelpers'
+    );
+    const viewerSession = {
+      data: { session: { user: { id: 'viewer' } } },
+      error: null,
+    };
+    const otherSession = {
+      data: { session: { user: { id: 'another-viewer' } } },
+      error: null,
+    };
+    const requests = [
+      () => helpers.fetchNotifications('viewer'),
+      () => helpers.fetchNotificationsPage('viewer', 0, 20),
+      () => helpers.fetchNotificationsCursorPage({ pageSize: 20, userId: 'viewer' }),
+    ];
+
+    for (const request of requests) {
+      getSessionMock.mockReset();
+      getSessionMock
+        .mockResolvedValueOnce(viewerSession)
+        .mockResolvedValueOnce(otherSession);
+
+      await expect(request()).rejects.toThrow('Notification session owner mismatch.');
+      expect(getSessionMock).toHaveBeenCalledTimes(2);
+    }
   });
 
   it('does not request profiles when rows do not contain actors', async () => {

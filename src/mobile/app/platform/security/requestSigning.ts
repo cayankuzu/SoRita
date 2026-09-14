@@ -9,7 +9,6 @@ type SignedEdgeHeadersParams = {
   accessToken: string;
   bodyText?: string;
   functionName: string;
-  legacy?: boolean;
   method?: string;
 };
 
@@ -39,7 +38,6 @@ export async function createSignedEdgeHeaders({
   accessToken,
   bodyText = '',
   functionName,
-  legacy = false,
   method = 'POST',
 }: SignedEdgeHeadersParams) {
   let deviceId: string;
@@ -55,16 +53,14 @@ export async function createSignedEdgeHeaders({
   // causing the server to reject one request as a replay.
   const nonce = createUuid();
   const payloadHash = hashBody(bodyText);
-  const signingMessage = legacy
-    ? [deviceId, timestamp, nonce, payloadHash].join(':')
-    : buildSigningMessage({
-        deviceId,
-        functionName,
-        method,
-        nonce,
-        payloadHash,
-        timestamp,
-      });
+  const signingMessage = buildSigningMessage({
+    deviceId,
+    functionName,
+    method,
+    nonce,
+    payloadHash,
+    timestamp,
+  });
   const signature = bytesToHex(
     hmac(
       sha256,

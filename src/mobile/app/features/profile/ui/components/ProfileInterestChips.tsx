@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PROFILE_INTEREST_META } from '@/mobile/app/catalog/profileInterests';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileInterestChipsProps = {
   interestIds?: string[];
@@ -31,7 +31,7 @@ export function ProfileInterestChips({
 
   return (
     <View style={styles.section}>
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {title ? <Text accessibilityRole="header" style={styles.title}>{title}</Text> : null}
 
       <View style={styles.row}>
         {visibleLabels.map((label) => (
@@ -54,8 +54,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   row: {
@@ -71,8 +70,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.primaryDark,
   },
   moreChip: {

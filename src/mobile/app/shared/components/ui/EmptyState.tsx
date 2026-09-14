@@ -2,12 +2,18 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
-import { colors, contentWidth, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  contentWidth,
+  fontWeight,
+  spacing,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type EmptyStateProps = {
   icon: React.ReactNode;
   title: string;
-  description: string;
+  description?: string;
   actionLabel?: string;
   onAction?: () => void | Promise<void>;
   actionDisabled?: boolean;
@@ -36,20 +42,25 @@ export function EmptyState({
   title,
   tone = 'default',
 }: EmptyStateProps) {
+  const hasPrimaryAction = Boolean(actionLabel && onAction);
+  const hasSecondaryAction = Boolean(secondaryActionLabel && onSecondaryAction);
+
   return (
-    <View accessibilityRole="summary" style={styles.container}>
+    <View style={styles.container}>
       <View style={[styles.iconWrap, { backgroundColor: toneBackgrounds[tone] }]}>{icon}</View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-      {actionLabel && onAction ? (
+      <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+      {description ? <Text style={styles.description}>{description}</Text> : null}
+      {hasPrimaryAction || hasSecondaryAction ? (
         <View style={styles.actions}>
-          <PrimaryButton
-            title={actionLabel}
-            onPress={onAction}
-            disabled={actionDisabled}
-            loading={actionLoading}
-            style={styles.actionButton}
-          />
+          {actionLabel && onAction ? (
+            <PrimaryButton
+              title={actionLabel}
+              onPress={onAction}
+              disabled={actionDisabled}
+              loading={actionLoading}
+              style={styles.actionButton}
+            />
+          ) : null}
           {secondaryActionLabel && onSecondaryAction ? (
             <PrimaryButton
               title={secondaryActionLabel}
@@ -85,7 +96,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.section,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.text,
     textAlign: 'center',
   },

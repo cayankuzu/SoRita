@@ -133,21 +133,31 @@ npm run clean:metro
 ## Supabase Deploy
 
 ```bash
-# Tum migration'lari linkli projeye uygula
-npx supabase db push --linked --include-all
+# Onayli staging ref'ini acikca sec; production ref'i burada kullanma
+export SUPABASE_PROJECT_REF='<approved-staging-project-ref>'
+npx supabase@2.116.0 link --project-ref "$SUPABASE_PROJECT_REF"
+
+# Once hedefi ve uygulanacak migration listesini salt-okunur dogrula
+npx supabase@2.116.0 migration list --linked
+npx supabase@2.116.0 db push --linked --dry-run
+
+# Dry-run ciktisi onaylandiktan sonra yalniz siradaki migration'lari uygula
+npx supabase@2.116.0 db push --linked
 
 # Guncel edge function'lari deploy et
-npx supabase functions deploy auth-gateway --project-ref csidemtcbvtcmmjextey
-npx supabase functions deploy delete-user --project-ref csidemtcbvtcmmjextey
-npx supabase functions deploy maps-geocoding --project-ref csidemtcbvtcmmjextey
-npx supabase functions deploy media-assets --project-ref csidemtcbvtcmmjextey
-npx supabase functions deploy moderation-reports --project-ref csidemtcbvtcmmjextey
-npx supabase functions deploy admin-broadcast-notification --project-ref csidemtcbvtcmmjextey --no-verify-jwt
+npx supabase@2.116.0 functions deploy auth-gateway --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy delete-user --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy maps-geocoding --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy media-assets --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy moderation-reports --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy personal-data --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@2.116.0 functions deploy admin-broadcast-notification --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
 ```
 
 Notlar:
 
 - `supabase db push` icin CLI oturumu ve hedef proje veritabani sifresi gerekir.
+- `--include-all` yalniz incelenmis out-of-order history onariminda kullanilir; normal yayin akisi dry-run ardindan sirali push'tur.
 - Edge Function deploy icin `SUPABASE_ACCESS_TOKEN` veya aktif `supabase login` oturumu gerekir.
 - `SUPABASE_SERVICE_ROLE_KEY` gibi server-side secret'lar repo yerine Supabase project secrets veya CI environment tarafinda tutulmalidir.
 - Sistem bildirimi deploy edilmeden once idempotent delivery migration'i uygulanmalidir. `notify:broadcast` her canli gonderim icin bir UUID uretir; belirsiz sonuc veren bir istegi tekrar ederken ayni anahtari `--idempotency-key <uuid>` ile yeniden kullanin.

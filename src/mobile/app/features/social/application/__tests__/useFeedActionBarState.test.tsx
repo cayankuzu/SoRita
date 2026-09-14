@@ -81,12 +81,36 @@ describe('useFeedActionBarState', () => {
     expect(showToastMock).toHaveBeenCalledWith('like failed', 'error');
   });
 
+  it('contains refresh failures and restores both refresh states', async () => {
+    const onCommentsRefresh = vi.fn().mockRejectedValue(new Error('comments refresh failed'));
+    const onRefresh = vi.fn().mockRejectedValue(new Error('likers refresh failed'));
+    const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
+    const hook = renderHook(() =>
+      hooks.useFeedActionBarState({
+        comments: [],
+        onCommentsRefresh,
+        onRefresh,
+      }),
+    );
+
+    await act(async () => {
+      await hook.result.current.handleRefreshComments();
+      await hook.result.current.handleRefreshLikers();
+    });
+
+    expect(hook.result.current.commentsRefreshing).toBe(false);
+    expect(hook.result.current.likersRefreshing).toBe(false);
+    expect(showToastMock).toHaveBeenCalledWith('comments refresh failed', 'error');
+    expect(showToastMock).toHaveBeenCalledWith('likers refresh failed', 'error');
+  });
+
   it('supports editing, deleting, reporting, and refreshing comment flows', async () => {
     const onCommentDelete = vi.fn().mockResolvedValue(undefined);
     const onCommentLikeToggle = vi.fn().mockResolvedValue(undefined);
     const onCommentReport = vi.fn().mockResolvedValue(undefined);
     const onCommentSubmit = vi.fn().mockResolvedValue(undefined);
     const onCommentUpdate = vi.fn().mockResolvedValue(undefined);
+    const onCommentsRefresh = vi.fn().mockResolvedValue(undefined);
     const onRefresh = vi.fn().mockResolvedValue(undefined);
     const onReportSubmit = vi.fn().mockResolvedValue(undefined);
     const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
@@ -109,6 +133,7 @@ describe('useFeedActionBarState', () => {
         onCommentReport,
         onCommentSubmit,
         onCommentUpdate,
+        onCommentsRefresh,
         onRefresh,
         onReportSubmit,
       }),
@@ -142,7 +167,8 @@ describe('useFeedActionBarState', () => {
 
     expect(onCommentLikeToggle).toHaveBeenCalledWith('comment-1');
     expect(onCommentDelete).toHaveBeenCalledWith('comment-1');
-    expect(onRefresh).toHaveBeenCalledTimes(2);
+    expect(onCommentsRefresh).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledOnce();
   });
 
   it('blocks editing after the allowed comment window expires', async () => {

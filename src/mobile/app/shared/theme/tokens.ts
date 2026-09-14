@@ -85,20 +85,35 @@ export const layout = {
   thumbnailSize: 56,
 };
 
-export const typography = {
-  display: { fontSize: 24, lineHeight: 30, fontWeight: '800' as const },
-  title: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
-  section: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
-  bodyText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
-  labelText: { fontSize: 12, lineHeight: 17, fontWeight: '700' as const },
-  captionText: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
-  metadataText: { fontSize: 12, lineHeight: 15, fontWeight: '600' as const },
-  compactCardTitleText: { fontSize: 12, lineHeight: 16, fontWeight: '700' as const },
+const typographyStyles = {
+  display: { fontSize: 26, lineHeight: 33, fontWeight: '800' as const },
+  headlineText: { fontSize: 24, lineHeight: 30, fontWeight: '700' as const },
+  title: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const },
+  dialogTitleText: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
+  section: { fontSize: 17, lineHeight: 22, fontWeight: '700' as const },
+  compactSectionText: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
+  inputText: { fontSize: 16, lineHeight: 22, fontWeight: '400' as const },
+  compactTitleText: { fontSize: 15, lineHeight: 20, fontWeight: '700' as const },
+  bodyText: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
+  readingBodyText: { fontSize: 14, lineHeight: 21, fontWeight: '400' as const },
+  labelText: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
+  captionText: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
+  supportingText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
+  supportingLabelText: { fontSize: 13, lineHeight: 19, fontWeight: '600' as const },
+  metadataText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
+  compactBodyText: { fontSize: 12, lineHeight: 18, fontWeight: '400' as const },
+  compactCardTitleText: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
   compactCardMetaText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
-  screenTitle: 18,
-  sectionTitle: 16,
-  body: 13,
-  caption: 12,
+} as const;
+
+export const typography = {
+  ...typographyStyles,
+  // Compatibility aliases for older stylesheets. Derive them from the
+  // semantic styles so changing the scale cannot leave callers on two sizes.
+  screenTitle: typographyStyles.title.fontSize,
+  sectionTitle: typographyStyles.section.fontSize,
+  body: typographyStyles.bodyText.fontSize,
+  caption: typographyStyles.captionText.fontSize,
 };
 
 export const fontWeight = {
@@ -106,6 +121,12 @@ export const fontWeight = {
   medium: '600',
   strong: '700',
   heavy: '800',
+} as const;
+
+export const letterSpacing = {
+  brandTitle: -0.8,
+  brandTagline: 0.4,
+  emphasizedMetadata: 0.1,
 } as const;
 
 export const radius = {

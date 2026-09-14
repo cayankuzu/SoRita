@@ -218,7 +218,7 @@ export const listsRepositoryInternals = {
   uniqueOrderedStrings,
 };
 
-async function resolveAuthenticatedListOwnerId(fallbackUserId?: string) {
+async function resolveAuthenticatedListOwnerId() {
   const {
     data: { session },
     error,
@@ -234,17 +234,11 @@ async function resolveAuthenticatedListOwnerId(fallbackUserId?: string) {
     return authenticatedUserId;
   }
 
-  const normalizedFallbackUserId = fallbackUserId?.trim();
-
-  if (normalizedFallbackUserId) {
-    return normalizedFallbackUserId;
-  }
-
   throw new Error(tr.settings.sessionMissing);
 }
 
 async function resolvePersistedListOwner(list: PlaceList) {
-  const ownerId = await resolveAuthenticatedListOwnerId(list.userId);
+  const ownerId = await resolveAuthenticatedListOwnerId();
 
   if (ownerId === list.userId) {
     return list;

@@ -41,6 +41,7 @@ export function ListDetailPlacesSection({
       {owner ? (
         <Pressable
           accessibilityLabel={`${owner.name}, @${owner.username}`}
+          accessibilityHint={tr.listDetail.openOwnerProfile}
           accessibilityRole="button"
           style={styles.ownerCard}
           onPress={onOpenOwnerProfile}
@@ -84,7 +85,7 @@ export function ListDetailPlacesSection({
           <View style={styles.mapCardHeader}>
             <View>
               <Text style={styles.mapCardEyebrow}>{tr.cards.map}</Text>
-              <Text style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</Text>
+              <Text accessibilityRole="header" style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</Text>
             </View>
           </View>
 
@@ -110,7 +111,7 @@ export function ListDetailPlacesSection({
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
             <Text style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</Text>
-            <Text style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</Text>
             <Text style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</Text>
           </View>
         </View>

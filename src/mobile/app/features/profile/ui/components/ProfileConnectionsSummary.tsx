@@ -9,7 +9,7 @@ import {
 import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/components/ProfileInterestChips';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileConnectionsSummaryProps = {
   followerCount: number;
@@ -26,26 +26,29 @@ export function ProfileConnectionsSummary({
   onOpenFollowers,
   onOpenFollowing,
 }: ProfileConnectionsSummaryProps) {
+  const safeFollowerCount = Math.max(0, Math.trunc(followerCount));
+  const safeFollowingCount = Math.max(0, Math.trunc(followingCount));
+
   return (
     <View style={styles.detailsStack}>
       <ProfileInterestChips interestIds={interestIds} />
       <View style={styles.connectionsRow}>
         <InstantPressable
-          accessibilityLabel={`${followerCount} ${tr.profile.stats.follower}`}
+          accessibilityLabel={`${tr.profile.connections.followers}: ${tr.profile.connections.resultCount(safeFollowerCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
           onPress={onOpenFollowers}
         >
-          <Text style={styles.connectionValue}>{followerCount}</Text>
+          <Text style={styles.connectionValue}>{safeFollowerCount}</Text>
           <Text style={styles.connectionLabel}>{tr.profile.stats.follower}</Text>
         </InstantPressable>
         <InstantPressable
-          accessibilityLabel={`${followingCount} ${tr.profile.stats.following}`}
+          accessibilityLabel={`${tr.profile.connections.following}: ${tr.profile.connections.resultCount(safeFollowingCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
           onPress={onOpenFollowing}
         >
-          <Text style={styles.connectionValue}>{followingCount}</Text>
+          <Text style={styles.connectionValue}>{safeFollowingCount}</Text>
           <Text style={styles.connectionLabel}>{tr.profile.stats.following}</Text>
         </InstantPressable>
       </View>
@@ -60,10 +63,12 @@ const styles = StyleSheet.create({
   },
   connectionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 16,
   },
   connectionButton: {
+    minWidth: Platform.OS === 'ios' ? touch.ios : touch.android,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     flexDirection: 'row',
     gap: 4,
@@ -72,8 +77,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   connectionValue: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   connectionLabel: {

@@ -12,10 +12,14 @@ import type { ExploreTabType } from './exploreScreenTypes';
 
 type ExploreHeaderControlsProps = {
   activeTab: ExploreTabType;
+  resultCount?: number;
+  resultsPending?: boolean;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onTabChange: (tab: ExploreTabType) => void;
 };
+
+const MAX_SEARCH_QUERY_LENGTH = 120;
 
 const tabs: Array<{
   key: ExploreTabType;
@@ -46,6 +50,8 @@ const tabs: Array<{
 
 export function ExploreHeaderControls({
   activeTab,
+  resultCount,
+  resultsPending = false,
   searchQuery,
   onSearchQueryChange,
   onTabChange,
@@ -62,6 +68,8 @@ export function ExploreHeaderControls({
         : activeTab === 'photos'
           ? tr.explore.search.photo
           : tr.explore.search.person;
+  const activeTabLabel = tabs.find((tab) => tab.key === activeTab)?.label ?? tr.explore.title;
+  const searchAccessibilityLabel = `${activeTabLabel}: ${placeholder}`;
 
   const keepActiveTabVisible = React.useCallback(() => {
     const layout = tabLayoutsRef.current[activeTab];
@@ -103,17 +111,19 @@ export function ExploreHeaderControls({
           <TextInput
             value={searchQuery}
             onChangeText={onSearchQueryChange}
+            maxLength={MAX_SEARCH_QUERY_LENGTH}
             placeholder={placeholder}
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
             autoCapitalize="none"
             autoCorrect={false}
-            accessibilityLabel={placeholder}
+            accessibilityLabel={searchAccessibilityLabel}
+            accessibilityState={{ busy: resultsPending }}
             returnKeyType="search"
           />
           {searchQuery ? (
             <InstantPressable
-              accessibilityLabel={tr.common.clear}
+              accessibilityLabel={`${tr.common.clear}: ${activeTabLabel}`}
               accessibilityRole="button"
               hapticFeedback="selection"
               hitSlop={10}
@@ -132,6 +142,7 @@ export function ExploreHeaderControls({
           <ScrollView
             ref={tabScrollRef}
             horizontal
+            keyboardShouldPersistTaps="handled"
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabRow}
           >
@@ -140,6 +151,7 @@ export function ExploreHeaderControls({
 
               return (
                 <InstantPressable
+                  accessibilityLabel={tab.label}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   key={tab.key}
@@ -157,6 +169,16 @@ export function ExploreHeaderControls({
             })}
           </ScrollView>
         </View>
+
+        {typeof resultCount === 'number' ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            accessibilityState={{ busy: resultsPending }}
+            style={styles.resultStatus}
+          >
+            {resultsPending ? tr.common.loading : tr.map.searchResultCount(resultCount)}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

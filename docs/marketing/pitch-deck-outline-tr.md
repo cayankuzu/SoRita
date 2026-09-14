@@ -64,7 +64,7 @@ Haritayı aç → mekânı gör → listene ekle → paylaş
 **Mesaj:** Puan değil, kimin listesi.
 
 - Sosyal bağlam ürünün merkezinde, eklenti değil (C2)
-- Reklam ve pazarlama takip SDK'sı yok — bağımlılık listesinden doğrulanabilir (C3)
+- Reklam/attribution SDK'sı yok; sınırlı Sentry telemetrisi açıkça beyan edilir (C3)
 - Sponsorlu yerleştirme yok, çünkü reklam sistemi yok
 
 *Not:* Rakip adı geçirilmez, karşılaştırma tablosu yapılmaz.

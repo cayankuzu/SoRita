@@ -2,11 +2,11 @@
 
 Bu matris canlı test sonucu değildir. “Kaynak testi” satırları yalnız yerel
 pre-commit testlerini, “Bekliyor” satırları ise gerçek cihaz/sağlayıcı kanıtı
-gerektiren işleri gösterir. Hedefli push/config testleri 34/34 ve push dahil
-izole DB seti 6 dosya/180 pgTAP olarak geçmiştir; bunlar cihaz satırlarını
+gerektiren işleri gösterir. Hedefli push/config testleri 11 dosya/105 test ve push dahil
+izole DB seti 7 dosya/231 pgTAP olarak geçmiştir; bunlar cihaz satırlarını
 tamamlamaz.
 
-Hedef candidate metadata'sı kaynakta app `1.0.102`, Android 107 ve iOS 87'dir;
+Hedef candidate metadata'sı kaynakta app `1.0.106`, Android 111 ve iOS 91'dir;
 henüz immutable candidate SHA veya iki-platform signed build kimliği yoktur.
 
 | Ortam / senaryo | Beklenen sonuç | Durum | Kanıt alanı |

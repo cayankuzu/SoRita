@@ -1,13 +1,18 @@
 import React from 'react';
 import {
-  Platform,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  minTouchSize,
+  opacity,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export type MultiSelectChipOption = {
   value: string;
@@ -41,7 +46,11 @@ export function MultiSelectChipField({
             hapticFeedback="selection"
             key={option.value}
             onPress={() => onToggle(option.value)}
-            style={[styles.chip, selected ? styles.chipSelected : null]}
+            style={[
+              styles.chip,
+              selected ? styles.chipSelected : null,
+              disabled ? styles.chipDisabled : null,
+            ]}
           >
             <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>
               {option.label}
@@ -60,7 +69,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -73,11 +82,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   chipTextSelected: {
     color: colors.primaryDark,
+  },
+  chipDisabled: {
+    opacity: opacity.disabled,
   },
 });

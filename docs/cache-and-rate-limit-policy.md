@@ -78,12 +78,16 @@ production kararı **NO-GO**'dur.
 | --- | --- | ---: | ---: | ---: | --- |
 | yerel varsayılan | `AUTH_RATE_LIMITER` | `86083000` | 30 | 60 s | placeholder |
 | yerel varsayılan | `API_RATE_LIMITER` | `86083001` | 120 | 60 s | placeholder |
+| yerel varsayılan | `COARSE_IP_RATE_LIMITER` | `86083002` | 1.200 | 60 s | placeholder |
 | development | `AUTH_RATE_LIMITER` | `86083010` | 30 | 60 s | placeholder |
 | development | `API_RATE_LIMITER` | `86083011` | 120 | 60 s | placeholder |
+| development | `COARSE_IP_RATE_LIMITER` | `86083012` | 1.200 | 60 s | placeholder |
 | preview | `AUTH_RATE_LIMITER` | `86083020` | 30 | 60 s | placeholder |
 | preview | `API_RATE_LIMITER` | `86083021` | 120 | 60 s | placeholder |
+| preview | `COARSE_IP_RATE_LIMITER` | `86083022` | 1.200 | 60 s | placeholder |
 | production | `AUTH_RATE_LIMITER` | `86083030` | 30 | 60 s | placeholder; NO-GO |
 | production | `API_RATE_LIMITER` | `86083031` | 120 | 60 s | placeholder; NO-GO |
+| production | `COARSE_IP_RATE_LIMITER` | `86083032` | 1.200 | 60 s | placeholder; NO-GO |
 
 Bu namespace ID'leri yalnız yapılandırma placeholder'ıdır. Cloudflare hesabında pozitif integer ve
 benzersiz oldukları doğrulanmamıştır. Aynı namespace ID'sini kullanan binding'ler aynı anahtar için
@@ -98,10 +102,16 @@ kanıtlamalıdır.
 | `/v1/maps-geocoding` | `API_RATE_LIMITER` | `search` veya `reverse` |
 | `/v1/moderation-reports` | `API_RATE_LIMITER` | `targetType`: `user/list/place/comment` |
 | `/v1/media-assets` | `API_RATE_LIMITER` | media `action` |
+| `/v1/personal-data` | `API_RATE_LIMITER` | `export` |
 | `/v1/delete-user` | `API_RATE_LIMITER` | `delete-user` |
 | `/health` ve `OPTIONS` | yok | yok |
 
-Limit route toplamı değildir; anahtar action'ı da içerdiği için her actor/route/action kombinasyonu
+Her geçerli proxy isteği, JWT doğrulamasından önce ayrıca ham IP'yi saklamayan ortak
+`COARSE_IP_RATE_LIMITER` (1.200/60 s) katmanından geçer. Bu sayaç route/action'a bölünmez ve
+credential/JWKS maliyetine karşı kaba volumetrik koruma sağlar. Paylaşılan mobil operatör NAT'ında
+yanlış pozitif riskini azaltmak için action limitlerinden belirgin biçimde yüksektir.
+
+Action limiti route toplamı değildir; anahtar action'ı da içerdiği için her actor/route/action kombinasyonu
 ayrı sayılır. Örneğin aynı kullanıcı için maps `search` ve `reverse` ayrı P120 sayaçlarıdır. Bu
 ayrım, her action'ın izin verilen kapasitesi olarak ele alınmalı; birleşik kullanıcı kotası olarak
 yorumlanmamalıdır.
@@ -175,6 +185,10 @@ bulunması diğer action'lar için genel idempotency garantisi oluşturmaz.
 Structured Worker log'ları route, action, actor class, status, duration, environment, request ID,
 `CF-Ray` ve stable error code içerir; token, user ID, raw IP, body veya secret içermez. Başarılı log
 örnekleme development'ta 1, preview'da 0,25, production'da 0,10; tüm hatalar loglanır.
+Workers Logs request-level head sampling bütün ortamlarda 1'dir; böylece platform katmanı hata
+seviyesi bilinmeden istekleri düşürmez. Yukarıdaki oranlar yalnız Worker içindeki deterministik
+başarılı-istek örneklemesidir; `4xx/5xx` kayıtları uygulama katmanında daima tutulur. Traces ayrı ve
+daha düşük oranla örneklenir.
 
 Production öncesi aşağıdaki alarmlar canlıda kanıtlanmalıdır:
 

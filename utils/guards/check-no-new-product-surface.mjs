@@ -38,6 +38,12 @@ const CURRENT_INTERNAL_TABLES = new Set([
   'private.push_delivery_jobs',
   'private.system_broadcast_deliveries',
   'private.system_broadcast_requests',
+  // Compliance ledgers are service-controlled/audited infrastructure. The
+  // user-facing capability is the bounded personal-data export contract, not
+  // direct CRUD access to these tables.
+  'public.legal_consent_records',
+  'public.moderation_account_sanctions',
+  'public.personal_data_access_log',
   'public.account_deletion_jobs',
   'public.request_nonces',
 ]);

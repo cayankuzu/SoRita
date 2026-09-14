@@ -94,6 +94,7 @@ export function CommentComposer({
 
   return (
     <View
+      accessibilityState={{ busy: submitting }}
       style={[
         styles.composerDock,
         {
@@ -135,6 +136,12 @@ export function CommentComposer({
             <Text style={styles.composerBannerAction}>{tr.cards.cancelReply}</Text>
           </Pressable>
         </View>
+      ) : null}
+
+      {submitting ? (
+        <Text accessibilityLiveRegion="polite" style={styles.composerPendingText}>
+          {editingCommentId ? tr.cards.editingComment : tr.cards.commentSyncing}
+        </Text>
       ) : null}
 
       <ScrollView

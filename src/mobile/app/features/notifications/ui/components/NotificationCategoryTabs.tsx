@@ -2,18 +2,27 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type NotificationCategoryTabsProps = {
   tabs: Array<{ key: string; label: string }>;
   activeKey: string;
   onChange: (key: string) => void;
+  resultCount?: number;
 };
 
 export function NotificationCategoryTabs({
   tabs,
   activeKey,
   onChange,
+  resultCount,
 }: NotificationCategoryTabsProps) {
   return (
     <ScrollView
@@ -27,6 +36,11 @@ export function NotificationCategoryTabs({
 
         return (
           <InstantPressable
+            accessibilityLabel={
+              active && typeof resultCount === 'number'
+                ? `${tab.label}, ${tr.notifications.resultCount(resultCount)}`
+                : tab.label
+            }
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             key={tab.key}
@@ -72,12 +86,11 @@ const styles = StyleSheet.create({
     borderColor: colors.text,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...typography.supportingLabelText,
     color: colors.textMuted,
   },
   tabTextActive: {
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

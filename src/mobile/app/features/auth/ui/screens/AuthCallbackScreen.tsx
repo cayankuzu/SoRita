@@ -12,7 +12,7 @@ import {
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ScreenState =
   | { status: 'loading' }
@@ -20,6 +20,19 @@ type ScreenState =
   | { status: 'error'; message: string };
 
 const AUTH_CALLBACK_TIMEOUT_MS = 15_000;
+
+function getSafeCallbackErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const safeMessages = new Set<string>([
+    tr.auth.callback.failed,
+    tr.auth.callback.missingCode,
+    tr.auth.callback.sessionValidationFailed,
+    tr.auth.callback.signupLinkInvalid,
+    tr.auth.callback.timeout,
+  ]);
+
+  return safeMessages.has(message) ? message : tr.auth.callback.failed;
+}
 
 export function AuthCallbackScreen() {
   const navigation = useAppNavigation();
@@ -60,7 +73,7 @@ export function AuthCallbackScreen() {
     });
 
     void Promise.race([completeSignup(), timeout]).catch((error) => {
-      fail(error instanceof Error ? error.message : tr.auth.callback.failed);
+      fail(getSafeCallbackErrorMessage(error));
     }).finally(() => {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -85,9 +98,16 @@ export function AuthCallbackScreen() {
   if (screenState.status === 'loading' || screenState.status === 'success') {
     return (
       <Screen scroll={false} variant="form">
-        <View style={styles.centered}>
+        <View
+          accessibilityLabel={`${tr.auth.callback.loadingTitle}. ${tr.auth.callback.loadingDescription}`}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="progressbar"
+          accessibilityState={{ busy: true }}
+          accessible
+          style={styles.centered}
+        >
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.title}>{tr.auth.callback.loadingTitle}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr.auth.callback.loadingTitle}</Text>
           <Text style={styles.description}>{tr.auth.callback.loadingDescription}</Text>
         </View>
       </Screen>
@@ -100,8 +120,8 @@ export function AuthCallbackScreen() {
       contentContainerStyle={styles.scrollableCenteredContent}
     >
       <View style={styles.centered}>
-        <View style={styles.errorCard}>
-          <Text style={styles.title}>{tr.auth.callback.errorTitle}</Text>
+        <View accessibilityLiveRegion="assertive" style={styles.errorCard}>
+          <Text accessibilityRole="header" style={styles.title}>{tr.auth.callback.errorTitle}</Text>
           <Text style={styles.description}>{screenState.message}</Text>
           <View style={styles.actions}>
             <PrimaryButton
@@ -148,14 +168,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.dialogTitleText,
     textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     textAlign: 'center',
   },
 });

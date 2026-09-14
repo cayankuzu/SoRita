@@ -10,7 +10,13 @@ import {
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type FeedActionButtonsProps = {
   commentCount: number;
@@ -18,7 +24,7 @@ type FeedActionButtonsProps = {
   liked: boolean;
   onCommentPress: () => void;
   onCommentsIntent: () => void;
-  onLikePress: () => void;
+  onLikePress: () => void | Promise<void>;
   onLikersPress: () => void;
   onOverflowPress?: () => void;
   onSharePress?: () => void;
@@ -31,34 +37,44 @@ type FeedActionButtonsProps = {
 
 function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 'onLikePress' | 'onLikersPress'>) {
   return (
-    <InstantPressable
-      accessibilityLabel={props.liked ? tr.cards.unlikeAction : tr.cards.likeAction}
-      accessibilityRole="button"
-      accessibilityState={{ selected: props.liked }}
-      style={[styles.actionButton, props.liked ? styles.likeActionActive : null]}
-      onPress={() => {
-        triggerHaptic('light');
-        props.onLikePress();
-      }}
-      onLongPress={props.onLikersPress}
-      delayLongPress={500}
-    >
-      <Heart
-        size={16}
-        color={props.liked ? colors.danger : colors.textMuted}
-        fill={props.liked ? colors.danger : 'transparent'}
-      />
-      <Text
-        accessible={false}
-        style={[
-          styles.actionCount,
-          props.liked ? styles.actionCountLiked : null,
-          props.likeCount === 0 ? styles.actionCountEmpty : null,
-        ]}
+    <View style={styles.likeActionGroup}>
+      <InstantPressable
+        accessibilityLabel={props.liked ? tr.cards.unlikeAction : tr.cards.likeAction}
+        accessibilityRole="button"
+        accessibilityState={{ selected: props.liked }}
+        style={[styles.actionButton, props.liked ? styles.likeActionActive : null]}
+        onPress={() => {
+          triggerHaptic('light');
+          return props.onLikePress();
+        }}
       >
-        {props.likeCount}
-      </Text>
-    </InstantPressable>
+        <Heart
+          size={16}
+          color={props.liked ? colors.danger : colors.textMuted}
+          fill={props.liked ? colors.danger : 'transparent'}
+        />
+      </InstantPressable>
+
+      <InstantPressable
+        accessibilityHint={tr.cards.likedBy}
+        accessibilityLabel={`${tr.cards.likedBy}: ${props.likeCount}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: props.likeCount === 0 }}
+        disabled={props.likeCount === 0}
+        style={styles.likeCountButton}
+        onPress={props.onLikersPress}
+      >
+        <Text
+          accessible={false}
+          style={[
+            styles.actionCount,
+            props.liked ? styles.actionCountLiked : null,
+          ]}
+        >
+          {props.likeCount}
+        </Text>
+      </InstantPressable>
+    </View>
   );
 }
 
@@ -146,11 +162,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
+  likeActionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeCountButton: {
+    minWidth: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionCount: {
     minWidth: 12,
     textAlign: 'center',
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   actionCountLiked: { color: colors.danger },

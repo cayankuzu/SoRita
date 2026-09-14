@@ -6,11 +6,38 @@ function createHostComponent(name: string) {
   );
 }
 
+type PressableState = {
+  pressed: boolean;
+};
+
+type PressableMockProps = Record<string, unknown> & {
+  children?: React.ReactNode | ((state: PressableState) => React.ReactNode);
+  style?: unknown | ((state: PressableState) => unknown);
+};
+
+const idlePressableState: PressableState = { pressed: false };
+
+const PressableMock = React.forwardRef<unknown, PressableMockProps>(
+  ({ children, style, ...props }, ref) =>
+    React.createElement(
+      'Pressable',
+      {
+        ...props,
+        ref,
+        style: typeof style === 'function' ? style(idlePressableState) : style,
+      },
+      typeof children === 'function' ? children(idlePressableState) : children,
+    ),
+);
+
+PressableMock.displayName = 'PressableMock';
+
 export const View = createHostComponent('View');
 export const Text = createHostComponent('Text');
 export const Image = createHostComponent('Image');
-export const Pressable = createHostComponent('Pressable');
+export const Pressable = PressableMock;
 export const ScrollView = createHostComponent('ScrollView');
+export const RefreshControl = createHostComponent('RefreshControl');
 export const SafeAreaView = createHostComponent('SafeAreaView');
 export const TouchableOpacity = createHostComponent('TouchableOpacity');
 export const TouchableWithoutFeedback = createHostComponent('TouchableWithoutFeedback');
@@ -215,6 +242,7 @@ export default {
   PixelRatio,
   Platform,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   SectionList,

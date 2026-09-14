@@ -50,6 +50,11 @@ const moderationResponseSchema = z.object({
   reportId: z.string().min(1).max(120),
   success: z.literal(true),
 });
+const personalDataExportResponseSchema = z
+  .object({
+    data: z.object({}).passthrough(),
+  })
+  .strict();
 const storagePathSchema = z
   .string()
   .trim()
@@ -187,6 +192,10 @@ export function getOriginSuccessResponseContract(params: {
     }
 
     return undefined;
+  }
+
+  if (params.route.path === '/v1/personal-data' && params.action === 'export') {
+    return { maximumBytes: 5 * 1024 * 1024, schema: personalDataExportResponseSchema };
   }
 
   if (params.route.path === '/v1/delete-user' && params.action === 'delete-user') {

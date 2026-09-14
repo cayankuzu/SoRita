@@ -27,7 +27,14 @@ const featureSuites = [
 ];
 
 for (const suiteArgs of featureSuites) {
-  const result = spawnSync(process.execPath, [localStorageOption, vitestBin, 'run', ...suiteArgs].filter(Boolean), {
+  const result = spawnSync(process.execPath, [
+    localStorageOption,
+    vitestBin,
+    'run',
+    '--configLoader',
+    'runner',
+    ...suiteArgs,
+  ].filter(Boolean), {
     env: childEnv,
     stdio: 'inherit',
   });

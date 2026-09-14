@@ -11,6 +11,7 @@ import {
   buildPreviewPlace,
   buildPreviewPriceLabel,
 } from '@/mobile/app/features/map/application/placeEditorPreview';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 describe('placeEditorPreview', () => {
   it('builds a preview place and save payload from editor input', () => {
@@ -217,6 +218,7 @@ describe('placeEditorPreview', () => {
     });
 
     expect(buildPlaceSavePayload(base)).toMatchObject({
+      name: '',
       title: undefined,
       menuUrl: undefined,
       address: undefined,
@@ -228,6 +230,56 @@ describe('placeEditorPreview', () => {
       addedBy: undefined,
       sourceAttribution: undefined,
     });
+  });
+
+  it('never writes geocode status or placeholder copy into save identity fields', () => {
+    const base = {
+      lat: 1,
+      lng: 2,
+      title: '',
+      notes: '',
+      rating: 0,
+      selectedCategories: [] as string[],
+      studentFriendly: false,
+      priceMin: '',
+      priceMax: '',
+      bestTimes: [] as string[],
+      atmosphere: [] as string[],
+      features: [] as string[],
+    };
+
+    const displayOnlySnapshot = {
+      ...base,
+      name: tr.map.resolvingAddress,
+      placeName: tr.placeEditor.placeNamePlaceholder,
+      address: tr.map.addressUnavailable,
+      placeAddress: tr.map.resolvingAddress,
+    };
+
+    expect(buildPreviewPlace(displayOnlySnapshot)).toMatchObject({
+      name: tr.placeEditor.placeNamePlaceholder,
+      address: tr.map.addressUnavailable,
+    });
+    expect(buildPlaceSavePayload(displayOnlySnapshot)).toMatchObject({
+      name: '',
+      address: undefined,
+    });
+
+    expect(
+      buildPlaceSavePayload({
+        ...base,
+        name: tr.map.resolvingAddress,
+        address: '  Moda Sahili  ',
+      }),
+    ).toMatchObject({ name: 'Moda Sahili', address: 'Moda Sahili' });
+
+    expect(
+      buildPlaceSavePayload({
+        ...base,
+        name: '  Petra Roasting Co.  ',
+        address: tr.map.addressUnavailable,
+      }),
+    ).toMatchObject({ name: 'Petra Roasting Co.', address: undefined });
   });
 
   it('preserves existing metadata and legacy photos while editing', () => {

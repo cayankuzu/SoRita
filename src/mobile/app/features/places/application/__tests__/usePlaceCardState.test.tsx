@@ -13,6 +13,7 @@ const reportPlaceAsyncMock = vi.fn();
 const reportPlaceCommentAsyncMock = vi.fn();
 const createPlaceQuoteNotificationMock = vi.fn();
 const fetchNextPageMock = vi.fn();
+const refetchCommentsMock = vi.fn();
 let placeCommentsQueryResult: {
   data?: {
     pages: Array<Array<Record<string, unknown>>>;
@@ -20,6 +21,9 @@ let placeCommentsQueryResult: {
   fetchNextPage: typeof fetchNextPageMock;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: typeof refetchCommentsMock;
 };
 let visibleDataQueryResult: {
   data: {
@@ -101,6 +105,9 @@ vi.mock('@/mobile/app/shared/i18n/tr', () => ({
           `Bir mekani ayni anda en fazla ${max} listeye ekleyebilirsin`,
       },
     },
+    system: {
+      connectionUnavailable: 'Baglanti kurulamadi',
+    },
   },
 }));
 
@@ -119,6 +126,9 @@ describe('usePlaceCardState', () => {
       fetchNextPage: fetchNextPageMock,
       hasNextPage: false,
       isFetchingNextPage: false,
+      isLoading: false,
+      error: null,
+      refetch: refetchCommentsMock,
     };
     visibleDataQueryResult = {
       data: {
@@ -168,7 +178,55 @@ describe('usePlaceCardState', () => {
     reportPlaceCommentAsyncMock.mockReset();
     createPlaceQuoteNotificationMock.mockReset();
     fetchNextPageMock.mockReset();
+    refetchCommentsMock.mockReset();
     showToastMock.mockReset();
+  });
+
+  it('exposes initial loading, safe errors, and a dedicated comments retry', async () => {
+    placeCommentsQueryResult = {
+      data: undefined,
+      error: null,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: true,
+      refetch: refetchCommentsMock,
+    };
+    const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
+    const hook = renderHook(() => usePlaceCardState({
+      commentsEnabled: true,
+      place: {
+        addedAt: '2026-04-16T10:00:00.000Z',
+        id: 'place-1',
+        lat: 41,
+        lng: 29,
+        name: 'Cafe',
+      },
+      user: {
+        email: 'ada@example.com',
+        id: 'user-1',
+        name: 'Ada',
+        username: 'ada',
+      },
+    }), { wrapper });
+
+    expect(hook.result.current.commentsInitialLoading).toBe(true);
+    expect(hook.result.current.commentsErrorMessage).toBeNull();
+
+    placeCommentsQueryResult = {
+      ...placeCommentsQueryResult,
+      error: new Error('safe comment error'),
+      isLoading: false,
+    };
+    hook.rerender();
+
+    expect(hook.result.current.commentsInitialLoading).toBe(false);
+    expect(hook.result.current.commentsErrorMessage).toBe('safe comment error');
+
+    await act(async () => {
+      await hook.result.current.refreshComments();
+    });
+    expect(refetchCommentsMock).toHaveBeenCalledOnce();
   });
 
   it('adds a place to selected lists through the list update mutation', async () => {
@@ -713,6 +771,9 @@ describe('usePlaceCardState', () => {
       fetchNextPage: fetchNextPageMock,
       hasNextPage: false,
       isFetchingNextPage: false,
+      isLoading: false,
+      error: null,
+      refetch: refetchCommentsMock,
     };
     const { usePlaceCardState } = await import('@/mobile/app/features/places/application/usePlaceCardState');
     const hook = renderHook(() =>

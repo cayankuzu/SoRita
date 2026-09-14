@@ -257,7 +257,12 @@ export function createAdminBroadcastNotificationHandler({
         );
       }
 
-      const recipientUserIds = (await repository.fetchRecipientUserIds(payload.userIds)).sort();
+      // `userIds` omitted means the full audience. An explicitly empty array
+      // must remain empty; treating it as falsy here would turn a targeted
+      // no-op into a global broadcast.
+      const recipientUserIds = payload.userIds?.length === 0
+        ? []
+        : (await repository.fetchRecipientUserIds(payload.userIds)).sort();
 
       if (payload.dryRun) {
         return jsonResponse(

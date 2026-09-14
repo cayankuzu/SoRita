@@ -12,6 +12,7 @@ const { envMock } = vi.hoisted(() => ({
     supabaseMapsFunctionName: 'maps-geocoding',
     supabaseMediaAssetsFunctionName: 'media-assets',
     supabaseModerationReportsFunctionName: 'moderation-reports',
+    supabasePersonalDataFunctionName: 'personal-data',
     supabasePublishableKey: 'publishable-key',
     supabaseUrl: 'https://project.supabase.co',
   },
@@ -65,6 +66,7 @@ describe('Edge Function transport', () => {
     envMock.supabaseMapsFunctionName = 'maps-geocoding';
     envMock.supabaseMediaAssetsFunctionName = 'media-assets';
     envMock.supabaseModerationReportsFunctionName = 'moderation-reports';
+    envMock.supabasePersonalDataFunctionName = 'personal-data';
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -88,6 +90,9 @@ describe('Edge Function transport', () => {
 
     expect(getFunctionUrl('maps-geocoding')).toBe(
       'https://api.example.com/v1/maps-geocoding',
+    );
+    expect(getFunctionUrl('personal-data')).toBe(
+      'https://api.example.com/v1/personal-data',
     );
     expect(getFunctionUrl('internal-unselected')).toBe(
       'https://project.supabase.co/functions/v1/internal-unselected',

@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  createHash,
+  generateKeyPairSync,
+  sign,
+} from "node:crypto";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -8,19 +18,25 @@ import test from "node:test";
 import {
   REQUIRED_RUNTIME_CHECKS,
   REQUIRED_SCENARIOS,
-  RUNTIME_PROBE_SOURCE_PATH,
-  RUNTIME_PROBE_SOURCE_SHA256,
+  canonicalizeRuntimeReceipt,
+  runtimeReceiptSigningBytes,
   stageRuntimeEvidence,
   verifyRuntimeEvidence,
 } from "./runtime-evidence.mjs";
 
 const now = new Date("2026-08-31T12:00:00.000Z");
+const signingKeys = generateKeyPairSync("ed25519");
+const publicKeyDer = signingKeys.publicKey.export({ format: "der", type: "spki" });
+const publicKeySpkiBase64 = publicKeyDer.toString("base64");
+const keyId = `sha256:${createHash("sha256").update(publicKeyDer).digest("hex")}`;
 const expected = {
   repository: "https://github.com/cayankuzu/SoRita",
   commitSha: "a".repeat(40),
   runtimeVersion: "1.0.102",
   runId: 12345,
   runAttempt: 2,
+  publicKeySpkiBase64,
+  keyId,
 };
 
 const definitions = {
@@ -130,13 +146,18 @@ function rawArtifactBody(check, scenario) {
   return `${JSON.stringify({ check, scenario, result: "pass" })}\n`;
 }
 
+function executionId(check) {
+  const index = REQUIRED_RUNTIME_CHECKS.indexOf(check) + 1;
+  return `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
 function receipt(check) {
   const definition = definitions[check];
   const subjects = definition.subjects.map((descriptor, index) =>
     buildSubject(check, descriptor, index),
   );
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     check,
     repository: expected.repository,
     commitSha: expected.commitSha,
@@ -145,9 +166,16 @@ function receipt(check) {
     result: "pass",
     probe: {
       id: definition.probe,
-      version: "2.0.0",
-      sourcePath: RUNTIME_PROBE_SOURCE_PATH,
-      sourceSha256: RUNTIME_PROBE_SOURCE_SHA256,
+      version: "3.0.0",
+    },
+    producer: {
+      id: "sorita-runtime-probe-harness",
+      version: "3.4.1",
+      sourceSha256: digest("external-harness-source"),
+      artifactSha256: digest("external-harness-artifact"),
+      buildProvenanceUri: "https://evidence.example.test/builds/runtime-harness-3.4.1",
+      executionId: executionId(check),
+      keyId,
     },
     subjects,
     scenarios: REQUIRED_SCENARIOS[check].map((scenario) => {
@@ -168,10 +196,15 @@ function receipt(check) {
   };
 }
 
-function writeReceipt(directory, value) {
+function writeReceipt(directory, value, privateKey = signingKeys.privateKey) {
   writeFileSync(
     join(directory, `${value.check}.json`),
-    `${JSON.stringify(value)}\n`,
+    canonicalizeRuntimeReceipt(value),
+  );
+  const signature = sign(null, runtimeReceiptSigningBytes(value), privateKey);
+  writeFileSync(
+    join(directory, `${value.check}.sig`),
+    `${signature.toString("base64")}\n`,
   );
   for (const scenario of value.scenarios) {
     const artifactPath = join(directory, scenario.rawArtifact.path);
@@ -188,7 +221,22 @@ function sourceFixture() {
   return directory;
 }
 
-test("runtime schemas and executable check list remain identical", () => {
+function outputFixture(prefix) {
+  return join(mkdtempSync(join(tmpdir(), prefix)), "packet");
+}
+
+test("canonical receipt encoding is deterministic and rejects invalid Unicode", () => {
+  assert.equal(
+    canonicalizeRuntimeReceipt({ z: 1e30, a: [true, null, -0], m: "é" }),
+    '{"a":[true,null,0],"m":"é","z":1e+30}',
+  );
+  assert.throws(
+    () => canonicalizeRuntimeReceipt({ invalid: "\ud800" }),
+    /unpaired high surrogate/u,
+  );
+});
+
+test("runtime v3 schemas and executable check list remain identical", () => {
   const manifestSchema = JSON.parse(
     readFileSync(
       join(process.cwd(), "release-evidence", "runtime-manifest.schema.json"),
@@ -201,6 +249,8 @@ test("runtime schemas and executable check list remain identical", () => {
       "utf8",
     ),
   );
+  assert.equal(manifestSchema.properties.schemaVersion.const, 2);
+  assert.equal(receiptSchema.properties.schemaVersion.const, 3);
   assert.deepEqual(
     manifestSchema.properties.checks.required,
     REQUIRED_RUNTIME_CHECKS,
@@ -217,60 +267,186 @@ test("runtime schemas and executable check list remain identical", () => {
     receiptSchema.properties.check.enum,
     REQUIRED_RUNTIME_CHECKS,
   );
+  assert.deepEqual(
+    receiptSchema.properties.producer.required,
+    [
+      "id",
+      "version",
+      "sourceSha256",
+      "artifactSha256",
+      "buildProvenanceUri",
+      "executionId",
+      "keyId",
+    ],
+  );
 });
 
-test("stages canonical receipts and verifies every checksum and release identity", () => {
-  const sourceDirectory = sourceFixture();
-  const outputDirectory = join(
-    mkdtempSync(join(tmpdir(), "sorita-runtime-output-")),
-    "packet",
-  );
+test("stages signed canonical receipts and binds every receipt and signature hash", () => {
+  const outputDirectory = outputFixture("sorita-runtime-output-");
   const staged = stageRuntimeEvidence({
-    sourceDirectory,
+    sourceDirectory: sourceFixture(),
     outputDirectory,
     expected,
     now,
   });
+  assert.equal(staged.schemaVersion, 2);
+  assert.equal(staged.signingKeyId, keyId);
   assert.equal(staged.artifacts.length, REQUIRED_RUNTIME_CHECKS.length);
+  assert.equal(staged.artifacts[0].signature.bytes, 89);
+  assert.match(staged.artifacts[0].receipt.sha256, /^[a-f0-9]{64}$/u);
+  assert.match(staged.artifacts[0].signature.sha256, /^[a-f0-9]{64}$/u);
   assert.equal(
     verifyRuntimeEvidence({ packetDirectory: outputDirectory, expected, now })
       .commitSha,
     expected.commitSha,
   );
 
-  const changedPath = join(
-    outputDirectory,
-    "evidence",
-    "cloudflare-preview.json",
-  );
+  const changedPath = join(outputDirectory, "evidence", "cloudflare-preview.json");
   writeFileSync(changedPath, `${readFileSync(changedPath, "utf8")} `);
   assert.throws(
-    () =>
-      verifyRuntimeEvidence({
-        packetDirectory: outputDirectory,
-        expected,
-        now,
-      }),
+    () => verifyRuntimeEvidence({ packetDirectory: outputDirectory, expected, now }),
     /byte count changed|checksum changed/u,
   );
 });
 
-test("rejects stale, mismatched, incomplete, and duplicated machine evidence", () => {
-  const sourceDirectory = sourceFixture();
-  const stale = receipt("physical-device-matrix");
-  stale.observedAt = "2026-08-01T00:00:00.000Z";
+test("rejects unsigned changes, wrong keys, malformed signatures, and missing signatures", () => {
+  const changedSource = sourceFixture();
+  const changed = receipt("cloudflare-preview");
+  changed.observedAt = "2026-08-31T11:30:00.000Z";
   writeFileSync(
-    join(sourceDirectory, "physical-device-matrix.json"),
-    `${JSON.stringify(stale)}\n`,
+    join(changedSource, "cloudflare-preview.json"),
+    canonicalizeRuntimeReceipt(changed),
   );
   assert.throws(
     () =>
       stageRuntimeEvidence({
+        sourceDirectory: changedSource,
+        outputDirectory: outputFixture("sorita-runtime-unsigned-"),
+        expected,
+        now,
+      }),
+    /Ed25519 signature is invalid/u,
+  );
+
+  const otherKeys = generateKeyPairSync("ed25519");
+  const otherSpki = otherKeys.publicKey.export({ format: "der", type: "spki" });
+  const otherExpected = {
+    ...expected,
+    publicKeySpkiBase64: otherSpki.toString("base64"),
+    keyId: `sha256:${digest(otherSpki)}`,
+  };
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: sourceFixture(),
+        outputDirectory: outputFixture("sorita-runtime-wrong-key-"),
+        expected: otherExpected,
+        now,
+      }),
+    /signing key does not match|Ed25519 signature is invalid/u,
+  );
+
+  const malformedSource = sourceFixture();
+  writeFileSync(
+    join(malformedSource, "cloudflare-preview.sig"),
+    `${Buffer.alloc(64).toString("base64")}\n`,
+  );
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: malformedSource,
+        outputDirectory: outputFixture("sorita-runtime-bad-signature-"),
+        expected,
+        now,
+      }),
+    /Ed25519 signature is invalid/u,
+  );
+
+  const missingSource = sourceFixture();
+  unlinkSync(join(missingSource, "cloudflare-preview.sig"));
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: missingSource,
+        outputDirectory: outputFixture("sorita-runtime-missing-signature-"),
+        expected,
+        now,
+      }),
+    /signature is missing/u,
+  );
+});
+
+test("rejects noncanonical receipt bytes and legacy v2 receipts", () => {
+  const noncanonicalSource = sourceFixture();
+  const value = receipt("cloudflare-preview");
+  writeFileSync(
+    join(noncanonicalSource, "cloudflare-preview.json"),
+    `${JSON.stringify(value, null, 2)}\n`,
+  );
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: noncanonicalSource,
+        outputDirectory: outputFixture("sorita-runtime-noncanonical-"),
+        expected,
+        now,
+      }),
+    /not canonical JSON/u,
+  );
+
+  const legacySource = sourceFixture();
+  const legacy = receipt("cloudflare-preview");
+  legacy.schemaVersion = 2;
+  legacy.probe = {
+    id: "cloudflare-preview-health",
+    version: "2.0.0",
+    sourcePath: "utils/release-evidence/runtime-evidence.mjs",
+    sourceSha256: digest("legacy-validator"),
+  };
+  writeReceipt(legacySource, legacy);
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: legacySource,
+        outputDirectory: outputFixture("sorita-runtime-v2-"),
+        expected,
+        now,
+      }),
+    /violates JSON Schema/u,
+  );
+});
+
+test("signed raw-artifact hashes fail closed when evidence bytes change", () => {
+  const sourceDirectory = sourceFixture();
+  const artifactPath = join(
+    sourceDirectory,
+    "raw",
+    "cloudflare-preview",
+    "preview-health.json",
+  );
+  writeFileSync(artifactPath, `${readFileSync(artifactPath, "utf8")}tampered`);
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
         sourceDirectory,
-        outputDirectory: join(
-          mkdtempSync(join(tmpdir(), "sorita-runtime-stale-")),
-          "packet",
-        ),
+        outputDirectory: outputFixture("sorita-runtime-raw-tamper-"),
+        expected,
+        now,
+      }),
+    /raw artifact byte count changed|raw artifact checksum changed/u,
+  );
+});
+
+test("rejects stale, mismatched, incomplete, and duplicated signed evidence", () => {
+  const staleSource = sourceFixture();
+  const stale = receipt("physical-device-matrix");
+  stale.observedAt = "2026-08-01T00:00:00.000Z";
+  writeReceipt(staleSource, stale);
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: staleSource,
+        outputDirectory: outputFixture("sorita-runtime-stale-"),
         expected,
         now,
       }),
@@ -280,42 +456,79 @@ test("rejects stale, mismatched, incomplete, and duplicated machine evidence", (
   const mismatchedSource = sourceFixture();
   const mismatched = receipt("signed-android-ios");
   mismatched.commitSha = "c".repeat(40);
-  writeFileSync(
-    join(mismatchedSource, "signed-android-ios.json"),
-    `${JSON.stringify(mismatched)}\n`,
-  );
+  writeReceipt(mismatchedSource, mismatched);
   assert.throws(
     () =>
       stageRuntimeEvidence({
         sourceDirectory: mismatchedSource,
-        outputDirectory: join(
-          mkdtempSync(join(tmpdir(), "sorita-runtime-sha-")),
-          "packet",
-        ),
+        outputDirectory: outputFixture("sorita-runtime-sha-"),
         expected,
         now,
       }),
     /commit does not match/u,
   );
 
-  const duplicateSource = sourceFixture();
+  const duplicateSubjectSource = sourceFixture();
   const duplicated = receipt("signed-android-ios");
   duplicated.subjects[1] = { ...duplicated.subjects[0] };
-  writeFileSync(
-    join(duplicateSource, "signed-android-ios.json"),
-    `${JSON.stringify(duplicated)}\n`,
-  );
+  writeReceipt(duplicateSubjectSource, duplicated);
   assert.throws(
     () =>
       stageRuntimeEvidence({
-        sourceDirectory: duplicateSource,
-        outputDirectory: join(
-          mkdtempSync(join(tmpdir(), "sorita-runtime-duplicate-")),
-          "packet",
-        ),
+        sourceDirectory: duplicateSubjectSource,
+        outputDirectory: outputFixture("sorita-runtime-duplicate-subject-"),
         expected,
         now,
       }),
     /exactly one eas-build\/(?:android|ios)/u,
+  );
+
+  const duplicateExecutionSource = sourceFixture();
+  const duplicateExecution = receipt("security-review");
+  duplicateExecution.producer.executionId = executionId("cloudflare-preview");
+  writeReceipt(duplicateExecutionSource, duplicateExecution);
+  assert.throws(
+    () =>
+      stageRuntimeEvidence({
+        sourceDirectory: duplicateExecutionSource,
+        outputDirectory: outputFixture("sorita-runtime-duplicate-execution-"),
+        expected,
+        now,
+      }),
+    /reuse a producer execution ID/u,
+  );
+});
+
+test("manifest rejects duplicate signature paths and a changed signing key ID", () => {
+  const outputDirectory = outputFixture("sorita-runtime-manifest-negative-");
+  stageRuntimeEvidence({
+    sourceDirectory: sourceFixture(),
+    outputDirectory,
+    expected,
+    now,
+  });
+  const manifestPath = join(outputDirectory, "manifest.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.artifacts[1].signature.path = manifest.artifacts[0].signature.path;
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  assert.throws(
+    () => verifyRuntimeEvidence({ packetDirectory: outputDirectory, expected, now }),
+    /paths do not match|Duplicate runtime artifact path/u,
+  );
+
+  const otherOutput = outputFixture("sorita-runtime-manifest-key-");
+  stageRuntimeEvidence({
+    sourceDirectory: sourceFixture(),
+    outputDirectory: otherOutput,
+    expected,
+    now,
+  });
+  const otherManifestPath = join(otherOutput, "manifest.json");
+  const otherManifest = JSON.parse(readFileSync(otherManifestPath, "utf8"));
+  otherManifest.signingKeyId = `sha256:${"f".repeat(64)}`;
+  writeFileSync(otherManifestPath, `${JSON.stringify(otherManifest, null, 2)}\n`);
+  assert.throws(
+    () => verifyRuntimeEvidence({ packetDirectory: otherOutput, expected, now }),
+    /manifest signing key does not match/u,
   );
 });

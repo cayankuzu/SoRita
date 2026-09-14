@@ -15,7 +15,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import {
@@ -62,7 +62,6 @@ export function ProfileFeedScreen({
     listRef,
     safeStartIndex,
     initialScrollIndex,
-    getItemLayout,
     handleContentSizeChange,
     handleScrollToIndexFailed,
   } = useInitialFlatListIndex<PlaceFeedCardItem>({
@@ -92,14 +91,13 @@ export function ProfileFeedScreen({
         >
           <ArrowLeft color={colors.textMuted} size={18} />
         </IconButton>
-        <Text style={styles.title}>{title}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{title}</Text>
       </View>
 
       <FlatList
         {...listProps}
         ref={listRef}
         data={items}
-        getItemLayout={getItemLayout}
         initialScrollIndex={initialScrollIndex}
         initialNumToRender={Math.max(
           listProps.initialNumToRender ?? 4,
@@ -154,12 +152,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   content: {

@@ -13,7 +13,7 @@ import {
   type MapMarkerCluster,
 } from '@/mobile/app/shared/components/maps/mapMarkerClustering';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 
 const DEFAULT_LATITUDE = 39.9334;
@@ -173,6 +173,25 @@ function MapMarkerGlyph({
           )}
         </Svg>
       </View>
+    </View>
+  );
+}
+
+function MapLoadingOverlay({ isReady }: { isReady: boolean }) {
+  if (isReady) {
+    return null;
+  }
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={tr.map.mapLoading}
+      accessibilityLiveRegion="polite"
+      accessibilityState={{ busy: true }}
+      pointerEvents="none"
+      style={styles.loadingOverlay}
+    >
+      <Text style={styles.loadingText}>{tr.map.mapLoading}</Text>
     </View>
   );
 }
@@ -370,6 +389,9 @@ function GoogleMapViewComponent({
   return (
     <View collapsable={false} style={styles.container}>
       <MapView
+        accessibilityLabel={tr.map.mapMarkerState(places.length)}
+        accessibilityLiveRegion="polite"
+        accessibilityState={{ busy: !isReady }}
         collapsable={false}
         key={mapKey}
         ref={mapRef}
@@ -460,6 +482,7 @@ function GoogleMapViewComponent({
           );
         })}
       </MapView>
+      <MapLoadingOverlay isReady={isReady} />
     </View>
   );
 }
@@ -497,6 +520,21 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.mapBackground,
+  },
+  loadingText: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.glassSurface,
+    color: colors.textMuted,
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   markerShell: {
     width: 22,
@@ -539,7 +577,7 @@ const styles = StyleSheet.create({
   },
   clusterMarkerText: {
     color: colors.surface,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.metadataText.fontSize,
+    fontWeight: fontWeight.strong,
   },
 });

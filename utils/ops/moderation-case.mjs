@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const MUTATING_COMMANDS = new Set(['appeal', 'close', 'reopen', 'review', 'sanction', 'set-sla']);
+const MUTATING_COMMANDS = new Set(['appeal', 'close', 'reinstate', 'reopen', 'review', 'sanction', 'set-sla']);
 const READ_COMMANDS = new Set(['events', 'list', 'show']);
 const ALLOWED_STATUSES = new Set(['actioned', 'appealed', 'closed', 'in_review', 'open']);
 const CONFIRMATION = 'MODERATION_CASE_TRANSITION';
@@ -23,7 +23,7 @@ function readValue(argv, index, option) {
 export function parseModerationArguments(argv) {
   const [command, ...rest] = argv;
   if (!command || (!MUTATING_COMMANDS.has(command) && !READ_COMMANDS.has(command))) {
-    fail('command must be one of: list, show, events, review, sanction, close, appeal, reopen, set-sla');
+    fail('command must be one of: list, show, events, review, sanction, close, appeal, reinstate, reopen, set-sla');
   }
 
   const options = {
@@ -99,7 +99,7 @@ export function parseModerationArguments(argv) {
     if (!IDEMPOTENCY_PATTERN.test(options.idempotencyKey?.trim() ?? '')) {
       fail('--idempotency-key must be an opaque 8-200 character identifier');
     }
-    if (['appeal', 'sanction', 'set-sla'].includes(command) && !options.reference) {
+    if (['appeal', 'reinstate', 'sanction', 'set-sla'].includes(command) && !options.reference) {
       fail(`${command} requires --reference`);
     }
     if (options.reference && !REFERENCE_PATTERN.test(options.reference.trim())) {
@@ -118,7 +118,9 @@ export function parseModerationArguments(argv) {
 }
 
 export function buildTransitionPayload(options) {
-  if (!MUTATING_COMMANDS.has(options.command)) fail('transition payload requires a mutating command');
+  if (!MUTATING_COMMANDS.has(options.command) || options.command === 'reinstate') {
+    fail('transition payload requires a transition command');
+  }
   return {
     p_action: options.command,
     p_case_id: options.caseId,
@@ -127,6 +129,17 @@ export function buildTransitionPayload(options) {
     p_reason: options.reason.trim(),
     p_reference: options.reference?.trim() || null,
     p_sla_due_at: options.command === 'set-sla' ? options.slaDueAt : null,
+  };
+}
+
+export function buildReinstatementPayload(options) {
+  if (options.command !== 'reinstate') fail('reinstatement payload requires reinstate');
+  return {
+    p_case_id: options.caseId,
+    p_idempotency_key: options.idempotencyKey.trim(),
+    p_operator_id: options.operator.trim(),
+    p_reason: options.reason.trim(),
+    p_reference: options.reference.trim(),
   };
 }
 
@@ -232,11 +245,19 @@ export async function runModerationCommand(options, { environment = process.env,
     return rows.map(sanitizeEventRecord);
   }
 
-  const rpcUrl = new URL('/rest/v1/rpc/moderation_transition_case', baseUrl);
+  const isReinstatement = options.command === 'reinstate';
+  const rpcUrl = new URL(
+    isReinstatement
+      ? '/rest/v1/rpc/reinstate_moderation_sanction'
+      : '/rest/v1/rpc/moderation_transition_case',
+    baseUrl,
+  );
   const result = await requestJson(
     rpcUrl,
     {
-      body: JSON.stringify(buildTransitionPayload(options)),
+      body: JSON.stringify(
+        isReinstatement ? buildReinstatementPayload(options) : buildTransitionPayload(options),
+      ),
       headers: { Prefer: 'return=representation' },
       method: 'POST',
     },

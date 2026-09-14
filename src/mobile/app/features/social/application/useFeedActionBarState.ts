@@ -20,6 +20,7 @@ type UseFeedActionBarStateParams = {
   onCommentReport?: (commentId: string, reason: string, details?: string) => Promise<void> | void;
   onCommentSubmit?: (content: string, parentCommentId?: string | null) => Promise<void> | void;
   onCommentUpdate?: (commentId: string, content: string) => Promise<void> | void;
+  onCommentsRefresh?: () => Promise<void> | void;
   onLikePress?: () => Promise<void> | void;
   onRefresh?: () => Promise<void> | void;
   onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
@@ -34,6 +35,13 @@ function getErrorMessage(error: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
+function countCommentTree(items: FeedActionComment[]): number {
+  return items.reduce(
+    (total, comment) => total + 1 + countCommentTree(comment.replies || []),
+    0,
+  );
+}
+
 export const feedActionBarInternals = { getErrorMessage };
 
 export function useFeedActionBarState({
@@ -44,6 +52,7 @@ export function useFeedActionBarState({
   onCommentReport,
   onCommentSubmit,
   onCommentUpdate,
+  onCommentsRefresh,
   onLikePress,
   onRefresh,
   onReportSubmit,
@@ -70,9 +79,6 @@ export function useFeedActionBarState({
     if (typeof commentCountOverride === 'number') {
       return Math.max(0, commentCountOverride);
     }
-
-    const countCommentTree = (items: FeedActionComment[]): number =>
-      items.reduce((total, comment) => total + 1 + countCommentTree(comment.replies || []), 0);
 
     return countCommentTree(comments);
   }, [commentCountOverride, comments]);
@@ -164,14 +170,18 @@ export function useFeedActionBarState({
   };
 
   const handleRefreshComments = async () => {
-    if (!onRefresh || commentsRefreshing) {
+    const refreshComments = onCommentsRefresh ?? onRefresh;
+
+    if (!refreshComments || commentsRefreshing) {
       return;
     }
 
     setCommentsRefreshing(true);
 
     try {
-      await onRefresh();
+      await refreshComments();
+    } catch (error) {
+      showToast(getErrorMessage(error, tr.common.unexpectedError), 'error');
     } finally {
       setCommentsRefreshing(false);
     }
@@ -186,6 +196,8 @@ export function useFeedActionBarState({
 
     try {
       await onRefresh();
+    } catch (error) {
+      showToast(getErrorMessage(error, tr.common.unexpectedError), 'error');
     } finally {
       setLikersRefreshing(false);
     }

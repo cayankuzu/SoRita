@@ -136,7 +136,7 @@ try {
     'db.shadow_port',
     'db.pooler.port',
     'studio.port',
-    'inbucket.port',
+    'local_smtp.port',
     'edge_runtime.inspector_port',
     'analytics.port',
   ];
@@ -150,6 +150,9 @@ try {
       if (sectionMatch) {
         currentSection = sectionMatch[1];
         return line;
+      }
+      if (currentSection === 'analytics' && /^\s*enabled\s*=\s*true\s*$/u.test(line)) {
+        return line.replace('true', 'false');
       }
       const portMatch = line.match(/^(\s*(?:port|shadow_port|inspector_port)\s*=\s*)\d+(\s*(?:#.*)?)$/u);
       if (!portMatch) return line;

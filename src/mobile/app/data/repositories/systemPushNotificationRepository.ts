@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import type { NotificationPermissionsStatus } from 'expo-notifications';
 
 import { ensureAndroidPushChannel } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import { env } from '@/mobile/app/platform/config/env';
@@ -9,32 +8,18 @@ import {
   type FirebaseMessagingRemoteMessage,
 } from '@/mobile/app/platform/notifications/firebaseMessaging';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
+import { resolvePushPermission } from '@/mobile/app/platform/notifications/pushPermission';
 import { androidNotificationChannelId } from '@/mobile/app/platform/notifications/channels';
 
 async function loadNotificationsModule() {
   return import('expo-notifications');
 }
 
-function allowsIosDelivery(
-  permissions: NotificationPermissionsStatus,
-  Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
-) {
-  return (
-    permissions.granted ||
-    permissions.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-    permissions.ios?.status === Notifications.IosAuthorizationStatus.EPHEMERAL
-  );
-}
-
-async function hasGrantedPushPermission() {
-  const Notifications = await loadNotificationsModule();
-  const permissions = await Notifications.getPermissionsAsync();
-
-  if (Platform.OS === 'ios') {
-    return allowsIosDelivery(permissions, Notifications);
+class SystemPushTokenAcquisitionError extends Error {
+  constructor() {
+    super('FCM token acquisition returned an empty token.');
+    this.name = 'SystemPushTokenAcquisitionError';
   }
-
-  return permissions.granted;
 }
 
 function getSystemNotificationFcmTopic() {
@@ -64,12 +49,14 @@ export async function syncSystemPushNotifications() {
     return null;
   }
 
-  if (!await hasGrantedPushPermission()) {
+  // Android 13 associates the runtime permission prompt with a notification
+  // channel. Always create it before the shared Expo/FCM permission request.
+  await ensureAndroidPushChannel();
+
+  if (!(await resolvePushPermission({ requestIfPossible: true })).granted) {
     logger.info('push', 'FCM system push sync skipped because push permission is not granted.');
     return null;
   }
-
-  await ensureAndroidPushChannel();
 
   const firebaseMessaging = await loadFirebaseMessagingModule();
   const messaging = firebaseMessaging.getMessaging();
@@ -78,7 +65,7 @@ export async function syncSystemPushNotifications() {
 
   if (!token) {
     logger.warn('push', 'FCM token could not be resolved.');
-    return null;
+    throw new SystemPushTokenAcquisitionError();
   }
 
   await firebaseMessaging.subscribeToTopic(messaging, topic);
@@ -121,10 +108,9 @@ export async function presentForegroundSystemPushNotification(
     content: {
       title,
       body,
-      data: {
-        ...remoteMessage.data,
-        source: 'system-fcm',
-      },
+      // Provider data may contain content that should not be persisted in a
+      // local notification. System taps only need the stable source marker.
+      data: { source: 'system-fcm' },
       sound: 'default',
     },
     trigger: Platform.OS === 'android'

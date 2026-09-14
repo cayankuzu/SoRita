@@ -11,6 +11,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { MainTabs } from '@/mobile/app/app-shell/navigation/MainTabs';
+import { buildNavigationLinkingPrefixes } from '@/mobile/app/app-shell/navigation/linkingPrefixes';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
   AppHeaderScreen,
@@ -50,7 +51,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const APP_EXIT_DOUBLE_PRESS_WINDOW_MS = 1800;
 const NAVIGATION_STATE_PERSIST_DEBOUNCE_MS = 700;
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [`${env.appScheme}://`],
+  prefixes: buildNavigationLinkingPrefixes(env.appScheme, env.appLinkDomain),
   config: {
     screens: {
       AuthCallback: 'auth/callback',
@@ -102,6 +103,7 @@ function getActiveRouteName(state?: InitialState) {
 
 export function RootNavigator() {
   const { booted, user } = useAuth();
+  const navigationOwnerUserId = user?.id ?? null;
   const markStartupShellReady = useMarkStartupShellReady();
   const lastExitAttemptAtRef = useRef(0);
   const pendingNavigationStateRef = useRef<InitialState | undefined>(undefined);
@@ -109,11 +111,19 @@ export function RootNavigator() {
   const navigationPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigationPersistTaskRef = useRef<ReturnType<typeof scheduleDeferredTask> | null>(null);
   const [initialNavigationState, setInitialNavigationState] = useState<InitialState | undefined>();
+  const [restoredNavigationOwnerUserId, setRestoredNavigationOwnerUserId] = useState<
+    string | null | undefined
+  >();
   const [navigationStateReady, setNavigationStateReady] = useState(false);
   const [initialScreenReady, setInitialScreenReady] = useState(false);
+  const isNavigationOwnerReady =
+    navigationStateReady && restoredNavigationOwnerUserId === navigationOwnerUserId;
+  const ownerInitialNavigationState = isNavigationOwnerReady
+    ? initialNavigationState
+    : undefined;
   const sanitizedInitialNavigationState = React.useMemo(
-    () => sanitizePersistedNavigationState(initialNavigationState, Boolean(user)),
-    [initialNavigationState, user],
+    () => sanitizePersistedNavigationState(ownerInitialNavigationState, Boolean(user)),
+    [ownerInitialNavigationState, user],
   );
 
   const prioritizeActiveRoute = React.useCallback(() => {
@@ -146,6 +156,10 @@ export function RootNavigator() {
   }, []);
 
   const persistLatestNavigationState = React.useCallback(() => {
+    if (!navigationOwnerUserId) {
+      return;
+    }
+
     const nextState = pendingNavigationStateRef.current;
     const nextStateJson = nextState ? JSON.stringify(nextState) : null;
 
@@ -154,8 +168,8 @@ export function RootNavigator() {
     }
 
     lastSavedNavigationStateJsonRef.current = nextStateJson;
-    void savePersistedNavigationState(nextState);
-  }, []);
+    void savePersistedNavigationState(navigationOwnerUserId, nextState);
+  }, [navigationOwnerUserId]);
 
   const flushPendingNavigationStatePersist = React.useCallback(() => {
     cancelPendingNavigationStatePersist();
@@ -210,7 +224,7 @@ export function RootNavigator() {
   }, []);
 
   useEffect(() => {
-    if (!booted || !navigationStateReady) {
+    if (!booted || !isNavigationOwnerReady) {
       return;
     }
 
@@ -228,11 +242,24 @@ export function RootNavigator() {
     }
 
     setInitialScreenReady(true);
-  }, [booted, navigationStateReady, sanitizedInitialNavigationState, user]);
+  }, [booted, isNavigationOwnerReady, sanitizedInitialNavigationState, user]);
 
   useEffect(() => {
+    if (!booted) {
+      return;
+    }
+
     let active = true;
     let fallbackElapsed = false;
+    const ownerUserId = navigationOwnerUserId;
+    cancelPendingNavigationStatePersist();
+    pendingNavigationStateRef.current = undefined;
+    lastSavedNavigationStateJsonRef.current = null;
+    setInitialNavigationState(undefined);
+    setRestoredNavigationOwnerUserId(undefined);
+    setNavigationStateReady(false);
+    setInitialScreenReady(false);
+
     const fallbackTimeout = setTimeout(() => {
       if (!active) {
         return;
@@ -240,14 +267,20 @@ export function RootNavigator() {
 
       fallbackElapsed = true;
       setInitialNavigationState(undefined);
+      setRestoredNavigationOwnerUserId(ownerUserId);
       setNavigationStateReady(true);
     }, NAVIGATION_STATE_RESTORE_BUDGET_MS);
 
-    void getPersistedNavigationState()
+    const restoreNavigationState = ownerUserId
+      ? getPersistedNavigationState(ownerUserId)
+      : clearPersistedNavigationState().then(() => undefined);
+
+    void restoreNavigationState
       .then((state) => {
         if (active && !fallbackElapsed) {
           lastSavedNavigationStateJsonRef.current = state ? JSON.stringify(state) : null;
           setInitialNavigationState(state);
+          setRestoredNavigationOwnerUserId(ownerUserId);
         }
       })
       .finally(() => {
@@ -262,26 +295,25 @@ export function RootNavigator() {
       active = false;
       clearTimeout(fallbackTimeout);
     };
-  }, []);
+  }, [booted, cancelPendingNavigationStatePersist, navigationOwnerUserId]);
 
   useEffect(() => {
-    if (!navigationStateReady || !initialNavigationState || sanitizedInitialNavigationState) {
+    if (
+      !navigationOwnerUserId ||
+      !isNavigationOwnerReady ||
+      !ownerInitialNavigationState ||
+      sanitizedInitialNavigationState
+    ) {
       return;
     }
 
-    void clearPersistedNavigationState();
-  }, [initialNavigationState, navigationStateReady, sanitizedInitialNavigationState]);
-
-  useEffect(() => {
-    if (!booted || user) {
-      return;
-    }
-
-    cancelPendingNavigationStatePersist();
-    pendingNavigationStateRef.current = undefined;
-    lastSavedNavigationStateJsonRef.current = null;
-    void clearPersistedNavigationState();
-  }, [booted, cancelPendingNavigationStatePersist, user]);
+    void clearPersistedNavigationState(navigationOwnerUserId);
+  }, [
+    isNavigationOwnerReady,
+    navigationOwnerUserId,
+    ownerInitialNavigationState,
+    sanitizedInitialNavigationState,
+  ]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -299,13 +331,13 @@ export function RootNavigator() {
     };
   }, [flushPendingNavigationStatePersist, prioritizeActiveRoute]);
 
-  const canRenderNavigation = booted && navigationStateReady && initialScreenReady;
+  const canRenderNavigation = booted && isNavigationOwnerReady && initialScreenReady;
 
   return (
     <View style={styles.container}>
       {canRenderNavigation ? (
         <NavigationContainer
-          key={`${user ? 'auth' : 'guest'}-${sanitizedInitialNavigationState ? 'persisted' : 'fresh'}`}
+          key={`${navigationOwnerUserId ?? 'guest'}-${sanitizedInitialNavigationState ? 'persisted' : 'fresh'}`}
           initialState={sanitizedInitialNavigationState}
           linking={linking}
           ref={rootNavigationRef}

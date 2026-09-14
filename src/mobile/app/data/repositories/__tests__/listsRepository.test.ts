@@ -392,6 +392,31 @@ describe('listsRepository', () => {
     );
   });
 
+  it('rejects a caller-supplied owner when there is no authenticated session', async () => {
+    const { createList } = await import('@/mobile/app/data/repositories/listsRepository');
+
+    getSessionMock.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    await expect(createList({
+      id: 'list-without-session',
+      userId: 'caller-controlled-user',
+      name: 'Saved spots',
+      places: [],
+      isPublic: true,
+      likes: 0,
+      likedBy: [],
+      createdAt: '2026-04-16T10:00:00.000Z',
+      updatedAt: '2026-04-16T10:00:00.000Z',
+    })).rejects.toThrow();
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(uploadImageAssetMock).not.toHaveBeenCalled();
+    expect(uploadPlaceMediaAssetMock).not.toHaveBeenCalled();
+  });
+
   it('uploads private-list covers directly to private storage', async () => {
     const { createList } = await import('@/mobile/app/data/repositories/listsRepository');
     const listsInsertMock = vi.fn().mockResolvedValue({ error: null });

@@ -9,7 +9,13 @@ import { Check, X } from 'lucide-react-native';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  hitSlopFor,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type AuthImagePickerProps = {
   uri?: string;
@@ -36,6 +42,7 @@ export function AuthImagePicker({
   return (
     <View style={styles.block}>
       <InstantPressable
+        accessibilityHint={helperText}
         accessibilityLabel={placeholderText}
         accessibilityRole="button"
         accessibilityState={{ selected: hasSelection }}
@@ -143,13 +150,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...typography.compactTitleText,
     color: colors.text,
   },
   subtitle: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   headerActions: {
@@ -167,8 +173,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   selectionBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.secondary,
   },
   clearButton: {
@@ -180,8 +186,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkOverlay,
   },
   helperText: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
 });

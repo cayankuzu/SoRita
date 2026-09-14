@@ -522,7 +522,7 @@ async function enforceCoarseIpRateLimit(params: {
   let outcome: RateLimitOutcome;
 
   try {
-    outcome = await params.env.API_RATE_LIMITER.limit({ key: `coarse-ip:${ipHash}` });
+    outcome = await params.env.COARSE_IP_RATE_LIMITER.limit({ key: `coarse-ip:${ipHash}` });
   } catch {
     throw new GatewayError(503, 'rate_limit_unavailable', 'Rate limiting is unavailable.');
   }

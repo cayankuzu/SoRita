@@ -112,7 +112,12 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
       return;
     }
 
-    await markAllNotificationsReadMutation.mutateAsync().catch((err) => { logger.debug('notifications', 'Failed to mark all notifications as read', err); });
+    try {
+      await markAllNotificationsReadMutation.mutateAsync();
+    } catch (error) {
+      logger.debug('notifications', 'Failed to mark all notifications as read', error);
+      throw error;
+    }
   }, [markAllNotificationsReadMutation, unreadCount, userId]);
 
   const markItemRead = useCallback(

@@ -17,6 +17,7 @@ import { createFeedVisibilityStore } from '@/mobile/app/features/home/applicatio
 import { HomeFeedCardRow } from '@/mobile/app/features/home/ui/components/HomeFeedCardRow';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -29,7 +30,13 @@ import {
   MEDIA_PREFETCH_AHEAD_CARD_COUNT,
   MEDIA_PREFETCH_VIEWABILITY_DELAY_MS,
 } from '@/mobile/app/shared/performance/budgets';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
@@ -91,6 +98,7 @@ export function HomeScreen() {
     feedItems,
     followingCount,
     hasNextPage,
+    hasPartialDataError,
     isInitialLoading,
     isFetchingNextPage,
     isShowingStartupCache,
@@ -242,11 +250,7 @@ export function HomeScreen() {
     requestNextPage(paginationRef.current);
   }, []);
 
-  if (!user) {
-    return null;
-  }
-
-  if (isInitialLoading) {
+  if (!user || isInitialLoading) {
     return (
       <Screen safeTop={false} scroll={false} variant="feed">
         <SkeletonGroup style={styles.skeletonWrap}>
@@ -308,6 +312,7 @@ export function HomeScreen() {
   return (
     <Screen safeTop={false} scroll={false} variant="feed">
       <FlatList
+        accessibilityState={{ busy: refreshing || isFetchingNextPage }}
         {...listProps}
         initialNumToRender={Math.min(
           Math.max(feedItems.length, 1),
@@ -319,6 +324,19 @@ export function HomeScreen() {
         data={feedItems}
         keyExtractor={(item) => item.key}
         renderItem={renderFeedItem}
+        ListHeaderComponent={
+          hasPartialDataError && feedItems.length > 0 ? (
+            <View style={styles.partialDataNotice}>
+              <InlineNotice
+                tone="warning"
+                title={tr.home.partialDataTitle}
+                description={tr.home.partialDataDescription}
+                actionLabel={tr.home.partialDataRetry}
+                onAction={retry}
+              />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={renderEmptyState}
         contentContainerStyle={[
           styles.feedListContent,
@@ -333,8 +351,15 @@ export function HomeScreen() {
         onEndReachedThreshold={0.35}
         ListFooterComponent={
           isFetchingNextPage ? (
-            <View style={styles.listFooter}>
+            <View
+              accessibilityLabel={tr.common.loadingMore}
+              accessibilityLiveRegion="polite"
+              accessibilityRole="progressbar"
+              accessibilityState={{ busy: true }}
+              style={styles.listFooter}
+            >
               <ActivityIndicator color={colors.primary} size="small" />
+              <Text style={styles.listFooterLabel}>{tr.common.loadingMore}</Text>
             </View>
           ) : null
         }
@@ -366,8 +391,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   primaryCtaText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   emptyStateWrap: {
@@ -383,6 +408,16 @@ const styles = StyleSheet.create({
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     paddingVertical: 10,
+  },
+  listFooterLabel: {
+    ...typography.metadataText,
+    color: colors.primary,
+    fontWeight: fontWeight.strong,
+  },
+  partialDataNotice: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
 });

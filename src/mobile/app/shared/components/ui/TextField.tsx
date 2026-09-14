@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   StyleSheet,
-  Platform,
   Text,
   TextInput,
   TextInputProps,
@@ -11,9 +10,9 @@ import {
 import {
   colors,
   fontWeight,
+  minTouchSize,
   radius,
   semanticColors,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -28,8 +27,6 @@ type TextFieldProps = TextInputProps & {
   helperTone?: 'muted' | 'danger' | 'success';
   status?: 'default' | 'error' | 'success';
 };
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 export const TextField = React.forwardRef<TextInput, TextFieldProps>(function TextField({
   label,
@@ -160,7 +157,7 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   input: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,

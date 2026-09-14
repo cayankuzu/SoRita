@@ -1,6 +1,93 @@
 # SoRita — Current Gap Matrix
 
-- Candidate commit: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
+## 2026-09-07 working-tree hardening delta
+
+> This section is the current assessment. The 2026-09-03 material below is
+> retained as historical evidence and must not be read as proof for this dirty,
+> uncommitted tree.
+
+- Base HEAD: `b347f7f2ff91becec0db97f83088c017d6e7d1ed`
+- Working branch: `chore/final-release-candidate-aaa`
+- Candidate status: **none** — the working tree is intentionally uncommitted
+- Product version: `1.0.106`; Android `111`; iOS `91`
+- Current decision: **SOURCE HARDENED / RELEASE `NO-GO`**
+
+The three supplied master prompts were treated as an audit backlog, not as an
+instruction to manufacture a score. Contradictory or unjustified expansion
+(dark mode, English/RTL, microservices, Kafka, and other non-MVP surface) was
+rejected. The Turkish, light-theme, phone-first MVP surface remains frozen by
+the bidirectional product-surface guard. Work was prioritized by user-data
+isolation, auth correctness, exploitability, crash/performance impact, and the
+strength of evidence that can be produced in this environment.
+
+### Material changes in this delta
+
+| Area | Result |
+|---|---|
+| Auth lifecycle | Auth transitions now have one lifecycle owner, serialized scope changes, generation/owner guards at asynchronous boundaries, fail-closed purge handling, owner-bound persisted snapshots, and deterministic login/logout/refresh race coverage. |
+| Notification isolation | Hydration uses authoritative unread counts, parallel page/count reads, monotonic same-owner sequencing, account-generation and unmount guards, and repository-level pre/post session-owner verification including empty responses. |
+| Request/media security | Legacy weak request signatures and invalid-signature downgrade retries were removed. Upload cleanup now targets the actual bucket and size errors use the selected bucket policy. |
+| Lists/data ownership | Network reads require the live authenticated Supabase owner; caller-supplied fallback ownership was removed. |
+| Android notification privacy | Lock-screen visibility is private. The immutable channel was bumped to `sorita-alerts-v5`, and native/app-config parity is enforced. |
+| Profile performance | The static discovery grid and nested same-axis scroll layout were removed. Each tab now has a real virtualized list as its vertical scroll owner while preserving refresh, pagination, tab offsets, and scroll-to-top behavior. |
+| Release evidence | The checked-in scorecard is schema-v2, fixed-shape, baseline-only `NO-GO`. It cannot ingest arbitrary receipts or self-assert runtime verification; final `GO` can only come from the checksum-bound same-SHA release-evidence workflow artifact. |
+| Test and tool reliability | Vitest uses the runner config loader and a version-aware dedicated Node local-storage file, coverage is cleaned before every measurement so stale shards cannot inflate the result, the React Native `Pressable` test mock now evaluates render props, Docker's npm runner no longer uses a shell, and Supabase local mail uses the current `local_smtp` configuration. |
+
+### Current local automated evidence
+
+These results were produced on the dirty working tree above after the code and
+test changes. They are useful local evidence, but they are not an immutable-SHA
+CI attestation and do not change the release decision.
+
+| Gate | 2026-09-07 local result |
+|---|---|
+| Type safety and repository lint | `typecheck` passed. Full lint passed, including architecture boundaries, 405 app/21 backend source-health budgets with no cycles, UTF-8 across 782 files, 64 tracked evidence documents, UI copy/tokens, accessibility, 150-file 48dp touch targets, product-surface freeze, marketing claims, and native parity. |
+| Full regression | 167 files / 995 tests passed. |
+| Security regression | 20 files / 303 tests passed. |
+| Clean global coverage | 167 files / 995 tests passed; statements 94.63%, branches 90.25%, functions 94.26%, lines 94.86%. No threshold or exclusion was relaxed. |
+| Release policy | Scorecard policy/schema guard and 12 self-tests passed. This validates a working-tree `NO-GO` baseline only; the printed HEAD is context, not a SHA binding. |
+| Delivery and operations contracts | Deployment workflows 17/17, OTA/EAS 44/44, release evidence 8/8, and operations 18/18 passed. |
+| Performance and Expo contracts | 7 files / 24 tests passed. Expo dependencies are aligned and Expo Doctor passed 19/19 checks. The official Android Hermes bytecode bundle measured 9.46 MiB against a 12 MiB budget, and the Android release baseline-profile merge passed. |
+| Dependency and dead-code policy | Dead-code and license checks passed for 738 locked production packages. The production audit reports 0 critical, 0 high and 4 moderate advisories under one time-bounded acceptance; signature provenance verified 968 packages and 218 attestations. |
+| Container and database validation | The ready isolated validation database applied the pending `20260914150000`, `20260914153000`, and `20260914160000` migrations in order; DB lint returned no errors and 10 pgTAP files / 311 assertions passed. A fresh full-stack verification attempt exceeded the shell timeout during initial stack startup, so final same-SHA zero-reset and dump/restore evidence is still required. This is local evidence, not hosted-provider evidence. |
+| Android smoke artifact | The current tree produced a 125,021,804-byte APK for `com.cayan.sorita.socialmap` version `1.0.102` (`107`), SHA-256 `9129B78B6467D0E201862BEB4F70CCB69CEBF19C9BE329CF7DC97EF7E1ACB6B7`. APK Signature Scheme v2 verification passed, but the signer is Android Debug, so this is only a local smoke artifact—not a store/release artifact. |
+| Emulator smoke | The APK updated in place and rendered the guest UI on one API 30 emulator, but Maestro was occluded by an emulator System UI ANR dialog. A second emulator retained an older differently signed build and was not uninstalled or data-cleared. No device-flow execution is claimed as passed. |
+| Product and E2E manifests | Product-surface guard 12/12 passed. All 30 critical flows map to named evidence, but only 1/12 device-required flows maps to a Maestro YAML definition and no execution result is attached. |
+
+An additional in-session security review pass found and drove closure of several
+subtle auth ordering cases, including `SIGNED_OUT`/`SIGNED_IN` renders that occur
+before a Supabase mutation promise resolves, chained `B → null → C` transitions,
+stale transition markers, failed newer login attempts, and terminal logout priority.
+No high-confidence open-diff security finding remained after the final patch;
+this is not a substitute for the external gates below.
+
+### Open release blockers
+
+1. A non-placeholder Sentry auth credential is still reachable in historical
+   `.env` commits. Revoke/rotate it provider-side, review access/audit logs and
+   blast radius, coordinate history remediation, and attach a clean full-history
+   scan. Never copy the credential value into evidence or tickets.
+2. There is no clean immutable candidate SHA and therefore no checksum-bound
+   same-SHA CI/provider evidence for hosted Supabase, Cloudflare, EAS, Sentry,
+   migrations, restore, canary, rollback, or production monitoring.
+3. Production-signed Android AAB and iOS IPA, Play Internal/TestFlight evidence,
+   and the required physical-device matrix are absent. The local APK is
+   debug-signed and cannot close any distribution gate. The successful Android
+   build also emitted warnings from transitive Google Play Services bytecode and
+   future Gradle 10 deprecations; the signed release lane must re-evaluate them
+   against its exact dependency/plugin graph.
+4. The critical-flow manifest maps 30/30 flows to named automated evidence, but
+   only 1/12 device-required flows has a mapped Maestro YAML definition and no
+   same-SHA execution result is attached. The remaining flows require real
+   device/store execution against the same immutable candidate.
+
+Until every blocker is closed by independently controlled evidence, neither a
+9.8 score nor a production `GO` is supportable.
+
+## Historical snapshot — 2026-09-03
+
+- Previous/base HEAD: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
+- Resulting candidate: `86702f86c06d57a05a668bebf47bdb91e7b0636f`
 - Working branch: `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`
 - Audit date: 2026-09-03
 - Scope: re-verification of every inherited audit finding, plus the defects found

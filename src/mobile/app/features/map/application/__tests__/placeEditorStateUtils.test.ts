@@ -3,16 +3,35 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildEditorSourceKey,
   filterSafeSelectedLists,
+  getDuplicateListIds,
   getInitialBestTimes,
   getInitialSelectedCategories,
   getInitialSelectedLists,
+  hasValidPlaceIdentity,
   isEquivalentTargetPlace,
+  normalizePersistablePlaceIdentity,
   reorderPhotos,
   swapPhotos,
   toggleArrayValue,
 } from '@/mobile/app/features/map/application/placeEditorStateUtils';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 describe('placeEditorStateUtils', () => {
+  it('rejects display-only place identity values while preserving user input', () => {
+    expect(normalizePersistablePlaceIdentity(`  ${tr.map.resolvingAddress}  `)).toBe('');
+    expect(normalizePersistablePlaceIdentity(tr.map.addressUnavailable)).toBe('');
+    expect(normalizePersistablePlaceIdentity(tr.placeEditor.placeNamePlaceholder)).toBe('');
+    expect(normalizePersistablePlaceIdentity('  Moda Sahili  ')).toBe('Moda Sahili');
+    expect(
+      hasValidPlaceIdentity([
+        tr.map.resolvingAddress,
+        tr.map.addressUnavailable,
+        tr.placeEditor.placeNamePlaceholder,
+      ]),
+    ).toBe(false);
+    expect(hasValidPlaceIdentity([tr.map.resolvingAddress, 'Moda Sahili'])).toBe(true);
+  });
+
   it('compares equivalent target places', () => {
     expect(
       isEquivalentTargetPlace(
@@ -88,5 +107,43 @@ describe('placeEditorStateUtils', () => {
         new Set(['list-1', 'list-2']),
       ),
     ).toEqual(['list-1', 'list-2']);
+  });
+
+  it('identifies every target list that already contains the same place', () => {
+    const duplicatePlace = {
+      id: 'copy-1',
+      name: 'Özgür Kafe',
+      lat: 41.000001,
+      lng: 29.000001,
+      addedAt: '2025-01-01T00:00:00.000Z',
+    };
+    const lists = [
+      {
+        id: 'duplicate-list',
+        userId: 'viewer',
+        name: 'Favoriler',
+        places: [duplicatePlace],
+        isPublic: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'available-list',
+        userId: 'viewer',
+        name: 'Yeni yerler',
+        places: [],
+        isPublic: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ];
+
+    expect(
+      [...getDuplicateListIds(lists, {
+        name: 'ozgur kafe',
+        lat: 41,
+        lng: 29,
+      })],
+    ).toEqual(['duplicate-list']);
   });
 });

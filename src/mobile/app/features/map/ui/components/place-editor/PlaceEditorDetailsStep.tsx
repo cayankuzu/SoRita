@@ -11,13 +11,20 @@ import { PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorDetailsStepProps = {
   bestTimes: string[];
   dietarySelections: string[];
   priceMax: string;
   priceMin: string;
+  priceRangeIsValid: boolean;
   studentFriendly: boolean;
   onPriceMaxChange: (value: string) => void;
   onPriceMinChange: (value: string) => void;
@@ -31,6 +38,7 @@ export function PlaceEditorDetailsStep({
   dietarySelections,
   priceMax,
   priceMin,
+  priceRangeIsValid,
   studentFriendly,
   onPriceMaxChange,
   onPriceMinChange,
@@ -41,8 +49,12 @@ export function PlaceEditorDetailsStep({
   return (
     <View style={styles.stepContent}>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.studentDiscount}</Text>
-        <View style={styles.segmentedRow}>
+        <Text style={styles.sectionTitle}>{`${tr.placeEditor.studentDiscount} (${tr.common.optional})`}</Text>
+        <View
+          accessibilityLabel={tr.placeEditor.studentDiscount}
+          accessibilityRole="radiogroup"
+          style={styles.segmentedRow}
+        >
           <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: studentFriendly }}
@@ -84,7 +96,7 @@ export function PlaceEditorDetailsStep({
       <View style={styles.inlineFields}>
         <View style={styles.inlineField}>
           <TextField
-            label={tr.placeEditor.minPrice}
+            label={`${tr.placeEditor.minPrice} (₺, ${tr.common.optional})`}
             value={priceMin}
             onChangeText={onPriceMinChange}
             keyboardType="numeric"
@@ -93,11 +105,18 @@ export function PlaceEditorDetailsStep({
         </View>
         <View style={styles.inlineField}>
           <TextField
-            label={tr.placeEditor.maxPrice}
+            helper={
+              priceRangeIsValid
+                ? tr.placeEditor.priceRangeHelper
+                : tr.placeEditor.priceRangeInvalid
+            }
+            helperTone={priceRangeIsValid ? 'muted' : 'danger'}
+            label={`${tr.placeEditor.maxPrice} (₺, ${tr.common.optional})`}
             value={priceMax}
             onChangeText={onPriceMaxChange}
             keyboardType="numeric"
             placeholder={tr.placeEditor.pricePlaceholder}
+            status={priceRangeIsValid ? 'default' : 'error'}
           />
         </View>
       </View>
@@ -124,8 +143,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   sectionHelper: {
@@ -135,7 +154,7 @@ const styles = StyleSheet.create({
   },
   selectionMeta: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   inlineFields: {
@@ -166,8 +185,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
   },
   segmentText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   segmentTextPrimaryActive: {

@@ -15,6 +15,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  fontWeight,
   radius,
   semanticColors,
   touch,
@@ -122,7 +123,8 @@ function AuthFieldHelper({ id, message, tone }: { id: string; message?: string; 
 
   return (
     <Text
-      accessibilityLiveRegion="polite"
+      accessibilityLiveRegion={tone === 'danger' ? 'assertive' : 'polite'}
+      accessibilityRole={tone === 'danger' ? 'alert' : undefined}
       nativeID={id}
       style={[
         styles.helper,
@@ -290,8 +292,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    ...typography.metadataText,
-    fontWeight: '600',
+    ...typography.captionText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
   inputWrap: {
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
   },
   input: {
     color: colors.text,
-    fontSize: 13,
+    ...typography.inputText,
     minHeight: MIN_TOUCH_SIZE,
     paddingVertical: 8,
     paddingRight: 30,
@@ -346,8 +348,8 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   helper: {
-    ...typography.metadataText,
-    lineHeight: 15,
+    ...typography.captionText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
   helperDanger: {

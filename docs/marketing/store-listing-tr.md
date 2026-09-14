@@ -2,7 +2,7 @@
 
 Tarih: 2026-09-04
 Uygulama adı: **SoRita** (değiştirilmiyor — marka kararı yok)
-Paket: `com.cayan.sorita.socialmap` · Sürüm: `1.0.102`
+Paket: `com.cayan.sorita.socialmap` · Sürüm: `1.0.106`
 Dil: Yalnız Türkçe. Yeni dil bu kapsamda yok.
 Bağlı kütük: [claims-register.md](claims-register.md)
 
@@ -30,7 +30,7 @@ oluştur") türetildi.
 
 ```
 Beğendiğin mekânları haritada işaretle, listelerine ekle ve arkadaşlarınla
-paylaş. Reklam yok, pazarlama takip SDK'sı yok.
+paylaş. Reklam/attribution SDK'sı yok; ürün analitiği isteğe bağlıdır.
 ```
 
 ### Açıklama (ilk üç satır ekranda görünür)
@@ -52,8 +52,9 @@ Takip et, beğen, yorum yaz ve yanıtla. Bir mekânın kimin listesinde olduğun
 görmek, puan ortalamasından daha çok şey anlatır.
 
 GİZLİLİK VE KONTROL
-• Reklam yok. Pazarlama veya attribution SDK'sı yok. Yalnız çökme raporu
-  (Sentry) çalışır.
+• Reklam ve sponsorlu yerleştirme yok. Attribution SDK'sı yok. Sentry teknik
+  telemetri için kullanılabilir; anonim ürün analitiği varsayılan olarak kapalı
+  ve isteğe bağlıdır.
 • Listelerini herkese açık ya da özel tutabilirsin; hesabını gizli yapabilirsin.
 • Rahatsız eden kullanıcıyı engelleyebilir, içeriği bildirebilirsin.
 • Hesabını uygulama içinden silebilirsin.
@@ -98,16 +99,20 @@ Beyan gerçek veri akışıyla eşleşmek zorundadır. Doğrulanan durum:
 | Alan | Beyan | Dayanak |
 | --- | --- | --- |
 | Reklam kimliği | Toplanmıyor | Üretim bağımlılıklarında reklam SDK'sı yok (C3) |
-| Analitik / attribution | Toplanmıyor | Analitik/attribution SDK'sı yok (C3) |
-| Çökme verisi | Toplanıyor | `@sentry/react-native` (C3) |
+| Attribution / reklam verisi | Toplanmıyor | Reklam ve attribution SDK'sı yok (C3) |
+| Uygulama etkileşimi / performans | Sentry etkinse teknik ölçümler; ayrıca yalnız açık kullanıcı izni, yayın anahtarı ve uzaktan kill-switch onayı varsa PostHog ile sınırlı anonim ürün olayları toplanabilir | Düşük kardinaliteli olay, ekran/işlem adı ve süre/sayaç metrikleri (C3) |
+| Çökme ve tanılama verisi | Sentry etkinse toplanabilir | `@sentry/react-native`, performans izi ve hata raporu (C3) |
+| Hesap tanımlayıcı | Sentry etkinse dahili kullanıcı kimliğiyle ilişkilendirilebilir | `AuthSessionProvider.tsx` içindeki `Sentry.setUser` (C3) |
 | Konum | Toplanıyor (uygulama işlevi) | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` |
 | Fotoğraf/video | Toplanıyor (kullanıcı içeriği) | `CAMERA`, medya seçici |
 | Kişisel bilgi | E-posta, kullanıcı adı, profil | Supabase Auth |
 | Silme | Uygulama içinden hesap silme var | `delete-user` Edge Function (C4) |
 | Şifreleme | Aktarımda TLS | Supabase/HTTPS |
 
-**Yapılmayacak:** "Hiçbir veri toplanmıyor" kutusunu işaretlemek. Çökme raporu
-ve hesap verisi var; yanlış beyan mağaza yaptırımı sebebidir.
+**Yapılmayacak:** "Hiçbir veri toplanmıyor" veya "analitik toplanmıyor"
+kutusunu işaretlemek. Nihai App Store Privacy / Play Data Safety cevapları,
+yayın yapılandırmasındaki Sentry/PostHog ayarları, kullanıcı izni ve sağlayıcı sözleşmeleriyle ayrıca
+doğrulanmalıdır; yanlış beyan mağaza yaptırımı sebebidir.
 
 ## İçerik derecelendirmesi notu
 

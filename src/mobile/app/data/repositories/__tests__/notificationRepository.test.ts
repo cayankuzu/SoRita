@@ -8,6 +8,16 @@ const selectMock = vi.fn();
 const updateMock = vi.fn();
 const fromMock = vi.fn();
 const rpcMock = vi.fn();
+const getSessionMock = vi.fn();
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
 
 vi.mock('@/mobile/app/data/repositories/notifications/notificationQueryHelpers', () => ({
   fetchNotifications: fetchNotificationsMock,
@@ -16,6 +26,7 @@ vi.mock('@/mobile/app/data/repositories/notifications/notificationQueryHelpers',
 
 vi.mock('@/mobile/app/platform/supabase/client', () => ({
   supabase: {
+    auth: { getSession: getSessionMock },
     from: fromMock,
     rpc: rpcMock,
   },
@@ -31,11 +42,16 @@ describe('notificationRepository', () => {
     updateMock.mockReset();
     fromMock.mockReset();
     rpcMock.mockReset();
+    getSessionMock.mockReset();
 
     eqMock.mockResolvedValue({ error: null });
     updateMock.mockReturnValue({ eq: eqMock });
     fromMock.mockReturnValue({ update: updateMock });
     rpcMock.mockResolvedValue({ error: null });
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'viewer-1' } } },
+      error: null,
+    });
   });
 
   it('refreshes and paginates notifications through the helper layer', async () => {
@@ -113,6 +129,41 @@ describe('notificationRepository', () => {
 
     rpcMock.mockResolvedValueOnce({ data: null, error: new Error('count failed') });
     await expect(repository.getNotificationCount('viewer-1')).rejects.toThrow('count failed');
+  });
+
+  it('rejects unread counts when the authenticated owner mismatches before the RPC', async () => {
+    getSessionMock.mockResolvedValueOnce({
+      data: { session: { user: { id: 'viewer-2' } } },
+      error: null,
+    });
+    const repository = await import('@/mobile/app/data/repositories/notificationRepository');
+
+    await expect(repository.getNotificationCount('viewer-1')).rejects.toThrow(
+      'Notification session owner mismatch.',
+    );
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects unread counts when the authenticated owner changes during the RPC', async () => {
+    const rpcRequest = createDeferred<{ data: number; error: null }>();
+    getSessionMock
+      .mockResolvedValueOnce({
+        data: { session: { user: { id: 'viewer-1' } } },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { session: { user: { id: 'viewer-2' } } },
+        error: null,
+      });
+    rpcMock.mockReturnValueOnce(rpcRequest.promise);
+    const repository = await import('@/mobile/app/data/repositories/notificationRepository');
+
+    const countPromise = repository.getNotificationCount('viewer-1');
+    await vi.waitFor(() => expect(rpcMock).toHaveBeenCalledWith('notification_unread_count'));
+    rpcRequest.resolve({ data: 12, error: null });
+
+    await expect(countPromise).rejects.toThrow('Notification session owner mismatch.');
+    expect(getSessionMock).toHaveBeenCalledTimes(2);
   });
 
   it('marks notifications as read', async () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  AccessibilityInfo,
   StyleSheet,
   Text,
   TextInput,
@@ -7,12 +8,24 @@ import {
 } from 'react-native';
 import { Flag, X } from 'lucide-react-native';
 
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
+import { logger } from '@/mobile/app/platform/feedback/logger';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import {
+  getReportReasonsForTarget,
+  type ReportTargetType,
+} from '@/mobile/app/shared/components/feedback/reportReasonOptions';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type ReportActionSheetProps = {
   visible: boolean;
@@ -20,6 +33,7 @@ type ReportActionSheetProps = {
   description?: string;
   reportDetails?: string;
   reportReason: string;
+  targetType: ReportTargetType;
   onReportDetailsChange?: (value: string) => void;
   onReportReasonChange: (value: string) => void;
   onClose: () => void;
@@ -32,16 +46,65 @@ export function ReportActionSheet({
   description,
   reportDetails = '',
   reportReason,
+  targetType,
   onReportDetailsChange,
   onReportReasonChange,
   onClose,
   onSubmit,
 }: ReportActionSheetProps) {
+  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const reportReasons = React.useMemo(
+    () => getReportReasonsForTarget(tr.cards.reportReasons, targetType),
+    [targetType],
+  );
+
+  React.useEffect(() => {
+    if (!visible) {
+      setIsSubmitting(false);
+      setErrorMessage(null);
+    }
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (reportReason && !reportReasons.includes(reportReason)) {
+      onReportReasonChange('');
+    }
+  }, [onReportReasonChange, reportReason, reportReasons]);
+
+  const handleClose = React.useCallback(() => {
+    if (!isSubmitting) {
+      onClose();
+    }
+  }, [isSubmitting, onClose]);
+
+  const handleSubmit = React.useCallback(async () => {
+    if (!reportReason || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      await onSubmit();
+    } catch (error) {
+      logger.warn('ui', 'Report submission failed', error);
+      const message = getUserFacingErrorMessage(error, tr.cards.reportFailed);
+      setErrorMessage(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, onSubmit, reportReason]);
+
   return (
     <ModalScaffold
       accessibilityLabel={title}
       visible={visible}
-      onClose={onClose}
+      initialFocusRef={titleRef}
+      onClose={handleClose}
       variant="sheet"
       scroll
       dismissOnBackdropPress
@@ -51,49 +114,59 @@ export function ReportActionSheet({
           <PrimaryButton
             title={tr.common.cancel}
             variant="secondary"
-            onPress={onClose}
+            disabled={isSubmitting}
+            onPress={handleClose}
             style={styles.actionButton}
           />
           <PrimaryButton
             title={tr.common.send}
-            onPress={onSubmit}
-            disabled={!reportReason}
+            onPress={handleSubmit}
+            disabled={!reportReason || isSubmitting}
+            loading={isSubmitting}
             style={styles.actionButton}
           />
         </View>
       }
     >
-      <View style={styles.handle} />
-
       <View style={styles.header}>
         <View style={styles.titleWrap}>
           <View style={styles.iconWrap}>
             <Flag color={colors.warning} size={14} />
           </View>
           <View style={styles.headerTextWrap}>
-            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+            <Text ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</Text>
             {description ? <Text style={styles.description}>{description}</Text> : null}
           </View>
         </View>
-        <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
+        <IconButton
+          accessibilityLabel={tr.common.close}
+          disabled={isSubmitting}
+          onPress={handleClose}
+          variant="surface"
+        >
           <X color={colors.textMuted} size={14} />
         </IconButton>
       </View>
 
-      <View style={styles.options}>
-        {tr.cards.reportReasons.map((reason) => {
+      <View accessibilityRole="radiogroup" style={styles.options}>
+        {reportReasons.map((reason) => {
           const selected = reportReason === reason;
 
           return (
             <InstantPressable
               key={reason}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
+              accessibilityLabel={reason}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected, disabled: isSubmitting }}
+              disabled={isSubmitting}
               style={[
                 styles.option,
                 selected ? styles.optionActive : null,
               ]}
-              onPress={() => onReportReasonChange(reason)}
+              onPress={() => {
+                setErrorMessage(null);
+                onReportReasonChange(reason);
+              }}
             >
               <Text
                 style={[
@@ -119,9 +192,23 @@ export function ReportActionSheet({
           style={styles.detailsInput}
           textAlignVertical="top"
           value={reportDetails}
-          onChangeText={onReportDetailsChange}
+          editable={!isSubmitting}
+          onChangeText={(value) => {
+            setErrorMessage(null);
+            onReportDetailsChange?.(value);
+          }}
         />
       </View>
+
+      {errorMessage ? (
+        <Text
+          accessibilityLiveRegion="assertive"
+          accessibilityRole="alert"
+          style={styles.errorText}
+        >
+          {errorMessage}
+        </Text>
+      ) : null}
     </ModalScaffold>
   );
 }
@@ -129,13 +216,6 @@ export function ReportActionSheet({
 const styles = StyleSheet.create({
   sheetContent: {
     paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.cardBorder,
   },
   header: {
     flexDirection: 'row',
@@ -162,13 +242,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   options: {
@@ -178,8 +256,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailsLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   detailsInput: {
@@ -190,8 +267,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.text,
   },
   option: {
@@ -208,13 +284,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningBg,
   },
   optionText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.bodyText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
   optionTextActive: {
     color: colors.warningText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
+  },
+  errorText: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerBg,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    ...typography.captionText,
+    fontWeight: fontWeight.medium,
+    color: colors.danger,
   },
   actions: {
     flexDirection: 'row',

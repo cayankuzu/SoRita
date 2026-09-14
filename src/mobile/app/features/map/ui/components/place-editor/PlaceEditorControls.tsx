@@ -10,7 +10,7 @@ import { Star, StarHalf } from 'lucide-react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 import { compareLocalizedText } from '@/mobile/app/shared/utils/textSort';
@@ -34,7 +34,12 @@ export function OptionRail({ options, selectedValues, onToggle }: OptionRailProp
   }, [options]);
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRail}>
+    <ScrollView
+      horizontal
+      keyboardShouldPersistTaps="handled"
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.optionRail}
+    >
       {optionColumns.map((column, columnIndex) => (
         <View key={`column-${columnIndex}`} style={styles.optionColumn}>
           {column.map((item) => {
@@ -138,9 +143,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   railChipText: {
-    fontSize: 12,
+    ...typography.metadataText,
     color: colors.textMuted,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   railChipTextSelected: {
     color: colors.primaryDark,
@@ -169,8 +174,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: colors.warningBg,
     color: colors.warningText,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     textAlign: 'center',
   },
 });

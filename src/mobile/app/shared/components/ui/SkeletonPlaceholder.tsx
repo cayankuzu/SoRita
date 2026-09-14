@@ -79,7 +79,13 @@ type SkeletonGroupProps = {
 
 export function SkeletonGroup({ children, style }: SkeletonGroupProps) {
   return (
-    <View accessibilityLabel={tr.common.loading} style={[styles.group, style]}>
+    <View
+      accessible
+      accessibilityLabel={tr.common.loading}
+      accessibilityRole="progressbar"
+      accessibilityState={{ busy: true }}
+      style={[styles.group, style]}
+    >
       {children}
     </View>
   );

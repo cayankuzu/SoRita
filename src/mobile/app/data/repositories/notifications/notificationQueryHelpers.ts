@@ -9,6 +9,7 @@ import type {
   NotificationCursor,
   NotificationPage,
 } from '@/mobile/app/data/contracts/notification';
+import { assertNotificationSessionOwner } from '@/mobile/app/data/repositories/notifications/notificationOwnerGuard';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
 
@@ -59,6 +60,29 @@ const NOTIFICATION_SELECT = `
     responded_at
   )
 `;
+
+function requireNotificationRowsForUser<Row extends { recipient_user_id: string }>(
+  data: unknown,
+  expectedUserId: string,
+): Row[] {
+  if (data == null) {
+    return [];
+  }
+
+  if (
+    !Array.isArray(data)
+    || data.some((row) => (
+      !row
+      || typeof row !== 'object'
+      || !('recipient_user_id' in row)
+      || row.recipient_user_id !== expectedUserId
+    ))
+  ) {
+    throw new Error('Notification response owner mismatch.');
+  }
+
+  return data as Row[];
+}
 
 async function getHiddenUserIds(userId: string) {
   const { data, error } = await supabase
@@ -167,6 +191,7 @@ function mapAndFilterNotifications(
 }
 
 export async function fetchNotifications(userId: string): Promise<MobileNotification[]> {
+  await assertNotificationSessionOwner(userId);
   const hiddenUserIds = await getHiddenUserIds(userId);
   const { data, error } = await supabase
     .from('notifications')
@@ -178,9 +203,11 @@ export async function fetchNotifications(userId: string): Promise<MobileNotifica
     throw error;
   }
 
-  const rows = (data || []) as unknown as NotificationRecord[];
+  const rows = requireNotificationRowsForUser<NotificationRecord>(data, userId);
   const actorProfilesById = await fetchActorProfilesById(rows);
-  return mapAndFilterNotifications(rows, userId, hiddenUserIds, actorProfilesById);
+  const notifications = mapAndFilterNotifications(rows, userId, hiddenUserIds, actorProfilesById);
+  await assertNotificationSessionOwner(userId);
+  return notifications;
 }
 
 export async function fetchNotificationsPage(
@@ -188,6 +215,7 @@ export async function fetchNotificationsPage(
   pageOffset: number,
   pageSize: number,
 ): Promise<MobileNotification[]> {
+  await assertNotificationSessionOwner(userId);
   const hiddenUserIds = await getHiddenUserIds(userId);
   const { data, error } = await supabase
     .from('notifications')
@@ -200,9 +228,11 @@ export async function fetchNotificationsPage(
     throw error;
   }
 
-  const rows = (data || []) as unknown as NotificationRecord[];
+  const rows = requireNotificationRowsForUser<NotificationRecord>(data, userId);
   const actorProfilesById = await fetchActorProfilesById(rows);
-  return mapAndFilterNotifications(rows, userId, hiddenUserIds, actorProfilesById);
+  const notifications = mapAndFilterNotifications(rows, userId, hiddenUserIds, actorProfilesById);
+  await assertNotificationSessionOwner(userId);
+  return notifications;
 }
 
 export async function fetchNotificationsCursorPage(params: {
@@ -211,6 +241,7 @@ export async function fetchNotificationsCursorPage(params: {
   signal?: AbortSignal;
   userId: string;
 }): Promise<NotificationPage> {
+  await assertNotificationSessionOwner(params.userId);
   let request = supabase.rpc('notifications_page', {
     p_cursor_created_at: params.cursor?.createdAt ?? null,
     p_cursor_id: params.cursor?.id ?? null,
@@ -222,12 +253,13 @@ export async function fetchNotificationsCursorPage(params: {
   }
 
   const { data, error } = await request;
+  await assertNotificationSessionOwner(params.userId);
 
   if (error) {
     throw error;
   }
 
-  const rows = ((data || []) as unknown) as NotificationPageRow[];
+  const rows = requireNotificationRowsForUser<NotificationPageRow>(data, params.userId);
   const items = rows
     .filter((row) => !row.actor_user_id || row.actor_user_id !== params.userId)
     .map<MobileNotification>((row) => ({

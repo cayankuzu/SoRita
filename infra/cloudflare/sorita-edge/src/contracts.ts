@@ -5,6 +5,7 @@ export const PROXY_PATHS = [
   '/v1/maps-geocoding',
   '/v1/moderation-reports',
   '/v1/media-assets',
+  '/v1/personal-data',
   '/v1/delete-user',
 ] as const;
 
@@ -16,7 +17,8 @@ export type RouteDefinition = {
     | 'delete-user'
     | 'maps-geocoding'
     | 'media-assets'
-    | 'moderation-reports';
+    | 'moderation-reports'
+    | 'personal-data';
   limiter: 'api' | 'auth';
   maxBodyBytes: number;
   path: ProxyPath;
@@ -47,6 +49,12 @@ export const ROUTE_DEFINITIONS: Readonly<Record<ProxyPath, RouteDefinition>> = {
     maxBodyBytes: 64 * 1024,
     path: '/v1/media-assets',
   },
+  '/v1/personal-data': {
+    functionName: 'personal-data',
+    limiter: 'api',
+    maxBodyBytes: 1024,
+    path: '/v1/personal-data',
+  },
   '/v1/delete-user': {
     functionName: 'delete-user',
     limiter: 'api',
@@ -57,6 +65,8 @@ export const ROUTE_DEFINITIONS: Readonly<Record<ProxyPath, RouteDefinition>> = {
 
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
+const LEGAL_CONSENT_VERSION = '2026-09-08-terms-community-privacy';
+const REQUIRED_LEGAL_DOCUMENTS = ['community', 'kvkk', 'privacy', 'terms'] as const;
 const MAX_MEDIA_FILE_BYTES = 140_313_800;
 const MAX_PROFILE_MEDIA_BYTES = 5 * 1024 * 1024;
 const MAX_MEDIA_DURATION_SECONDS = 183;
@@ -122,10 +132,27 @@ const authGatewayPayloadSchema = z.discriminatedUnion('action', [
       legalConsent: z
         .object({
           acceptedAt: z.string().datetime(),
-          documentsAccepted: z.array(z.string().trim().min(1).max(32)).min(1).max(10),
-          version: z.string().trim().min(1).max(32),
+          documentsAccepted: z
+            .array(z.enum(REQUIRED_LEGAL_DOCUMENTS))
+            .length(REQUIRED_LEGAL_DOCUMENTS.length),
+          version: z.literal(LEGAL_CONSENT_VERSION),
         })
-        .strict(),
+        .strict()
+        .superRefine((value, context) => {
+          const documents = [...value.documentsAccepted].sort();
+          if (documents.some((document, index) => document !== REQUIRED_LEGAL_DOCUMENTS[index])) {
+            context.addIssue({ code: 'custom', message: 'All current legal documents are required.' });
+          }
+
+          const acceptedAt = Date.parse(value.acceptedAt);
+          if (
+            !Number.isFinite(acceptedAt)
+            || acceptedAt < Date.now() - 24 * 60 * 60_000
+            || acceptedAt > Date.now() + 5 * 60_000
+          ) {
+            context.addIssue({ code: 'custom', message: 'Legal consent timestamp is invalid.' });
+          }
+        }),
       name: displayNameSchema,
       password: passwordSchema,
       profilePhoto: z.string().trim().url().max(500).optional(),
@@ -363,6 +390,7 @@ const mediaControlPayloadSchema = z.discriminatedUnion('action', [
 });
 
 const deleteUserPayloadSchema = z.object({}).strict();
+const personalDataPayloadSchema = z.object({ action: z.literal('export') }).strict();
 const publicAuthActions = [
   'check-availability',
   'login',
@@ -449,6 +477,13 @@ export function validatePayload(route: RouteDefinition, payload: unknown): Contr
     }
 
     return { action: result.data.action, authRequired: true, success: true };
+  }
+
+  if (route.path === '/v1/personal-data') {
+    const result = personalDataPayloadSchema.safeParse(payload);
+    return result.success
+      ? { action: result.data.action, authRequired: true, success: true }
+      : { code: 'invalid_request', success: false };
   }
 
   const result = deleteUserPayloadSchema.safeParse(payload);

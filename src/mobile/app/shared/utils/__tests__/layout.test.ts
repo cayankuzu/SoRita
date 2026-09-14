@@ -5,6 +5,7 @@ import {
   getResponsiveDiscoveryColumnCount,
   getResponsiveGalleryColumnCount,
   getResponsiveDiscoveryTileWidth,
+  getResponsiveGridLayout,
   getResponsiveScreenPadding,
 } from '@/mobile/app/shared/utils/layout';
 
@@ -28,6 +29,30 @@ describe('responsive layout helpers', () => {
     expect(getResponsiveGalleryColumnCount(320, 720)).toBe(3);
     expect(getResponsiveGalleryColumnCount(840, 1180)).toBe(6);
   });
+
+  it.each([
+    { expectedColumnWidth: 89, height: 720, width: 320 },
+    { expectedColumnWidth: 112, height: 844, width: 390 },
+  ])(
+    'fits gallery columns, gaps, and padding inside a $width dp compact viewport',
+    ({ expectedColumnWidth, height, width }) => {
+      const gap = 10;
+      const layout = getResponsiveGridLayout(width, height, {
+        gap,
+        strategy: 'gallery',
+      });
+      const occupiedWidth =
+        layout.horizontalPadding * 2 +
+        layout.columnWidth * layout.columnCount +
+        gap * (layout.columnCount - 1);
+
+      expect(layout).toMatchObject({
+        columnCount: 3,
+        columnWidth: expectedColumnWidth,
+      });
+      expect(occupiedWidth).toBeLessThanOrEqual(width);
+    },
+  );
 
   it('reports constrained content width and safe-area adjusted height', () => {
     expect(

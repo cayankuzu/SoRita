@@ -35,7 +35,7 @@ type CommentThreadProps = {
   onOpenCommentMenu: (comment: FeedActionComment) => void;
   onShowCommentLikers: (comment: FeedActionComment) => void;
   onStartReply: (comment: FeedActionComment) => void;
-  onToggleCommentLike: (commentId: string) => void;
+  onToggleCommentLike: (commentId: string) => void | Promise<void>;
   onToggleReplies: (commentId: string) => void;
   onUserPress?: (userId: string) => void;
 };
@@ -88,6 +88,7 @@ export function CommentThread({
   const isEdited = hasMeaningfulUpdate(comment.createdAt, comment.updatedAt);
   const isReply = depth > 0;
   const depthStyle = isReply ? { marginLeft: Math.min(depth, 3) * 14 } : null;
+  const likeCount = Math.max(0, Math.trunc(comment.likes ?? 0));
 
   return (
     <View
@@ -122,7 +123,9 @@ export function CommentThread({
               <View style={styles.commentAuthorRow}>
                 <Text numberOfLines={1} style={styles.commentAuthor}>{comment.userName}</Text>
                 {comment.pendingSync ? (
-                  <Text style={styles.commentPending}>{tr.cards.commentSyncing}</Text>
+                  <Text accessibilityLiveRegion="polite" style={styles.commentPending}>
+                    {tr.cards.commentSyncing}
+                  </Text>
                 ) : null}
                 {isEdited ? (
                   <Text style={styles.commentEdited}>{tr.cards.editedLabel}</Text>
@@ -137,33 +140,41 @@ export function CommentThread({
               </View>
             </CommentAuthorPressable>
 
-            <InstantPressable
-              accessibilityLabel={comment.liked ? tr.cards.unlikeComment : tr.cards.likeComment}
-              accessibilityRole="button"
-              style={styles.commentLikeColumn}
-              onPress={() => onToggleCommentLike(comment.id)}
-              onLongPress={() => onShowCommentLikers(comment)}
-              delayLongPress={500}
-              preventRepeatWhileBusy={false}
-            >
-              <View style={[styles.commentLikeButton, comment.liked ? styles.commentLikeButtonActive : null]}>
-                <Heart
-                  color={comment.liked ? colors.danger : colors.textSoft}
-                  size={15}
-                  fill={comment.liked ? colors.danger : 'transparent'}
-                />
-              </View>
-              {comment.likes ? (
-                <Text
-                  style={[
-                    styles.commentLikeCount,
-                    comment.liked ? styles.commentLikeCountActive : null,
-                  ]}
+            <View style={styles.commentLikeColumn}>
+              <InstantPressable
+                accessibilityLabel={comment.liked ? tr.cards.unlikeComment : tr.cards.likeComment}
+                accessibilityRole="button"
+                accessibilityState={{ selected: comment.liked }}
+                style={styles.commentLikeAction}
+                onPress={() => onToggleCommentLike(comment.id)}
+              >
+                <View style={[styles.commentLikeButton, comment.liked ? styles.commentLikeButtonActive : null]}>
+                  <Heart
+                    color={comment.liked ? colors.danger : colors.textSoft}
+                    size={15}
+                    fill={comment.liked ? colors.danger : 'transparent'}
+                  />
+                </View>
+              </InstantPressable>
+
+              {likeCount > 0 ? (
+                <InstantPressable
+                  accessibilityLabel={`${tr.cards.likedBy}: ${likeCount}`}
+                  accessibilityRole="button"
+                  style={styles.commentLikersAction}
+                  onPress={() => onShowCommentLikers(comment)}
                 >
-                  {comment.likes}
-                </Text>
+                  <Text
+                    style={[
+                      styles.commentLikeCount,
+                      comment.liked ? styles.commentLikeCountActive : null,
+                    ]}
+                  >
+                    {likeCount}
+                  </Text>
+                </InstantPressable>
               ) : null}
-            </InstantPressable>
+            </View>
           </View>
 
           <ExpandableText

@@ -10,6 +10,7 @@ import {
   colors,
   contentWidth,
   elevation,
+  fontWeight,
   iconSize,
   motion,
   radius,
@@ -112,12 +113,25 @@ export function ToastHost({ suppressed = false }: { suppressed?: boolean }) {
         ]).start();
       }
 
-      dismissTimerRef.current = setTimeout(
-        dismiss,
-        nextToast.kind === 'error' ? ERROR_TOAST_DURATION_MS : TOAST_DURATION_MS,
-      );
     });
-  }, [clearDismissTimer, dismiss, opacity, reduceMotion, translateY]);
+  }, [clearDismissTimer, opacity, reduceMotion, translateY]);
+
+  // A higher-priority offline or progress message can temporarily hide the
+  // toast. Do not let its reading time elapse while it is not visible.
+  useEffect(() => {
+    clearDismissTimer();
+
+    if (!toast || suppressed) {
+      return undefined;
+    }
+
+    dismissTimerRef.current = setTimeout(
+      dismiss,
+      toast.kind === 'error' ? ERROR_TOAST_DURATION_MS : TOAST_DURATION_MS,
+    );
+
+    return clearDismissTimer;
+  }, [clearDismissTimer, dismiss, suppressed, toast]);
 
   useEffect(() => clearDismissTimer, [clearDismissTimer]);
 
@@ -176,6 +190,6 @@ const styles = StyleSheet.create({
     ...typography.captionText,
     color: colors.text,
     flex: 1,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
 });

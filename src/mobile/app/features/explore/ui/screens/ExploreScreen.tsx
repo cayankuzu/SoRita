@@ -16,6 +16,7 @@ import {
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { ExploreFeedView } from '@/mobile/app/features/explore/ui/components/ExploreFeedView';
 import { ExploreHeaderControls } from '@/mobile/app/features/explore/ui/components/ExploreHeaderControls';
+import { ExplorePagerLayout } from '@/mobile/app/features/explore/ui/components/ExplorePagerLayout';
 import {
   ExploreResultsPage,
   type ExploreGridItem,
@@ -45,29 +46,35 @@ const EXPLORE_TAB_LABELS: Record<ExploreTabType, string> = {
   places: tr.explore.tabs.places,
 };
 
-type ExplorePageHeaderProps = {
+type ExploreBrowseHeaderProps = {
   activeTab: ExploreTabType;
   onRetry: () => void;
   onSearchQueryChange: (value: string) => void;
   onTabChange: (tab: ExploreTabType) => void;
+  resultCount?: number;
+  resultsPending: boolean;
   screenPadding: number;
   searchQuery: string;
   showPartialDataNotice: boolean;
 };
 
-const ExplorePageHeader = React.memo(function ExplorePageHeader({
+const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
   activeTab,
   onRetry,
   onSearchQueryChange,
   onTabChange,
+  resultCount,
+  resultsPending,
   screenPadding,
   searchQuery,
   showPartialDataNotice,
-}: ExplorePageHeaderProps) {
+}: ExploreBrowseHeaderProps) {
   return (
     <View>
       <ExploreHeaderControls
         activeTab={activeTab}
+        resultCount={resultCount}
+        resultsPending={resultsPending}
         searchQuery={searchQuery}
         onSearchQueryChange={onSearchQueryChange}
         onTabChange={onTabChange}
@@ -98,6 +105,7 @@ export function ExploreScreen() {
   const { screenPadding } = useAppLayout();
   const activeListRef = React.useRef<FlatList<ExploreGridItem> | null>(null);
   const [activeTab, setActiveTab] = useState<ExploreTabType>('lists');
+  const [visibleTab, setVisibleTab] = useState<ExploreTabType>('lists');
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<ExploreFeedMode | null>(null);
   const {
@@ -164,6 +172,8 @@ export function ExploreScreen() {
 
   const handleTabChange = useCallback(
     (nextTab: ExploreTabType) => {
+      setVisibleTab(nextTab);
+
       if (nextTab === activeTab) {
         scrollActiveListToTop();
         return;
@@ -177,6 +187,7 @@ export function ExploreScreen() {
 
   const handleTabPreviewChange = useCallback(
     (nextTab: ExploreTabType) => {
+      setVisibleTab(nextTab);
       restoreTabScrollOffset(nextTab);
     },
     [restoreTabScrollOffset],
@@ -247,11 +258,7 @@ export function ExploreScreen() {
     [errorMessage, queryStateByTab],
   );
 
-  if (!user) {
-    return null;
-  }
-
-  if (isInitialLoading) {
+  if (!user || isInitialLoading) {
     return (
       <Screen safeTop={false} padded={false} scroll={false}>
         <View style={loadMoreStyles.content}>
@@ -291,80 +298,88 @@ export function ExploreScreen() {
 
   return (
     <Screen safeTop={false} padded={false} scroll={false}>
-      <View style={loadMoreStyles.screen}>
-        <SwipeableTabPager
-          activeTab={activeTab}
-          enabled={!refreshing && !feedMode}
-          getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
-          keepAlive={false}
-          lazy
-          tabs={EXPLORE_PAGER_TABS}
-          onChange={handleTabChange}
-          onPreviewTabChange={handleTabPreviewChange}
-          renderPage={(tab, _preview, active) => {
-            const tabQuery = queryStateByTab[tab];
+      <ExplorePagerLayout
+        header={
+          <ExploreBrowseHeader
+            activeTab={visibleTab}
+            onRetry={handleRetry}
+            onSearchQueryChange={setSearchQuery}
+            onTabChange={handleTabChange}
+            resultCount={
+              visibleTab === activeTab
+                ? dataByTab[activeTab].length
+                : undefined
+            }
+            resultsPending={
+              visibleTab !== activeTab ||
+              searchQuery.trim() !== debouncedSearchQuery.trim()
+            }
+            screenPadding={screenPadding}
+            searchQuery={searchQuery}
+            showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
+          />
+        }
+        pager={
+          <SwipeableTabPager
+            activeTab={activeTab}
+            enabled={!refreshing && !feedMode}
+            getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
+            keepAlive={false}
+            lazy
+            tabs={EXPLORE_PAGER_TABS}
+            onChange={handleTabChange}
+            onPreviewTabChange={handleTabPreviewChange}
+            renderPage={(tab, _preview, active) => {
+              const tabQuery = queryStateByTab[tab];
 
-            return (
-              <ExploreResultsPage
-                active={active}
-                data={dataByTab[tab]}
-                errorMessage={
-                  active && errorMessage && !hasAnyBrowseData
-                    ? errorMessage
-                    : null
-                }
-                following={following}
-                hasNextPage={tabQuery.hasNextPage}
-                isFetchingNextPage={tabQuery.isFetchingNextPage}
-                listMarkerLists={listMarkerLists}
-                listRef={getTabScrollRefCallback(tab)}
-                listHeader={
-                  <ExplorePageHeader
-                    activeTab={tab}
-                    onRetry={handleRetry}
-                    onSearchQueryChange={setSearchQuery}
-                    onTabChange={handleTabChange}
-                    screenPadding={screenPadding}
-                    searchQuery={searchQuery}
-                    showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
-                  />
-                }
-                onContentReady={() => notifyTabContentReady(tab)}
-                onClearSearch={() => setSearchQuery('')}
-                onEndReached={() => handleEndReached(tab)}
-                onFollowUser={handleFollowUser}
-                onListIntent={warmListIntent}
-                onListPress={openListDetail}
-                onOwnerIntent={warmOwnerIntent}
-                onOwnerPress={openUserProfile}
-                onPlacePress={(pageTab, index) =>
-                  setFeedMode({
-                    kind: pageTab === 'photos' ? 'photos' : 'places',
-                    startIndex: index,
-                  })
-                }
-                onRefresh={onRefresh}
-                onRetry={retry}
-                onScrollOffsetChange={(offset) =>
-                  recordTabScrollOffset(tab, offset)
-                }
-                pendingFollowRequests={pendingFollowRequests}
-                refreshing={refreshing}
-                searchQuery={debouncedSearchQuery}
-                tab={tab}
-              />
-            );
-          }}
-        />
-      </View>
+              return (
+                <ExploreResultsPage
+                  active={active}
+                  data={dataByTab[tab]}
+                  errorMessage={
+                    active && errorMessage && !hasAnyBrowseData
+                      ? errorMessage
+                      : null
+                  }
+                  following={following}
+                  hasNextPage={tabQuery.hasNextPage}
+                  isFetchingNextPage={tabQuery.isFetchingNextPage}
+                  listMarkerLists={listMarkerLists}
+                  listRef={getTabScrollRefCallback(tab)}
+                  onContentReady={() => notifyTabContentReady(tab)}
+                  onClearSearch={() => setSearchQuery('')}
+                  onEndReached={() => handleEndReached(tab)}
+                  onFollowUser={handleFollowUser}
+                  onListIntent={warmListIntent}
+                  onListPress={openListDetail}
+                  onOwnerIntent={warmOwnerIntent}
+                  onOwnerPress={openUserProfile}
+                  onPlacePress={(pageTab, index) =>
+                    setFeedMode({
+                      kind: pageTab === 'photos' ? 'photos' : 'places',
+                      startIndex: index,
+                    })
+                  }
+                  onRefresh={onRefresh}
+                  onRetry={retry}
+                  onScrollOffsetChange={(offset) =>
+                    recordTabScrollOffset(tab, offset)
+                  }
+                  pendingFollowRequests={pendingFollowRequests}
+                  refreshing={refreshing}
+                  searchQuery={debouncedSearchQuery}
+                  tab={tab}
+                />
+              );
+            }}
+          />
+        }
+      />
     </Screen>
   );
 }
 
 const loadMoreStyles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
   noticeWrap: {
     paddingBottom: 10,
   },

@@ -48,23 +48,30 @@ function chunkArray<T>(items: T[], size: number) {
 
 const repository = {
   async fetchRecipientUserIds(userIds?: string[]) {
-    if (userIds?.length) {
-      const { data, error } = await adminClient
-        .from('profiles')
-        .select('id')
-        .in('id', userIds);
+    if (userIds !== undefined) {
+      const requestedRecipientUserIds: string[] = [];
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      // An explicitly empty audience means nobody, never a global broadcast.
+      // Bound each PostgREST `in` filter so a valid Edge request cannot exceed
+      // intermediary URL/header limits.
+      for (const userIdChunk of chunkArray(userIds, 100)) {
+        const { data, error } = await adminClient
+          .from('profiles')
+          .select('id')
+          .in('id', userIdChunk);
 
-      return Array.from(
-        new Set(
-          (data ?? [])
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        requestedRecipientUserIds.push(
+          ...(data ?? [])
             .map((row) => (typeof row.id === 'string' ? row.id : null))
             .filter((id): id is string => Boolean(id)),
-        ),
-      );
+        );
+      }
+
+      return Array.from(new Set(requestedRecipientUserIds));
     }
 
     const recipientUserIds: string[] = [];

@@ -220,6 +220,57 @@ describe('useExploreScreenState', () => {
     );
   });
 
+  it('matches Turkish read-model content with an ASCII query', async () => {
+    const viewer = {
+      id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
+    };
+    const owner = {
+      id: 'owner', email: 'owner@example.com', name: 'Çağrı', username: 'cagri',
+      bio: 'Şehir rehberi', isPublicAccount: true,
+    };
+    const placeItem = {
+      key: 'place-key', owner, ownerId: owner.id, listId: 'list-1',
+      listName: 'Çağrı listesi', memberships: [], sortTime: 1,
+      place: {
+        id: 'place-1', name: 'Çağrı Meydanı', lat: 1, lng: 2,
+        photos: ['photo'], addedAt: '2025-01-01T00:00:00.000Z',
+      },
+    };
+    const page = {
+      listItems: [{
+        list: {
+          id: 'list-1', userId: owner.id, name: 'Çağrı rotası', isPublic: true,
+          places: [], createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+        owner,
+      }],
+      placeItems: [placeItem],
+      userItems: [owner],
+    };
+    const queryResult = {
+      data: { pages: [page] }, error: null, fetchNextPage: vi.fn(), hasNextPage: false,
+      isFetchingNextPage: false, isLoading: false, refetch: vi.fn().mockResolvedValue(undefined),
+    };
+
+    useExploreQueryMock.mockReturnValue(queryResult);
+    useFollowUserMutationMock.mockReturnValue({ mutateAsync: vi.fn() });
+    useFocusRefreshMock.mockImplementation((action: () => Promise<void>) => ({
+      refreshing: false,
+      onRefresh: action,
+    }));
+
+    const hooks = await import('@/mobile/app/features/explore/application/useExploreScreenState');
+    const hook = renderHook(() =>
+      hooks.useExploreScreenState({ activeTab: 'lists', user: viewer, searchQuery: 'cagri' }),
+    );
+
+    expect(hook.result.current.filteredListItems).toHaveLength(1);
+    expect(hook.result.current.filteredPlaces).toHaveLength(1);
+    expect(hook.result.current.filteredPhotos).toHaveLength(1);
+    expect(hook.result.current.filteredUsers).toHaveLength(1);
+  });
+
   it('hydrates every read-model tab, filters duplicates, and exposes per-tab pagination', async () => {
     const viewer = {
       id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',

@@ -5,7 +5,13 @@ import { Check } from 'lucide-react-native';
 import type { LegalDocumentId } from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalConsentCardProps = {
   accepted: boolean;
@@ -21,29 +27,57 @@ export function AuthLegalConsentCard({
   return (
     <View style={styles.card}>
       <View style={styles.copyBlock}>
-        <Text style={styles.title}>{tr.auth.legalConsent.title}</Text>
-        <Text style={styles.linksText}>
-          {tr.auth.legalConsent.descriptionPrefix}{' '}
-          <Text accessibilityRole="link" onPress={() => onOpenDocument('terms')} style={styles.inlineLink}>
+        <Text accessibilityRole="header" style={styles.title}>{tr.auth.legalConsent.title}</Text>
+        <Text style={styles.linksText}>{tr.auth.legalConsent.descriptionPrefix}</Text>
+        <View style={styles.linksRow}>
+          <InstantPressable
+            accessibilityLabel={tr.auth.legalConsent.terms}
+            accessibilityRole="link"
+            hitSlop={0}
+            onPress={() => onOpenDocument('terms')}
+            style={styles.linkButton}
+          >
+            <Text style={styles.inlineLink}>
             {tr.auth.legalConsent.terms}
-          </Text>
-          {', '}
-          <Text accessibilityRole="link" onPress={() => onOpenDocument('community')} style={styles.inlineLink}>
+            </Text>
+          </InstantPressable>
+          <InstantPressable
+            accessibilityLabel={tr.auth.legalConsent.community}
+            accessibilityRole="link"
+            hitSlop={0}
+            onPress={() => onOpenDocument('community')}
+            style={styles.linkButton}
+          >
+            <Text style={styles.inlineLink}>
             {tr.auth.legalConsent.community}
-          </Text>
-          {tr.auth.legalConsent.descriptionSuffix}
-        </Text>
-        <Text style={styles.linksText}>
-          {tr.auth.legalConsent.noticePrefix}{' '}
-          <Text accessibilityRole="link" onPress={() => onOpenDocument('privacy')} style={styles.inlineLink}>
+            </Text>
+          </InstantPressable>
+        </View>
+        <Text style={styles.linksText}>{tr.auth.legalConsent.noticePrefix}</Text>
+        <View style={styles.linksRow}>
+          <InstantPressable
+            accessibilityLabel={tr.auth.legalConsent.privacy}
+            accessibilityRole="link"
+            hitSlop={0}
+            onPress={() => onOpenDocument('privacy')}
+            style={styles.linkButton}
+          >
+            <Text style={styles.inlineLink}>
             {tr.auth.legalConsent.privacy}
-          </Text>
-          {tr.common.andConnector}
-          <Text accessibilityRole="link" onPress={() => onOpenDocument('kvkk')} style={styles.inlineLink}>
+            </Text>
+          </InstantPressable>
+          <InstantPressable
+            accessibilityLabel={tr.auth.legalConsent.kvkk}
+            accessibilityRole="link"
+            hitSlop={0}
+            onPress={() => onOpenDocument('kvkk')}
+            style={styles.linkButton}
+          >
+            <Text style={styles.inlineLink}>
             {tr.auth.legalConsent.kvkk}
-          </Text>
-          {tr.auth.legalConsent.noticeSuffix}
-        </Text>
+            </Text>
+          </InstantPressable>
+        </View>
       </View>
 
       <InstantPressable
@@ -75,20 +109,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...typography.compactTitleText,
     color: colors.text,
   },
   linksText: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
+  linksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  linkButton: {
+    minHeight: minTouchSize,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
   inlineLink: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.labelText,
     color: colors.primary,
-    fontWeight: '700',
     textDecorationLine: 'underline',
   },
   checkboxRow: {
@@ -98,8 +139,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     marginTop: 1,
     borderRadius: 6,
     borderWidth: 1.5,
@@ -114,8 +155,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.supportingText,
     color: colors.textMuted,
   },
 });

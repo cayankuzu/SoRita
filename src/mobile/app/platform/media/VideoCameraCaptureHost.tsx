@@ -1,34 +1,18 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
-import { Camera, RefreshCcw, Square, Video, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   PLACE_MEDIA_MAX_VIDEO_DURATION_SECONDS,
-  PLACE_MEDIA_TARGET_VIDEO_BITRATE,
-  PLACE_MEDIA_TARGET_VIDEO_QUALITY,
 } from '@/mobile/app/platform/media/mediaConstants';
 import { PLACE_MEDIA_MAX_FILE_SIZE_BYTES } from '@/mobile/app/platform/media/placeMediaSize';
+import { VideoCameraCaptureView } from '@/mobile/app/platform/media/VideoCameraCaptureView';
 import {
   resolveVideoCameraCapture,
   useVideoCameraCaptureState,
 } from '@/mobile/app/platform/media/videoCameraCaptureController';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
-import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
-import { getAndroidModalWindowProps } from '@/mobile/app/shared/utils/modalLayout';
-import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 function clearTimer(timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>) {
   if (!timerRef.current) {
@@ -50,15 +34,25 @@ function clearIntervalTimer(timerRef: React.MutableRefObject<ReturnType<typeof s
 
 export function VideoCameraCaptureHost() {
   const animationType = useModalAnimationType('slide');
-  const insets = useSafeAreaInsets();
   const { options, requestId, visible } = useVideoCameraCaptureState();
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
+  const [
+    cameraPermission,
+    requestCameraPermission,
+    refreshCameraPermission,
+  ] = useCameraPermissions();
+  const [
+    microphonePermission,
+    requestMicrophonePermission,
+    refreshMicrophonePermission,
+  ] = useMicrophonePermissions();
   const [facing, setFacing] = React.useState<'back' | 'front'>('back');
   const [isCameraReady, setIsCameraReady] = React.useState(false);
   const [isRecording, setIsRecording] = React.useState(false);
   const [isPermissionRequestInFlight, setIsPermissionRequestInFlight] = React.useState(false);
   const [elapsedMs, setElapsedMs] = React.useState(0);
+  const [cameraMountFailed, setCameraMountFailed] = React.useState(false);
+  const [cameraSessionKey, setCameraSessionKey] = React.useState(0);
+  const [captureError, setCaptureError] = React.useState<string | null>(null);
   const cameraRef = React.useRef<CameraView | null>(null);
   const autoStopTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const captureCancelledRef = React.useRef(false);
@@ -72,6 +66,10 @@ export function VideoCameraCaptureHost() {
   );
   const maxDurationMs = maxDurationSeconds * 1000;
   const permissionsGranted = Boolean(cameraPermission?.granted && microphonePermission?.granted);
+  const permissionsBlocked = Boolean(
+    (!cameraPermission?.granted && cameraPermission?.canAskAgain === false) ||
+      (!microphonePermission?.granted && microphonePermission?.canAskAgain === false),
+  );
   const countdownMs = Math.max(maxDurationMs - elapsedMs, 0);
 
   const clearCaptureTimers = React.useCallback(() => {
@@ -87,6 +85,9 @@ export function VideoCameraCaptureHost() {
     stopRequestedRef.current = false;
     setElapsedMs(0);
     setFacing('back');
+    setCameraMountFailed(false);
+    setCameraSessionKey(0);
+    setCaptureError(null);
     setIsCameraReady(false);
     setIsRecording(false);
   }, [clearCaptureTimers]);
@@ -121,7 +122,7 @@ export function VideoCameraCaptureHost() {
   );
 
   const ensurePermissions = React.useCallback(async () => {
-    if (!visible || isPermissionRequestInFlight || permissionsGranted) {
+    if (!visible || isPermissionRequestInFlight || permissionsGranted || permissionsBlocked) {
       return;
     }
 
@@ -150,6 +151,7 @@ export function VideoCameraCaptureHost() {
     cameraPermission,
     isPermissionRequestInFlight,
     microphonePermission,
+    permissionsBlocked,
     permissionsGranted,
     requestCameraPermission,
     requestMicrophonePermission,
@@ -163,6 +165,28 @@ export function VideoCameraCaptureHost() {
 
     void ensurePermissions();
   }, [ensurePermissions, requestId, visible]);
+
+  React.useEffect(() => {
+    if (!visible || !permissionsBlocked) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void Promise.all([
+          refreshCameraPermission(),
+          refreshMicrophonePermission(),
+        ]);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [
+    permissionsBlocked,
+    refreshCameraPermission,
+    refreshMicrophonePermission,
+    visible,
+  ]);
 
   const requestStopRecording = React.useCallback(() => {
     if (!cameraRef.current || stopRequestedRef.current) {
@@ -184,10 +208,17 @@ export function VideoCameraCaptureHost() {
   }, [finishCapture, isRecording, requestStopRecording]);
 
   const handleStartRecording = React.useCallback(async () => {
-    if (!cameraRef.current || !isCameraReady || !permissionsGranted || isRecording) {
+    if (
+      !cameraRef.current ||
+      !isCameraReady ||
+      cameraMountFailed ||
+      !permissionsGranted ||
+      isRecording
+    ) {
       return;
     }
 
+    setCaptureError(null);
     captureCancelledRef.current = false;
     stopRequestedRef.current = false;
     recordingStartedAtRef.current = Date.now();
@@ -218,9 +249,13 @@ export function VideoCameraCaptureHost() {
         ? Math.min(Date.now() - recordingStartedAtRef.current, maxDurationMs)
         : maxDurationMs;
 
-      if (!recording?.uri || captureCancelledRef.current) {
+      if (captureCancelledRef.current) {
         finishCapture(null);
         return;
+      }
+
+      if (!recording?.uri) {
+        throw new Error('missing-recording-uri');
       }
 
       finishCapture({
@@ -228,9 +263,20 @@ export function VideoCameraCaptureHost() {
         uri: recording.uri,
       });
     } catch {
-      finishCapture(null);
+      if (captureCancelledRef.current) {
+        finishCapture(null);
+        return;
+      }
+
+      clearCaptureTimers();
+      recordingStartedAtRef.current = null;
+      stopRequestedRef.current = false;
+      setIsRecording(false);
+      setCaptureError(tr.mediaPicker.videoRecorderUnexpectedError);
     }
   }, [
+    cameraMountFailed,
+    clearCaptureTimers,
     finishCapture,
     isCameraReady,
     isRecording,
@@ -248,262 +294,58 @@ export function VideoCameraCaptureHost() {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }, [isRecording]);
 
+  const handlePermissionAction = React.useCallback(() => {
+    if (permissionsBlocked) {
+      void Linking.openSettings();
+      return;
+    }
+
+    void ensurePermissions();
+  }, [ensurePermissions, permissionsBlocked]);
+
+  const handleRetryCamera = React.useCallback(() => {
+    setCameraMountFailed(false);
+    setCaptureError(null);
+    setIsCameraReady(false);
+    setCameraSessionKey((current) => current + 1);
+  }, []);
+
+  const handleCameraReady = React.useCallback(() => {
+    setCameraMountFailed(false);
+    setIsCameraReady(true);
+  }, []);
+
+  const handleCameraMountError = React.useCallback(() => {
+    setIsCameraReady(false);
+    setCameraMountFailed(true);
+  }, []);
+
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
+    <VideoCameraCaptureView
       animationType={animationType}
-      hardwareAccelerated
-      onRequestClose={handleClose}
-      presentationStyle="fullScreen"
-    >
-      <View accessibilityViewIsModal importantForAccessibility="yes" style={styles.screen}>
-        {permissionsGranted ? (
-          <CameraView
-            ref={cameraRef}
-            active={visible}
-            facing={facing}
-            mode="video"
-            mute={false}
-            style={StyleSheet.absoluteFillObject}
-            videoBitrate={PLACE_MEDIA_TARGET_VIDEO_BITRATE}
-            videoQuality={PLACE_MEDIA_TARGET_VIDEO_QUALITY}
-            onCameraReady={() => setIsCameraReady(true)}
-          />
-        ) : (
-          <View style={styles.permissionState}>
-            <View style={styles.permissionIconWrap}>
-              <Camera color={colors.primary} size={20} />
-            </View>
-            <Text style={styles.permissionTitle}>{tr.mediaPicker.videoRecorderPermissionTitle}</Text>
-            <Text style={styles.permissionDescription}>
-              {tr.mediaPicker.videoRecorderPermissionDescription}
-            </Text>
-            <PrimaryButton
-              title={
-                isPermissionRequestInFlight
-                  ? tr.mediaPicker.videoRecorderPreparing
-                  : tr.mediaPicker.videoRecorderGrantPermissions
-              }
-              onPress={ensurePermissions}
-              loading={isPermissionRequestInFlight}
-            />
-          </View>
-        )}
-
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 18) }]}>
-          <IconButton
-            accessibilityLabel={tr.common.close}
-            onPress={handleClose}
-            style={styles.topIconButton}
-            variant="inverse"
-          >
-            <X color={colors.onPrimary} size={16} />
-          </IconButton>
-
-          <View style={styles.timerStack}>
-            <View style={styles.timerBadge}>
-              {isRecording ? <View style={styles.liveDot} /> : null}
-              <Text style={styles.timerText}>{formatPlaceMediaDuration(elapsedMs)}</Text>
-            </View>
-            <Text style={styles.timerHelper}>
-              {tr.mediaPicker.videoRecorderAutoStop(
-                formatPlaceMediaDuration(maxDurationMs),
-                formatPlaceMediaDuration(countdownMs),
-              )}
-            </Text>
-          </View>
-
-          <IconButton
-            accessibilityLabel={tr.mediaPicker.videoRecorderSwitchCamera}
-            onPress={handleToggleFacing}
-            disabled={isRecording}
-            style={styles.topIconButton}
-            variant="inverse"
-          >
-            <RefreshCcw color={colors.onPrimary} size={16} />
-          </IconButton>
-        </View>
-
-        {permissionsGranted && !isCameraReady ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator color={colors.onPrimary} size="large" />
-            <Text style={styles.loadingText}>{tr.mediaPicker.videoRecorderPreparing}</Text>
-          </View>
-        ) : null}
-
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <Text style={styles.bottomHint}>{tr.mediaPicker.videoRecorderHint}</Text>
-
-          <Pressable
-            accessibilityLabel={
-              isRecording
-                ? tr.mediaPicker.videoRecorderStop
-                : tr.mediaPicker.videoRecorderStart
-            }
-            accessibilityRole="button"
-            onPress={() => {
-              if (isRecording) {
-                requestStopRecording();
-                return;
-              }
-
-              void handleStartRecording();
-            }}
-            style={({ pressed }) => [
-              styles.recordButtonOuter,
-              pressed ? styles.recordButtonOuterPressed : null,
-            ]}
-          >
-            <View style={[styles.recordButtonInner, isRecording ? styles.recordButtonInnerActive : null]}>
-              {isRecording ? (
-                <Square color={colors.onPrimary} fill={colors.onPrimary} size={16} />
-              ) : (
-                <Video color={colors.onPrimary} size={20} />
-              )}
-            </View>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
+      cameraMountFailed={cameraMountFailed}
+      cameraRef={cameraRef}
+      cameraSessionKey={cameraSessionKey}
+      captureError={captureError}
+      countdownMs={countdownMs}
+      elapsedMs={elapsedMs}
+      facing={facing}
+      isCameraReady={isCameraReady}
+      isPermissionRequestInFlight={isPermissionRequestInFlight}
+      isRecording={isRecording}
+      maxDurationMs={maxDurationMs}
+      onCameraMountError={handleCameraMountError}
+      onCameraReady={handleCameraReady}
+      onClose={handleClose}
+      onPermissionAction={handlePermissionAction}
+      onRetryCamera={handleRetryCamera}
+      onStartRecording={handleStartRecording}
+      onStopRecording={requestStopRecording}
+      onToggleFacing={handleToggleFacing}
+      permissionsBlocked={permissionsBlocked}
+      permissionsGranted={permissionsGranted}
+      requestId={requestId}
+      visible={visible}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.cameraBackground,
-  },
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    left: 0,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 14,
-  },
-  topIconButton: {
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-  },
-  timerStack: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-  },
-  timerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.danger,
-  },
-  timerText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
-  timerHelper: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.onPrimary,
-    textAlign: 'center',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  loadingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
-  permissionState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 22,
-    backgroundColor: colors.background,
-  },
-  permissionIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  permissionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  permissionDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  bottomBar: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    left: 0,
-    zIndex: 2,
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-  },
-  bottomHint: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.onPrimary,
-    textAlign: 'center',
-  },
-  recordButtonOuter: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-    borderWidth: 3,
-    borderColor: colors.cameraBorder,
-    marginBottom: 4,
-  },
-  recordButtonOuterPressed: {
-    transform: [{ scale: 0.96 }],
-  },
-  recordButtonInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.danger,
-  },
-  recordButtonInnerActive: {
-    borderRadius: radius.md,
-  },
-});

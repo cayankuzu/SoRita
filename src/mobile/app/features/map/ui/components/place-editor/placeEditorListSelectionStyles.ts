@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const placeEditorListSelectionStyles = StyleSheet.create({
   stepContent: {
@@ -10,8 +10,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   sectionHelper: {
@@ -50,12 +50,12 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   listSelectionNoticeTitle: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.warningText,
   },
   listSelectionNoticeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.warningText,
   },
   listWrap: {
@@ -94,7 +94,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   listPreviewEmoji: {
-    fontSize: 20,
+    fontSize: typography.title.fontSize,
   },
   listRadio: {
     width: 16,
@@ -131,8 +131,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   listName: {
     flexShrink: 1,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   listNameDisabled: {
@@ -145,9 +145,9 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     gap: 6,
   },
   listMeta: {
-    fontSize: 12,
+    ...typography.metadataText,
     color: colors.textSoft,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   listMetaDisabled: {
     color: colors.textMuted,
@@ -165,7 +165,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   listPrivacyText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   createListTrigger: {
@@ -181,8 +181,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     gap: 6,
   },
   createListTriggerText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   createListCard: {
@@ -226,6 +226,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flex: 1,
+    minHeight: 48,
   },
   coverPickerIconWrap: {
     width: 34,
@@ -240,8 +241,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     gap: 2,
   },
   coverPickerTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.secondary,
   },
   coverPickerHint: {
@@ -249,8 +250,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     color: colors.textMuted,
   },
   coverPickerText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.secondary,
   },
   selectionBadge: {
@@ -265,13 +266,11 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   selectionBadgeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   coverClearInline: {
     alignSelf: 'flex-end',
-    width: 30,
-    height: 30,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
     alignItems: 'center',
@@ -302,8 +301,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderColor: colors.primary,
   },
   privacyText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   privacyTextActive: {

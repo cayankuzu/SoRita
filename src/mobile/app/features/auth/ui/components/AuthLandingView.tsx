@@ -42,17 +42,18 @@ export function AuthLandingView({
         </View>
         <Text style={styles.landingSubtitle}>{tr.auth.landing.subtitle}</Text>
 
+        <PrimaryButton
+          title={tr.auth.landing.login}
+          variant="secondary"
+          onPress={onLoginPress}
+        />
+
         <AuthLegalConsentCard
           accepted={hasAcceptedLegal}
           onToggle={onToggleLegalConsent}
           onOpenDocument={onOpenLegalDocument}
         />
 
-        <PrimaryButton
-          title={tr.auth.landing.login}
-          variant="secondary"
-          onPress={onLoginPress}
-        />
         <PrimaryButton
           title={tr.auth.landing.register}
           onPress={onRegisterPress}

@@ -15,11 +15,9 @@ import {
 type ListEditorFormProps = {
   coverImage?: string;
   description: string;
-  descriptionCount: string;
   isPublic: boolean;
   loading: boolean;
   name: string;
-  nameCount: string;
   onCoverPress: () => void;
   onDescriptionChange: (value: string) => void;
   onNameChange: (value: string) => void;
@@ -31,11 +29,9 @@ type ListEditorFormProps = {
 export function ListEditorForm({
   coverImage,
   description,
-  descriptionCount,
   isPublic,
   loading,
   name,
-  nameCount,
   onCoverPress,
   onDescriptionChange,
   onNameChange,
@@ -47,8 +43,90 @@ export function ListEditorForm({
     <>
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.listEditor.coverTitle}</Text>
-          <Text style={styles.sectionHint}>{t.listEditor.coverVisibilityHint}</Text>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.basicsTitle}</Text>
+          <Text style={styles.sectionHint}>{t.listEditor.basicsHint}</Text>
+        </View>
+        <TextField
+          label={t.listEditor.titleLabel}
+          value={name}
+          onChangeText={onNameChange}
+          placeholder={t.listEditor.titlePlaceholder}
+          maxLength={LIST_NAME_MAX_LENGTH}
+          returnKeyType="next"
+        />
+
+        <TextField
+          label={`${t.listEditor.descriptionLabel} (${t.common.optional})`}
+          value={description}
+          onChangeText={onDescriptionChange}
+          placeholder={t.listEditor.descriptionPlaceholder}
+          multilineRows={3}
+          maxLength={LIST_DESCRIPTION_MAX_LENGTH}
+        />
+      </View>
+
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.privacyTitle}</Text>
+          <Text style={styles.sectionHint}>{t.listEditor.privacyHint}</Text>
+        </View>
+        <View accessibilityRole="radiogroup" style={styles.privacyRow}>
+          <Pressable
+            accessibilityLabel={t.listEditor.privacyPublic}
+            accessibilityHint={t.listEditor.privacyPublicDescription}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isPublic, disabled: loading }}
+            style={[styles.privacyButton, isPublic ? styles.privacyButtonActive : null]}
+            disabled={loading}
+            onPress={() => onVisibilityChange(true)}
+          >
+            <Globe color={isPublic ? colors.secondary : colors.textMuted} size={14} />
+            <View style={styles.privacyButtonBody}>
+              <Text style={[styles.privacyText, isPublic ? styles.privacyTextActivePublic : null]}>
+                {t.listEditor.privacyPublic}
+              </Text>
+              <Text
+                style={[
+                  styles.privacyCaption,
+                  isPublic ? styles.privacyCaptionActivePublic : null,
+                ]}
+              >
+                {t.listEditor.privacyPublicDescription}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel={t.listEditor.privacyPrivate}
+            accessibilityHint={t.listEditor.privacyPrivateDescription}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: !isPublic, disabled: loading }}
+            style={[styles.privacyButton, !isPublic ? styles.privateButtonActive : null]}
+            disabled={loading}
+            onPress={() => onVisibilityChange(false)}
+          >
+            <Lock color={!isPublic ? colors.primary : colors.textMuted} size={14} />
+            <View style={styles.privacyButtonBody}>
+              <Text style={[styles.privacyText, !isPublic ? styles.privacyTextActivePrivate : null]}>
+                {t.listEditor.privacyPrivate}
+              </Text>
+              <Text
+                style={[
+                  styles.privacyCaption,
+                  !isPublic ? styles.privacyCaptionActivePrivate : null,
+                ]}
+              >
+                {t.listEditor.privacyPrivateDescription}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.coverTitle}</Text>
+          <Text style={styles.sectionHint}>{t.common.optional}</Text>
         </View>
 
         <View style={styles.coverPickerRow}>
@@ -113,85 +191,6 @@ export function ListEditorForm({
               <X color={colors.onPrimary} size={14} />
             </Pressable>
           ) : null}
-        </View>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.listEditor.basicsTitle}</Text>
-          <Text style={styles.sectionHint}>{t.listEditor.basicsHint}</Text>
-        </View>
-        <TextField
-          label={t.listEditor.titleLabel}
-          value={name}
-          onChangeText={onNameChange}
-          placeholder={t.listEditor.titlePlaceholder}
-          maxLength={LIST_NAME_MAX_LENGTH}
-        />
-        <Text style={styles.fieldCount}>{nameCount}</Text>
-
-        <TextField
-          label={t.listEditor.descriptionLabel}
-          value={description}
-          onChangeText={onDescriptionChange}
-          placeholder={t.listEditor.descriptionPlaceholder}
-          multilineRows={3}
-          maxLength={LIST_DESCRIPTION_MAX_LENGTH}
-        />
-        <Text style={styles.fieldCount}>{descriptionCount}</Text>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.listEditor.privacyTitle}</Text>
-          <Text style={styles.sectionHint}>{t.listEditor.privacyHint}</Text>
-        </View>
-        <View style={styles.privacyRow}>
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isPublic, disabled: loading }}
-            style={[styles.privacyButton, isPublic ? styles.privacyButtonActive : null]}
-            disabled={loading}
-            onPress={() => onVisibilityChange(true)}
-          >
-            <Globe color={isPublic ? colors.secondary : colors.textMuted} size={14} />
-            <View style={styles.privacyButtonBody}>
-              <Text style={[styles.privacyText, isPublic ? styles.privacyTextActivePublic : null]}>
-                {t.listEditor.privacyPublic}
-              </Text>
-              <Text
-                style={[
-                  styles.privacyCaption,
-                  isPublic ? styles.privacyCaptionActivePublic : null,
-                ]}
-              >
-                {t.listEditor.privacyPublicDescription}
-              </Text>
-            </View>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: !isPublic, disabled: loading }}
-            style={[styles.privacyButton, !isPublic ? styles.privateButtonActive : null]}
-            disabled={loading}
-            onPress={() => onVisibilityChange(false)}
-          >
-            <Lock color={!isPublic ? colors.primary : colors.textMuted} size={14} />
-            <View style={styles.privacyButtonBody}>
-              <Text style={[styles.privacyText, !isPublic ? styles.privacyTextActivePrivate : null]}>
-                {t.listEditor.privacyPrivate}
-              </Text>
-              <Text
-                style={[
-                  styles.privacyCaption,
-                  !isPublic ? styles.privacyCaptionActivePrivate : null,
-                ]}
-              >
-                {t.listEditor.privacyPrivateDescription}
-              </Text>
-            </View>
-          </Pressable>
         </View>
       </View>
     </>

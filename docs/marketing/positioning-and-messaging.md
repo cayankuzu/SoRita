@@ -63,9 +63,10 @@ Segmentler kod ve mevcut copy'den türetildi; anket verisi yok, o yüzden
 2. **Karar veren listeler** — Liste oluşturma, düzenleme, detay (C1, C2).
 3. **Sosyal bağlam** — Takip, beğeni, yorum, profil (C2).
 
-**Güven mesajı:** Reklam yok, pazarlama takip SDK'sı yok; hesabını
-uygulamadan silebilirsin (C3, C4). Bu, ürünün en savunulabilir ayrımıdır çünkü
-bağımlılık listesinden doğrulanabilir.
+**Güven mesajı:** Reklam/sponsorlu yerleştirme ve attribution SDK'sı yok;
+Sentry'nin sınırlı hata, performans ve ürün olayı telemetrisi açıkça belirtilir;
+hesabını uygulamadan silebilirsin (C3, C4). Bu ayrım bağımlılık ve telemetri
+adaptörü kaynaklarından doğrulanabilir.
 
 **CTA dili:** "Haritayı aç", "Listeni oluştur", "Keşfet". Emir kipi kısa
 tutulur; aciliyet dili kullanılmaz.

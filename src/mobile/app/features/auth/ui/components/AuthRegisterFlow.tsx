@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Text, TextInput, View } from 'react-native';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,6 +13,7 @@ import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests'
 import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthField, type AuthFieldStatus } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthImagePicker } from '@/mobile/app/features/auth/ui/components/AuthImagePicker';
+import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import { AuthStepDots } from '@/mobile/app/features/auth/ui/components/AuthStepDots';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
@@ -61,7 +62,8 @@ type AuthRegisterFlowProps = {
   passwordHint?: string;
   passwordHintTone?: 'muted' | 'danger' | 'success';
   profilePhoto?: string;
-  registerFieldErrors?: Partial<Record<'email' | 'interests' | 'name' | 'password' | 'username', string>>;
+  registerFieldErrors?: Partial<Record<'email' | 'name' | 'password' | 'username', string>>;
+  registerSubmissionError?: string;
   regBio: string;
   regEmail: string;
   regInterests: string[];
@@ -123,6 +125,85 @@ function buildAvailabilityFieldStatus(params: {
   return buildHelperFieldStatus(params.helper, params.helperTone);
 }
 
+type AuthRegisterHeaderProps = {
+  compact: boolean;
+  currentStep: RegisterStepItem;
+  goToPreviousRegisterStep: () => void;
+  handleRegisterBack: () => void;
+  isLastStep: boolean;
+  regStep: number;
+  stepCount: number;
+};
+
+function AuthRegisterHeader({
+  compact,
+  currentStep,
+  goToPreviousRegisterStep,
+  handleRegisterBack,
+  isLastStep,
+  regStep,
+  stepCount,
+}: AuthRegisterHeaderProps) {
+  if (isLastStep) {
+    return (
+      <>
+        <View style={styles.previewBackRow}>
+          <IconButton
+            accessibilityLabel={tr.common.back}
+            onPress={goToPreviousRegisterStep}
+            style={styles.backButton}
+          >
+            <ArrowLeft color={colors.textMuted} size={18} />
+          </IconButton>
+        </View>
+
+        <View style={styles.stepHeader}>
+          <AuthStepDots current={regStep} total={stepCount} />
+          <Text accessible={false} style={styles.stepCounter}>
+            {tr.settings.editProfile.stepCounter(regStep + 1, stepCount)}
+          </Text>
+        </View>
+
+        <View style={styles.stepCopy}>
+          <Text accessibilityRole="header" style={styles.stepTitle}>{currentStep.title}</Text>
+          <Text style={styles.stepDescription}>{currentStep.subtitle}</Text>
+        </View>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <View style={styles.registerTopBar}>
+        <IconButton
+          accessibilityLabel={tr.common.back}
+          onPress={handleRegisterBack}
+          style={styles.backButton}
+        >
+          <ArrowLeft color={colors.textMuted} size={18} />
+        </IconButton>
+        <View style={styles.stepProgress}>
+          <AuthStepDots current={regStep} total={stepCount} />
+          <Text accessible={false} style={styles.stepCounter}>
+            {tr.settings.editProfile.stepCounter(regStep + 1, stepCount)}
+          </Text>
+        </View>
+        <View style={styles.spacer} />
+      </View>
+
+      <View style={[styles.authBrandRow, compact ? styles.authBrandRowCompact : null]}>
+        <SoRitaLogo size={compact ? 'lg' : 'xl'} />
+      </View>
+
+      <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
+        <View style={styles.stepIconWrap}>{currentStep.icon}</View>
+        <Text accessibilityRole="header" style={styles.screenTitle}>{currentStep.title}</Text>
+        <Text style={styles.screenSubtitle}>{currentStep.subtitle}</Text>
+      </View>
+    </>
+  );
+}
+
 export function AuthRegisterFlow({
   clearCoverPhoto,
   clearProfilePhoto,
@@ -139,6 +220,7 @@ export function AuthRegisterFlow({
   passwordHintTone = 'muted',
   profilePhoto,
   registerFieldErrors = {},
+  registerSubmissionError,
   regBio,
   regEmail,
   regInterests,
@@ -162,69 +244,70 @@ export function AuthRegisterFlow({
   const currentStep = steps[regStep];
   const isLastStep = regStep === steps.length - 1;
   const compact = useAuthLayoutMode();
+  const nameRef = React.useRef<TextInput | null>(null);
   const usernameRef = React.useRef<TextInput | null>(null);
   const bioRef = React.useRef<TextInput | null>(null);
+  const emailRef = React.useRef<TextInput | null>(null);
   const passwordRef = React.useRef<TextInput | null>(null);
+  const lastFocusedErrorRef = React.useRef('');
+
+  React.useEffect(() => {
+    const progressLabel = tr.settings.editProfile.stepCounter(regStep + 1, steps.length);
+    AccessibilityInfo.announceForAccessibility(`${progressLabel}. ${currentStep.title}`);
+  }, [currentStep.title, regStep, steps.length]);
+
+  React.useEffect(() => {
+    const firstError = regStep === 0
+      ? registerFieldErrors.name
+        ? { key: 'name', ref: nameRef }
+        : registerFieldErrors.username
+          ? { key: 'username', ref: usernameRef }
+          : null
+      : regStep === 1
+        ? registerFieldErrors.email
+          ? { key: 'email', ref: emailRef }
+          : registerFieldErrors.password
+            ? { key: 'password', ref: passwordRef }
+            : null
+        : null;
+
+    if (!firstError) {
+      lastFocusedErrorRef.current = '';
+      return;
+    }
+
+    const signature = `${regStep}:${firstError.key}`;
+    if (lastFocusedErrorRef.current === signature) {
+      return;
+    }
+
+    lastFocusedErrorRef.current = signature;
+    const timeout = setTimeout(() => firstError.ref.current?.focus(), 0);
+    return () => clearTimeout(timeout);
+  }, [regStep, registerFieldErrors]);
 
   return (
     <Screen variant="form" contentContainerStyle={styles.authScreen}>
-      {isLastStep ? (
-        <>
-          <View style={styles.previewBackRow}>
-            <IconButton
-              accessibilityLabel={tr.common.back}
-              onPress={goToPreviousRegisterStep}
-              style={styles.backButton}
-            >
-              <ArrowLeft color={colors.textMuted} size={18} />
-            </IconButton>
-          </View>
-
-          <View style={styles.stepHeader}>
-            <AuthStepDots current={regStep} total={steps.length} />
-            <Text style={styles.stepCounter}>
-              {tr.settings.editProfile.stepCounter(regStep + 1, steps.length)}
-            </Text>
-          </View>
-
-          <View style={styles.stepCopy}>
-            <Text style={styles.stepTitle}>{currentStep.title}</Text>
-            <Text style={styles.stepDescription}>{currentStep.subtitle}</Text>
-          </View>
-        </>
-      ) : (
-        <>
-          <View style={styles.registerTopBar}>
-            <IconButton
-              accessibilityLabel={tr.common.back}
-              onPress={handleRegisterBack}
-              style={styles.backButton}
-            >
-              <ArrowLeft color={colors.textMuted} size={18} />
-            </IconButton>
-            <AuthStepDots current={regStep} total={steps.length} />
-            <View style={styles.spacer} />
-          </View>
-
-          <View style={[styles.authBrandRow, compact ? styles.authBrandRowCompact : null]}>
-            <SoRitaLogo size={compact ? 'lg' : 'xl'} />
-          </View>
-
-          <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
-            <View style={styles.stepIconWrap}>{currentStep.icon}</View>
-            <Text style={styles.screenTitle}>{currentStep.title}</Text>
-            <Text style={styles.screenSubtitle}>{currentStep.subtitle}</Text>
-          </View>
-        </>
-      )}
+      <AuthRegisterHeader
+        compact={compact}
+        currentStep={currentStep}
+        goToPreviousRegisterStep={goToPreviousRegisterStep}
+        handleRegisterBack={handleRegisterBack}
+        isLastStep={isLastStep}
+        regStep={regStep}
+        stepCount={steps.length}
+      />
 
       {regStep === 0 ? (
         <View style={styles.formBlock}>
           <AuthField
+            ref={nameRef}
             label={tr.auth.register.nameLabel}
             placeholder={tr.auth.register.namePlaceholder}
             value={regName}
             onChangeText={setRegName}
+            autoComplete="name"
+            textContentType="name"
             blurOnSubmit={false}
             returnKeyType="next"
             onSubmitEditing={() => usernameRef.current?.focus()}
@@ -238,7 +321,9 @@ export function AuthRegisterFlow({
             placeholder={tr.auth.register.usernamePlaceholder}
             value={regUsername}
             onChangeText={updateRegisterUsername}
+            autoComplete="username-new"
             autoCapitalize="none"
+            textContentType="username"
             returnKeyType="next"
             blurOnSubmit={false}
             onSubmitEditing={() => bioRef.current?.focus()}
@@ -257,6 +342,7 @@ export function AuthRegisterFlow({
             placeholder={tr.auth.register.bioPlaceholder}
             value={regBio}
             onChangeText={setRegBio}
+            autoComplete="off"
             multilineRows={4}
             blurOnSubmit
             returnKeyType="done"
@@ -269,12 +355,15 @@ export function AuthRegisterFlow({
       {regStep === 1 ? (
         <View style={styles.formBlock}>
           <AuthField
+            ref={emailRef}
             label={tr.auth.register.emailLabel}
             placeholder={tr.auth.register.emailPlaceholder}
             value={regEmail}
             onChangeText={setRegEmail}
+            autoComplete="email"
             keyboardType="email-address"
             autoCapitalize="none"
+            textContentType="emailAddress"
             blurOnSubmit={false}
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
@@ -293,8 +382,10 @@ export function AuthRegisterFlow({
             placeholder={tr.auth.register.passwordPlaceholder}
             value={regPassword}
             onChangeText={setRegPassword}
+            autoComplete="new-password"
             secureTextEntry
             autoCapitalize="none"
+            textContentType="newPassword"
             returnKeyType="done"
             onSubmitEditing={goToNextRegisterStep}
             status={buildHelperFieldStatus(
@@ -304,21 +395,7 @@ export function AuthRegisterFlow({
             icon={<Lock color={colors.textMuted} size={14} />}
           />
 
-          <View style={styles.passwordMeter}>
-            {[1, 2, 3, 4].map((level) => (
-              <View
-                key={level}
-                style={[
-                  styles.passwordMeterItem,
-                  regPassword.length >= level * 3
-                    ? level <= 2
-                      ? styles.passwordMeterWarm
-                      : styles.passwordMeterStrong
-                    : null,
-                ]}
-              />
-            ))}
-          </View>
+          <AuthPasswordRequirements password={regPassword} />
         </View>
       ) : null}
 
@@ -335,8 +412,8 @@ export function AuthRegisterFlow({
             onToggle={toggleInterest}
           />
 
-          <Text style={[styles.selectionMeta, registerFieldErrors.interests ? styles.selectionMetaError : null]}>
-            {registerFieldErrors.interests || tr.auth.register.interestsSelectedCount(regInterests.length)}
+          <Text accessibilityLiveRegion="polite" style={styles.selectionMeta}>
+            {tr.auth.register.interestsSelectedCount(regInterests.length)}
           </Text>
         </View>
       ) : null}
@@ -365,6 +442,16 @@ export function AuthRegisterFlow({
             onClear={clearCoverPhoto}
           />
         </View>
+      ) : null}
+
+      {registerSubmissionError ? (
+        <Text
+          accessibilityLiveRegion="assertive"
+          accessibilityRole="alert"
+          style={styles.formError}
+        >
+          {registerSubmissionError}
+        </Text>
       ) : null}
 
       {isLastStep ? (

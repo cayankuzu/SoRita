@@ -134,7 +134,7 @@ describe('read model query hooks', () => {
     await expect(options[1]?.queryFn()).resolves.toEqual([]);
   });
 
-  it('normalizes explore query input and falls back without a user', async () => {
+  it('normalizes Turkish explore input consistently for the query key and request', async () => {
     const capturedOptions: QueryOptions[] = [];
     useInfiniteQueryMock.mockImplementation((options: QueryOptions) => {
       capturedOptions.push(options);
@@ -142,11 +142,12 @@ describe('read model query hooks', () => {
     });
     fetchExplorePageMock.mockResolvedValue({ listItems: [], placeItems: [], userItems: [] });
 
-    useExploreQuery('viewer-1', '  Coffee  ', { kind: 'places' });
+    useExploreQuery('viewer-1', '  Özgür   Çelik  ', { kind: 'places' });
 
     expect(capturedOptions[0]).toMatchObject({
       enabled: true,
       initialPageParam: null,
+      queryKey: ['explore', 'page', 'viewer-1', 'places', 'ozgur celik', null],
       staleTime: 300000,
     });
     await capturedOptions[0]?.queryFn({
@@ -157,7 +158,7 @@ describe('read model query hooks', () => {
       abortSignal: expect.any(AbortSignal),
       cursor: { id: 'cursor-1', rank: 3 },
       kind: 'places',
-      query: 'coffee',
+      query: 'ozgur celik',
       viewerId: 'viewer-1',
     });
     expect(capturedOptions[0]?.getNextPageParam?.({ nextCursor: { id: 'next', rank: 2 } })).toEqual({

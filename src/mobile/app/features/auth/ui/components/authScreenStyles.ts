@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const authScreenStyles = StyleSheet.create({
   landingScreen: {
@@ -23,7 +23,7 @@ export const authScreenStyles = StyleSheet.create({
     marginBottom: 8,
   },
   landingSubtitle: {
-    fontSize: 12,
+    ...typography.bodyText,
     color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 18,
@@ -63,9 +63,12 @@ export const authScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+  stepProgress: {
+    alignItems: 'center',
+    gap: 4,
+  },
   stepCounter: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textMuted,
   },
   stepCopy: {
@@ -73,23 +76,20 @@ export const authScreenStyles = StyleSheet.create({
     gap: 4,
   },
   stepTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...typography.title,
     color: colors.text,
   },
   stepDescription: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   screenTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...typography.headlineText,
     color: colors.text,
   },
   screenSubtitle: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   formBlock: {
@@ -102,18 +102,16 @@ export const authScreenStyles = StyleSheet.create({
     padding: 10,
   },
   confirmationTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.primaryDark,
   },
   confirmationText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   footerText: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
     textAlign: 'center',
   },
@@ -135,9 +133,9 @@ export const authScreenStyles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   footerLink: {
+    ...typography.bodyText,
     color: colors.primary,
-    fontWeight: '700',
-    lineHeight: 18,
+    fontWeight: fontWeight.strong,
   },
   registerTopBar: {
     flexDirection: 'row',
@@ -158,26 +156,9 @@ export const authScreenStyles = StyleSheet.create({
     marginBottom: 10,
   },
   atIcon: {
-    fontSize: 14,
+    ...typography.bodyText,
     color: colors.textMuted,
-    fontWeight: '600',
-  },
-  passwordMeter: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: -4,
-  },
-  passwordMeterItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.cardBorder,
-  },
-  passwordMeterWarm: {
-    backgroundColor: colors.warning,
-  },
-  passwordMeterStrong: {
-    backgroundColor: colors.secondary,
+    fontWeight: fontWeight.medium,
   },
   photoSection: {
     alignItems: 'center',
@@ -190,22 +171,28 @@ export const authScreenStyles = StyleSheet.create({
     padding: 10,
   },
   helperCardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   helperCardText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   selectionMeta: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.captionText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
-  selectionMetaError: {
+  formError: {
+    marginTop: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerBg,
     color: colors.danger,
+    ...typography.captionText,
+    fontWeight: fontWeight.medium,
+    padding: 10,
   },
   counterText: {
     marginTop: -6,

@@ -9,7 +9,7 @@ import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { t } from '@/mobile/app/shared/i18n';
 import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapPreviewProps = {
   places: MapMarkerItem[];
@@ -311,15 +311,14 @@ const styles = StyleSheet.create({
   },
   fallbackTitle: {
     maxWidth: '88%',
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
     textAlign: 'center',
   },
   fallbackSubtitle: {
     maxWidth: '88%',
     ...typography.metadataText,
-    fontWeight: '600',
     color: colors.textSoft,
     textAlign: 'center',
   },

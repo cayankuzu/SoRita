@@ -24,7 +24,7 @@ import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/co
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   formatPlaceMediaDuration,
   getPlaceMediaCounts,
@@ -61,6 +61,7 @@ type PlaceEditorFinalStepProps = {
   onCreateList: () => void | Promise<void>;
   onMediaPreview: (index: number) => void;
   onMediaSelection: (index: number) => void;
+  onMoveMedia: (fromIndex: number, toIndex: number) => void;
   onNewListCoverImageChange: (value: string) => void;
   onNewListDescriptionChange: (value: string) => void;
   onNewListNameChange: (value: string) => void;
@@ -76,15 +77,21 @@ type PlaceEditorFinalStepProps = {
 };
 
 function MediaThumb({
+  count,
   index,
   isSelected,
   item,
+  onMoveEarlier,
+  onMoveLater,
   onPress,
   onLongPress,
 }: {
+  count: number;
   index: number;
   isSelected: boolean;
   item: PlaceMedia;
+  onMoveEarlier?: () => void;
+  onMoveLater?: () => void;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -92,12 +99,32 @@ function MediaThumb({
 
   return (
     <Pressable
+      accessibilityActions={[
+        ...(onMoveEarlier
+          ? [{ name: 'decrement' as const, label: tr.placeEditor.mediaMoveEarlier }]
+          : []),
+        ...(onMoveLater
+          ? [{ name: 'increment' as const, label: tr.placeEditor.mediaMoveLater }]
+          : []),
+      ]}
+      accessibilityLabel={tr.placeEditor.mediaItemLabel(
+        index + 1,
+        count,
+        item.type === 'video' ? tr.common.mediaVideo : tr.common.mediaPhoto,
+      )}
       accessibilityRole="button"
       accessibilityState={{ selected: isSelected }}
       delayLongPress={500}
       onLongPress={() => {
         ignoreNextPressRef.current = true;
         onLongPress();
+      }}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'decrement') {
+          onMoveEarlier?.();
+        } else if (event.nativeEvent.actionName === 'increment') {
+          onMoveLater?.();
+        }
       }}
       onPress={() => {
         if (ignoreNextPressRef.current) {
@@ -153,6 +180,7 @@ export function PlaceEditorFinalStep({
   onCreateList,
   onMediaPreview,
   onMediaSelection,
+  onMoveMedia,
   onNewListCoverImageChange,
   onNewListDescriptionChange,
   onNewListNameChange,
@@ -179,8 +207,31 @@ export function PlaceEditorFinalStep({
 
   return (
     <View style={styles.stepContent}>
+      <PlaceEditorListSelectionSection
+        currentMembershipListIds={currentMembershipListIds}
+        duplicateListIds={duplicateListIds}
+        isCreatingList={isCreatingList}
+        isPickingListCover={isPickingListCover}
+        listSelectionNotice={listSelectionNotice}
+        lists={lists}
+        newListCoverImage={newListCoverImage}
+        newListDescription={newListDescription}
+        newListName={newListName}
+        newListPublic={newListPublic}
+        selectedLists={selectedLists}
+        showNewListForm={showNewListForm}
+        onCreateList={onCreateList}
+        onNewListCoverImageChange={onNewListCoverImageChange}
+        onNewListDescriptionChange={onNewListDescriptionChange}
+        onNewListNameChange={onNewListNameChange}
+        onNewListPublicChange={onNewListPublicChange}
+        onPickListCover={onPickListCover}
+        onShowNewListFormChange={onShowNewListFormChange}
+        onToggleList={onToggleList}
+      />
+
       <TextField
-        label={tr.placeEditor.shortTitleLabel}
+        label={`${tr.placeEditor.shortTitleLabel} (${tr.common.optional})`}
         value={title}
         onChangeText={onTitleChange}
         multilineRows={3}
@@ -192,7 +243,7 @@ export function PlaceEditorFinalStep({
         autoComplete="url"
         autoCorrect={false}
         keyboardType="url"
-        label={tr.placeEditor.menuUrlLabel}
+        label={`${tr.placeEditor.menuUrlLabel} (${tr.common.optional})`}
         helper={tr.placeEditor.menuUrlHelper}
         maxLength={PLACE_MENU_URL_MAX_LENGTH}
         placeholder={tr.placeEditor.menuUrlPlaceholder}
@@ -200,7 +251,7 @@ export function PlaceEditorFinalStep({
         onChangeText={onMenuUrlChange}
       />
       <TextField
-        label={tr.placeEditor.notesLabel}
+        label={`${tr.placeEditor.notesLabel} (${tr.common.optional})`}
         value={notes}
         onChangeText={onNotesChange}
         multilineRows={4}
@@ -209,7 +260,7 @@ export function PlaceEditorFinalStep({
       />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.atmosphere}</Text>
+        <Text style={styles.sectionTitle}>{`${tr.placeEditor.atmosphere} (${tr.common.optional})`}</Text>
         <Text style={styles.sectionHelper}>{tr.placeEditor.atmosphereHelper}</Text>
         <OptionRail options={PLACE_ATMOSPHERE_OPTIONS} selectedValues={atmosphere} onToggle={onToggleAtmosphere} />
         {atmosphere.length > 0 ? (
@@ -218,7 +269,7 @@ export function PlaceEditorFinalStep({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.features}</Text>
+        <Text style={styles.sectionTitle}>{`${tr.placeEditor.features} (${tr.common.optional})`}</Text>
         <Text style={styles.sectionHelper}>{tr.placeEditor.featuresHelper}</Text>
         <OptionRail options={generalFeatureOptions} selectedValues={features} onToggle={onToggleFeature} />
         {features.length > 0 ? (
@@ -229,7 +280,7 @@ export function PlaceEditorFinalStep({
       <View style={styles.section}>
         <View style={styles.mediaSectionHeader}>
           <View style={styles.mediaSectionHeaderCopy}>
-            <Text style={styles.sectionTitle}>{tr.placeEditor.mediaTitle}</Text>
+            <Text style={styles.sectionTitle}>{`${tr.placeEditor.mediaTitle} (${tr.common.optional})`}</Text>
             {mediaHelperText ? (
               <Text style={[styles.sectionHelper, styles.sectionHelperActive]}>
                 {mediaHelperText}
@@ -279,15 +330,21 @@ export function PlaceEditorFinalStep({
           <View style={styles.mediaRail}>
             <ScrollView
               horizontal
+              keyboardShouldPersistTaps="handled"
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.mediaStrip}
             >
               {media.map((item, index) => (
                 <MediaThumb
+                  count={media.length}
                   key={`${item.id ?? item.url}-${item.type}`}
                   index={index}
                   isSelected={selectedMediaIndex === index}
                   item={item}
+                  onMoveEarlier={index > 0 ? () => onMoveMedia(index, index - 1) : undefined}
+                  onMoveLater={
+                    index < media.length - 1 ? () => onMoveMedia(index, index + 1) : undefined
+                  }
                   onLongPress={() => onMediaSelection(index)}
                   onPress={() => {
                     if (selectedMediaIndex == null) {
@@ -324,28 +381,6 @@ export function PlaceEditorFinalStep({
 
       </View>
 
-      <PlaceEditorListSelectionSection
-        currentMembershipListIds={currentMembershipListIds}
-        duplicateListIds={duplicateListIds}
-        isCreatingList={isCreatingList}
-        isPickingListCover={isPickingListCover}
-        listSelectionNotice={listSelectionNotice}
-        lists={lists}
-        newListCoverImage={newListCoverImage}
-        newListDescription={newListDescription}
-        newListName={newListName}
-        newListPublic={newListPublic}
-        selectedLists={selectedLists}
-        showNewListForm={showNewListForm}
-        onCreateList={onCreateList}
-        onNewListCoverImageChange={onNewListCoverImageChange}
-        onNewListDescriptionChange={onNewListDescriptionChange}
-        onNewListNameChange={onNewListNameChange}
-        onNewListPublicChange={onNewListPublicChange}
-        onPickListCover={onPickListCover}
-        onShowNewListFormChange={onShowNewListFormChange}
-        onToggleList={onToggleList}
-      />
     </View>
   );
 }
@@ -358,8 +393,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   sectionHelper: {
@@ -372,7 +407,7 @@ const styles = StyleSheet.create({
   },
   selectionMeta: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   mediaSectionHeader: {
@@ -394,7 +429,7 @@ const styles = StyleSheet.create({
   },
   counterBadgeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   counterBadgeStrong: {
@@ -405,7 +440,7 @@ const styles = StyleSheet.create({
   },
   counterBadgeStrongText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   mediaEmptyCard: {
@@ -431,13 +466,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mediaEmptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   mediaEmptyText: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   mediaEmptyAction: {
@@ -451,8 +486,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   mediaEmptyActionText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   mediaRail: {
@@ -495,7 +530,7 @@ const styles = StyleSheet.create({
   },
   mediaOrderBadgeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   mediaAddTile: {
@@ -519,13 +554,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   addMediaText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   addMediaSubtext: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
     textAlign: 'center',
   },

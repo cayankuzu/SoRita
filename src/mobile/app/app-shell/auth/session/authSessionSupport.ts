@@ -45,6 +45,14 @@ export class MissingAuthenticatedAccountError extends Error {
   }
 }
 
+export type AuthScopeSyncOptions = {
+  isCurrent?: () => boolean;
+};
+
+function isAuthScopeCurrent(options?: AuthScopeSyncOptions) {
+  return options?.isCurrent?.() !== false;
+}
+
 function createInfiniteQueryCachePage<T>(items: T[]): InfiniteData<T[], number> {
   return {
     pageParams: [0],
@@ -111,7 +119,10 @@ export async function getPersistedAuthUserSnapshot() {
   return getPersistedAuthUser<User>();
 }
 
-export async function restorePersistedVisibleDataSnapshot(authUserId: string) {
+export async function restorePersistedVisibleDataSnapshot(
+  authUserId: string,
+  options?: AuthScopeSyncOptions,
+) {
   const [snapshot] = await Promise.all([
     getPersistedVisibleDataSnapshot(authUserId),
     restoreStartupQueryCache(queryClient, authUserId).catch((error) => {
@@ -120,7 +131,7 @@ export async function restorePersistedVisibleDataSnapshot(authUserId: string) {
     }),
   ]);
 
-  if (!snapshot) {
+  if (!snapshot || !isAuthScopeCurrent(options)) {
     return null;
   }
 
@@ -193,7 +204,10 @@ export function isMissingAuthenticatedAccountError(error: unknown) {
   return isAuthApiError(error) && error.status === 404;
 }
 
-export async function ensureProfileExists(authUser: SupabaseAuthUser) {
+export async function ensureProfileExists(
+  authUser: SupabaseAuthUser,
+  options?: AuthScopeSyncOptions,
+) {
   if (!isEmailConfirmed(authUser)) {
     return;
   }
@@ -203,6 +217,10 @@ export async function ensureProfileExists(authUser: SupabaseAuthUser) {
     .select('id')
     .eq('id', authUser.id)
     .maybeSingle();
+
+  if (!isAuthScopeCurrent(options)) {
+    return;
+  }
 
   if (existingProfileError) {
     throw existingProfileError;
@@ -301,18 +319,26 @@ async function hydrateContextCurrentUserEmail<TContext extends {
   };
 }
 
-export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
+export async function syncPendingProfileMedia(
+  authUser: SupabaseAuthUser,
+  options?: AuthScopeSyncOptions,
+) {
   const [{ clearPendingSignupMedia, getPendingSignupMedia }, { fetchUserByIdIncludingBlocked, updateUser }] =
     await Promise.all([loadPendingSignupMediaStorage(), loadUsersRepository()]);
+
+  if (!isAuthScopeCurrent(options)) {
+    return;
+  }
+
   const pendingMedia = await getPendingSignupMedia(authUser.email);
 
-  if (!pendingMedia) {
+  if (!pendingMedia || !isAuthScopeCurrent(options)) {
     return;
   }
 
   const currentUser = await fetchUserByIdIncludingBlocked(authUser.id);
 
-  if (!currentUser) {
+  if (!currentUser || !isAuthScopeCurrent(options)) {
     return;
   }
 
@@ -320,7 +346,15 @@ export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
   const nextCoverPhoto = currentUser.coverPhoto || pendingMedia.coverPhoto;
 
   if (nextProfilePhoto === currentUser.profilePhoto && nextCoverPhoto === currentUser.coverPhoto) {
+    if (!isAuthScopeCurrent(options)) {
+      return;
+    }
+
     await clearPendingSignupMedia(authUser.email);
+    return;
+  }
+
+  if (!isAuthScopeCurrent(options)) {
     return;
   }
 
@@ -329,6 +363,11 @@ export async function syncPendingProfileMedia(authUser: SupabaseAuthUser) {
     profilePhoto: nextProfilePhoto,
     coverPhoto: nextCoverPhoto,
   });
+
+  if (!isAuthScopeCurrent(options)) {
+    return;
+  }
+
   await clearPendingSignupMedia(authUser.email);
 }
 
@@ -373,14 +412,35 @@ export function clearCurrentUserState() {
   queryClient.clear();
 }
 
-export async function syncAuthenticatedUser(authUser: SupabaseAuthUser): Promise<User | null> {
-  await ensureProfileExists(authUser);
-  await syncPendingProfileMedia(authUser);
+export async function syncAuthenticatedUser(
+  authUser: SupabaseAuthUser,
+  options?: AuthScopeSyncOptions,
+): Promise<User | null> {
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
+
+  await ensureProfileExists(authUser, options);
+
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
+
+  await syncPendingProfileMedia(authUser, options);
+
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
 
   const [{ fetchVisibleDataContext }, { refreshNotifications }] = await Promise.all([
     loadVisibleDataRepository(),
     loadNotificationRepository(),
   ]);
+
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
+
   const context = await hydrateContextCurrentUserEmail(
     await fetchVisibleDataContext(authUser.id),
     {
@@ -389,14 +449,27 @@ export async function syncAuthenticatedUser(authUser: SupabaseAuthUser): Promise
     },
   );
 
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
+
   if (!context.currentUser) {
     throw new MissingAuthenticatedAccountError();
   }
 
   setVisibleDataContextCache(authUser.id, context);
   await savePersistedAuthUser(context.currentUser);
+
+  if (!isAuthScopeCurrent(options)) {
+    return null;
+  }
+
   void refreshNotifications(authUser.id)
     .then((items) => {
+      if (!isAuthScopeCurrent(options)) {
+        return;
+      }
+
       queryClient.setQueryData(
         queryKeys.notifications.list(authUser.id),
         createInfiniteQueryCachePage(items),

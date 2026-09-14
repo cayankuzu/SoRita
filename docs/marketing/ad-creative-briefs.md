@@ -49,7 +49,7 @@ biriktiriyor ve bir daha bulamıyor.
 
 ### 6 saniyelik hook
 
-> "Galerinde 40 tane mekân ekran görüntüsü var, değil mi?"
+> "Galerindeki mekân ekran görüntülerini sonra bulabiliyor musun?"
 > *(telefon galerisi → uygulama listesi geçişi)*
 
 ### 15 saniyelik video akışı
@@ -73,9 +73,9 @@ biriktiriyor ve bir daha bulamıyor.
 **İçgörü:** Öneri uygulamalarına güvensizlik, çoğunlukla "sponsorlu mu?"
 sorusundan geliyor.
 
-**Kanıt:** C3 — üretim bağımlılıklarında reklam/analitik/attribution SDK'sı
-yok; yalnız çökme raporu var. Bu, `package.json` üzerinden **dışarıdan
-doğrulanabilir** bir iddiadır.
+**Kanıt:** C3 — üretim bağımlılıklarında reklam/attribution SDK'sı yoktur;
+Sentry hata, performans ve sınırlı ürün olayı telemetrisi için kullanılabilir.
+Bu, bağımlılık ve telemetri adaptörü kaynaklarından doğrulanabilir.
 
 ### 6 saniyelik hook
 
@@ -86,7 +86,7 @@ doğrulanabilir** bir iddiadır.
 | Saniye | Görsel | Altyazı |
 | --- | --- | --- |
 | 0–4 | Liste görünümü | "Sponsorlu yok." |
-| 4–9 | Ayarlar / gizlilik | "Reklam SDK'sı yok, pazarlama takibi yok." |
+| 4–9 | Ayarlar / gizlilik | "Reklam/attribution SDK'sı yok." |
 | 9–13 | Hesap silme ekranı | "Hesabını uygulamadan silebilirsin." |
 | 13–15 | Kapanış | "SoRita." |
 
@@ -94,8 +94,8 @@ doğrulanabilir** bir iddiadır.
 - **Segment:** Gizliliğe duyarlı kullanıcı
 - **Kanal:** Reddit, Mastodon, gizlilik odaklı bültenler
 - **Ölçülecek:** Store view → install oranı (bu açıda yüksek niyet beklenir)
-- **Dikkat:** "Hiçbir veri toplamıyoruz" **denmez** — çökme raporu ve hesap
-  verisi var. Cümle her zaman "reklam ve pazarlama takibi yok" biçiminde kurulur.
+- **Dikkat:** "Hiçbir veri toplamıyoruz" veya "takip yok" **denmez** — hesap
+  verisi ile Sentry hata, performans ve sınırlı ürün telemetrisi vardır.
 
 ---
 

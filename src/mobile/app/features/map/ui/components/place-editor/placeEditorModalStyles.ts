@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
@@ -65,8 +65,8 @@ export const placeEditorModalStyles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   cancelButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   headerText: {
@@ -74,19 +74,20 @@ export const placeEditorModalStyles = StyleSheet.create({
     paddingRight: 10,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.compactSectionText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   headerSubtitle: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   headerMeta: {
     marginTop: 4,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   saveProgressBanner: {
@@ -111,18 +112,17 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   saveProgressTitle: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   saveProgressDetail: {
     ...typography.metadataText,
-    lineHeight: 15,
     color: colors.textMuted,
   },
   saveProgressPercent: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   saveProgressPercentFailed: {
@@ -151,7 +151,6 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   saveProgressWarning: {
     ...typography.metadataText,
-    lineHeight: 15,
     color: colors.textSoft,
   },
   closeButton: {
@@ -175,13 +174,14 @@ export const placeEditorModalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   stepTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   stepSubtitle: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   stepDots: {
@@ -222,14 +222,14 @@ export const placeEditorModalStyles = StyleSheet.create({
     paddingHorizontal: 22,
   },
   lockOverlayTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
     textAlign: 'center',
   },
   lockOverlayDescription: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
     textAlign: 'center',
   },
@@ -253,8 +253,8 @@ export const placeEditorModalStyles = StyleSheet.create({
     gap: 4,
   },
   backButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   deleteButton: {
@@ -268,8 +268,8 @@ export const placeEditorModalStyles = StyleSheet.create({
     gap: 4,
   },
   deleteButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.danger,
   },
   nextButton: {
@@ -286,8 +286,8 @@ export const placeEditorModalStyles = StyleSheet.create({
     opacity: 0.45,
   },
   nextButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

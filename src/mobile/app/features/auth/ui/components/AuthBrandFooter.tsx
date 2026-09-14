@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -33,14 +33,14 @@ const styles = StyleSheet.create({
   },
   metaText: {
     ...typography.metadataText,
-    lineHeight: 15,
+    lineHeight: typography.compactTitleText.fontSize,
     textAlign: 'center',
     color: colors.textSoft,
   },
   brandText: {
     ...typography.metadataText,
-    lineHeight: 15,
-    fontWeight: '700',
+    lineHeight: typography.compactTitleText.fontSize,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
 });

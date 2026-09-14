@@ -25,6 +25,7 @@ const TRUSTED_FUNCTION_NAMES = new Set([
   'maps-geocoding',
   'media-assets',
   'moderation-reports',
+  'personal-data',
 ]);
 
 function bytesToBase64Url(bytes: Uint8Array) {

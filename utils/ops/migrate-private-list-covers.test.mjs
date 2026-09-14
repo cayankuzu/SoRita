@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -100,4 +102,13 @@ test('canonicalizes equivalent public cover references for reference-counted cle
       `${supabaseUrl}/storage/v1/object/public/place-media/user-1/list%201/cover.jpg`,
     ],
   );
+});
+
+test('apply phase never deletes a public source before live verification', () => {
+  const source = readFileSync(resolve(process.cwd(), 'utils/ops/migrate-private-list-covers.mjs'), 'utf8');
+  assert.doesNotMatch(source, /from\(PUBLIC_BUCKET\)\.remove/u);
+  assert.match(source, /private-cover-source-cleanup-candidates\.json/u);
+  assert.match(source, /source_retained/u);
+  assert.match(source, /contentSha256/u);
+  assert.match(source, /sizeBytes: downloaded\.data\.size/u);
 });

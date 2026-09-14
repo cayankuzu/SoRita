@@ -20,7 +20,7 @@ import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaf
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalSheetProps = {
   documentId: LegalDocumentId | null;
@@ -81,7 +81,7 @@ export function AuthLegalSheet({
       <View style={styles.scrollContent}>
         {document.sections.map((section) => (
           <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>{section.title}</Text>
             {section.body.map((paragraph) => (
               <Text key={paragraph} style={styles.paragraph}>
                 {paragraph}
@@ -120,13 +120,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...typography.compactTitleText,
     color: colors.text,
   },
   summary: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.supportingText,
     color: colors.textSoft,
   },
   scrollContent: {
@@ -137,13 +135,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.compactTitleText,
     color: colors.text,
   },
   paragraph: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.readingBodyText,
     color: colors.textMuted,
   },
 });

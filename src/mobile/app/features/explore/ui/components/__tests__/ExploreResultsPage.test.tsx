@@ -20,8 +20,6 @@ vi.mock('@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid', () => ({
 import { ExploreResultsPage } from '@/mobile/app/features/explore/ui/components/ExploreResultsPage';
 
 function createProps(active: boolean, listRef: (node: unknown) => void) {
-  const listHeader = <React.Fragment />;
-
   return {
     active,
     data: [],
@@ -31,7 +29,6 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     isFetchingNextPage: false,
     listMarkerLists: [],
     listRef,
-    listHeader,
     onClearSearch: vi.fn(),
     onContentReady: vi.fn(),
     onEndReached: vi.fn(),
@@ -73,7 +70,7 @@ describe('ExploreResultsPage', () => {
     );
     expect(lists[0]?.props.listRef).toBe(activeRef);
     expect(lists[1]?.props.listRef).toBe(backgroundRef);
-    expect(lists[0]?.props.ListHeaderComponent).toBe(activeProps.listHeader);
+    expect(lists[0]?.props.ListHeaderComponent).toBeUndefined();
     expect(lists[0]?.props.onEndReached).toBe(activeProps.onEndReached);
     expect(lists[1]?.props.onEndReached).toBeUndefined();
     expect(lists[1]?.props.onRefresh).toBeUndefined();
@@ -102,5 +99,7 @@ describe('ExploreResultsPage', () => {
       (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
     );
     expect(list.props.ListFooterComponent).not.toBeNull();
+    expect(list.props.ListFooterComponent.props.accessibilityLiveRegion).toBe('polite');
+    expect(list.props.ListFooterComponent.props.accessibilityState).toEqual({ busy: true });
   });
 });

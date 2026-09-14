@@ -13,8 +13,15 @@ import {
 } from 'lucide-react-native';
 
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { openMapLocationInApp } from '@/mobile/app/shared/utils/mapLinks';
 
 type AddressPanelProps = {
@@ -24,6 +31,7 @@ type AddressPanelProps = {
 
 export function AddressPanel({ location, onCopied }: AddressPanelProps) {
   const [isAddressExpanded, setIsAddressExpanded] = React.useState(false);
+  const [isCopying, setIsCopying] = React.useState(false);
   const addressText = React.useMemo(
     () => location.address?.trim() || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`,
     [location.address, location.lat, location.lng],
@@ -31,11 +39,23 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
 
   React.useEffect(() => {
     setIsAddressExpanded(false);
+    setIsCopying(false);
   }, [addressText, location.name]);
 
   const copyAddress = async () => {
-    await Clipboard.setStringAsync(addressText);
-    onCopied?.();
+    if (isCopying) {
+      return;
+    }
+
+    setIsCopying(true);
+    try {
+      await Clipboard.setStringAsync(addressText);
+      onCopied?.();
+    } catch {
+      showToast(tr.cards.copyAddressFailed, 'error');
+    } finally {
+      setIsCopying(false);
+    }
   };
 
   const openInMaps = () => {
@@ -49,10 +69,11 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
 
   return (
     <View style={styles.panel}>
-      <Text style={styles.panelTitle}>{location.name}</Text>
+      <Text accessibilityRole="header" style={styles.panelTitle}>{location.name}</Text>
       <View style={styles.addressCard}>
         <Pressable
           accessibilityLabel={`${location.name}, ${addressText}`}
+          accessibilityHint={tr.cards.openInMaps}
           accessibilityRole="link"
           onPress={openInMaps}
           style={styles.addressLinkButton}
@@ -64,7 +85,11 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={tr.cards.showAddressAction}
+          accessibilityLabel={
+            isAddressExpanded
+              ? `${tr.placeEditor.addressLabel}: ${tr.common.minimize}`
+              : tr.cards.showAddressAction
+          }
           accessibilityState={{ expanded: isAddressExpanded }}
           hitSlop={6}
           onPress={() => setIsAddressExpanded((current) => !current)}
@@ -73,13 +98,21 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
             isAddressExpanded ? styles.addressToggleButtonExpanded : null,
           ]}
         >
-          <ChevronRight color={colors.primary} size={14} />
+          <View
+            accessibilityElementsHidden
+            style={isAddressExpanded ? styles.addressToggleIconExpanded : null}
+          >
+            <ChevronRight color={colors.primary} size={14} />
+          </View>
         </Pressable>
       </View>
       <View style={styles.panelActions}>
         <Pressable
+          accessibilityLabel={tr.cards.copy}
           accessibilityRole="button"
-          style={styles.secondaryPanelButton}
+          accessibilityState={{ busy: isCopying, disabled: isCopying }}
+          disabled={isCopying}
+          style={[styles.secondaryPanelButton, isCopying ? styles.buttonDisabled : null]}
           onPress={() => void copyAddress()}
         >
           <Copy color={colors.textMuted} size={12} />
@@ -98,8 +131,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   panelTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   addressCard: {
@@ -121,12 +154,11 @@ const styles = StyleSheet.create({
   },
   addressLabel: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   addressLinkText: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.bodyText,
     color: colors.primary,
     textDecorationLine: 'underline',
     textDecorationColor: colors.primary,
@@ -143,6 +175,8 @@ const styles = StyleSheet.create({
   },
   addressToggleButtonExpanded: {
     backgroundColor: colors.primaryBg,
+  },
+  addressToggleIconExpanded: {
     transform: [{ rotate: '90deg' }],
   },
   panelActions: {
@@ -160,8 +194,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   secondaryPanelText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textMuted,
+  },
+  buttonDisabled: {
+    opacity: 0.62,
   },
 });

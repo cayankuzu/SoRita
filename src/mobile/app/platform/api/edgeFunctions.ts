@@ -19,6 +19,7 @@ const GATEWAY_FUNCTION_NAME_CONTRACT = [
   ['maps-geocoding', () => env.supabaseMapsFunctionName],
   ['media-assets', () => env.supabaseMediaAssetsFunctionName],
   ['moderation-reports', () => env.supabaseModerationReportsFunctionName],
+  ['personal-data', () => env.supabasePersonalDataFunctionName],
 ] as const;
 
 export type EdgeFunctionErrorCategory =

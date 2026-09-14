@@ -210,7 +210,7 @@ describe('usePlaceEditorState', () => {
     hook.unmount();
   });
 
-  it('allows saving without optional place details but still requires an explicit list selection', async () => {
+  it('allows saving without optional place details when an address identifies the place', async () => {
     let lists: Array<{
       id: string;
       userId: string;
@@ -225,12 +225,12 @@ describe('usePlaceEditorState', () => {
       lists = [...lists, list];
     });
     const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
-    const { tr } = await import('@/mobile/app/shared/i18n/tr');
     const hook = renderHook(() =>
       hooks.usePlaceEditorState({
         visible: true,
         lat: 39.9334,
         lng: 32.8597,
+        placeAddress: 'Ankara',
         lists,
         onSave: onSaveMock,
         onCreateList: onCreateListMock,
@@ -238,6 +238,7 @@ describe('usePlaceEditorState', () => {
     );
 
     expect(hook.result.current.canContinue).toBe(true);
+    expect(hook.result.current.newListPublic).toBe(false);
 
     act(() => {
       hook.result.current.goToNextStep();
@@ -261,6 +262,10 @@ describe('usePlaceEditorState', () => {
       await hook.result.current.handleCreateList();
     });
 
+    expect(onCreateListMock).toHaveBeenCalledWith(
+      expect.objectContaining({ isPublic: false }),
+    );
+
     hook.rerender();
 
     await waitFor(() => {
@@ -275,7 +280,8 @@ describe('usePlaceEditorState', () => {
     expect(beginProgressMock).toHaveBeenCalledTimes(1);
     expect(onSaveMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: tr.placeEditor.placeNamePlaceholder,
+        name: 'Ankara',
+        address: 'Ankara',
         categories: [],
         bestTimes: [],
         atmosphere: [],
@@ -284,6 +290,127 @@ describe('usePlaceEditorState', () => {
       ['generated-id'],
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
+
+    hook.unmount();
+  });
+
+  it('requires a real name or address on every step and unlocks after user input', async () => {
+    const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
+    const { tr } = await import('@/mobile/app/shared/i18n/tr');
+    const onSaveMock = vi.fn().mockResolvedValue(undefined);
+    const lists: PlaceList[] = [{
+      id: 'list-1',
+      userId: 'viewer',
+      name: 'Favorites',
+      places: [],
+      isPublic: true,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }];
+    const hook = renderHook(() =>
+      hooks.usePlaceEditorState({
+        visible: true,
+        lat: 41,
+        lng: 29,
+        placeName: tr.map.addressUnavailable,
+        placeAddress: tr.map.resolvingAddress,
+        lists,
+        onSave: onSaveMock,
+      }),
+    );
+
+    expect(hook.result.current.step).toBe(0);
+    expect(hook.result.current.canContinue).toBe(false);
+
+    await act(async () => {
+      await hook.result.current.handleSave();
+    });
+    expect(onSaveMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith(tr.placeEditor.placeIdentityRequired, 'error');
+
+    act(() => {
+      hook.result.current.setName('Moda Kahvesi');
+    });
+    expect(hook.result.current.canContinue).toBe(true);
+
+    act(() => {
+      hook.result.current.goToNextStep();
+      hook.result.current.setName('');
+    });
+    expect(hook.result.current.step).toBe(1);
+    expect(hook.result.current.canContinue).toBe(false);
+
+    act(() => {
+      hook.result.current.setAddress('Moda Sahili');
+    });
+    expect(hook.result.current.canContinue).toBe(true);
+
+    act(() => {
+      hook.result.current.goToNextStep();
+      hook.result.current.toggleList('list-1');
+    });
+    expect(hook.result.current.step).toBe(2);
+    expect(hook.result.current.canContinue).toBe(true);
+
+    act(() => {
+      hook.result.current.setAddress(tr.map.resolvingAddress);
+    });
+    expect(hook.result.current.canContinue).toBe(false);
+
+    act(() => {
+      hook.result.current.setName('Moda Kahvesi');
+    });
+    expect(hook.result.current.canContinue).toBe(true);
+
+    await act(async () => {
+      await hook.result.current.handleSave();
+    });
+    expect(onSaveMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Moda Kahvesi',
+        address: undefined,
+      }),
+      ['list-1'],
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    );
+
+    hook.unmount();
+  });
+
+  it('blocks the details step when the minimum price exceeds the maximum', async () => {
+    const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
+    const hook = renderHook(() =>
+      hooks.usePlaceEditorState({
+        visible: true,
+        lat: 39.9334,
+        lng: 32.8597,
+        placeName: 'Cafe',
+        lists: [],
+        onSave: vi.fn(),
+      }),
+    );
+
+    act(() => {
+      hook.result.current.goToNextStep();
+      hook.result.current.setPriceMin('250');
+      hook.result.current.setPriceMax('100');
+    });
+
+    expect(hook.result.current.step).toBe(1);
+    expect(hook.result.current.priceRangeIsValid).toBe(false);
+    expect(hook.result.current.canContinue).toBe(false);
+
+    act(() => {
+      hook.result.current.goToNextStep();
+    });
+    expect(hook.result.current.step).toBe(1);
+    expect(showToastMock).toHaveBeenCalled();
+
+    act(() => {
+      hook.result.current.setPriceMax('300');
+    });
+    expect(hook.result.current.priceRangeIsValid).toBe(true);
+    expect(hook.result.current.canContinue).toBe(true);
 
     hook.unmount();
   });
@@ -320,8 +447,13 @@ describe('usePlaceEditorState', () => {
       }),
     );
 
+    expect([...hook.result.current.duplicateListIds]).toEqual(['list-1']);
+
     act(() => {
-      hook.result.current.toggleList('list-1', { blocked: true, listName: 'Favorites' });
+      hook.result.current.toggleList('list-1', {
+        blocked: hook.result.current.duplicateListIds.has('list-1'),
+        listName: 'Favorites',
+      });
       hook.result.current.goToNextStep();
       hook.result.current.goToNextStep();
     });
@@ -333,6 +465,82 @@ describe('usePlaceEditorState', () => {
     expect(hook.result.current.listSelectionNotice).toBeTruthy();
     expect(hook.result.current.canContinue).toBe(false);
 
+    hook.unmount();
+  });
+
+  it('ignores geocode display copy when re-evaluating coordinate duplicates after naming a map point', async () => {
+    const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
+    const { tr } = await import('@/mobile/app/shared/i18n/tr');
+    const hook = renderHook(() =>
+      hooks.usePlaceEditorState({
+        visible: true,
+        lat: 1,
+        lng: 1,
+        placeName: tr.map.addressUnavailable,
+        placeAddress: tr.map.resolvingAddress,
+        lists: [{
+          id: 'list-1',
+          userId: 'viewer',
+          name: 'Aynı bina',
+          places: [{
+            id: 'existing-place',
+            name: 'Zemin kat',
+            lat: 1,
+            lng: 1,
+            addedAt: '2025-01-01T00:00:00.000Z',
+          }],
+          isPublic: false,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        }],
+        onSave: vi.fn(),
+      }),
+    );
+
+    expect([...hook.result.current.duplicateListIds]).toEqual(['list-1']);
+
+    act(() => {
+      hook.result.current.setName('Üst kat');
+    });
+
+    expect([...hook.result.current.duplicateListIds]).toEqual([]);
+    hook.unmount();
+  });
+
+  it('keeps a genuine source place name stable for duplicate detection after a draft rename', async () => {
+    const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
+    const hook = renderHook(() =>
+      hooks.usePlaceEditorState({
+        visible: true,
+        lat: 1,
+        lng: 1,
+        placeName: 'Zemin kat',
+        lists: [{
+          id: 'list-1',
+          userId: 'viewer',
+          name: 'Ayni bina',
+          places: [{
+            id: 'existing-place',
+            name: 'Zemin kat',
+            lat: 1,
+            lng: 1,
+            addedAt: '2025-01-01T00:00:00.000Z',
+          }],
+          isPublic: false,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        }],
+        onSave: vi.fn(),
+      }),
+    );
+
+    expect([...hook.result.current.duplicateListIds]).toEqual(['list-1']);
+
+    act(() => {
+      hook.result.current.setName('Ust kat');
+    });
+
+    expect([...hook.result.current.duplicateListIds]).toEqual(['list-1']);
     hook.unmount();
   });
 
@@ -355,6 +563,7 @@ describe('usePlaceEditorState', () => {
         visible: true,
         lat: 41,
         lng: 29,
+        placeName: 'Cafe',
         lists,
         onSave: onSaveMock,
       }),
@@ -406,6 +615,7 @@ describe('usePlaceEditorState', () => {
         visible: true,
         lat: 41,
         lng: 29,
+        placeName: 'Cafe',
         lists,
         onSave: onSaveMock,
         onSaveStart: onSaveStartMock,
@@ -668,6 +878,12 @@ describe('usePlaceEditorState', () => {
     expect(hook.result.current.media).toHaveLength(6);
     expect(showToastMock).toHaveBeenCalled();
 
+    act(() => {
+      hook.result.current.handleMoveMedia(0, 5);
+      hook.result.current.handleMoveMedia(-1, 3);
+    });
+    expect(hook.result.current.media[5]?.url).toBe('file://p0.jpg');
+
     await act(async () => {
       await hook.result.current.handleAddMedia();
     });
@@ -726,7 +942,7 @@ describe('usePlaceEditorState', () => {
     const abortController = new AbortController();
     const onSave = vi.fn().mockRejectedValueOnce(new Error('write failed'));
     const hook = renderHook(() => hooks.usePlaceEditorState({
-      visible: true, lat: 41, lng: 29, lists, onSave, onSaveError,
+      visible: true, lat: 41, lng: 29, placeName: 'Cafe', lists, onSave, onSaveError,
       onSaveStart: () => ({
         abortSignal: abortController.signal, onBannerCancel, onBannerOpen, onBannerRetry,
       }),

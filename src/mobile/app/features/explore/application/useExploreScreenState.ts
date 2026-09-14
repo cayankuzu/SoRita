@@ -10,6 +10,7 @@ import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorM
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
+import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 export type ExploreTabKey = 'lists' | 'places' | 'photos' | 'people';
@@ -59,7 +60,7 @@ function shouldLoadExploreTab(
 }
 
 function matchesText(value: string | undefined | null, query: string) {
-  return Boolean(value?.toLowerCase().includes(query));
+  return normalizeSearchText(value).includes(query);
 }
 
 function matchesUser(user: User, query: string) {
@@ -95,8 +96,8 @@ export function useExploreScreenState({
   const userId = user?.id;
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
-  const q = deferredSearchQuery.trim().toLowerCase();
-  const hasSearchQuery = debouncedSearchQuery.trim().length > 0;
+  const q = normalizeSearchText(deferredSearchQuery);
+  const hasSearchQuery = normalizeSearchText(debouncedSearchQuery).length > 0;
   const listExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
     enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'lists', hasSearchQuery),
     kind: 'lists',

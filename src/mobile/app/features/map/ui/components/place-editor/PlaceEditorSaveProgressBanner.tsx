@@ -25,11 +25,15 @@ export function PlaceEditorSaveProgressBanner({
   return (
     <View style={styles.saveProgressBanner}>
       <View style={styles.saveProgressHeader}>
-        <Text style={styles.saveProgressTitle}>
+        <Text accessibilityLiveRegion="polite" style={styles.saveProgressTitle}>
           {isFailed ? tr.placeEditor.saveFailedTitle : tr.placeEditor.saveProgressTitle}
         </Text>
         <View style={styles.saveProgressMeta}>
-          <Text style={[styles.saveProgressPercent, isFailed ? styles.saveProgressPercentFailed : null]}>
+          <Text
+            accessibilityLabel={`${nextProgress}%`}
+            accessibilityLiveRegion="polite"
+            style={[styles.saveProgressPercent, isFailed ? styles.saveProgressPercentFailed : null]}
+          >
             {`%${nextProgress}`}
           </Text>
           {onMenuPress ? (
@@ -49,6 +53,9 @@ export function PlaceEditorSaveProgressBanner({
       {detail ? <Text style={styles.saveProgressDetail}>{detail}</Text> : null}
 
       <View
+        accessibilityLabel={`${
+          isFailed ? tr.placeEditor.saveFailedTitle : tr.placeEditor.saveProgressTitle
+        }: ${nextProgress}%`}
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: nextProgress }}
         style={styles.saveProgressTrack}

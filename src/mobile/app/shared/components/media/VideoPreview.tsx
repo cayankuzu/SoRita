@@ -23,7 +23,7 @@ import {
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
   autoPlay?: boolean;
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

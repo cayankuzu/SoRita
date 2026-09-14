@@ -51,6 +51,7 @@ jobs:
   repository-evidence:
     name: Build checksum-bound repository evidence
     runs-on: ubuntu-latest
+    environment: production-evidence
     timeout-minutes: 25
     steps:
       - name: Check out the requested immutable commit
@@ -260,6 +261,8 @@ jobs:
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           GH_TOKEN: ${{ github.token }}
           REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64: ${{ vars.RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64 }}
+          RUNTIME_EVIDENCE_EXPECTED_KEY_ID: ${{ vars.RUNTIME_EVIDENCE_EXPECTED_KEY_ID }}
           RUNTIME_EVIDENCE_RUN_ID: ${{ inputs.runtime_evidence_run_id }}
         run: |
           set -euo pipefail
@@ -334,7 +337,9 @@ jobs:
             --commit "$CANDIDATE_SHA" \
             --runtime "$REQUESTED_RUNTIME_VERSION" \
             --run-id "$RUNTIME_EVIDENCE_RUN_ID" \
-            --run-attempt "$run_attempt"
+            --run-attempt "$run_attempt" \
+            --public-key-spki-base64 "$RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64" \
+            --key-id "$RUNTIME_EVIDENCE_EXPECTED_KEY_ID"
 
       - name: Generate a deliberately partial NO-GO manifest
         if: inputs.runtime_evidence_run_id == ''

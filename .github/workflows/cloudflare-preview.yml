@@ -66,15 +66,10 @@ jobs:
     timeout-minutes: 20
     environment: preview
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       EDGE_CORS_ALLOWLIST: ${{ vars.CLOUDFLARE_EDGE_CORS_ALLOWLIST }}
       EDGE_HEALTH_URL: ${{ vars.CLOUDFLARE_EDGE_HEALTH_URL }}
       EDGE_LOG_SAMPLE_RATE: ${{ vars.CLOUDFLARE_EDGE_LOG_SAMPLE_RATE }}
       EDGE_SUPABASE_URL: ${{ vars.CLOUDFLARE_EDGE_SUPABASE_URL }}
-      ORIGIN_HMAC_SECRET: ${{ secrets.CLOUDFLARE_ORIGIN_HMAC_SECRET }}
-      IP_HASH_PEPPER: ${{ secrets.CLOUDFLARE_IP_HASH_PEPPER }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -94,6 +89,12 @@ jobs:
 
       - name: Validate protected environment configuration
         shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          IP_HASH_PEPPER: ${{ secrets.CLOUDFLARE_IP_HASH_PEPPER }}
+          ORIGIN_HMAC_SECRET: ${{ secrets.CLOUDFLARE_ORIGIN_HMAC_SECRET }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN EDGE_CORS_ALLOWLIST EDGE_HEALTH_URL EDGE_SUPABASE_URL ORIGIN_HMAC_SECRET IP_HASH_PEPPER SUPABASE_PUBLISHABLE_KEY; do
@@ -107,7 +108,10 @@ jobs:
       - name: Create a mode-600 transient Worker secret file
         shell: bash
         env:
+          IP_HASH_PEPPER: ${{ secrets.CLOUDFLARE_IP_HASH_PEPPER }}
+          ORIGIN_HMAC_SECRET: ${{ secrets.CLOUDFLARE_ORIGIN_HMAC_SECRET }}
           SECRETS_FILE: ${{ runner.temp }}/sorita-edge-preview-secrets.json
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           node -e "const fs=require('node:fs'); fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify({SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY,ORIGIN_HMAC_SECRET:process.env.ORIGIN_HMAC_SECRET,IP_HASH_PEPPER:process.env.IP_HASH_PEPPER}), {mode:0o600,flag:'wx'});"
@@ -116,6 +120,8 @@ jobs:
         working-directory: ${{ env.WORKER_DIRECTORY }}
         shell: bash
         env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SECRETS_FILE: ${{ runner.temp }}/sorita-edge-preview-secrets.json
         run: |
           set -euo pipefail
@@ -134,6 +140,11 @@ jobs:
             --var 'ORIGIN_TIMEOUT_MS:8000' \
             --var 'JWKS_TIMEOUT_MS:2500' \
             --var "LOG_SAMPLE_RATE:${sample_rate}"
+
+      - name: Remove transient secret material
+        if: always()
+        shell: bash
+        run: rm -f -- "${RUNNER_TEMP}/sorita-edge-preview-secrets.json"
 
       - name: Verify the deployed health contract
         shell: bash
@@ -174,11 +185,6 @@ jobs:
 
           if (lastError) throw lastError;
           NODE
-
-      - name: Remove transient secret material
-        if: always()
-        shell: bash
-        run: rm -f -- "${RUNNER_TEMP}/sorita-edge-preview-secrets.json"
 
       - name: Upload non-secret Worker build metadata
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -1,6 +1,13 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  letterSpacing,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const placeCardStyles = StyleSheet.create({
   feedCard: {
@@ -24,14 +31,13 @@ export const placeCardStyles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   userUsername: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   sourceBar: {
@@ -77,19 +83,18 @@ export const placeCardStyles = StyleSheet.create({
   },
   sourceBarTitle: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.text,
     flexShrink: 1,
   },
   sourceBarUsername: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
     flexShrink: 1,
   },
   sourceBarMeta: {
     ...typography.metadataText,
-    fontWeight: '600',
     color: colors.quote,
   },
   linkBar: {
@@ -132,8 +137,8 @@ export const placeCardStyles = StyleSheet.create({
     gap: 4,
   },
   linkBarTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   linkBarMetaRow: {
@@ -144,7 +149,6 @@ export const placeCardStyles = StyleSheet.create({
   },
   linkBarMetaText: {
     ...typography.metadataText,
-    fontWeight: '600',
     color: colors.textSoft,
   },
   linkBarMetaTextPrivate: {
@@ -186,7 +190,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   mediaCarouselCounterText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   locationBar: {
@@ -215,8 +219,8 @@ export const placeCardStyles = StyleSheet.create({
     ...typography.metadataText,
     flex: 1,
     color: colors.textMuted,
-    fontWeight: '700',
-    letterSpacing: 0.1,
+    fontWeight: fontWeight.strong,
+    letterSpacing: letterSpacing.emphasizedMetadata,
   },
   content: {
     paddingHorizontal: 12,
@@ -262,14 +266,13 @@ export const placeCardStyles = StyleSheet.create({
     minWidth: 0,
   },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.secondary,
   },
   title: {
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
     flexShrink: 1,
   },
@@ -278,7 +281,6 @@ export const placeCardStyles = StyleSheet.create({
   },
   titleMeta: {
     ...typography.metadataText,
-    fontWeight: '600',
     color: colors.textSoft,
   },
   contentTitleChevron: {
@@ -320,7 +322,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   menuActionLabel: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   menuUrlPreview: {
@@ -369,7 +371,7 @@ export const placeCardStyles = StyleSheet.create({
   moreFeaturesText: {
     ...typography.metadataText,
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   badgeRow: {
     gap: 6,
@@ -383,7 +385,6 @@ export const placeCardStyles = StyleSheet.create({
   },
   badgeText: {
     ...typography.metadataText,
-    fontWeight: '600',
     color: colors.textMuted,
   },
   ratingBadge: {

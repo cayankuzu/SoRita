@@ -616,10 +616,12 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       setMinimizedEditor(null);
       showToast(tr.map.placeDeleted, 'success');
     } catch (error) {
-      showToast(
-        getUserFacingErrorMessage(error, tr.map.deletePlaceUnexpected),
-        'error',
+      const message = getUserFacingErrorMessage(
+        error,
+        tr.map.deletePlaceUnexpected,
       );
+      showToast(message, 'error');
+      throw createErrorWithCause(message, error);
     }
   }, [deletePlaceMutation]);
 

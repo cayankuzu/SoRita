@@ -3,7 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, iconSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  iconSize,
+  radius,
+  spacing,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export type SettingsMenuItem = {
   label: string;
@@ -11,6 +18,7 @@ export type SettingsMenuItem = {
   color: string;
   action: () => void;
   danger?: boolean;
+  disabled?: boolean;
 };
 
 type SettingsMenuSectionProps = {
@@ -21,10 +29,14 @@ type SettingsMenuSectionProps = {
 export function SettingsMenuSection({ title, items }: SettingsMenuSectionProps) {
   return (
     <View>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
       <View style={styles.menuGroup}>
         {items.map((item, index) => (
           <InstantPressable
+            accessibilityLabel={item.label}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: item.disabled }}
+            disabled={item.disabled}
             key={item.label}
             onPress={item.action}
             style={[styles.menuRow, index < items.length - 1 ? styles.menuRowBorder : null]}
@@ -44,7 +56,7 @@ const styles = StyleSheet.create({
     ...typography.metadataText,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.xs,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   menuGroup: {
@@ -55,7 +67,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   menuRow: {
-    minHeight: 52,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -75,7 +87,7 @@ const styles = StyleSheet.create({
   menuLabel: {
     ...typography.labelText,
     flex: 1,
-    fontWeight: '600',
+    fontWeight: fontWeight.medium,
     color: colors.text,
   },
   menuLabelDanger: {

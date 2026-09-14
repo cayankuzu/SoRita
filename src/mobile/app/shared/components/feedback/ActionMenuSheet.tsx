@@ -9,7 +9,13 @@ import { X } from 'lucide-react-native';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type ActionMenuSheetItem = {
@@ -17,7 +23,7 @@ export type ActionMenuSheetItem = {
   label: string;
   tone?: 'default' | 'danger';
   renderIcon?: (color: string) => React.ReactNode;
-  onPress: () => void;
+  onPress: () => Promise<void> | void;
 };
 
 type ActionMenuSheetProps = {
@@ -25,6 +31,7 @@ type ActionMenuSheetProps = {
   title: string;
   items: readonly ActionMenuSheetItem[];
   onClose: () => void;
+  returnFocusRef?: React.RefObject<unknown>;
 };
 
 export function ActionMenuSheet({
@@ -32,19 +39,24 @@ export function ActionMenuSheet({
   title,
   items,
   onClose,
+  returnFocusRef,
 }: ActionMenuSheetProps) {
+  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+
   return (
     <ModalScaffold
       accessibilityLabel={title}
+      initialFocusRef={titleRef}
       visible={visible}
       onClose={onClose}
+      returnFocusRef={returnFocusRef}
       variant="sheet"
       dismissOnBackdropPress
       style={styles.sheet}
       contentContainerStyle={styles.sheetContent}
     >
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+        <Text ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</Text>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
           <X color={colors.textMuted} size={14} />
         </IconButton>
@@ -59,9 +71,7 @@ export function ActionMenuSheet({
               accessibilityLabel={item.label}
               accessibilityRole="button"
               key={item.key}
-              onPress={() => {
-                item.onPress();
-              }}
+              onPress={item.onPress}
               style={styles.action}
             >
               {item.renderIcon ? (
@@ -98,8 +108,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   actions: {
@@ -122,8 +131,8 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   actionLabelDanger: {

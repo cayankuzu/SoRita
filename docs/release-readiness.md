@@ -1,5 +1,9 @@
 # SoRita release readiness
 
+> Historical snapshot: this document records the 2026-09-03 candidate. For the
+> current 2026-09-07 uncommitted hardening delta and its still-open release
+> blockers, use [audit/current-gap-matrix.md](./audit/current-gap-matrix.md).
+
 Son repo incelemesi: 2026-09-03
 
 İncelenen branch: `chore/final-aaa-mvp-hardening-docker-cloudflare-ota`
@@ -65,7 +69,7 @@ bulundu ve düzeltildi; düzeltmeler bir sonraki commit'te doğrulanacaktır.
 Bu tablodaki en önemli satır sonuncusudur: bir kapının **atlanmış** olması,
 geçmiş olması anlamına gelmez. Aggregator bu boşluğu kapatır.
 
-## Güncel readiness özeti
+## 2026-09-03 readiness özeti (tarihsel)
 
 | Alan | Güncel gerçek | Durum |
 | --- | --- | --- |
@@ -76,7 +80,7 @@ geçmiş olması anlamına gelmez. Aggregator bu boşluğu kapatır.
 | Push | Startup izin prompt'u kaldırıldı; token capability/tombstone, account-switch, verified tap, background dedupe, delivery DLQ/health/requeue güçlendirildi | Kaynak ve hedefli test `VERIFIED (LOCAL)`; FCM/APNs/Expo credential, receipt/scheduler alarmı ve iki-platform cihaz matrisi `UNVERIFIED / NO-GO` |
 | Cloudflare | Bounded origin parsing/schema, request-owned JWKS, no-store ve fail-closed Worker sözleşmesi; 3 dosya/34 test ve iki dry-run geçti | `VERIFIED (LOCAL)`; account/DNS/TLS/WAF/secrets/deploy/origin enforcement/canary `UNVERIFIED / NO-GO` |
 | Docker | Build context'i bozan `+!App.tsx` diff artifact'ı düzeltildi; `docker:test` uçtan uca exit 0: container profili 34 Worker testi, temiz Supabase reset + migration replay, lint hatasız, 6 dosya/180 pgTAP, dump/restore parity (22 tablo, 70 routine, 50 RLS policy, 3 bucket); `docker:load:smoke` 122.370 istek 0 hata | `VERIFIED (LOCAL)`; aynı-SHA CI/SBOM/provenance `UNVERIFIED` |
-| OTA | Runtime/channel/build identity/OTA classifier ve otomatik rollback kapıları güçlendirildi; 38 OTA/EAS testi geçti | `VERIFIED (LOCAL)`; signed provider update ve device rollback yok |
+| OTA | Runtime/channel/build identity/OTA classifier ve otomatik rollback kapıları güçlendirildi; 44 OTA/EAS testi geçti | `VERIFIED (LOCAL)`; signed provider update ve device rollback yok |
 | OTA code signing | Workflow geçerli tracked RSA certificate olmadan fail-closed | Mevcut EAS Free planında özellik kullanılamıyor: `BLOCKED / NO-GO` |
 | Release evidence | Manifest v2 Docker ve OTA-signing durumunu kapsar; binary input'u provider build identity ile doğrulanır | `VERIFIED (STATIC/LOCAL)`; final same-SHA attestation ve başarılı remote run yok |
 | Android/iOS | Yeni native/runtime candidate iki platform yeni binary gerektirir | `1.0.102`/107 AAB ve iOS 87 same-SHA signed artifact `UNVERIFIED / NO-GO`; eski 1.0.101/106 artifact geçersiz |
@@ -90,7 +94,7 @@ aynı-SHA runtime/operasyon kanıtı olmadan 9.80 verilmemiştir.
 
 ## Çalıştırılmış yerel kanıt
 
-2026-09-03 tarihli tam gate taraması (bu çalışma ağacı):
+2026-09-03 tarihli candidate çalışma ağacının tam gate taraması:
 
 ```text
 typecheck (app + tests):                     PASS
@@ -260,6 +264,6 @@ checksum-bound manifestte bulunduğunda verilebilir:
 10. Store privacy/data-safety/UGC ve named owner approvals; açık kritik/yüksek
     güvenlik, gizlilik, veri kaybı veya kullanıcılar arası izolasyon bulgusu yok.
 
-Bu paket mevcut değildir. 2026-08-31 nihai release kararı: **`NO-GO`**.
+Bu paket mevcut değildir. 2026-09-03 nihai release kararı: **`NO-GO`**.
 
 IMPLEMENTATION COMPLETE, RELEASE NO-GO UNTIL LISTED MANUAL/RUNTIME EVIDENCE IS ATTACHED TO THE SAME COMMIT SHA.

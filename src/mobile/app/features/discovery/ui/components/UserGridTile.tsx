@@ -1,15 +1,15 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
 
 export type UserGridTileProps = {
@@ -37,13 +37,15 @@ function UserGridTileComponent({
 }: UserGridTileProps) {
   const { columnGap, height, width } = useAppLayout();
   const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
+  const followStatus = isFollowing
+    ? tr.cards.following
+    : isPending
+      ? tr.profile.actions.requestSent
+      : tr.cards.follow;
+  const followActionLabel = isFollowing ? tr.profile.actions.unfollow : followStatus;
 
   return (
-    <Pressable
-      accessibilityLabel={`${user.name}, @${user.username}`}
-      accessibilityRole="button"
-      onPress={onPress}
-      onPressIn={onPressIn}
+    <View
       style={[
         styles.tile,
         styles.userTile,
@@ -51,73 +53,72 @@ function UserGridTileComponent({
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
-      <View style={styles.userCover}>
-        {user.coverPhoto ? (
-          <AppImage
-            uri={user.coverPhoto}
-            style={styles.userCover}
-            accessibilityLabel={tr.cards.listCoverImageLabel(user.name)}
-          />
-        ) : null}
-      </View>
-
-      <View style={styles.userAvatarWrap}>
-        <View style={styles.userAvatarFrame}>
-          <AvatarView uri={user.profilePhoto} name={user.name} size={38} />
+      <Pressable
+        accessibilityLabel={`${user.name}, @${user.username}`}
+        accessibilityRole="button"
+        onPress={onPress}
+        onPressIn={onPressIn}
+        style={styles.userTileMainAction}
+      >
+        <View style={styles.userCover}>
+          {user.coverPhoto ? (
+            <AppImage
+              uri={user.coverPhoto}
+              style={styles.userCover}
+              accessibilityLabel={tr.cards.listCoverImageLabel(user.name)}
+            />
+          ) : null}
         </View>
-      </View>
 
-      <View style={styles.userTileBody}>
-        <ExpandableText
-          text={user.name}
-          collapsedLines={1}
-          textStyle={styles.tileTitle}
-          showIndicator={false}
-          renderContent={() => <HighlightedText query={searchQuery} text={user.name} />}
-        />
-        <ExpandableText
-          text={`@${user.username}`}
-          collapsedLines={1}
-          textStyle={styles.ownerUsername}
-          showIndicator={false}
-          renderContent={() => <HighlightedText query={searchQuery} text={`@${user.username}`} />}
-        />
-        {user.bio && !compact ? (
-          <ExpandableText
-            text={user.bio}
-            collapsedLines={1}
-            textStyle={styles.tileDescription}
-            renderContent={() => <HighlightedText query={searchQuery} text={user.bio || ''} />}
-          />
-        ) : null}
-        <InstantPressable
-          accessibilityState={{ selected: isFollowing || isPending }}
-          hapticFeedback="light"
-          hitSlop={5}
-          onPress={(event) => {
-            event.stopPropagation();
-            return onFollowPress();
-          }}
-          style={[
-            styles.followButton,
-            isFollowing || isPending ? styles.followButtonPassive : null,
-          ]}
-        >
-          <Text
-            style={[
-              styles.followButtonText,
-              isFollowing || isPending ? styles.followButtonTextPassive : null,
-            ]}
-          >
-            {isFollowing
-              ? tr.cards.following
-              : isPending
-                ? tr.profile.actions.requestSent
-                : tr.cards.follow}
+        <View style={styles.userAvatarWrap}>
+          <View style={styles.userAvatarFrame}>
+            <AvatarView uri={user.profilePhoto} name={user.name} size={38} />
+          </View>
+        </View>
+
+        <View style={[styles.userTileBody, styles.userTileBodyMain]}>
+          <Text numberOfLines={1} style={styles.tileTitle}>
+            <HighlightedText query={searchQuery} text={user.name} />
           </Text>
-        </InstantPressable>
-      </View>
-    </Pressable>
+          <Text numberOfLines={1} style={styles.ownerUsername}>
+            <HighlightedText query={searchQuery} text={`@${user.username}`} />
+          </Text>
+          {user.bio && !compact ? (
+            <Text numberOfLines={1} style={styles.tileDescription}>
+              <HighlightedText query={searchQuery} text={user.bio} />
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+
+      <InstantPressable
+        accessibilityLabel={`${followActionLabel}: ${user.name}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isPending, selected: isFollowing }}
+        disabled={isPending}
+        hapticFeedback="light"
+        onPress={() => onFollowPress()}
+        style={({ busy }) => [
+          styles.followButton,
+          isFollowing || isPending || busy ? styles.followButtonPassive : null,
+        ]}
+      >
+        {({ busy }) => (
+          <View style={styles.followButtonContent}>
+            {busy ? <ActivityIndicator color={colors.textMuted} size="small" /> : null}
+            <Text
+              accessibilityLiveRegion={busy ? 'polite' : 'none'}
+              style={[
+                styles.followButtonText,
+                isFollowing || isPending || busy ? styles.followButtonTextPassive : null,
+              ]}
+            >
+              {busy ? tr.common.loading : followStatus}
+            </Text>
+          </View>
+        )}
+      </InstantPressable>
+    </View>
   );
 }
 

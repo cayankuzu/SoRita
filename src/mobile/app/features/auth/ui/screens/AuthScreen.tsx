@@ -97,6 +97,7 @@ export function AuthScreen() {
       <>
         <AuthLoginView
           confirmationEmail={authState.confirmationEmail}
+          error={authState.loginError}
           loginEmail={authState.loginEmail}
           loginPassword={authState.loginPassword}
           onBack={authState.goToLanding}
@@ -121,6 +122,7 @@ export function AuthScreen() {
       <>
         <AuthForgotPasswordView
           email={authState.forgotPasswordEmail}
+          error={authState.forgotPasswordError}
           onBack={authState.goToLogin}
           onChangeEmail={authState.setForgotPasswordEmail}
           onSubmit={authState.handleForgotPassword}
@@ -152,6 +154,7 @@ export function AuthScreen() {
         passwordHintTone={authState.passwordHintTone}
         profilePhoto={authState.profilePhoto}
         registerFieldErrors={authState.registerFieldErrors}
+        registerSubmissionError={authState.registerSubmissionError}
         regBio={authState.regBio}
         regEmail={authState.regEmail}
         regInterests={authState.regInterests}

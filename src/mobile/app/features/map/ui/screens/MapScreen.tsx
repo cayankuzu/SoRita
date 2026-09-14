@@ -69,7 +69,11 @@ function MapFilterMenu({
   onFilterChange: (filter: MarkerFilterOption) => void;
 }) {
   return (
-    <View style={styles.filterMenu}>
+    <View
+      accessibilityLabel={tr.map.filterTitle}
+      accessibilityRole="radiogroup"
+      style={styles.filterMenu}
+    >
       <Text style={styles.filterMenuTitle}>{tr.map.filterTitle}</Text>
       {MARKER_FILTER_OPTIONS.map((option) => {
         const isActive = markerFilter === option.value;
@@ -100,6 +104,43 @@ function MapFilterMenu({
         );
       })}
     </View>
+  );
+}
+
+function MapSecondaryOverlays({
+  bottom,
+  hasEditor,
+  hasPriorityNotice,
+  hasMinimizedEditor,
+  hasMinimizedExistingPlace,
+  isShort,
+  onDismissHint,
+  showHint,
+}: {
+  bottom: number;
+  hasEditor: boolean;
+  hasPriorityNotice: boolean;
+  hasMinimizedEditor: boolean;
+  hasMinimizedExistingPlace: boolean;
+  isShort: boolean;
+  onDismissHint: () => void;
+  showHint: boolean;
+}) {
+  if (isShort) {
+    return null;
+  }
+
+  return (
+    <>
+      <MapVisibilityLegend bottom={bottom + 58} />
+      {showHint &&
+      !hasPriorityNotice &&
+      !hasEditor &&
+      !hasMinimizedEditor &&
+      !hasMinimizedExistingPlace ? (
+        <MapAddHint bottom={bottom + 8} onClose={onDismissHint} />
+      ) : null}
+    </>
   );
 }
 
@@ -185,6 +226,9 @@ export function MapScreen() {
     visibleDataErrorMessage || searchErrorMessage || locationErrorMessage || env.isExpoGo,
   );
   const showSearchFeedback = !isFilterMenuOpen && !hasPriorityNotice && !isSearching && hasSearched;
+  const activeFilterLabel = MARKER_FILTER_OPTIONS.find(
+    (option) => option.value === markerFilter,
+  )?.label;
   const handleMapSceneLayout = React.useCallback((event: LayoutChangeEvent) => {
     const nextHeight = Math.round(event.nativeEvent.layout.height);
     setMapSceneHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
@@ -272,6 +316,7 @@ export function MapScreen() {
                 <Search color={colors.textSoft} size={16} />
                 <TextInput
                   accessibilityLabel={tr.map.searchPlaceholder}
+                  accessibilityState={{ busy: isSearching }}
                   value={searchQuery}
                   onChangeText={handleSearchQueryChange}
                   autoCapitalize="none"
@@ -300,7 +345,7 @@ export function MapScreen() {
                   <ActivityIndicator color={colors.primary} size="small" />
                 ) : searchQuery ? (
                   <InstantPressable
-                    accessibilityLabel={tr.common.close}
+                    accessibilityLabel={tr.map.clearSearch}
                     accessibilityRole="button"
                     onPress={clearSearch}
                     hitSlop={hitSlopFor(24)}
@@ -315,6 +360,7 @@ export function MapScreen() {
                 <InstantPressable
                   accessibilityLabel={tr.map.refreshButton}
                   accessibilityRole="button"
+                  accessibilityState={{ busy: refreshing, disabled: refreshing }}
                   disabled={refreshing}
                   style={[styles.floatingSearchAction, refreshing ? styles.refreshButtonActive : null]}
                   onPress={handleRefreshPress}
@@ -326,8 +372,12 @@ export function MapScreen() {
                   )}
                 </InstantPressable>
                 <InstantPressable
-                  accessibilityLabel={tr.map.filterButton}
+                  accessibilityLabel={`${tr.map.filterButton}: ${activeFilterLabel || tr.map.filterAll}`}
                   accessibilityRole="button"
+                  accessibilityState={{
+                    expanded: isFilterMenuOpen,
+                    selected: markerFilter !== 'all',
+                  }}
                   style={[
                     styles.floatingSearchAction,
                     markerFilter !== 'all' ? styles.filterButtonActive : null,
@@ -434,16 +484,21 @@ export function MapScreen() {
             )}
           </View>
 
-          <MapVisibilityLegend bottom={locateButtonBottomOffset + 58} />
-
-          {showMapAddHint && !editorData && !minimizedEditor && !minimizedExistingPlace ? (
-            <MapAddHint bottom={locateButtonBottomOffset + 8} onClose={dismissMapAddHint} />
-          ) : null}
+          <MapSecondaryOverlays
+            bottom={locateButtonBottomOffset}
+            hasEditor={Boolean(editorData)}
+            hasPriorityNotice={hasPriorityNotice}
+            hasMinimizedEditor={Boolean(minimizedEditor)}
+            hasMinimizedExistingPlace={Boolean(minimizedExistingPlace)}
+            isShort={mapOverlayLayout.isShort}
+            onDismissHint={dismissMapAddHint}
+            showHint={showMapAddHint}
+          />
 
           <InstantPressable
             accessibilityLabel={tr.map.locateMe}
             accessibilityRole="button"
-            accessibilityState={{ disabled: isLocating }}
+            accessibilityState={{ busy: isLocating, disabled: isLocating }}
             disabled={isLocating}
             style={[
               styles.locateButton,

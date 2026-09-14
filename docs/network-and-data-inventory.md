@@ -15,7 +15,7 @@ flowchart LR
   P[Postgres + RLS / RPC]
   R[Realtime]
   S[Supabase Storage]
-  X[Google Maps / FCM / Expo Updates / Sentry]
+  X[Google Maps / FCM / Expo Updates / Sentry / opt-in PostHog]
 
   D <--> L
   D -->|direct varsayılanı veya seçili gateway| C
@@ -31,7 +31,7 @@ flowchart LR
   D --> X
 ```
 
-Cloudflare genel uygulama proxy'si değildir. `gateway` modunda yalnız beş seçili mobil Edge Function `/v1/<function>` yoluna gider; diğer Supabase Auth/PostgREST/RPC/Realtime/Storage trafiği doğrudan kalır. `direct` varsayılandır ve gateway hatasında otomatik direct fallback yoktur. Kaynak: [edgeFunctions.ts](../src/mobile/app/platform/api/edgeFunctions.ts) ve [publicRuntimeConfig.ts](../src/mobile/app/platform/config/publicRuntimeConfig.ts).
+Cloudflare genel uygulama proxy'si değildir. `gateway` modunda yalnız altı seçili mobil Edge Function `/v1/<function>` yoluna gider; diğer Supabase Auth/PostgREST/RPC/Realtime/Storage trafiği doğrudan kalır. `direct` varsayılandır ve gateway hatasında otomatik direct fallback yoktur. Kaynak: [edgeFunctions.ts](../src/mobile/app/platform/api/edgeFunctions.ts) ve [publicRuntimeConfig.ts](../src/mobile/app/platform/config/publicRuntimeConfig.ts).
 
 ## İstemci ağ çıkışları
 
@@ -41,12 +41,13 @@ Cloudflare genel uygulama proxy'si değildir. `gateway` modunda yalnız beş se�
 | Supabase PostgREST/RPC | Profil, liste, mekân, sosyal grafik, yorum, bildirim, rapor ve read model verisi | Kullanıcı JWT + RLS | `VERIFIED (STATIC)` | `UNVERIFIED` |
 | Supabase Realtime | Kullanıcıya ait bildirim kanalı | Kullanıcı JWT ve kanal politikası | `VERIFIED (STATIC)` | `UNVERIFIED` |
 | Supabase Storage | Public profil/mekân medyası; private mekân medyası için imzalı URL; imzalı doğrudan upload | JWT, Edge Function tarafından verilen kısa ömürlü sözleşme | `VERIFIED (STATIC)` | `UNVERIFIED` |
-| Supabase Edge Functions | Auth, hesap silme, geocoding, medya varlıkları, moderasyon ve yönetim yayını | Eyleme göre public/JWT; request ID, cihaz kimliği, imza/idempotency | `VERIFIED (STATIC)` | `UNVERIFIED` |
-| Cloudflare Worker | Seçili beş Edge Function önünde boyut/şema/JWT/rate-limit/CORS/origin-HMAC katmanı | JWT veya dar public auth eylemi; Worker secrets | `VERIFIED (STATIC)` | `NO-GO` — dağıtılmamış placeholder config |
+| Supabase Edge Functions | Auth, hesap/veri hakları, geocoding, medya varlıkları, moderasyon ve yönetim yayını | Eyleme göre public/JWT; request ID, cihaz kimliği, imza/idempotency | `VERIFIED (STATIC)` | `UNVERIFIED` |
+| Cloudflare Worker | Seçili altı Edge Function önünde boyut/şema/JWT/rate-limit/CORS/origin-HMAC katmanı | JWT veya dar public auth eylemi; Worker secrets | `VERIFIED (STATIC)` | `NO-GO` — dağıtılmamış placeholder config |
 | Google Maps SDK/Static Maps | Harita, konum görünümü, mini harita görseli ve harici harita araması | Platform/statik Maps anahtarları | `VERIFIED (STATIC)` | `UNVERIFIED` |
 | Firebase Cloud Messaging | Cihaz tokenı, doğrudan push ve sistem topic aboneliği | Native Firebase yapılandırması | `VERIFIED (STATIC)` | `UNVERIFIED` |
 | Expo Updates/EAS | Runtime `appVersion` uyumlu OTA kontrolü ve yayın | Expo proje kimliği/CI secrets | `VERIFIED (STATIC)` | `UNVERIFIED` |
 | Sentry | Hata/telemetri; yalnız DSN/yapılandırma sağlanırsa | DSN ve opsiyonel build plugin ayarları | `VERIFIED (STATIC)` | `UNVERIFIED` |
+| PostHog | Açık kullanıcı izni ve uzaktan kill-switch sonrasında allowlist'teki anonim ürün olayları | Public proje anahtarı; anonim kurulum tanımlayıcısı; hesapla `identify` edilmez | `VERIFIED (STATIC)` | `UNVERIFIED` — proje/veri bölgesi/retention ve canlı event kanıtı gerekli |
 | Kullanıcı menü URL'leri | Mekân kartındaki doğrulanmış HTTPS bağlantısını işletim sisteminde açma | Kullanıcı kontrollü harici hedef | `VERIFIED (STATIC)` | Hedef alan adları değişken; `UNVERIFIED` |
 
 Secret veya token değerleri bu envantere yazılmaz. `.env`, platform hizmet dosyaları ve credential dosyalarının varlığı geçerli, kısıtlı veya production'a uygun kimlik bilgisi kanıtı değildir.
@@ -60,6 +61,7 @@ Secret veya token değerleri bu envantere yazılmaz. `.env`, platform hizmet dos
 | `maps-geocoding` | Evet | Mevcut harita/konum için kontrollü geocoding |
 | `media-assets` | Evet | Upload/read URL üretimi, tamamlama ve silme; medya baytı gateway'den geçmez |
 | `moderation-reports` | Evet | Mevcut kullanıcı/liste/mekân/yorum raporları |
+| `personal-data` | Evet | Kimliği doğrulanmış kullanıcının sınırlandırılmış kişisel veri dışa aktarımı |
 | `admin-broadcast-notification` | Hayır | Mevcut sistem duyurularının yönetim/operasyon yayını |
 
 Mobil edge taşıyıcısı tek `POST` yapar; varsayılan zaman aşımı 15 saniye, izin verilen üst sınır 60 saniye, hata gövdesi sınırı 16 KiB'dir. Başarı şeması çağrı bazında doğrulanabilir. `Retry-After` bilgisi üst katmana taşınır; genel taşıyıcı otomatik retry veya gateway→direct fallback yapmaz. Medya modülü kendi dar, idempotent/geçici hata retry politikasına sahiptir; bu genel Edge Function garantisi olarak yorumlanmamalıdır.
@@ -76,10 +78,11 @@ Mobil edge taşıyıcısı tek `POST` yapar; varsayılan zaman aşımı 15 saniy
 | `/v1/moderation-reports` | `POST` | 8 KiB | `moderation-reports` |
 | `/v1/media-assets` | `POST` | 64 KiB | `media-assets` |
 | `/v1/delete-user` | `POST` | 1 KiB | `delete-user` |
+| `/v1/personal-data` | `POST` | 1 KiB | `personal-data` |
 
 Worker; asimetrik Supabase JWT doğrulaması, bounded JSON, exact method/path/action/schema, HMAC-hash'li rate-limit anahtarı, no-store yanıt, güvenli log alanları ve origin HMAC sağlar. Mutasyon origin'e bir kez iletilir. Media `upload`/`fileBase64` reddedilir; baytlar imzalı URL ile doğrudan Storage'a gider.
 
-Ancak [wrangler.jsonc](../infra/cloudflare/sorita-edge/wrangler.jsonc) halen `.invalid` origin'ler, `replace-*-project-ref` URL'leri, placeholder namespace ID'leri ve production için `workers_dev` içerir. README açıkça deploy yapılmadığını belirtir. Gerçek secrets, özel domain/WAF, HMAC gözlem→enforcement sırası ve origin bypass koruması kanıtlanmadığı için Cloudflare durumu `NO-GO`dur.
+Ancak [wrangler.jsonc](../infra/cloudflare/sorita-edge/wrangler.jsonc) halen `.invalid` origin'ler, `replace-*-project-ref` URL'leri ve örnek namespace ID'leri içerir; production Worker ve özel route henüz yoktur. README açıkça deploy yapılmadığını belirtir. Gerçek secrets, özel domain/WAF, HMAC gözlem→enforcement sırası ve origin bypass koruması kanıtlanmadığı için Cloudflare durumu `NO-GO`dur.
 
 ## Sunucu veri envanteri
 
@@ -99,6 +102,8 @@ Postgres ve Storage nihai kaynak kabul edilir; istemci cache'i nihai kaynak değ
 - `private.edge_rate_limits`
 - `private.push_delivery_jobs`
 - `private.system_broadcast_deliveries`
+- `private.moderation_sanctions`
+- `private.personal_data_access_log`
 - `public.account_deletion_jobs`
 - `public.request_nonces`
 
@@ -121,7 +126,7 @@ Repository katmanında mevcut ekranlar için sayfalı/read-model sözleşmeleri 
 | Expo SecureStore | Auth session ve cihaz kimliği | Gizli veri AsyncStorage'a fallback edilmez; logout ve session temizliğinde auth session silinir |
 | AsyncStorage kullanıcı cache'leri | Görünür snapshot, entity cache, screen index/startup query cache | Kullanıcı kimliğiyle adlandırılır; TTL/boyut/adet sınırları vardır; kullanıcı geçişinde purge edilir |
 | AsyncStorage outbox | Sekiz izinli yazma türünün payload referansı, bağımlılığı, deneme zamanı ve idempotency anahtarı | Kullanıcı kapsamlı, seri yazım; auth sınırında purge |
-| AsyncStorage taslak/durum | Liste düzenleme taslağı, harita ekranı, navigation state, UI ipuçları, legal consent, pending signup media, auth redirect state | İlgili akışın yaşam döngüsünde silinir; kullanıcıya ait olanlar kullanıcı kimliğiyle sınırlandırılmalıdır |
+| AsyncStorage taslak/durum | Liste düzenleme taslağı, harita ekranı, navigation state, UI ipuçları, legal consent, isteğe bağlı analitik tercihi, pending signup media, auth redirect state | İlgili akışın yaşam döngüsünde silinir; analitik tercihi kurulum düzeyinde ve varsayılan kapalıdır; kullanıcıya ait olanlar kullanıcı kimliğiyle sınırlandırılmalıdır |
 | Bellek | React Query cache, Realtime kanalları, özel imzalı URL cache/in-flight işler | Logout/kullanıcı değişiminde merkezi purge; imzalı URL en çok 4 dakika cache |
 
 Kalıcı startup query cache en fazla 7 query ve 1 MB tutar, sonsuz sorguların yalnız ilk sayfasını saklar ve `file:`, `content:`, `blob:`, `data:` ile imza/token içeren kısa ömürlü URL'leri dışlar. Retention: bildirim 2 saat, keşif 6 saat, feed 12 saat, harita/profil 24 saattir. Görünür snapshot 12 saat; en çok 24 liste, liste başına 32 mekân, mekân başına 8 yorum ve yorum başına 4 yanıt taşır. Entity ve screen index varsayılan TTL'i 24 saattir. Ayrıntı: [startupQueryCache.ts](../src/mobile/app/data/cache/startupQueryCache.ts), [visibleDataSnapshotCache.ts](../src/mobile/app/data/cache/visibleDataSnapshotCache.ts), [entityCacheStorage.ts](../src/mobile/app/data/cache/entityCacheStorage.ts) ve [screenIndexStorage.ts](../src/mobile/app/data/cache/screenIndexStorage.ts).
@@ -136,4 +141,4 @@ Worker sözleşmesi token, body, e-posta, kullanıcı ID'si, ham IP, secret ve u
 
 ## Operasyonel karar
 
-Bu envanter kaynak kodu için geçerlidir. Gerçek DNS, TLS, CORS allowlist, Supabase proje URL'si, JWT signing algorithm, service-role sınırı, secrets rotasyonu, FCM/APNs, Google Maps kotaları, EAS update grubu, Sentry alımı ve veri retention işi için canlı kanıt yoktur. Ağ/veri production cutover kararı `NO-GO`dur.
+Bu envanter kaynak kodu için geçerlidir. Gerçek DNS, TLS, CORS allowlist, Supabase proje URL'si, JWT signing algorithm, service-role sınırı, secrets rotasyonu, FCM/APNs, Google Maps kotaları, EAS update grubu, Sentry/PostHog alımı ve veri retention işi için canlı kanıt yoktur. Ağ/veri production cutover kararı `NO-GO`dur.

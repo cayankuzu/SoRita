@@ -87,7 +87,13 @@ values (
   'test',
   timezone('utc', now()),
   '{"provider":"email","providers":["email"]}',
-  '{"name":"Push Hardening","username":"push_hardening"}',
+  jsonb_build_object(
+    'name', 'Push Hardening',
+    'username', 'push_hardening',
+    'legal_consent_version', '2026-09-08-terms-community-privacy',
+    'legal_consent_documents', jsonb_build_array('community', 'kvkk', 'privacy', 'terms'),
+    'legal_consent_at', timezone('utc', now())
+  ),
   timezone('utc', now()),
   timezone('utc', now())
 );

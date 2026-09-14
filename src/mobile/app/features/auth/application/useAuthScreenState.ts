@@ -2,20 +2,34 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
 import {
+  getAuthPasswordRequirementProgress,
+} from '@/mobile/app/features/auth/application/authPasswordRequirements';
+import {
   useEmailAvailabilityQuery,
   useUsernameAvailabilityQuery,
-  type AvailabilityState,
-  type AvailabilityStatus,
 } from '@/mobile/app/data/hooks/useAccountAvailabilityQuery';
+import {
+  AUTH_EMAIL_REGEX,
+  getAvailabilityHelper,
+  getAvailabilityHelperTone,
+  getPasswordRequirementLabel,
+  getRegisterPasswordErrorMessage,
+  getSafeAuthFailureMessage,
+  isAvailabilityUsable,
+  isWeakPasswordMessage,
+  type AuthHelperTone,
+  type RegisterFieldErrors,
+} from '@/mobile/app/features/auth/application/authScreenStateHelpers';
+import { useAuthRegistrationMedia } from '@/mobile/app/features/auth/application/useAuthRegistrationMedia';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { pickSingleImageFromPrompt } from '@/mobile/app/platform/media/images';
 import {
   getPersistedLegalConsentVersion,
   savePersistedLegalConsentVersion,
 } from '@/mobile/app/platform/storage/legalConsent';
 import {
   LEGAL_CONSENT_VERSION,
+  LEGAL_DOCUMENT_IDS,
   type LegalDocumentId,
 } from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -26,10 +40,7 @@ import {
   normalizeUsernameInput,
   PASSWORD_MIN_LENGTH,
 } from '@/mobile/app/shared/validation/contentLimits';
-import {
-  doesPasswordMeetCompositionRequirements,
-  isPasswordLikelyWeak,
-} from '@/mobile/app/shared/validation/passwordStrength';
+import { doesPasswordMeetCompositionRequirements } from '@/mobile/app/shared/validation/passwordStrength';
 
 export type AuthView = 'landing' | 'login' | 'register' | 'forgotPassword';
 
@@ -44,72 +55,7 @@ Partial<
   initialView?: AuthView;
 };
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LAST_REGISTER_STEP_INDEX = 3;
-type HelperTone = 'muted' | 'danger' | 'success';
-type RegisterFieldErrorKey = 'email' | 'interests' | 'name' | 'password' | 'username';
-type RegisterFieldErrors = Partial<Record<RegisterFieldErrorKey, string>>;
-
-function isAvailabilityUsable(status: AvailabilityStatus) {
-  return status === 'available';
-}
-
-function getAvailabilityHelper(availability: AvailabilityState, idleMessage?: string) {
-  return availability.status === 'idle' ? idleMessage : availability.message;
-}
-
-function getAvailabilityHelperTone(availability: AvailabilityState): HelperTone {
-  if (availability.status === 'available') {
-    return 'success';
-  }
-
-  if (
-    availability.status === 'invalid' ||
-    availability.status === 'unavailable' ||
-    availability.status === 'error'
-  ) {
-    return 'danger';
-  }
-
-  return 'muted';
-}
-
-function isWeakPasswordMessage(message?: string | null) {
-  const normalized = message?.toLowerCase() ?? '';
-
-  return (
-    normalized.includes('password is known to be weak') ||
-    normalized.includes('weak and easy to guess') ||
-    normalized.includes('weak password')
-  );
-}
-
-function getRegisterPasswordErrorMessage(params: {
-  email: string;
-  name: string;
-  password: string;
-  username: string;
-}) {
-  if (params.password.length < PASSWORD_MIN_LENGTH) {
-    return null;
-  }
-
-  if (!doesPasswordMeetCompositionRequirements(params.password)) {
-    return tr.auth.passwordHint.complexity;
-  }
-
-  if (
-    isPasswordLikelyWeak(params.password, {
-      email: params.email,
-      name: params.name,
-      username: params.username,
-    })
-  ) {
-    return tr.auth.register.passwordWeak;
-  }
-
-  return null;
-}
 
 export function useAuthScreenState({
   initialEmail,
@@ -131,12 +77,25 @@ export function useAuthScreenState({
   const [regEmail, setRegEmailState] = useState('');
   const [regPassword, setRegPasswordState] = useState('');
   const [regInterests, setRegInterests] = useState<string[]>([]);
-  const [profilePhoto, setProfilePhoto] = useState<string | undefined>();
-  const [coverPhoto, setCoverPhoto] = useState<string | undefined>();
   const [registerPasswordError, setRegisterPasswordError] = useState<string | null>(null);
   const [registerFieldErrors, setRegisterFieldErrors] = useState<RegisterFieldErrors>({});
+  const [registerSubmissionError, setRegisterSubmissionError] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false);
   const [activeLegalDocument, setActiveLegalDocument] = useState<LegalDocumentId | null>(null);
+  const clearRegisterSubmissionError = useCallback(() => {
+    setRegisterSubmissionError('');
+  }, []);
+  const {
+    clearCoverPhoto,
+    clearProfilePhoto,
+    coverPhoto,
+    profilePhoto,
+    resetRegistrationMedia,
+    selectCoverPhoto,
+    selectProfilePhoto,
+  } = useAuthRegistrationMedia({ onMediaChange: clearRegisterSubmissionError });
 
   useEffect(() => {
     let active = true;
@@ -183,11 +142,11 @@ export function useAuthScreenState({
     setRegEmailState('');
     setRegPasswordState('');
     setRegInterests([]);
-    setProfilePhoto(undefined);
-    setCoverPhoto(undefined);
+    resetRegistrationMedia();
     setRegisterPasswordError(null);
     setRegisterFieldErrors({});
-  }, []);
+    setRegisterSubmissionError('');
+  }, [resetRegistrationMedia]);
 
   const { availability: usernameAvailability } =
     useUsernameAvailabilityQuery({
@@ -205,7 +164,7 @@ export function useAuthScreenState({
     useEmailAvailabilityQuery({
       active: view === 'register',
       value: regEmail,
-      invalidMessage: (value) => (!EMAIL_REGEX.test(value) ? tr.auth.register.emailInvalid : null),
+      invalidMessage: (value) => (!AUTH_EMAIL_REGEX.test(value) ? tr.auth.register.emailInvalid : null),
       checkingMessage: tr.auth.register.emailChecking,
       availableMessage: tr.auth.register.emailUsable,
       unavailableMessage: tr.auth.register.emailTaken,
@@ -222,7 +181,7 @@ export function useAuthScreenState({
   const normalizedRegBio = normalizeUserBioInput(regBio).trim();
   const normalizedRegEmail = normalizeEmailInput(regEmail).trim().toLowerCase();
   const isUsernameFormatValid = normalizedRegUsername.length >= 3;
-  const isEmailFormatValid = EMAIL_REGEX.test(normalizedRegEmail);
+  const isEmailFormatValid = AUTH_EMAIL_REGEX.test(normalizedRegEmail);
   const canUseUsername =
     isUsernameFormatValid && isAvailabilityUsable(usernameAvailability.status);
   const canUseEmail = isEmailFormatValid && isAvailabilityUsable(emailAvailability.status);
@@ -237,6 +196,10 @@ export function useAuthScreenState({
     [normalizedRegEmail, normalizedRegName, normalizedRegUsername, regPassword],
   );
   const passwordMeetsCompositionRequirements = doesPasswordMeetCompositionRequirements(regPassword);
+  const passwordRequirementProgress = useMemo(
+    () => getAuthPasswordRequirementProgress(regPassword),
+    [regPassword],
+  );
 
   const canContinue = useMemo(() => {
     if (regStep === 0) {
@@ -253,17 +216,12 @@ export function useAuthScreenState({
       );
     }
 
-    if (regStep === 2) {
-      return regInterests.length > 0;
-    }
-
     return true;
   }, [
     canUseEmail,
     canUseUsername,
     normalizedRegName,
     passwordMeetsCompositionRequirements,
-    regInterests.length,
     regPassword,
     regStep,
     registerPasswordError,
@@ -272,26 +230,26 @@ export function useAuthScreenState({
 
   const defaultPasswordHint = useMemo(() => {
     if (regPassword.length === 0) {
-      return tr.auth.passwordHint.min;
-    }
-
-    if (regPassword.length < PASSWORD_MIN_LENGTH) {
-      return tr.auth.passwordHint.remaining(PASSWORD_MIN_LENGTH - regPassword.length);
+      return tr.auth.passwordHint.requirements;
     }
 
     if (registerPasswordPolicyError) {
       return registerPasswordPolicyError;
     }
 
-    if (regPassword.length < 10) {
-      return tr.auth.passwordHint.good;
+    const missingRequirements = passwordRequirementProgress.requirements
+      .filter((requirement) => !requirement.met)
+      .map((requirement) => getPasswordRequirementLabel(requirement.id));
+
+    if (missingRequirements.length > 0) {
+      return tr.auth.passwordHint.missingRequirements(missingRequirements.join(', '));
     }
 
-    return tr.auth.passwordHint.strong;
-  }, [regPassword, registerPasswordPolicyError]);
+    return tr.auth.passwordHint.requirementsMet;
+  }, [passwordRequirementProgress.requirements, regPassword.length, registerPasswordPolicyError]);
 
   const passwordHint = registerPasswordError || defaultPasswordHint;
-  const passwordHintTone: HelperTone = registerPasswordError
+  const passwordHintTone: AuthHelperTone = registerPasswordError
     ? 'danger'
     : regPassword.length === 0
       ? 'muted'
@@ -302,28 +260,39 @@ export function useAuthScreenState({
   const setRegPassword = useCallback((value: string) => {
     setRegisterPasswordError(null);
     setRegisterFieldErrors((current) => ({ ...current, password: undefined }));
+    setRegisterSubmissionError('');
     setRegPasswordState(value);
   }, []);
 
   const setLoginEmail = useCallback((value: string) => {
+    setLoginError('');
     setLoginEmailState(normalizeEmailInput(value));
   }, []);
 
+  const updateLoginPassword = useCallback((value: string) => {
+    setLoginError('');
+    setLoginPassword(value);
+  }, []);
+
   const setForgotPasswordEmail = useCallback((value: string) => {
+    setForgotPasswordError('');
     setForgotPasswordEmailState(normalizeEmailInput(value));
   }, []);
 
   const setRegName = useCallback((value: string) => {
     setRegisterFieldErrors((current) => ({ ...current, name: undefined }));
+    setRegisterSubmissionError('');
     setRegNameState(normalizeUserNameInput(value));
   }, []);
 
   const setRegBio = useCallback((value: string) => {
+    setRegisterSubmissionError('');
     setRegBioState(normalizeUserBioInput(value));
   }, []);
 
   const setRegEmail = useCallback((value: string) => {
     setRegisterFieldErrors((current) => ({ ...current, email: undefined }));
+    setRegisterSubmissionError('');
     setRegEmailState(normalizeEmailInput(value));
   }, []);
 
@@ -366,10 +335,6 @@ export function useAuthScreenState({
       }
     }
 
-    if (step === 2 && regInterests.length === 0) {
-      errors.interests = tr.auth.register.interestsRequired;
-    }
-
     return errors;
   }, [
     emailAvailability.message,
@@ -378,7 +343,6 @@ export function useAuthScreenState({
     isUsernameFormatValid,
     normalizedRegName,
     passwordMeetsCompositionRequirements,
-    regInterests.length,
     regPassword.length,
     registerPasswordError,
     registerPasswordPolicyError,
@@ -388,6 +352,7 @@ export function useAuthScreenState({
 
   const openRegister = useCallback(() => {
     if (!requireLegalConsent()) {
+      setView('landing');
       return;
     }
 
@@ -400,15 +365,25 @@ export function useAuthScreenState({
   }, []);
 
   const goToLogin = useCallback(() => {
+    setForgotPasswordError('');
     setView('login');
   }, []);
 
   const goToForgotPassword = useCallback(() => {
+    setForgotPasswordError('');
     setForgotPasswordEmailState((current) => current || loginEmail);
     setView('forgotPassword');
   }, [loginEmail]);
 
   const handleLogin = useCallback(async () => {
+    setLoginError('');
+
+    if (!AUTH_EMAIL_REGEX.test(loginEmail.trim()) || !loginPassword) {
+      setLoginError(tr.auth.login.missingCredentials);
+      showToast(tr.auth.login.missingCredentials, 'error');
+      return;
+    }
+
     try {
       const result = await login(loginEmail, loginPassword);
 
@@ -424,8 +399,11 @@ export function useAuthScreenState({
         return;
       }
 
-      showToast(result.message || tr.auth.toast.loginInvalid, 'error');
+      const message = getSafeAuthFailureMessage(result.code, tr.auth.toast.loginInvalid);
+      setLoginError(message);
+      showToast(message, 'error');
     } catch {
+      setLoginError(tr.auth.toast.loginInvalid);
       showToast(tr.auth.toast.loginInvalid, 'error');
     }
   }, [login, loginEmail, loginPassword]);
@@ -435,7 +413,8 @@ export function useAuthScreenState({
       return;
     }
 
-    const allStepErrors = [0, 1, 2].map((step) => validateRegisterStep(step));
+    setRegisterSubmissionError('');
+    const allStepErrors = [0, 1].map((step) => validateRegisterStep(step));
     const mergedStepErrors = Object.assign({}, ...allStepErrors) as RegisterFieldErrors;
 
     if (Object.values(mergedStepErrors).some(Boolean)) {
@@ -458,7 +437,7 @@ export function useAuthScreenState({
         interests: regInterests,
         legalConsent: {
           acceptedAt: new Date().toISOString(),
-          documentsAccepted: ['terms', 'community'],
+          documentsAccepted: LEGAL_DOCUMENT_IDS,
           version: LEGAL_CONSENT_VERSION,
         },
         profilePhoto,
@@ -483,7 +462,12 @@ export function useAuthScreenState({
           return;
         }
 
-        showToast(result.message || tr.auth.toast.duplicateAccount, 'error');
+        const message = getSafeAuthFailureMessage(
+          result.code,
+          tr.auth.register.registrationFailed,
+        );
+        setRegisterSubmissionError(message);
+        showToast(message, 'error');
         return;
       }
 
@@ -499,7 +483,8 @@ export function useAuthScreenState({
         return;
       }
 
-      showToast(error instanceof Error ? error.message : tr.auth.toast.duplicateAccount, 'error');
+      setRegisterSubmissionError(tr.auth.register.registrationFailed);
+      showToast(tr.auth.register.registrationFailed, 'error');
     }
   }, [
     coverPhoto,
@@ -538,9 +523,14 @@ export function useAuthScreenState({
 
   const handleForgotPassword = useCallback(async () => {
     const normalizedForgotPasswordEmail = normalizeEmailInput(forgotPasswordEmail).trim().toLowerCase();
+    setForgotPasswordError('');
 
-    if (!normalizedForgotPasswordEmail) {
-      showToast(tr.auth.forgotPassword.missingEmail, 'error');
+    if (!normalizedForgotPasswordEmail || !AUTH_EMAIL_REGEX.test(normalizedForgotPasswordEmail)) {
+      const message = normalizedForgotPasswordEmail
+        ? tr.auth.register.emailInvalid
+        : tr.auth.forgotPassword.missingEmail;
+      setForgotPasswordError(message);
+      showToast(message, 'error');
       return;
     }
 
@@ -548,20 +538,26 @@ export function useAuthScreenState({
       const result = await requestPasswordResetEmail(normalizedForgotPasswordEmail);
 
       if (!result.success) {
-        showToast(result.message || tr.settings.password.resetHint, 'error');
+        const message = getSafeAuthFailureMessage(
+          result.code,
+          tr.settings.password.resetHint,
+        );
+        setForgotPasswordError(message);
+        showToast(message, 'error');
         return;
       }
 
       setLoginEmailState(normalizedForgotPasswordEmail);
       setView('login');
       showToast(tr.settings.password.resetSent, 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : tr.settings.password.resetHint, 'error');
+    } catch {
+      setForgotPasswordError(tr.settings.password.resetHint);
+      showToast(tr.settings.password.resetHint, 'error');
     }
   }, [forgotPasswordEmail, requestPasswordResetEmail]);
 
   const toggleInterest = useCallback((value: string) => {
-    setRegisterFieldErrors((current) => ({ ...current, interests: undefined }));
+    setRegisterSubmissionError('');
     setRegInterests((current) =>
       current.includes(value)
         ? current.filter((item) => item !== value)
@@ -569,38 +565,9 @@ export function useAuthScreenState({
     );
   }, []);
 
-  const selectProfilePhoto = useCallback(async () => {
-    const uri = await pickSingleImageFromPrompt({
-      cropAspect: [1, 1],
-      cropShape: 'oval',
-    });
-
-    if (uri) {
-      setProfilePhoto(uri);
-    }
-  }, []);
-
-  const selectCoverPhoto = useCallback(async () => {
-    const uri = await pickSingleImageFromPrompt({
-      cropAspect: [21, 9],
-      cropShape: 'rectangle',
-    });
-
-    if (uri) {
-      setCoverPhoto(uri);
-    }
-  }, []);
-
-  const clearProfilePhoto = useCallback(() => {
-    setProfilePhoto(undefined);
-  }, []);
-
-  const clearCoverPhoto = useCallback(() => {
-    setCoverPhoto(undefined);
-  }, []);
-
   const updateRegisterUsername = useCallback((value: string) => {
     setRegisterFieldErrors((current) => ({ ...current, username: undefined }));
+    setRegisterSubmissionError('');
     setRegUsernameState(normalizeUsernameInput(value));
   }, []);
 
@@ -660,6 +627,7 @@ export function useAuthScreenState({
     emailHelper,
     emailAvailabilityStatus: emailAvailability.status,
     emailHelperTone,
+    forgotPasswordError,
     forgotPasswordEmail,
     goToLanding,
     goToForgotPassword,
@@ -673,6 +641,7 @@ export function useAuthScreenState({
     handleResendConfirmation,
     hasAcceptedLegal,
     loginEmail,
+    loginError,
     loginPassword,
     openLegalDocument,
     openRegister,
@@ -680,6 +649,7 @@ export function useAuthScreenState({
     passwordHintTone,
     profilePhoto,
     registerFieldErrors,
+    registerSubmissionError,
     regBio,
     regEmail,
     regInterests,
@@ -690,7 +660,7 @@ export function useAuthScreenState({
     selectCoverPhoto,
     selectProfilePhoto,
     setLoginEmail,
-    setLoginPassword,
+    setLoginPassword: updateLoginPassword,
     setForgotPasswordEmail,
     setRegBio,
     setRegEmail,

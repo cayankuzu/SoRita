@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorTransientNoticeProps = {
   description: string;
@@ -21,6 +21,7 @@ export function PlaceEditorTransientNotice({
       accessibilityLiveRegion="assertive"
       accessibilityRole="button"
       accessibilityViewIsModal
+      onAccessibilityEscape={onClose}
       style={styles.overlay}
       onPress={onClose}
     >
@@ -70,13 +71,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
 });

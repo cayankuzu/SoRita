@@ -12,6 +12,38 @@ const IOS_NETWORK_PREVIEW_CONCURRENCY = 3;
 const iosNetworkPreviewQueue: Array<() => void> = [];
 let activeIosNetworkPreviews = 0;
 
+export type MediaLibraryAssetTileItem = {
+  asset: MediaLibraryPickerAsset;
+  orderIndex: number;
+};
+
+export function buildResponsiveMediaGridLayout(
+  viewportWidth: number,
+  {
+    gap = 10,
+    horizontalPadding = 32,
+    maxColumns = 6,
+    minTileSize = 96,
+  }: {
+    gap?: number;
+    horizontalPadding?: number;
+    maxColumns?: number;
+    minTileSize?: number;
+  } = {},
+) {
+  const safeWidth = Math.max(0, viewportWidth - horizontalPadding);
+  const columnCount = Math.max(
+    2,
+    Math.min(maxColumns, Math.floor((safeWidth + gap) / (minTileSize + gap))),
+  );
+  const tileSize = Math.max(
+    1,
+    Math.floor((safeWidth - gap * (columnCount - 1)) / columnCount),
+  );
+
+  return { columnCount, tileSize };
+}
+
 async function withIosNetworkPreviewSlot<T>(operation: () => Promise<T>) {
   if (activeIosNetworkPreviews >= IOS_NETWORK_PREVIEW_CONCURRENCY) {
     await new Promise<void>((resolve) => iosNetworkPreviewQueue.push(resolve));
@@ -62,6 +94,22 @@ export function buildSelectionCounts(selectedAssets: MediaLibraryPickerAsset[]) 
     },
     { photos: 0, total: 0, videos: 0 },
   );
+}
+
+export function buildSelectionOrderById(selectedIds: readonly string[]) {
+  return new Map(selectedIds.map((id, index) => [id, index]));
+}
+
+export function buildMediaLibraryAssetTileItems(
+  assets: readonly MediaLibraryPickerAsset[],
+  selectedIds: readonly string[],
+): MediaLibraryAssetTileItem[] {
+  const selectionOrderById = buildSelectionOrderById(selectedIds);
+
+  return assets.map((asset) => ({
+    asset,
+    orderIndex: selectionOrderById.get(asset.id) ?? -1,
+  }));
 }
 
 export function buildAndroidMediaStoreUri(

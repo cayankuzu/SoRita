@@ -81,6 +81,7 @@ docs/*
 !docs/ui-ux/**
 !docs/marketing/
 !docs/marketing/**
+!docs/delivery-ops-release-gates.md
 expo-export/
 expo-export-*/
 mobile-web/

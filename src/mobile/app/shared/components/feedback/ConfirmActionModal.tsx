@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
@@ -7,7 +7,7 @@ import { logger } from '@/mobile/app/platform/feedback/logger';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ConfirmActionModalProps = {
   visible: boolean;
@@ -19,6 +19,7 @@ type ConfirmActionModalProps = {
   onClose: () => void;
   confirmingLabel?: string;
   onConfirm: () => Promise<void> | void;
+  returnFocusRef?: React.RefObject<unknown>;
 };
 
 export function ConfirmActionModal({
@@ -31,8 +32,10 @@ export function ConfirmActionModal({
   confirmVariant = 'primary',
   onClose,
   onConfirm,
+  returnFocusRef,
 }: ConfirmActionModalProps) {
   const isDanger = confirmVariant === 'danger';
+  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -64,7 +67,9 @@ export function ConfirmActionModal({
       onClose();
     } catch (error) {
       logger.warn('ui', 'Confirm action failed', error);
-      setErrorMessage(getUserFacingErrorMessage(error, tr.common.unexpectedError));
+      const message = getUserFacingErrorMessage(error, tr.common.unexpectedError);
+      setErrorMessage(message);
+      AccessibilityInfo.announceForAccessibility(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +79,9 @@ export function ConfirmActionModal({
     <ModalScaffold
       visible={visible}
       accessibilityLabel={title}
+      initialFocusRef={titleRef}
       onClose={handleClose}
+      returnFocusRef={returnFocusRef}
       variant="dialog"
       footer={
         <View style={styles.modalActions}>
@@ -100,10 +107,14 @@ export function ConfirmActionModal({
           <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={18} />
         </View>
         <View style={styles.confirmCopy}>
-          <Text accessibilityRole="header" style={styles.confirmTitle}>{title}</Text>
+          <Text ref={titleRef} accessibilityRole="header" style={styles.confirmTitle}>{title}</Text>
           <Text style={styles.confirmText}>{description}</Text>
           {errorMessage ? (
-            <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+            <Text
+              accessibilityLiveRegion="assertive"
+              accessibilityRole="alert"
+              style={styles.errorText}
+            >
               {errorMessage}
             </Text>
           ) : null}
@@ -137,18 +148,22 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   confirmTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   confirmText: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   errorText: {
-    fontSize: 12,
-    lineHeight: 16,
+    marginTop: 4,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerBg,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    ...typography.captionText,
     color: colors.danger,
   },
   modalActions: {

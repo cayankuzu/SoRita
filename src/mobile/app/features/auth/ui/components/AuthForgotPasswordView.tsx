@@ -16,6 +16,7 @@ import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useA
 
 type AuthForgotPasswordViewProps = {
   email: string;
+  error?: string;
   onBack: () => void;
   onChangeEmail: (value: string) => void;
   onSubmit: () => void | Promise<void>;
@@ -23,6 +24,7 @@ type AuthForgotPasswordViewProps = {
 
 export function AuthForgotPasswordView({
   email,
+  error,
   onBack,
   onChangeEmail,
   onSubmit,
@@ -40,7 +42,7 @@ export function AuthForgotPasswordView({
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
-        <Text style={styles.screenTitle}>{tr.auth.forgotPassword.title}</Text>
+        <Text accessibilityRole="header" style={styles.screenTitle}>{tr.auth.forgotPassword.title}</Text>
         <Text style={styles.screenSubtitle}>{tr.auth.forgotPassword.subtitle}</Text>
       </View>
 
@@ -50,12 +52,23 @@ export function AuthForgotPasswordView({
           placeholder={tr.auth.login.emailPlaceholder}
           value={email}
           onChangeText={onChangeEmail}
+          autoComplete="email"
           keyboardType="email-address"
           autoCapitalize="none"
+          textContentType="emailAddress"
           returnKeyType="done"
           onSubmitEditing={() => onSubmit()}
           icon={<Mail color={colors.textMuted} size={14} />}
         />
+        {error ? (
+          <Text
+            accessibilityLiveRegion="assertive"
+            accessibilityRole="alert"
+            style={styles.formError}
+          >
+            {error}
+          </Text>
+        ) : null}
         <PrimaryButton title={tr.auth.forgotPassword.sendAction} onPress={onSubmit} />
       </View>
 

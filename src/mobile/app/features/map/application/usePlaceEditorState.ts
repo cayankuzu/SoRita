@@ -16,13 +16,17 @@ import {
 } from '@/mobile/app/features/map/application/placeEditorPreview';
 import {
   buildEditorSourceKey,
-  filterSafeSelectedLists,
+  getErrorMessage,
   getInitialBestTimes,
   getInitialSelectedCategories,
   getInitialSelectedLists,
+  hasValidPlaceIdentity,
+  isValidPriceRange,
+  sanitizeNumericInput,
   sortSelectedCategories,
   toggleArrayValue,
 } from '@/mobile/app/features/map/application/placeEditorStateUtils';
+import { usePlaceEditorListIdentity } from '@/mobile/app/features/map/application/usePlaceEditorListIdentity';
 import {
   appendPlaceMediaWithinLimits,
   replacePlaceMediaWithinLimits,
@@ -89,14 +93,6 @@ type UsePlaceEditorStateParams = {
   onCreateList?: (list: PlaceList) => Promise<void> | void;
 };
 
-function getErrorMessage(error: unknown, fallbackMessage: string) {
-  return error instanceof Error && error.message.trim() ? error.message : fallbackMessage;
-}
-
-function sanitizeNumericInput(value: string) {
-  return value.replace(/[^\d]/g, '');
-}
-
 type EditorBlockingNotice = {
   description: string;
   title: string;
@@ -108,6 +104,7 @@ export const placeEditorInternals = {
   getErrorMessage,
   replacePlaceMediaWithinLimits,
   sanitizeNumericInput,
+  isValidPriceRange,
 };
 
 export function usePlaceEditorState({
@@ -145,7 +142,7 @@ export function usePlaceEditorState({
   const [newListName, setNewListName] = useState('');
   const [newListDescription, setNewListDescription] = useState('');
   const [newListCoverImage, setNewListCoverImage] = useState('');
-  const [newListPublic, setNewListPublic] = useState(true);
+  const [newListPublic, setNewListPublic] = useState(false);
   const [showNewListForm, setShowNewListForm] = useState(false);
   const [blockingNotice, setBlockingNotice] = useState<EditorBlockingNotice | null>(null);
   const [listSelectionNotice, setListSelectionNotice] = useState<string | null>(null);
@@ -312,7 +309,7 @@ export function usePlaceEditorState({
       setNewListName('');
       setNewListDescription('');
       setNewListCoverImage('');
-      setNewListPublic(true);
+      setNewListPublic(false);
       setShowNewListForm(false);
     }
   }, [clearBlockingNotice, clearListSelectionNotice, draft, existingPlace, lat, lng, placeAddress, placeName, visible]);
@@ -328,43 +325,41 @@ export function usePlaceEditorState({
   );
   const photoUris = useMemo(() => getPlacePhotoUrls({ media }), [media]);
 
-  const currentMembershipListIds = useMemo(
-    () =>
-      new Set(
-        existingPlace
-          ? lists
-              .filter((list) => list.places.some((place) => place.id === existingPlace.id))
-              .map((list) => list.id)
-          : [],
-      ),
-    [existingPlace, lists],
-  );
-
-  const duplicateListIds = useMemo(
-    () => new Set<string>(),
-    [],
-  );
-
-  const availableListIds = useMemo(() => new Set(lists.map((list) => list.id)), [lists]);
-
-  const safeSelectedLists = useMemo(
-    () =>
-      filterSafeSelectedLists(
-        selectedLists,
-        duplicateListIds,
-        currentMembershipListIds,
-        availableListIds,
-      ),
-    [availableListIds, currentMembershipListIds, duplicateListIds, selectedLists],
-  );
-  const pendingAddedListCount = useMemo(
-    () => safeSelectedLists.filter((listId) => !currentMembershipListIds.has(listId)).length,
-    [currentMembershipListIds, safeSelectedLists],
-  );
-
-  const hasTargetListSelection = safeSelectedLists.length > 0;
+  const {
+    currentMembershipListIds,
+    duplicateListIds,
+    hasTargetListSelection,
+    pendingAddedListCount,
+    safeSelectedLists,
+  } = usePlaceEditorListIdentity({
+    currentName: name,
+    draftName: draft?.name,
+    existingPlace,
+    lat,
+    lists,
+    lng,
+    placeName,
+    selectedLists,
+  });
+  const priceRangeIsValid = isValidPriceRange(priceMin, priceMax);
+  const hasPlaceIdentity = hasValidPlaceIdentity([
+    name,
+    placeName,
+    address,
+    placeAddress,
+  ]);
 
   const showValidationFeedback = useCallback(() => {
+    if (!hasPlaceIdentity) {
+      showToast(tr.placeEditor.placeIdentityRequired, 'error');
+      return;
+    }
+
+    if (!priceRangeIsValid) {
+      showToast(tr.placeEditor.priceRangeInvalid, 'error');
+      return;
+    }
+
     if (!hasTargetListSelection) {
       showListSelectionNotice(
         lists.length > 0
@@ -374,7 +369,15 @@ export function usePlaceEditorState({
             : tr.placeEditor.notices.createOrSelectList,
       );
     }
-  }, [hasTargetListSelection, lists.length, newListName, showListSelectionNotice, showNewListForm]);
+  }, [
+    hasPlaceIdentity,
+    hasTargetListSelection,
+    lists.length,
+    newListName,
+    priceRangeIsValid,
+    showListSelectionNotice,
+    showNewListForm,
+  ]);
 
   const showMediaSelectionFeedback = useCallback(
     (
@@ -419,6 +422,7 @@ export function usePlaceEditorState({
     handleAddMedia,
     handleEditMedia,
     handleMediaPress,
+    handleMoveMedia,
     handleRemoveMedia,
     isAddingMedia,
     openVideoThumbnailEditor,
@@ -480,12 +484,20 @@ export function usePlaceEditorState({
   }, []);
 
   const canContinue = useMemo(() => {
+    if (!hasPlaceIdentity) {
+      return false;
+    }
+
+    if (step === 1) {
+      return priceRangeIsValid;
+    }
+
     if (step === LAST_PLACE_EDITOR_STEP_INDEX) {
-      return hasTargetListSelection;
+      return hasTargetListSelection && priceRangeIsValid;
     }
 
     return true;
-  }, [hasTargetListSelection, step]);
+  }, [hasPlaceIdentity, hasTargetListSelection, priceRangeIsValid, step]);
 
   const toggleList = useCallback((listId: string, options?: { blocked?: boolean; listName?: string }) => {
     if (options?.blocked) {
@@ -686,7 +698,7 @@ export function usePlaceEditorState({
       setNewListName('');
       setNewListDescription('');
       setNewListCoverImage('');
-      setNewListPublic(true);
+      setNewListPublic(false);
       showToast(tr.placeEditor.newListCreated, 'success');
 
       if (blockedBySelectionLimit) {
@@ -889,6 +901,7 @@ export function usePlaceEditorState({
     handleCreateList,
     handleEditMedia,
     handleMediaPress,
+    handleMoveMedia,
     handlePickListCover,
     handleRemoveMedia,
     handleSave,
@@ -909,6 +922,7 @@ export function usePlaceEditorState({
     photos: photoUris,
     priceMax,
     priceMin,
+    priceRangeIsValid,
     rating,
     selectedCategories,
     selectedLists,

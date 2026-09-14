@@ -174,7 +174,8 @@ export function useSettingsScreenState({
   const [profilePhoto, setProfilePhoto] = useState(freshUser?.profilePhoto);
   const [coverPhoto, setCoverPhoto] = useState(freshUser?.coverPhoto);
   const [isPublicAccount, setIsPublicAccount] = useState(freshUser?.isPublicAccount ?? true);
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [currentPassword, setCurrentPasswordState] = useState('');
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
   const [resetMailSent, setResetMailSent] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
@@ -334,23 +335,26 @@ export function useSettingsScreenState({
     }
 
     if (!currentPassword.trim()) {
+      setPasswordResetError(tr.settings.password.missingFields);
       showToast(tr.settings.password.missingFields, 'error');
       return;
     }
 
     passwordResetPendingRef.current = true;
     setIsSendingPasswordReset(true);
+    setPasswordResetError(null);
 
     try {
       const result = await requestPasswordReset(currentPassword);
 
       if (!result.success) {
+        setPasswordResetError(tr.auth.toast.loginInvalid);
         showToast(tr.auth.toast.loginInvalid, 'error');
         return;
       }
 
       setResetMailSent(true);
-      setCurrentPassword('');
+      setCurrentPasswordState('');
       setIsPasswordResetCoolingDown(true);
       if (passwordResetCooldownTimeoutRef.current) {
         clearTimeout(passwordResetCooldownTimeoutRef.current);
@@ -362,7 +366,9 @@ export function useSettingsScreenState({
       showToast(tr.settings.password.resetSent, 'success');
     } catch (error) {
       logger.error('settings', 'Failed to send password reset email', error);
-      showToast(getErrorMessage(error, tr.settings.toast.passwordResetFailed), 'error');
+      const message = getErrorMessage(error, tr.settings.toast.passwordResetFailed);
+      setPasswordResetError(message);
+      showToast(message, 'error');
     } finally {
       passwordResetPendingRef.current = false;
       setIsSendingPasswordReset(false);
@@ -479,6 +485,14 @@ export function useSettingsScreenState({
     setEditUsernameState(normalizeUsernameInput(value));
   }, []);
 
+  const setCurrentPassword = useCallback((value: string) => {
+    setCurrentPasswordState(value);
+    setPasswordResetError(null);
+    if (!isPasswordResetCoolingDown) {
+      setResetMailSent(false);
+    }
+  }, [isPasswordResetCoolingDown]);
+
   return {
     canContinueEdit,
     clearCoverPhoto,
@@ -504,6 +518,7 @@ export function useSettingsScreenState({
     openEditProfile,
     openPassword,
     openPrivacy,
+    passwordResetError,
     profilePhoto,
     resetMailSent,
     saveAccountPrivacy,

@@ -18,14 +18,19 @@ type ExpoExtraConfig = {
   supabaseMediaAssetsFunctionName?: string;
   supabaseAuthGatewayFunctionName?: string;
   supabaseModerationReportsFunctionName?: string;
+  supabasePersonalDataFunctionName?: string;
   supabaseMapsFunctionName?: string;
   appScheme?: string;
+  appLinkDomain?: string;
   facebookAppId?: string;
   expoProjectId?: string;
   enablePushNotifications?: boolean | string;
   systemNotificationFcmTopic?: string;
   authRedirectPath?: string;
   sentryDsn?: string;
+  posthogProjectApiKey?: string;
+  posthogHost?: string;
+  productAnalyticsEnabled?: boolean | string;
   edgeApiUrl?: string;
   edgeCutoverMode?: string;
   releaseEnvironment?: string;
@@ -34,16 +39,22 @@ type ExpoExtraConfig = {
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as ExpoExtraConfig;
 const authRedirectPath = expoExtra.authRedirectPath ?? 'auth/callback';
 const publicRuntimeConfigResult = publicRuntimeConfigSchema.safeParse({
+  appLinkDomain: expoExtra.appLinkDomain,
   edgeApiUrl: expoExtra.edgeApiUrl,
   edgeCutoverMode: expoExtra.edgeCutoverMode,
   releaseEnvironment: expoExtra.releaseEnvironment,
+  posthogHost: expoExtra.posthogHost,
+  productAnalyticsEnabled: expoExtra.productAnalyticsEnabled,
 });
 const publicRuntimeConfig = publicRuntimeConfigResult.success
   ? publicRuntimeConfigResult.data
   : {
+      appLinkDomain: '',
       edgeApiUrl: '',
       edgeCutoverMode: 'direct' as const,
       releaseEnvironment: 'development' as const,
+      posthogHost: '',
+      productAnalyticsEnabled: false,
     };
 const missingRequiredStartupEnvVars = [
   !expoExtra.supabaseUrl ? 'EXPO_PUBLIC_SUPABASE_URL' : null,
@@ -92,8 +103,11 @@ export const env = {
   supabaseAuthGatewayFunctionName: expoExtra.supabaseAuthGatewayFunctionName ?? 'auth-gateway',
   supabaseModerationReportsFunctionName:
     expoExtra.supabaseModerationReportsFunctionName ?? 'moderation-reports',
+  supabasePersonalDataFunctionName:
+    expoExtra.supabasePersonalDataFunctionName ?? 'personal-data',
   supabaseMapsFunctionName: expoExtra.supabaseMapsFunctionName ?? 'maps-geocoding',
   appScheme: expoExtra.appScheme ?? 'sorita',
+  appLinkDomain: publicRuntimeConfig.appLinkDomain,
   facebookAppId: expoExtra.facebookAppId ?? '',
   pushNotificationsEnabledOverride,
   expoProjectId:
@@ -104,6 +118,11 @@ export const env = {
   authRedirectPath,
   authRedirectUrl: Linking.createURL(authRedirectPath),
   sentryDsn: expoExtra.sentryDsn ?? '',
+  // A PostHog project API key is public client configuration, not a secret.
+  // Never add personal, admin, or server-side keys to Expo extra.
+  posthogProjectApiKey: expoExtra.posthogProjectApiKey?.trim() ?? '',
+  posthogHost: publicRuntimeConfig.posthogHost,
+  productAnalyticsEnabled: publicRuntimeConfig.productAnalyticsEnabled,
   edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
   edgeConfigValid: publicRuntimeConfigResult.success,
   edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,

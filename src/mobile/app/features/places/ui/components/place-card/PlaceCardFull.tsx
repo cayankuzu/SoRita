@@ -66,6 +66,8 @@ type PlaceCardMap = {
 type PlaceCardSocial = {
   allowAddToList: boolean;
   comments: FeedActionComment[];
+  commentsErrorMessage?: string | null;
+  commentsInitialLoading?: boolean;
   currentUserName?: string;
   currentUserPhoto?: string;
   hasNextCommentsPage?: boolean;
@@ -78,6 +80,7 @@ type PlaceCardActions = {
   onAddToListPress: () => void;
   onAddressCopied: () => void;
   onCommentDelete: (commentId: string) => Promise<void> | void;
+  onCommentsRefresh?: () => Promise<void> | void;
   onCommentsLoadMore?: () => Promise<void> | void;
   onCommentLikeToggle: (commentId: string) => Promise<void> | void;
   onCommentReport: (commentId: string, reason: string, details?: string) => Promise<void> | void;
@@ -145,6 +148,8 @@ export function PlaceCardFull({
   const {
     allowAddToList,
     comments,
+    commentsErrorMessage = null,
+    commentsInitialLoading = false,
     currentUserName,
     currentUserPhoto,
     hasNextCommentsPage = false,
@@ -156,6 +161,7 @@ export function PlaceCardFull({
     onAddToListPress,
     onAddressCopied,
     onCommentDelete,
+    onCommentsRefresh,
     onCommentsLoadMore,
     onCommentLikeToggle,
     onCommentReport,
@@ -328,6 +334,8 @@ export function PlaceCardFull({
         commentCount={place.commentCount}
         likers={likers}
         comments={comments}
+        commentsErrorMessage={commentsErrorMessage}
+        commentsInitialLoading={commentsInitialLoading}
         location={{ name: place.name, address: place.address, lat: place.lat, lng: place.lng }}
         showShareAction
         showAddToList={allowAddToList}
@@ -341,6 +349,7 @@ export function PlaceCardFull({
         onCommentSubmit={onCommentSubmit}
         onCommentUpdate={onCommentUpdate}
         onCommentDelete={onCommentDelete}
+        onCommentsRefresh={onCommentsRefresh}
         onCommentsLoadMore={onCommentsLoadMore}
         onCommentReport={onCommentReport}
         onCommentLikeToggle={onCommentLikeToggle}

@@ -49,10 +49,12 @@ Expo Android izinleri: `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `CAMERA
 
 ## Dondurulan HTTP, veri ve depolama yüzeyi
 
-Edge Function sözleşmeleri (6):
+Edge Function sözleşmeleri (7):
 
 - `admin-broadcast-notification` yalnız yönetim/operasyon sözleşmesidir.
-- Mobil istemcinin kullandığı sözleşmeler `auth-gateway`, `delete-user`, `maps-geocoding`, `media-assets` ve `moderation-reports` ile sınırlıdır.
+- Mobil istemcinin kullandığı sözleşmeler `auth-gateway`, `delete-user`, `maps-geocoding`,
+  `media-assets`, `moderation-reports` ve kişisel veri dışa aktarımı için `personal-data` ile
+  sınırlıdır.
 
 Ürün tabloları (18):
 

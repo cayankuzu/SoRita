@@ -23,7 +23,6 @@ concurrency:
 env:
   CI: "true"
   NODE_VERSION: "24"
-  RUNTIME_EVIDENCE_SOURCE_ROOT: ${{ vars.RUNTIME_EVIDENCE_SOURCE_ROOT }}
 
 jobs:
   seal-runtime-evidence:
@@ -45,7 +44,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Validate immutable source and protected probe source
+      - name: Validate immutable source identity
         shell: bash
         env:
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
@@ -66,10 +65,6 @@ jobs:
             echo '::error::runtime_version must match the immutable candidate package version.'
             exit 1
           fi
-          if [[ -z "$RUNTIME_EVIDENCE_SOURCE_ROOT" || "$RUNTIME_EVIDENCE_SOURCE_ROOT" != /* ]]; then
-            echo '::error::The protected production-evidence environment must define an absolute RUNTIME_EVIDENCE_SOURCE_ROOT.'
-            exit 1
-          fi
           if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
             echo '::error::Runtime evidence sealing requires a clean candidate checkout.'
             exit 1
@@ -78,15 +73,26 @@ jobs:
       - name: Install the exact root lockfile without lifecycle scripts
         run: npm ci --ignore-scripts
 
-      - name: Canonicalize fresh machine probe receipts
+      - name: Verify and canonicalize signed machine probe receipts
         shell: bash
         env:
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           REQUESTED_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64: ${{ vars.RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64 }}
+          RUNTIME_EVIDENCE_EXPECTED_KEY_ID: ${{ vars.RUNTIME_EVIDENCE_EXPECTED_KEY_ID }}
+          RUNTIME_EVIDENCE_SOURCE_ROOT: ${{ vars.RUNTIME_EVIDENCE_SOURCE_ROOT }}
         run: |
           set -euo pipefail
+          if [[ -z "$RUNTIME_EVIDENCE_SOURCE_ROOT" || "$RUNTIME_EVIDENCE_SOURCE_ROOT" != /* ]]; then
+            echo '::error::The protected production-evidence environment must define an absolute RUNTIME_EVIDENCE_SOURCE_ROOT.'
+            exit 1
+          fi
           source_directory="${RUNTIME_EVIDENCE_SOURCE_ROOT%/}/${CANDIDATE_SHA}"
           test -d "$source_directory"
+          if [[ -w "$source_directory" ]]; then
+            echo '::error::The Actions runner identity must have read-only access to the signed receipt directory.'
+            exit 1
+          fi
           node utils/release-evidence/runtime-evidence.mjs stage \
             --source "$source_directory" \
             --directory artifacts/runtime-evidence \
@@ -94,14 +100,18 @@ jobs:
             --commit "$CANDIDATE_SHA" \
             --runtime "$REQUESTED_RUNTIME_VERSION" \
             --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --public-key-spki-base64 "$RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64" \
+            --key-id "$RUNTIME_EVIDENCE_EXPECTED_KEY_ID"
           node utils/release-evidence/runtime-evidence.mjs verify \
             --directory artifacts/runtime-evidence \
             --repository "https://github.com/${GITHUB_REPOSITORY}" \
             --commit "$CANDIDATE_SHA" \
             --runtime "$REQUESTED_RUNTIME_VERSION" \
             --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --public-key-spki-base64 "$RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64" \
+            --key-id "$RUNTIME_EVIDENCE_EXPECTED_KEY_ID"
 
       - name: Upload the checksum-bound runtime evidence packet
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

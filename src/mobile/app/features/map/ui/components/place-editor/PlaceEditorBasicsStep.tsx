@@ -12,7 +12,7 @@ import {
 import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   PLACE_ADDRESS_MAX_LENGTH,
   PLACE_NAME_MAX_LENGTH,
@@ -53,15 +53,20 @@ export function PlaceEditorBasicsStep({
         ) : null}
       </View>
 
+      <View style={styles.requirementsCard}>
+        <Text style={styles.requirementsTitle}>{tr.placeEditor.requirementsTitle}</Text>
+        <Text style={styles.requirementsText}>{tr.placeEditor.requirementsDescription}</Text>
+      </View>
+
       <TextField
-        label={tr.placeEditor.placeNameLabel}
+        label={`${tr.placeEditor.placeNameLabel} (${tr.common.optional})`}
         value={name}
         onChangeText={onNameChange}
         placeholder={tr.placeEditor.placeNamePlaceholder}
         maxLength={PLACE_NAME_MAX_LENGTH}
       />
       <TextField
-        label={tr.placeEditor.addressLabel}
+        label={`${tr.placeEditor.addressLabel} (${tr.common.optional})`}
         value={address}
         onChangeText={onAddressChange}
         placeholder={tr.placeEditor.addressPlaceholder}
@@ -69,13 +74,13 @@ export function PlaceEditorBasicsStep({
       />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.rating}</Text>
+        <Text style={styles.sectionTitle}>{`${tr.placeEditor.rating} (${tr.common.optional})`}</Text>
         <Text style={styles.sectionHelper}>{tr.placeEditor.ratingHelper}</Text>
         <RatingSelector value={rating} onChange={onRatingChange} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.category}</Text>
+        <Text style={styles.sectionTitle}>{`${tr.placeEditor.category} (${tr.common.optional})`}</Text>
         <Text style={styles.sectionHelper}>{tr.placeEditor.categoryHelper}</Text>
         <OptionRail
           options={PLACE_CATEGORY_OPTIONS.map((item) => item.label)}
@@ -105,27 +110,45 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   coordTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   coordText: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   coordMeta: {
     marginTop: 4,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
+  },
+  requirementsCard: {
+    gap: 3,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.surfaceMuted,
+    padding: 10,
+  },
+  requirementsTitle: {
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
+    color: colors.text,
+  },
+  requirementsText: {
+    ...typography.metadataText,
+    color: colors.textMuted,
   },
   section: {
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   sectionHelper: {
@@ -135,7 +158,7 @@ const styles = StyleSheet.create({
   },
   selectionMeta: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
 });

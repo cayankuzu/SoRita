@@ -95,6 +95,48 @@ describe('trusted Cloudflare origin security', () => {
     });
   });
 
+  it('accepts and claims the personal-data route added to the trusted origin contract', async () => {
+    const personalDataFunction = 'personal-data';
+    const personalDataBody = '{"action":"export"}';
+    const personalDataNonce = '018f47a2-2c50-4d87-8b51-d74965f68567';
+    const timestamp = String(nowMs);
+    const signed = await createTrustedEdgeOriginSignature({
+      bodyText: personalDataBody,
+      functionName: personalDataFunction,
+      nonce: personalDataNonce,
+      secret,
+      timestamp,
+    });
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const request = new Request(
+      `https://project.supabase.co/functions/v1/${personalDataFunction}`,
+      {
+        body: personalDataBody,
+        headers: {
+          'content-type': 'application/json',
+          'x-sorita-edge-body-sha256': signed.bodyHash,
+          'x-sorita-edge-nonce': personalDataNonce,
+          'x-sorita-edge-signature': signed.signature,
+          'x-sorita-edge-timestamp': timestamp,
+        },
+        method: 'POST',
+      },
+    );
+
+    await expect(verifyTrustedEdgeOrigin({
+      adminClient: { rpc },
+      bodyText: personalDataBody,
+      config: { required: true, secret },
+      functionName: personalDataFunction,
+      nowMs,
+      request,
+    })).resolves.toEqual({ mode: 'cloudflare', ok: true });
+    expect(rpc).toHaveBeenCalledWith('claim_cloudflare_origin_nonce', {
+      input_function_name: personalDataFunction,
+      input_nonce: personalDataNonce,
+    });
+  });
+
   it('fails closed for tampering, stale signatures, replay, and nonce-store failure', async () => {
     const tampered = await verifyTrustedEdgeOrigin({
       adminClient: { rpc: vi.fn() },

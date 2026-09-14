@@ -25,6 +25,7 @@ import type {
   FeedActionComment,
   FeedActionLiker,
 } from '@/mobile/app/features/social/public/types';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -281,6 +282,12 @@ export function usePlaceCardState({
   }, [place.likeDetails, place.likedBy, usersById]);
 
   const commentsQuery = usePlaceCommentsQuery(place.id, user?.id, commentsEnabled);
+  const commentsErrorMessage = commentsQuery.error
+    ? getUserFacingErrorMessage(commentsQuery.error, tr.system.connectionUnavailable)
+    : null;
+  const commentsInitialLoading = Boolean(
+    commentsEnabled && commentsQuery.isLoading && !commentsQuery.data,
+  );
 
   const comments = useMemo(
     () =>
@@ -541,6 +548,8 @@ export function usePlaceCardState({
   return {
     canReportPlace,
     comments,
+    commentsErrorMessage,
+    commentsInitialLoading,
     createList,
     fetchNextCommentsPage: commentsQuery.fetchNextPage,
     handleCreateComment,
@@ -555,6 +564,7 @@ export function usePlaceCardState({
     isLiked,
     likers,
     myLists,
+    refreshComments: commentsQuery.refetch,
     resolvedOwnerId,
     savePlaceToLists,
     canOpenSourcePlaceCard,

@@ -1,6 +1,8 @@
 import React from 'react';
 import {
+  AccessibilityInfo,
   FlatList,
+  findNodeHandle,
   Modal,
   Platform,
   StyleSheet,
@@ -19,13 +21,19 @@ import {
   type ActionMenuSheetItem,
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
+import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
 import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -37,7 +45,7 @@ type MediaLightboxProps = {
   initialIndex?: number;
   items: PlaceMedia[];
   onClose: () => void;
-  onRemoveItem?: (index: number) => void;
+  onRemoveItem?: (index: number) => Promise<void> | void;
 };
 
 type VisibleMediaEntry = {
@@ -57,12 +65,14 @@ function MediaLightboxPage({
   item,
   pageHeight,
   pageWidth,
+  positionLabel,
   shouldPrepareVideo,
 }: {
   isActive: boolean;
   item: PlaceMedia;
   pageHeight: number;
   pageWidth: number;
+  positionLabel: string;
   shouldPrepareVideo: boolean;
 }) {
   return (
@@ -83,7 +93,7 @@ function MediaLightboxPage({
             uri={item.thumbnailUrl}
             style={styles.image}
             resizeMode="contain"
-            accessibilityLabel={tr.common.videoPreview}
+            accessibilityLabel={`${tr.common.videoPreview}. ${positionLabel}`}
             backgroundColor="transparent"
             priority={isActive ? 'high' : 'normal'}
             fallback={
@@ -97,7 +107,7 @@ function MediaLightboxPage({
             uri={item.url}
             style={styles.image}
             resizeMode="contain"
-            accessibilityLabel={tr.common.enlargedMedia}
+            accessibilityLabel={`${tr.common.enlargedMedia}. ${positionLabel}`}
             backgroundColor="transparent"
             priority={isActive ? 'high' : 'normal'}
           />
@@ -105,6 +115,107 @@ function MediaLightboxPage({
       </View>
     </View>
   );
+}
+
+function useMediaLightboxLifecycle({
+  currentIndex,
+  flatListKey,
+  menuItemCount,
+  menuVisible,
+  pendingRemoveIndex,
+  positionLabel,
+  setCurrentIndex,
+  setMenuVisible,
+  setPendingRemoveIndex,
+  startIndex,
+  titleRef,
+  visibleItems,
+}: {
+  currentIndex: number;
+  flatListKey: string;
+  menuItemCount: number;
+  menuVisible: boolean;
+  pendingRemoveIndex: number | null;
+  positionLabel: string;
+  setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
+  setMenuVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  setPendingRemoveIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  startIndex: number;
+  titleRef: React.RefObject<React.ElementRef<typeof Text> | null>;
+  visibleItems: VisibleMediaEntry[];
+}) {
+  const previousAnnouncedIndexRef = React.useRef<number | null>(null);
+  const suppressNextAnnouncementRef = React.useRef(true);
+
+  React.useEffect(() => {
+    suppressNextAnnouncementRef.current = true;
+    setCurrentIndex(startIndex);
+    previousAnnouncedIndexRef.current = startIndex;
+    const resetAnnouncementTimer = setTimeout(() => {
+      suppressNextAnnouncementRef.current = false;
+    }, 0);
+
+    return () => clearTimeout(resetAnnouncementTimer);
+  }, [flatListKey, setCurrentIndex, startIndex]);
+
+  React.useEffect(() => {
+    if (visibleItems.length === 0) {
+      previousAnnouncedIndexRef.current = null;
+      return undefined;
+    }
+
+    if (menuVisible || pendingRemoveIndex != null) {
+      return undefined;
+    }
+
+    const focusTimer = setTimeout(() => {
+      const titleHandle = titleRef.current ? findNodeHandle(titleRef.current) : null;
+      if (titleHandle) {
+        AccessibilityInfo.setAccessibilityFocus(titleHandle);
+      }
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [flatListKey, menuVisible, pendingRemoveIndex, titleRef, visibleItems.length]);
+
+  React.useEffect(() => {
+    if (suppressNextAnnouncementRef.current) {
+      suppressNextAnnouncementRef.current = false;
+      return;
+    }
+
+    if (
+      visibleItems.length === 0 ||
+      previousAnnouncedIndexRef.current == null ||
+      previousAnnouncedIndexRef.current === currentIndex
+    ) {
+      previousAnnouncedIndexRef.current = currentIndex;
+      return;
+    }
+
+    previousAnnouncedIndexRef.current = currentIndex;
+    AccessibilityInfo.announceForAccessibility(positionLabel);
+  }, [currentIndex, positionLabel, visibleItems.length]);
+
+  React.useEffect(() => {
+    const nearbyMediaUris = visibleItems
+      .slice(Math.max(0, currentIndex - 1), currentIndex + 3)
+      .map(({ item }) => item.type === 'video' ? item.thumbnailUrl : item.url);
+
+    void prefetchAppImages(nearbyMediaUris);
+  }, [currentIndex, visibleItems]);
+
+  React.useEffect(() => {
+    if (menuItemCount === 0) {
+      setMenuVisible(false);
+    }
+  }, [menuItemCount, setMenuVisible]);
+
+  React.useEffect(() => {
+    if (visibleItems.length === 0) {
+      setPendingRemoveIndex(null);
+    }
+  }, [setPendingRemoveIndex, visibleItems.length]);
 }
 
 export function MediaLightbox({
@@ -117,6 +228,7 @@ export function MediaLightbox({
   const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
   const flatListRef = React.useRef<FlatList<VisibleMediaEntry> | null>(null);
   const visibleItems = React.useMemo(
     () =>
@@ -165,6 +277,11 @@ export function MediaLightbox({
   const currentItem = currentEntry?.item ?? null;
   const currentItemTypeLabel =
     currentItem?.type === 'video' ? tr.common.mediaVideo : tr.common.mediaPhoto;
+  const positionLabel = getLightboxPositionLabel(
+    currentItemTypeLabel,
+    currentIndex,
+    visibleItems.length,
+  );
 
   const handleClose = React.useCallback(() => {
     triggerHaptic('light');
@@ -221,29 +338,20 @@ export function MediaLightbox({
     return nextItems;
   }, [allowDownload, currentEntry, currentItem, handleDownloadCurrent, onRemoveItem]);
 
-  React.useEffect(() => {
-    setCurrentIndex(startIndex);
-  }, [startIndex]);
-
-  React.useEffect(() => {
-    const nearbyMediaUris = visibleItems
-      .slice(Math.max(0, currentIndex - 1), currentIndex + 3)
-      .map(({ item }) => item.type === 'video' ? item.thumbnailUrl : item.url);
-
-    void prefetchAppImages(nearbyMediaUris);
-  }, [currentIndex, visibleItems]);
-
-  React.useEffect(() => {
-    if (menuItems.length === 0) {
-      setMenuVisible(false);
-    }
-  }, [menuItems.length]);
-
-  React.useEffect(() => {
-    if (visibleItems.length === 0) {
-      setPendingRemoveIndex(null);
-    }
-  }, [visibleItems.length]);
+  useMediaLightboxLifecycle({
+    currentIndex,
+    flatListKey,
+    menuItemCount: menuItems.length,
+    menuVisible,
+    pendingRemoveIndex,
+    positionLabel,
+    setCurrentIndex,
+    setMenuVisible,
+    setPendingRemoveIndex,
+    startIndex,
+    titleRef,
+    visibleItems,
+  });
 
   return (
     <Modal
@@ -261,6 +369,7 @@ export function MediaLightbox({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={handleClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <View style={[styles.topBar, { width: pageWidth }]}>
@@ -274,11 +383,16 @@ export function MediaLightbox({
           </IconButton>
 
           <View style={styles.topBarCopy}>
-            <Text accessibilityRole="header" style={styles.topBarTitle}>
+            <Text
+              ref={titleRef}
+              accessibilityLabel={`${tr.common.previewTitle}. ${positionLabel}`}
+              accessibilityRole="header"
+              style={styles.topBarTitle}
+            >
               {tr.common.previewTitle}
             </Text>
-            <Text style={styles.topBarSubtitle}>
-              {currentIndex + 1}/{visibleItems.length} {currentItemTypeLabel}
+            <Text accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
+              {positionLabel}
             </Text>
           </View>
 
@@ -339,6 +453,11 @@ export function MediaLightbox({
                   item={item.item}
                   pageHeight={pageHeight}
                   pageWidth={pageWidth}
+                  positionLabel={getLightboxPositionLabel(
+                    item.item.type === 'video' ? tr.common.mediaVideo : tr.common.mediaPhoto,
+                    index,
+                    visibleItems.length,
+                  )}
                   shouldPrepareVideo={
                     item.item.type === 'video' && Math.abs(index - currentIndex) <= 1
                   }
@@ -362,6 +481,7 @@ export function MediaLightbox({
           title={tr.common.contentActionsTitle}
           items={menuItems}
           onClose={() => setMenuVisible(false)}
+          returnFocusRef={titleRef}
         />
         {pendingRemoveIndex != null && onRemoveItem ? (
           <ConfirmActionModal
@@ -371,11 +491,8 @@ export function MediaLightbox({
             confirmLabel={tr.common.delete}
             confirmVariant="danger"
             onClose={() => setPendingRemoveIndex(null)}
-            onConfirm={() => {
-              const nextIndex = pendingRemoveIndex;
-              setPendingRemoveIndex(null);
-              onRemoveItem(nextIndex);
-            }}
+            returnFocusRef={titleRef}
+            onConfirm={() => onRemoveItem(pendingRemoveIndex)}
           />
         ) : null}
       </View>
@@ -398,8 +515,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   topActionButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
@@ -408,8 +525,8 @@ const styles = StyleSheet.create({
     borderColor: colors.controlsBorder,
   },
   topActionSpacer: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
   },
   topBarCopy: {
     flex: 1,
@@ -422,14 +539,14 @@ const styles = StyleSheet.create({
     borderColor: colors.controlsBorder,
   },
   topBarTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   topBarSubtitle: {
     marginTop: 3,
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onDarkFaint,
   },
   carouselViewport: {

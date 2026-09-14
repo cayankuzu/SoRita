@@ -21,14 +21,22 @@ const cloudflarePreview = workflow("cloudflare-preview.yml");
 const cloudflareProduction = workflow("cloudflare-production.yml");
 const releaseEvidence = workflow("release-evidence.yml");
 const runtimeEvidence = workflow("runtime-evidence.yml");
+const runtimeEvidenceVerifier = readFileSync(
+  resolve(process.cwd(), "utils/release-evidence/runtime-evidence.mjs"),
+  "utf8",
+);
 const easPreview = workflow("eas-update-preview.yml");
 const easProduction = workflow("eas-update-production.yml");
 const easProductionIos = workflow("eas-production-ios.yml");
+const easProductionAndroidInternal = workflow(
+  "eas-production-android-internal.yml",
+);
 const deploymentWorkflows = [
   cloudflarePreview,
   cloudflareProduction,
   easPreview,
   easProduction,
+  easProductionAndroidInternal,
   easProductionIos,
   releaseEvidence,
   runtimeEvidence,
@@ -125,6 +133,155 @@ test("preview Worker deployment is protected, strict and deletes transient secre
   assert.match(cloudflarePreview, /health response must be no-store/u);
   assert.match(cloudflarePreview, /--var "BUILD_SHA:\$\{GITHUB_SHA\}"/u);
   assert.match(cloudflarePreview, /body\?\.buildSha !== expectedSha/u);
+});
+
+test("Cloudflare credentials are scoped only to the steps that consume them", async () => {
+  const { parse } = await import("yaml");
+  const workflows = [
+    {
+      cleanupFile: "sorita-edge-preview-secrets.json",
+      jobName: "deploy-preview",
+      source: cloudflarePreview,
+      secretBindings: {
+        CLOUDFLARE_ACCOUNT_ID: {
+          secretName: "CLOUDFLARE_ACCOUNT_ID",
+          steps: [
+            "Deploy preview from the verified lockfile",
+            "Validate protected environment configuration",
+          ],
+        },
+        CLOUDFLARE_API_TOKEN: {
+          secretName: "CLOUDFLARE_API_TOKEN",
+          steps: [
+            "Deploy preview from the verified lockfile",
+            "Validate protected environment configuration",
+          ],
+        },
+        IP_HASH_PEPPER: {
+          secretName: "CLOUDFLARE_IP_HASH_PEPPER",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+        ORIGIN_HMAC_SECRET: {
+          secretName: "CLOUDFLARE_ORIGIN_HMAC_SECRET",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+        SUPABASE_PUBLISHABLE_KEY: {
+          secretName: "CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+      },
+    },
+    {
+      cleanupFile: "sorita-edge-production-secrets.json",
+      jobName: "deploy-production-canary",
+      source: cloudflareProduction,
+      secretBindings: {
+        CLOUDFLARE_ACCOUNT_ID: {
+          secretName: "CLOUDFLARE_ACCOUNT_ID",
+          steps: [
+            "Automatically roll back a failed or cancelled canary",
+            "Confirm the declared rollback version is currently deployed",
+            "Route an initial 5% to the candidate",
+            "Upload a production version without routing traffic",
+            "Validate protected environment configuration",
+          ],
+        },
+        CLOUDFLARE_API_TOKEN: {
+          secretName: "CLOUDFLARE_API_TOKEN",
+          steps: [
+            "Automatically roll back a failed or cancelled canary",
+            "Confirm the declared rollback version is currently deployed",
+            "Route an initial 5% to the candidate",
+            "Upload a production version without routing traffic",
+            "Validate protected environment configuration",
+          ],
+        },
+        IP_HASH_PEPPER: {
+          secretName: "CLOUDFLARE_IP_HASH_PEPPER",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+        ORIGIN_HMAC_SECRET: {
+          secretName: "CLOUDFLARE_ORIGIN_HMAC_SECRET",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+        SUPABASE_PUBLISHABLE_KEY: {
+          secretName: "CLOUDFLARE_SUPABASE_PUBLISHABLE_KEY",
+          steps: [
+            "Create a mode-600 transient Worker secret file",
+            "Validate protected environment configuration",
+          ],
+        },
+      },
+    },
+  ];
+
+  for (const definition of workflows) {
+    const parsed = parse(definition.source, { uniqueKeys: true });
+    const job = parsed.jobs[definition.jobName];
+    assert.ok(job, `${definition.jobName} is missing`);
+    assert.doesNotMatch(JSON.stringify(parsed.env ?? {}), /\$\{\{\s*secrets\./u);
+    assert.doesNotMatch(JSON.stringify(job.env ?? {}), /\$\{\{\s*secrets\./u);
+
+    for (const step of job.steps) {
+      for (const [envName, value] of Object.entries(step.env ?? {})) {
+        if (typeof value === "string" && /\$\{\{\s*secrets\./u.test(value)) {
+          assert.ok(
+            definition.secretBindings[envName],
+            `${definition.jobName}/${step.name} exposes unexpected secret ${envName}`,
+          );
+        }
+      }
+    }
+
+    for (const [envName, binding] of Object.entries(definition.secretBindings)) {
+      const scopedSteps = job.steps.filter((step) =>
+        Object.hasOwn(step.env ?? {}, envName),
+      );
+      assert.deepEqual(
+        scopedSteps.map((step) => step.name).sort(),
+        [...binding.steps].sort(),
+        `${definition.jobName}/${envName} has the wrong step scope`,
+      );
+      for (const step of scopedSteps) {
+        assert.equal(
+          step.env[envName],
+          "${{ secrets." + binding.secretName + " }}",
+          `${definition.jobName}/${step.name} changed the source for ${envName}`,
+        );
+      }
+    }
+
+    const cleanupIndex = job.steps.findIndex(
+      (step) => step.name === "Remove transient secret material",
+    );
+    const lastSecretFileConsumerIndex = job.steps.reduce(
+      (lastIndex, step, index) =>
+        Object.hasOwn(step.env ?? {}, "SECRETS_FILE") ? index : lastIndex,
+      -1,
+    );
+    const cleanup = job.steps[cleanupIndex];
+    assert.ok(cleanupIndex > lastSecretFileConsumerIndex);
+    assert.equal(cleanup.if, "always()");
+    assert.equal(
+      cleanup.run,
+      `rm -f -- "\${RUNNER_TEMP}/${definition.cleanupFile}"`,
+    );
+  }
 });
 
 test("production Worker deploy requires same-SHA gates and only starts a 5% canary", () => {
@@ -230,6 +387,84 @@ test("production deploys consume one exact same-run release evidence artifact be
   }
 });
 
+test("signed mobile delivery requires successful same-SHA Quality and Database runs before build", async () => {
+  const { parse } = await import("yaml");
+
+  for (const [name, source] of [
+    ["Android Internal", easProductionAndroidInternal],
+    ["iOS TestFlight", easProductionIos],
+  ]) {
+    const parsedWorkflow = parse(source, { uniqueKeys: true });
+    const inputs = parsedWorkflow.on.workflow_dispatch.inputs;
+    assert.deepEqual(parsedWorkflow.permissions, {
+      actions: "read",
+      contents: "read",
+    });
+    assert.deepEqual(
+      {
+        databaseRun: inputs.database_run_id,
+        qualityRun: inputs.quality_run_id,
+      },
+      {
+        databaseRun: {
+          description: "Successful Database Validation workflow run ID for candidate_sha",
+          required: true,
+          type: "string",
+        },
+        qualityRun: {
+          description: "Successful Quality workflow run ID for candidate_sha",
+          required: true,
+          type: "string",
+        },
+      },
+    );
+    assert.match(source, /quality_run_id:/u, `${name} must require a Quality run ID`);
+    assert.match(
+      source,
+      /database_run_id:/u,
+      `${name} must require a Database Validation run ID`,
+    );
+    assert.match(source, /permissions:\s*\n\s+actions: read/u);
+    assert.match(source, /verify_and_record\(\)/u);
+    assert.ok(source.includes('[[ ! "$run_id" =~ ^[0-9]+$ ]]'));
+    assert.ok(source.includes("actions/runs/${run_id}"));
+    assert.ok(source.includes("actions/workflows/${workflow_file}"));
+    assert.match(source, /\.workflow_id\|tostring/u);
+    assert.match(source, /\.head_repository\.full_name/u);
+    assert.match(source, /\.repository\.full_name/u);
+    assert.ok(source.includes('"$status" != completed'));
+    assert.ok(source.includes('"$conclusion" != success'));
+    assert.ok(source.includes('"${head_sha,,}" != "${CANDIDATE_SHA,,}"'));
+    assert.ok(source.includes('"$workflow_id" != "$expected_id"'));
+    assert.ok(source.includes('"$head_repository" != "$GITHUB_REPOSITORY"'));
+    assert.ok(source.includes('"$repository" != "$GITHUB_REPOSITORY"'));
+    assert.match(
+      source,
+      /verify_and_record "\$QUALITY_RUN_ID" quality\.yml quality-run\.json/u,
+    );
+    assert.match(
+      source,
+      /verify_and_record "\$DATABASE_RUN_ID" database-validation\.yml database-run\.json/u,
+    );
+    assert.match(source, /prerequisiteRuns/u);
+
+    const evidenceGateIndex = source.indexOf(
+      "Verify successful same-SHA Quality and Database Validation runs",
+    );
+    const easSetupIndex = source.indexOf("Set up pinned EAS CLI");
+    const buildIndex = source.indexOf("eas build \\");
+    assert.ok(evidenceGateIndex >= 0, `${name} is missing its prerequisite evidence gate`);
+    assert.ok(
+      evidenceGateIndex < easSetupIndex,
+      `${name} must verify prerequisite evidence before exposing EAS credentials`,
+    );
+    assert.ok(
+      evidenceGateIndex < buildIndex,
+      `${name} must verify prerequisite evidence before EAS Build`,
+    );
+  }
+});
+
 test("release evidence supports partial NO-GO and a checksum-bound final runtime path", () => {
   assert.match(releaseEvidence, /candidate_sha/u);
   assert.match(releaseEvidence, /WORKFLOW_SHA: \$\{\{ github\.sha \}\}/u);
@@ -274,18 +509,56 @@ test("release evidence supports partial NO-GO and a checksum-bound final runtime
   );
 });
 
-test("runtime evidence is sealed only by a protected self-hosted probe runner", () => {
+test("runtime evidence verifies protected Ed25519 attestations without exposing a private key", async () => {
+  const { parse } = await import("yaml");
+  const runtimeWorkflow = parse(runtimeEvidence, { uniqueKeys: true });
+  const releaseWorkflow = parse(releaseEvidence, { uniqueKeys: true });
+  const runtimeJob = runtimeWorkflow.jobs["seal-runtime-evidence"];
+  const runtimeVerificationStep = runtimeJob.steps.find(
+    (step) => step.name === "Verify and canonicalize signed machine probe receipts",
+  );
+  const releaseJob = releaseWorkflow.jobs["repository-evidence"];
+  const releaseVerificationStep = releaseJob.steps.find(
+    (step) => step.name === "Download and verify exact provider and device runtime evidence",
+  );
+
   assert.match(
     runtimeEvidence,
     /runs-on: \[self-hosted, macOS, sorita-runtime-evidence\]/u,
   );
   assert.match(runtimeEvidence, /environment: production-evidence/u);
-  assert.match(
-    runtimeEvidence,
-    /RUNTIME_EVIDENCE_SOURCE_ROOT: \$\{\{ vars\.RUNTIME_EVIDENCE_SOURCE_ROOT \}\}/u,
+  assert.equal(releaseJob.environment, "production-evidence");
+  assert.ok(runtimeVerificationStep);
+  assert.ok(releaseVerificationStep);
+  assert.equal(
+    runtimeVerificationStep.env.RUNTIME_EVIDENCE_SOURCE_ROOT,
+    "${{ vars.RUNTIME_EVIDENCE_SOURCE_ROOT }}",
+  );
+  for (const step of [runtimeVerificationStep, releaseVerificationStep]) {
+    assert.equal(
+      step.env.RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64,
+      "${{ vars.RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64 }}",
+    );
+    assert.equal(
+      step.env.RUNTIME_EVIDENCE_EXPECTED_KEY_ID,
+      "${{ vars.RUNTIME_EVIDENCE_EXPECTED_KEY_ID }}",
+    );
+    assert.match(step.run, /--public-key-spki-base64/u);
+    assert.match(step.run, /--key-id/u);
+  }
+  assert.doesNotMatch(JSON.stringify(runtimeWorkflow.env ?? {}), /RUNTIME_EVIDENCE_/u);
+  assert.doesNotMatch(JSON.stringify(runtimeJob.env ?? {}), /RUNTIME_EVIDENCE_/u);
+  for (const source of [runtimeEvidence, releaseEvidence]) {
+    assert.doesNotMatch(source, /RUNTIME_EVIDENCE_(?:ED25519_)?PRIVATE/u);
+    assert.doesNotMatch(source, /secrets\.RUNTIME_EVIDENCE/u);
+  }
+  assert.doesNotMatch(
+    runtimeEvidenceVerifier,
+    /createPrivateKey|generateKeyPair|\bprivateKey\b|\bsign\s*\(/u,
   );
   assert.match(runtimeEvidence, /runtime-evidence\.mjs stage/u);
   assert.match(runtimeEvidence, /runtime-evidence\.mjs verify/u);
+  assert.match(runtimeEvidence, /must have read-only access to the signed receipt directory/u);
   assert.doesNotMatch(runtimeEvidence, /^\s{6}(?:result|status|pass):/mu);
   assert.match(
     runtimeEvidence,
@@ -310,7 +583,13 @@ test("deployment workflows avoid privileged PR triggers and mobile service-role 
 });
 
 test("production and release-evidence workflows never execute Docker workloads", () => {
-  for (const source of [cloudflareProduction, easProduction, releaseEvidence]) {
+  for (const source of [
+    cloudflareProduction,
+    easProduction,
+    easProductionAndroidInternal,
+    easProductionIos,
+    releaseEvidence,
+  ]) {
     assert.doesNotMatch(source, /\bdocker\s+(?:build|buildx|compose|run)\b/iu);
   }
 });

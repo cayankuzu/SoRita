@@ -47,14 +47,14 @@ describe('app.config EAS Update safety', () => {
 
     expect(config).toMatchObject({
       scheme: 'sorita',
-      version: '1.0.102',
+      version: '1.0.106',
       android: {
         package: 'com.cayan.sorita.socialmap',
-        versionCode: 107,
+        versionCode: 111,
       },
       ios: {
         bundleIdentifier: 'com.cayan.sorita.socialmap',
-        buildNumber: '87',
+        buildNumber: '91',
       },
     });
   });
@@ -94,7 +94,7 @@ describe('app.config EAS Update safety', () => {
     expect(androidGradle).toContain(
       'manifestPlaceholders.expoUpdatesChannel = resolveReleaseExpoUpdatesChannel()',
     );
-    expect(androidStrings).toContain('>1.0.102</string>');
+    expect(androidStrings).toContain('>1.0.106</string>');
     expect(androidStrings).toContain(`>https://u.expo.dev/${projectId}</string>`);
     expect(easConfig.build).toMatchObject({
       development: { channel: 'development', environment: 'development' },

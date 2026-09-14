@@ -136,10 +136,11 @@ submission.
 ## 4. Supabase staging, migrations and Edge Functions
 
 - **Current status:** `VERIFIED (LOCAL) / UNVERIFIED HOSTED / NO-GO`. The
-  current migration set passed an isolated local zero-reset, DB lint
-  (`results: []`), 6 files/180 pgTAP tests and a separate dump/restore check of
-  22 public tables. This is pre-commit local evidence. Hosted staging identity,
-  parity, migration history and deployed Function versions are not evidenced.
+  current migration set passed local DB lint (`results: []`) and 10 files/311
+  pgTAP tests in an isolated validation database. A fresh zero-reset plus
+  dump/restore must be rerun for the final immutable SHA. This is pre-commit
+  local evidence. Hosted staging identity, parity, migration history and
+  deployed Function versions are not evidenced.
 - **Why:** Schema/RLS/Function changes must be exercised outside production and
   bound to the exact candidate before release.
 - **Panel/location:** Supabase Dashboard → staging project → Database, Auth,
@@ -175,11 +176,11 @@ submission.
 ## 5. Supabase Function secrets and origin HMAC
 
 - **Current status:** **`UNVERIFIED / NO-GO`**. The working tree contains Worker
-  signing, matching HMAC/timestamp/body/nonce verification in the five selected
-  Supabase Functions and a nonce-claim migration. These files are
-  uncommitted/unapplied; the origin remains direct-compatible until the external
-  enforcement flag is enabled. Setting a shared secret alone does not close the
-  direct-origin path.
+  signing, matching HMAC/timestamp/body/nonce verification in the six selected
+  Supabase Functions and nonce-claim migrations. Provider deployment/cutover
+  evidence is not yet sealed; the origin remains direct-compatible until the
+  external enforcement flag is enabled. Setting a shared secret alone does not
+  close the direct-origin path.
 - **Why:** Gateway cutover is safe only when the origin rejects missing, invalid,
   expired and replayed signatures while authorized requests still succeed.
 - **Panel/location:** Supabase Dashboard → staging project → Edge Functions →
@@ -189,10 +190,11 @@ submission.
   `CLOUDFLARE_ORIGIN_SIGNATURE_REQUIRED`,
   `GOOGLE_MAPS_SERVICES_API_KEY`, `REPORTS_EMAIL_FROM`, `REPORTS_EMAIL_TO`,
   `RESEND_API_KEY`, `BREVO_API_KEY`, `MODERATION_REPORTS_ALLOWED_ORIGINS`,
+  `PERSONAL_DATA_ALLOWED_ORIGINS`,
   `EXPO_PUBLIC_EDGE_CUTOVER_MODE`.
 - **Authorized action:** Keep `EXPO_PUBLIC_EDGE_CUTOVER_MODE` on its existing
   direct path. From a clean reviewed SHA, first apply the nonce migration and
-  deploy all five Functions to staging with enforcement disabled; provision the
+  deploy all six Functions to staging with enforcement disabled; provision the
   same secret-manager value (at least 32 characters) as Worker
   `ORIGIN_HMAC_SECRET` and Supabase `CLOUDFLARE_ORIGIN_HMAC_SECRET`; set the
   Supabase `CLOUDFLARE_ORIGIN_SIGNATURE_REQUIRED` switch only to the reviewed
@@ -558,9 +560,13 @@ submission.
 - **Authorized action:** Build a reviewed data-flow inventory from code and
   configured providers; reconcile it with privacy/terms/deletion behavior;
   exercise report and block on both stores' test builds; document moderation
-  intake, enforcement, notification and appeal ownership; then submit truthful
-  declarations. Do not claim an admin panel or resolution state that does not
-  exist.
+  intake, enforcement, notification and appeal ownership; exercise the in-app
+  data copy with both a normal and deliberately 1.001+-row test account; then
+  submit truthful declarations. If any `truncated` flag is true or the Edge
+  Function returns `export_too_large`, fulfill the complete subject-access
+  request through an approved encrypted operator workflow and record delivery,
+  retention and deletion evidence. Do not claim an admin panel, complete
+  self-service archive or resolution state that does not exist.
 - **Verification command/check:**
 
   ```powershell
@@ -574,8 +580,10 @@ submission.
 
 - **Expected safe result:** Every declared data type/purpose/sharing/retention
   behavior has a source/provider/policy reference; report/block and deletion
-  paths work on physical devices; unresolved moderation lifecycle gaps are
-  disclosed and block release rather than being hidden.
+  paths work on physical devices; the user is explicitly warned about a bounded
+  or oversized archive and can receive the complete copy through the approved
+  fallback; unresolved moderation lifecycle gaps are disclosed and block
+  release rather than being hidden.
 - **Rollback:** Withdraw or pause the submission and correct the declaration or
   product behavior through a separately reviewed change. Never falsify an answer
   to preserve a release date.
@@ -709,9 +717,10 @@ submission.
   lists may still reference the public `place-media` bucket. The working tree now
   contains an uncommitted authorization migration and a bounded dry-run/apply
   utility with unit tests. They have not passed same-SHA database CI, staging or
-  live owner/unrelated access verification. The apply utility removes a public
-  source after its copy and conditional reference update; it does not retain the
-  source for a post-update live-access observation window. The current source
+  live owner/unrelated access verification. The apply utility copies and
+  conditionally updates the database but deliberately retains each public source
+  for the post-update live-access/rollback window, recording a sanitized cleanup
+  candidate journal bound to the copied byte count and SHA-256. The current source
   deterministically rehomes unsafe legacy paths, rehomes unchanged covers on a
   public-to-private client transition, and adds a database guard for private
   bucket/owner path; external execution evidence is still absent.
@@ -725,10 +734,12 @@ submission.
   the SQL count and the utility's default dry run in isolated staging, then in
   production through an approved controlled operator. Before any apply, require
   a database/Storage backup, same-SHA tests, staging copy/update/access/rollback
-  evidence and an explicit decision on source-object retention/deletion. Because
-  the current utility deletes after update rather than after a live-access hold,
-  production apply remains `NO-GO` until a reviewed code change or recovery
-  policy resolves that gap. Re-run the unsafe-path and public-to-private
+  evidence and an explicit retention window plus cleanup approval. The utility
+  never deletes a public source during apply; an authorized operator must use the
+  cleanup journal only after live owner/unrelated access verification and must
+  re-download both source and destination, verify both still match the journaled
+  byte count/SHA-256, and retain provider object-version or backup recovery
+  evidence before deletion. Re-run the unsafe-path and public-to-private
   regression cases against staging before production authorization.
 - **Verification command/check:**
 
@@ -820,33 +831,16 @@ submission.
 
 ## 20. Durable media-upload cleanup schedule
 
-- **Current status:** **`FAILING IN PRODUCTION`** (observed 2026-09-05). This is
-  worse than unverified: the hourly schedule is enabled and has failed on every
-  run. Runs `33859428833`, `33883299965`, `33905712137`, `33921290662` and
-  `33931857686` on `main` all end the same way:
-
-  ```
-  PGRST202: Could not find the function
-  public.claim_stale_media_upload_sessions(p_lease_id, p_lease_seconds, p_limit)
-  in the schema cache
-  ```
-
-  The function is not missing from the repository - migration
-  `20260830173000_durable_media_upload_sessions_and_state_guards.sql` defines it
-  with a matching signature (`p_lease_id uuid`, `p_limit integer default 100`,
-  `p_lease_seconds integer default 90`; PostgREST resolves named arguments
-  regardless of order). **That migration has not been applied to the hosted
-  project.** `utils/ops/sweep-media-upload-sessions.test.mjs` passes because it
-  stubs the RPC, so no local gate can see this.
-
-  Consequence: abandoned upload sessions have never been swept. Nothing is being
-  deleted incorrectly - the job dies before it claims anything - but orphaned
-  storage objects and ledger rows accumulate for as long as this stays red.
-
-  The authorized action below already required the schedule to be enabled only
-  *after* a same-SHA migration; the schedule was enabled first. Either apply the
-  migration to the hosted project or disable the schedule until it is applied -
-  an hourly red job trains the on-call channel to ignore it.
+- **Current status:** **`LIVE / SAME-SHA PROMOTION EVIDENCE PENDING`** (rechecked
+  2026-09-14). A read-only hosted schema dump confirms both
+  `claim_stale_media_upload_sessions` and
+  `complete_media_upload_session_cleanup` are present. The latest eight
+  scheduled runs through run `34794725116` completed successfully on source SHA
+  `2c8cf2208815ee939cdad1b5d42529847a3441c0`; the latest bounded sweep reported
+  `batches=0`, `claimed=0`, `cleaned=0`, `failed=0`. The 2026-09-05 PGRST202
+  incident is historical and must not be presented as current state. Promotion
+  of a newer candidate still requires its own same-SHA workflow and monitoring
+  evidence; a green empty sweep does not prove orphan cleanup under real load.
 - **Why:** Abandoned uploads and late writes must remain eligible for repeated
   cleanup without deleting referenced media. A checked-in schedule alone does
   not prove that cleanup is running or monitored.
@@ -858,9 +852,10 @@ submission.
 - **Authorized action:** Protect the `production` environment, provision a
   dedicated operational secret through approved storage, run the default manual
   dry-run first, reconcile the eligible count, then approve a bounded manual
-  apply in staging. Enable the hourly schedule for production only after
-  same-SHA migration, reference-safety and response-loss tests pass. Confirm a
-  failed workflow reaches the accountable on-call channel.
+  apply in staging. Keep the existing hourly production schedule enabled only
+  while the deployed schema remains compatible, reference-safety and
+  response-loss tests pass, and a deliberately failed staging probe reaches the
+  accountable on-call channel.
 - **Verification command/check:**
 
   ```powershell
@@ -1085,6 +1080,53 @@ Store the verification output above under the candidate release evidence packet.
 Protection state is a provider fact, not a repository fact, so it must be
 re-verified per release rather than assumed from this document.
 
+
+## 23. Runtime-evidence harness identity and Ed25519 trust
+
+- **Current status:** `UNVERIFIED / NO-GO`. The repository verifies the signed
+  receipt v3 contract, but no external harness build, hardware/KMS-backed signing
+  identity, source-directory ACL, public-key fingerprint, or rotation record is
+  proved for an immutable candidate.
+- **Why:** Checksums protect a packet after upload but do not prove who produced
+  the original provider/device result. The external probe producer must be
+  authenticated without making its private signing key or a general-purpose
+  signing oracle available to repository-controlled Actions code.
+- **Panel/location:** Dedicated runtime-probe host and service identity; approved
+  KMS, OS keychain, or Secure Enclave; GitHub repository -> Environments ->
+  `production-evidence`; protected runner filesystem ACLs.
+- **Variable/configuration names only:** `RUNTIME_EVIDENCE_SOURCE_ROOT`,
+  `RUNTIME_EVIDENCE_ED25519_PUBLIC_KEY_SPKI_BASE64`,
+  `RUNTIME_EVIDENCE_EXPECTED_KEY_ID`. These are a path and public verification
+  values, not private credentials. Do not create a GitHub private-key secret.
+- **Authorized action:** Build the external harness from a reviewed immutable
+  source revision; record its source and executable/image SHA-256 plus immutable
+  HTTPS build-provenance URI. Give a dedicated non-Actions harness identity the
+  only write/sign permission. Give the `sorita-runtime-evidence` Actions account
+  read-only access to `<source-root>/<candidate-sha>/` and no permission to read
+  the private key or invoke the signer. Configure the protected environment with
+  only the public SPKI base64 and its `sha256:<SPKI DER digest>` key ID. Require
+  approval and a sanitized ACL/KMS policy review before dispatch.
+- **Verification command/check:** Run `Provider and Device Runtime Evidence` for
+  the exact candidate and then pass that run ID to `Release Evidence`. Confirm
+  both workflows verify `--public-key-spki-base64` and `--key-id`, the runtime
+  manifest is schema v2, every receipt is schema v3, every check has a sibling
+  `.sig`, and altering a receipt, signature, raw artifact, producer execution ID,
+  or expected key ID makes verification fail. Separately prove the Actions OS
+  identity cannot write the source directory or use the KMS/keychain signing
+  operation. Store only public fingerprints and sanitized policy output.
+- **Expected safe result:** Eleven fresh, canonical, uniquely executed receipts
+  from one approved harness identity verify under the protected Ed25519 public
+  key; receipt and signature byte counts/SHA-256 values are present in the
+  manifest; the final release workflow independently verifies them. Unsigned v2
+  receipts and any key/provenance mismatch remain `NO-GO`.
+- **Rollback:** Remove or disable the public verification variables and stop
+  runtime-evidence promotion, leaving only the partial `NO-GO` packet. Restore a
+  previously approved public key only when the external harness still owns the
+  matching protected private key. Never restore acceptance of unsigned v2 data
+  or place private signing material in GitHub to recover a blocked release.
+- **Owner:** `OWNER_TBD`.
+- **Evidence path:**
+  `artifacts/release-evidence/manual/runtime-evidence/harness-attestation/`.
 
 ## Final external gate
 

@@ -8,6 +8,14 @@ import { registerRootComponent } from 'expo';
 // evaluated so Android headless/iOS terminated data messages have a safe path.
 registerSystemPushBackgroundHandler();
 
+// SDK 55 drops foreground notifications unless a presentation handler is
+// already installed. Configure it before evaluating the React tree so the
+// deferred runtime hosts cannot leave a startup delivery gap.
+const { ensureForegroundNotificationPresentation } = require(
+  './src/mobile/app/platform/notifications/foregroundNotificationPresentation'
+);
+void ensureForegroundNotificationPresentation().catch(() => undefined);
+
 // Keep the App require below the FCM registration. Static imports are
 // evaluated before this module body, which would otherwise initialize the
 // React tree before React Native Firebase can install its headless handler.

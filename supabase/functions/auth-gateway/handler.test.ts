@@ -221,9 +221,9 @@ const validRegistration = {
   email: 'new@example.com',
   interests: ['kahve'],
   legalConsent: {
-    acceptedAt: '2026-07-18T12:00:00.000Z',
-    documentsAccepted: ['terms', 'privacy'],
-    version: '2026-07',
+    acceptedAt: new Date().toISOString(),
+    documentsAccepted: ['terms', 'community', 'privacy', 'kvkk'],
+    version: '2026-09-08-terms-community-privacy',
   },
   name: 'Yeni Kullanici',
   password: 'Strong!Pass123',
@@ -519,6 +519,9 @@ describe('auth-gateway handler', () => {
       { ...validRegistration, password: 'weak' },
       { ...validRegistration, interests: Array.from({ length: 21 }, (_, index) => `i${index}`) },
       { ...validRegistration, legalConsent: { ...validRegistration.legalConsent, documentsAccepted: [] } },
+      { ...validRegistration, legalConsent: { ...validRegistration.legalConsent, version: '2026-01-01' } },
+      { ...validRegistration, legalConsent: { ...validRegistration.legalConsent, documentsAccepted: ['terms', 'terms', 'privacy', 'kvkk'] } },
+      { ...validRegistration, legalConsent: { ...validRegistration.legalConsent, acceptedAt: new Date(Date.now() - 25 * 60 * 60_000).toISOString() } },
       { action: 'request-password-reset', email: 'bad', redirectUrl: 'bad' },
       { action: 'prepare-password-reset', email: 'bad' },
       { action: 'request-password-reset-authenticated', currentPassword: '', redirectUrl: 'bad' },
@@ -655,6 +658,10 @@ describe('auth-gateway handler', () => {
         }),
       }),
     }));
+    expect(success.signUpMock.mock.calls[0]?.[0]?.options?.data).toMatchObject({
+      legal_consent_documents: ['community', 'kvkk', 'privacy', 'terms'],
+      legal_consent_version: '2026-09-08-terms-community-privacy',
+    });
 
     const duplicateEmail = createDeps({
       signUpError: { message: 'User already registered' },

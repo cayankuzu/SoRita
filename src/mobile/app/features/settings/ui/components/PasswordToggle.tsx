@@ -15,6 +15,7 @@ export function PasswordToggle({ visible, onPress }: PasswordToggleProps) {
   return (
     <IconButton
       accessibilityLabel={visible ? tr.common.hidePassword : tr.common.showPassword}
+      accessibilityState={{ selected: visible }}
       onPress={onPress}
       style={styles.passwordToggle}
     >
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
     right: 4,
-    bottom: 4,
+    top: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },

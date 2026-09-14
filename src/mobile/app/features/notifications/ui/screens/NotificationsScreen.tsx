@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ArrowLeft, CheckCheck, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
@@ -28,7 +28,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -80,13 +80,22 @@ export function NotificationsScreen() {
   );
   const handleNotificationPress = React.useCallback(
     (notification: MobileNotification) => {
-      openNotificationTarget(notification, navigation);
+      const opened = openNotificationTarget(notification, navigation);
+
+      if (!opened && notification.type !== 'system_announcement') {
+        showToast(tr.notifications.targetUnavailable, 'error');
+      }
       if (!notification.read) {
         void markItemRead(notification);
       }
     },
     [markItemRead, navigation],
   );
+  const handleMarkAllRead = React.useCallback(() => {
+    void markAllItemsRead()
+      .then(() => showToast(tr.notifications.toast.allRead, 'success'))
+      .catch(() => showToast(tr.notifications.toast.markAllFailed, 'error'));
+  }, [markAllItemsRead]);
   const handleFollowRequestDecision = React.useCallback(
     (notification: MobileNotification, decision: 'accept' | 'reject') => {
       void respondToFollowRequest(notification, decision)
@@ -143,29 +152,46 @@ export function NotificationsScreen() {
             <View style={styles.headerTitleDivider} />
             <Text style={styles.title}>{notificationUiConfig.title}</Text>
           </View>
-          {unreadCount > 0 ? <Text style={styles.subtitle}>{notificationUiConfig.newCount(unreadCount)}</Text> : null}
+          <Text accessibilityLiveRegion="polite" style={styles.subtitle}>
+            {unreadCount > 0
+              ? notificationUiConfig.newCount(unreadCount)
+              : tr.notifications.resultCount(filteredItems.length)}
+          </Text>
         </View>
         <InstantPressable
-          accessibilityLabel={notificationUiConfig.markAllReadLabel}
+          accessibilityLabel={
+            unreadCount > 0
+              ? `${notificationUiConfig.markAllReadLabel}, ${tr.notifications.unreadHint(unreadCount)}`
+              : notificationUiConfig.markAllReadLabel
+          }
           accessibilityRole="button"
+          accessibilityState={{
+            busy: isMarkingAllRead,
+            disabled: unreadCount === 0 || isMarkingAllRead,
+          }}
           disabled={unreadCount === 0 || isMarkingAllRead}
-          onPress={markAllItemsRead}
+          onPress={handleMarkAllRead}
           style={({ pressed }) => [
             styles.markAllButton,
             unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonDisabled : null,
             pressed && unreadCount > 0 && !isMarkingAllRead ? styles.markAllButtonPressed : null,
           ]}
         >
-          <CheckCheck
-            color={unreadCount === 0 || isMarkingAllRead ? colors.textDisabled : colors.primary}
-            size={18}
-          />
+          {isMarkingAllRead ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <CheckCheck
+              color={unreadCount === 0 ? colors.textDisabled : colors.primary}
+              size={18}
+            />
+          )}
         </InstantPressable>
       </View>
 
       <NotificationCategoryTabs
         tabs={categories}
         activeKey={category}
+        resultCount={filteredItems.length}
         onChange={(nextCategory) => setCategory(nextCategory as NotificationCategory)}
       />
 
@@ -223,7 +249,14 @@ export function NotificationsScreen() {
         }
         ListFooterComponent={
           isFetchingNextPage ? (
-            <View style={styles.listFooter}>
+            <View
+              accessible
+              accessibilityLabel={tr.common.loadingMore}
+              accessibilityLiveRegion="polite"
+              accessibilityRole="progressbar"
+              accessibilityState={{ busy: true }}
+              style={styles.listFooter}
+            >
               <ActivityIndicator color={colors.primary} size="small" />
             </View>
           ) : null
@@ -236,13 +269,17 @@ export function NotificationsScreen() {
 function openNotificationTarget(
   notification: MobileNotification,
   navigation: AppNavigation,
-) {
+): boolean {
   const target = resolveNotificationTarget(notification);
   if (target?.screen === 'UserProfile') {
     openStackScreen(navigation, 'UserProfile', target.params);
+    return true;
   } else if (target?.screen === 'ListDetail') {
     openStackScreen(navigation, 'ListDetail', target.params);
+    return true;
   }
+
+  return false;
 }
 
 const styles = StyleSheet.create({
@@ -255,8 +292,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.screen,
     minHeight: 56,
     paddingVertical: 6,
     backgroundColor: colors.surface,
@@ -264,8 +301,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -283,8 +320,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBorder,
   },
   markAllButton: {
-    width: Platform.OS === 'ios' ? touch.ios : touch.android,
-    height: Platform.OS === 'ios' ? touch.ios : touch.android,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -297,15 +334,14 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   subtitle: {
     marginTop: 2,
     ...typography.metadataText,
     color: colors.primary,
-    fontWeight: '600',
+    minHeight: typography.metadataText.lineHeight,
   },
   loadingWrap: {
     flex: 1,

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Platform,
   StyleProp,
   StyleSheet,
   Text,
@@ -18,13 +17,11 @@ import {
   colors,
   controlSize,
   fontWeight,
+  minTouchSize,
   opacity,
   radius,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 type PrimaryButtonProps = {
   title: string;
@@ -115,7 +112,7 @@ const palettes = {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: Math.max(controlSize.default, MIN_TOUCH_SIZE),
+    minHeight: Math.max(controlSize.default, minTouchSize),
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',

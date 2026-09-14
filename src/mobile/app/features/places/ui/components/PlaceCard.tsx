@@ -7,6 +7,8 @@ import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { useUpdateListsMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/public/types';
+import { deleteOwnedPlaceWithFeedback } from '@/mobile/app/features/places/application/deleteOwnedPlaceWithFeedback';
+import { buildPlaceAddToListDraft } from '@/mobile/app/features/places/application/placeAddToListDraft';
 import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
@@ -213,6 +215,8 @@ function PlaceCardComponent({
   const {
     canReportPlace,
     comments,
+    commentsErrorMessage,
+    commentsInitialLoading,
     createList,
     fetchNextCommentsPage,
     handleCreateComment,
@@ -227,6 +231,7 @@ function PlaceCardComponent({
     isLiked,
     likers,
     myLists,
+    refreshComments,
     resolvedOwnerId,
     savePlaceToLists,
     canOpenSourcePlaceCard,
@@ -386,18 +391,20 @@ function PlaceCardComponent({
     }
   };
 
-  const handleOwnedPlaceDelete = async () => {
-    try {
-      await deletePlaceAsync(place.id);
-      closeOverlay();
-      showToast(tr.profile.toast.placeDeleted, 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : tr.map.deletePlaceUnexpected, 'error');
-    }
-  };
+  const handleOwnedPlaceDelete = () =>
+    deleteOwnedPlaceWithFeedback({
+      deletePlace: deletePlaceAsync,
+      onDeleted: closeOverlay,
+      placeId: place.id,
+    });
 
   const openShareMenu = () => {
     setActiveOverlay({ type: 'share-menu' });
+  };
+
+  const handleAddToListPress = () => {
+    setAddToListDraft((currentDraft) => currentDraft ?? buildPlaceAddToListDraft(place));
+    setActiveOverlay({ type: 'add-to-list' });
   };
 
   const handleCopyAddressPress = async () => {
@@ -482,9 +489,12 @@ function PlaceCardComponent({
   ];
   const placeCardFullProps: React.ComponentProps<typeof PlaceCardFull> = {
     actions: {
-      onAddToListPress: () => setActiveOverlay({ type: 'add-to-list' }),
+      onAddToListPress: handleAddToListPress,
       onAddressCopied: () => showToast(tr.cards.addressCopied, 'success'),
       onCommentDelete: handleDeleteComment,
+      onCommentsRefresh: async () => {
+        await refreshComments();
+      },
       onCommentsLoadMore: async () => {
         await fetchNextCommentsPage?.();
       },
@@ -550,6 +560,8 @@ function PlaceCardComponent({
     social: {
       allowAddToList: allowAddToList && Boolean(user),
       comments,
+      commentsErrorMessage,
+      commentsInitialLoading,
       currentUserName: user?.name,
       currentUserPhoto: user?.profilePhoto,
       hasNextCommentsPage,
@@ -690,6 +702,7 @@ function PlaceCardComponent({
       {renderWhen(showReportSheet, () => (
         <DeferredReportActionSheet
           visible
+          targetType="place"
           title={tr.cards.reportContentTitle}
           description={tr.cards.reportContentDescription}
           reportDetails={reportDetails}

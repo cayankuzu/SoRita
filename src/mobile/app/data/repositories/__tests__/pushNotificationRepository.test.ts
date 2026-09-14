@@ -24,6 +24,7 @@ vi.mock('expo-notifications', () => ({
     MAX: 'max',
   },
   AndroidNotificationVisibility: {
+    PRIVATE: 0,
     PUBLIC: 1,
   },
   IosAuthorizationStatus: {
@@ -77,7 +78,8 @@ describe('pushNotificationRepository', () => {
 
     const { env } = await import('@/mobile/app/platform/config/env');
     const { notificationRuntime } = await import('@/mobile/app/platform/notifications/runtime');
-    const { Platform } = await import('react-native');
+    const { pushPermissionInternals } = await import('@/mobile/app/platform/notifications/pushPermission');
+    const { AppState, Platform } = await import('react-native');
 
     env.expoProjectId = 'project-id';
     env.pushNotificationsEnabledOverride = true;
@@ -85,6 +87,8 @@ describe('pushNotificationRepository', () => {
     notificationRuntime.featureEnabled = true;
     notificationRuntime.supportsRemotePushRegistration = true;
     Platform.OS = 'android';
+    (AppState as typeof AppState & { currentState: 'active' }).currentState = 'active';
+    pushPermissionInternals.resetForTests();
 
     getPermissionsAsyncMock.mockResolvedValue({ granted: true, canAskAgain: true, ios: null });
     requestPermissionsAsyncMock.mockResolvedValue({ granted: false, canAskAgain: false, ios: null });
@@ -101,7 +105,7 @@ describe('pushNotificationRepository', () => {
       expect.objectContaining({
         description: expect.any(String),
         importance: 'max',
-        lockscreenVisibility: 1,
+        lockscreenVisibility: 0,
         name: androidNotificationChannelName,
       }),
     );
@@ -111,6 +115,86 @@ describe('pushNotificationRepository', () => {
       input_token: 'ExponentPushToken[test]',
     }));
     expect(token).toBe('ExponentPushToken[test]');
+    expect(setNotificationChannelAsyncMock.mock.invocationCallOrder[0]).toBeLessThan(
+      getPermissionsAsyncMock.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('reuses the bound cleanup capability for a same-token heartbeat', async () => {
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await repository.registerPushNotifications('viewer-1');
+    await repository.registerPushNotifications('viewer-1');
+
+    const upserts = rpcMock.mock.calls.filter(([operation]) => (
+      operation === 'upsert_user_push_token'
+    ));
+    expect(upserts).toHaveLength(2);
+    expect(upserts[1]?.[1]).toMatchObject({
+      input_cleanup_secret: upserts[0]?.[1]?.input_cleanup_secret,
+      input_token: 'ExponentPushToken[test]',
+    });
+    expect(rpcMock).not.toHaveBeenCalledWith(
+      'revoke_push_token_with_cleanup_secret',
+      expect.anything(),
+    );
+  });
+
+  it('rotates cleanup capability and revokes the prior token only after the new bind succeeds', async () => {
+    getExpoPushTokenAsyncMock
+      .mockResolvedValueOnce({ data: 'ExponentPushToken[old]' })
+      .mockResolvedValueOnce({ data: 'ExponentPushToken[new]' });
+    rpcMock.mockImplementation(async (operation) => ({
+      data: operation === 'revoke_push_token_with_cleanup_secret',
+      error: null,
+    }));
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+    const { getActivePushTokenCleanupCapability } = await import(
+      '@/mobile/app/platform/notifications/pushTokenCleanup'
+    );
+
+    await repository.registerPushNotifications('viewer-1');
+    const oldCapability = await getActivePushTokenCleanupCapability();
+    await repository.registerPushNotifications('viewer-1');
+
+    const newCapability = await getActivePushTokenCleanupCapability();
+    expect(newCapability).toMatchObject({ token: 'ExponentPushToken[new]' });
+    expect(newCapability?.cleanupSecret).not.toBe(oldCapability?.cleanupSecret);
+    expect(rpcMock).toHaveBeenCalledWith('revoke_push_token_with_cleanup_secret', {
+      input_cleanup_secret: oldCapability?.cleanupSecret,
+      input_token: 'ExponentPushToken[old]',
+    });
+  });
+
+  it('restores the prior active capability when a rotated-token bind fails', async () => {
+    getExpoPushTokenAsyncMock
+      .mockResolvedValueOnce({ data: 'ExponentPushToken[old]' })
+      .mockResolvedValueOnce({ data: 'ExponentPushToken[new]' });
+    rpcMock.mockImplementation(async (operation, params) => ({
+      error: operation === 'upsert_user_push_token'
+        && params.input_token === 'ExponentPushToken[new]'
+        ? new Error('new token bind failed')
+        : null,
+    }));
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+    const {
+      flushPendingPushTokenCleanupTombstones,
+      getActivePushTokenCleanupCapability,
+    } = await import('@/mobile/app/platform/notifications/pushTokenCleanup');
+
+    await repository.registerPushNotifications('viewer-1');
+    const previousCapability = await getActivePushTokenCleanupCapability();
+
+    await expect(repository.registerPushNotifications('viewer-1')).rejects.toThrow(
+      'new token bind failed',
+    );
+
+    await expect(getActivePushTokenCleanupCapability()).resolves.toEqual(previousCapability);
+    await expect(flushPendingPushTokenCleanupTombstones()).resolves.toEqual({
+      attempted: 0,
+      pending: 0,
+      revoked: 0,
+    });
   });
 
   it('converts refreshed device push tokens into Expo push tokens', async () => {
@@ -129,6 +213,30 @@ describe('pushNotificationRepository', () => {
       input_token: 'ExponentPushToken[test]',
     }));
     expect(token).toBe('ExponentPushToken[test]');
+    expect(getPermissionsAsyncMock).toHaveBeenCalledOnce();
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('does not bind a refreshed native token after notification permission is revoked', async () => {
+    getPermissionsAsyncMock.mockResolvedValue({
+      granted: false,
+      canAskAgain: true,
+      ios: null,
+    });
+    const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
+
+    await expect(repository.registerDevicePushToken('viewer-1', {
+      type: 'android',
+      data: 'native-fcm-token',
+    })).resolves.toBeNull();
+
+    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
+    expect(getExpoPushTokenAsyncMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(warnMock).toHaveBeenCalledWith(
+      'push',
+      'Push token refresh ignored because notification permission is not granted.',
+    );
   });
 
   it('skips registration when the feature flag is disabled', async () => {
@@ -175,15 +283,17 @@ describe('pushNotificationRepository', () => {
     );
   });
 
-  it('never opens a permission prompt from startup registration', async () => {
+  it('requests notification permission once from an interactive signed-in registration', async () => {
     getPermissionsAsyncMock.mockResolvedValue({ granted: false, canAskAgain: true, ios: null });
+    requestPermissionsAsyncMock.mockResolvedValue({ granted: true, canAskAgain: true, ios: null });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
-    await expect(repository.registerPushNotifications('viewer-1')).resolves.toBeNull();
-    expect(requestPermissionsAsyncMock).not.toHaveBeenCalled();
-    expect(warnMock).toHaveBeenCalledWith(
-      'push',
-      'Push notification permission was not granted.',
+    await expect(repository.registerPushNotifications('viewer-1')).resolves.toBe(
+      'ExponentPushToken[test]',
+    );
+    expect(requestPermissionsAsyncMock).toHaveBeenCalledOnce();
+    expect(setNotificationChannelAsyncMock.mock.invocationCallOrder[0]).toBeLessThan(
+      requestPermissionsAsyncMock.mock.invocationCallOrder[0],
     );
   });
 
@@ -245,7 +355,9 @@ describe('pushNotificationRepository', () => {
     getExpoPushTokenAsyncMock.mockResolvedValue({ data: '' });
     const repository = await import('@/mobile/app/data/repositories/pushNotificationRepository');
 
-    await expect(repository.registerPushNotifications('viewer-1')).resolves.toBeNull();
+    await expect(repository.registerPushNotifications('viewer-1')).rejects.toMatchObject({
+      name: 'PushTokenAcquisitionError',
+    });
     expect(warnMock).toHaveBeenCalledWith('push', 'Expo push token could not be resolved.');
   });
 
@@ -441,7 +553,7 @@ describe('pushNotificationRepository', () => {
 
     await expect(
       repository.registerDevicePushToken('viewer-1', { type: 'android', data: 'native-fcm-token' }),
-    ).resolves.toBeNull();
+    ).rejects.toMatchObject({ name: 'PushTokenAcquisitionError' });
     expect(warnMock).toHaveBeenCalledWith('push', 'Expo push token could not be resolved.');
     expect(rpcMock).not.toHaveBeenCalled();
   });

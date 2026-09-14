@@ -28,7 +28,6 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
-import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
@@ -39,7 +38,6 @@ import {
   type ProfileTabOption,
   type ProfileVisibilityFilter,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
-import { estimateProfilePagerHeights } from '@/mobile/app/features/profile/ui/profilePagerLayout';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type ProfileTab = ProfileContentTab;
@@ -66,14 +64,10 @@ function matchesVisibilityFilter(
 export function ProfileScreen() {
   const navigation = useAppNavigation();
   const { user } = useAuth();
-  const { columnCount, columnGap, screenPadding, width } = useAppLayout();
-  const profileListRef = React.useRef<FlatList<'profile-content'> | null>(null);
+  const profileListRef = React.useRef<FlatList<ProfileGridItem> | null>(null);
   const pagerProgress = React.useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
   const [visibleTab, setVisibleTab] = useState<ProfileTab>('lists');
-  const [measuredPagerHeights, setMeasuredPagerHeights] = useState<
-    Partial<Record<ProfileTab, number>>
-  >({});
   const [visibilityFilter, setVisibilityFilter] =
     useState<ProfileVisibilityFilter>('all');
   const [showVisibilityFilterMenu, setShowVisibilityFilterMenu] =
@@ -192,46 +186,7 @@ export function ProfileScreen() {
     () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),
     [tabs],
   );
-  const pagerHeights = useMemo(
-    () =>
-      estimateProfilePagerHeights({
-        columnCount,
-        columnGap,
-        hasNextPage,
-        pageWidth: width,
-        screenPadding,
-        tabs: {
-          gallery: filteredPhotos,
-          lists: filteredLists,
-          places: filteredPlaces,
-        },
-      }),
-    [
-      columnCount,
-      columnGap,
-      filteredLists,
-      filteredPhotos,
-      filteredPlaces,
-      hasNextPage,
-      screenPadding,
-      width,
-    ],
-  );
-  const pagerHeight = Math.max(
-    measuredPagerHeights[activeTab] ?? pagerHeights[activeTab],
-    measuredPagerHeights[visibleTab] ?? pagerHeights[visibleTab],
-  );
   useScrollToTop(profileListRef as React.RefObject<FlatList>);
-
-  React.useEffect(() => {
-    setMeasuredPagerHeights({});
-  }, [
-    filteredLists.length,
-    filteredPhotos.length,
-    filteredPlaces.length,
-    hasNextPage,
-    visibilityFilter,
-  ]);
 
   const scrollProfileToTop = useCallback(() => {
     profileListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -253,28 +208,6 @@ export function ProfileScreen() {
     },
     [pagerProgress],
   );
-  const handlePagerContentHeightChange = useCallback(
-    (tab: ProfileTab, height: number) => {
-      if (height <= 0) {
-        return;
-      }
-
-      setMeasuredPagerHeights((currentHeights) => {
-        const currentHeight = currentHeights[tab];
-
-        if (currentHeight && Math.abs(currentHeight - height) < 1) {
-          return currentHeights;
-        }
-
-        return {
-          ...currentHeights,
-          [tab]: height,
-        };
-      });
-    },
-    [],
-  );
-
   const handleTabChange = useCallback(
     (key: string) => {
       const nextTab = key as ProfileTab;
@@ -367,7 +300,11 @@ export function ProfileScreen() {
       );
     }
 
-    return null;
+    return (
+      <Screen safeTop={false} padded={false} scroll={false}>
+        <ProfileSkeleton />
+      </Screen>
+    );
   }
 
   const openEditingPlaceTarget = (listId: string, placeId: string) => {
@@ -532,11 +469,6 @@ export function ProfileScreen() {
     <>
       <Screen safeTop={false} padded={false} scroll={false}>
         <ProfilePagedScrollContainer
-          header={renderProfileHeader()}
-          listRef={profileListRef}
-          onEndReached={handleProfileEndReached}
-          onRefresh={onRefresh}
-          pagerHeight={pagerHeight}
           pager={
             <ProfileContentPager
               activeTab={activeTab}
@@ -544,9 +476,11 @@ export function ProfileScreen() {
               emptyStateForTab={renderEmptyState}
               enabled={pagerSwipeEnabled}
               filteredLists={filteredLists}
+              header={renderProfileHeader()}
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}
-              onContentHeightChange={handlePagerContentHeightChange}
+              listRef={profileListRef}
+              onEndReached={handleProfileEndReached}
               onListPress={(list) =>
                 openStackScreen(navigation, 'ListDetail', { listId: list.id })
               }
@@ -557,15 +491,15 @@ export function ProfileScreen() {
                   kind: tab === 'gallery' ? 'gallery' : 'places',
                 })
               }
+              onRefresh={onRefresh}
               onTabChange={handleTabChange}
               onTabPreviewChange={handleTabPreviewChange}
-              pagerHeight={pagerHeight}
+              refreshing={refreshing}
               shouldShowErrorState={shouldShowErrorState}
               showPrivacyBadge
               tabs={pagerTabs}
             />
           }
-          refreshing={refreshing}
         />
       </Screen>
 

@@ -20,6 +20,8 @@ describe('InstantPressable', () => {
     });
 
     const pressable = () => renderer.root.find((node) => String(node.type) === 'Pressable');
+    expect(pressable().children).toEqual(['Kaydet']);
+
     act(() => {
       pressable().props.onPress({ persist: vi.fn() });
       pressable().props.onPress({ persist: vi.fn() });

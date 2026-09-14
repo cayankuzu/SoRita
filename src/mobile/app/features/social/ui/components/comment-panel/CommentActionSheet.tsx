@@ -14,7 +14,13 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -84,12 +90,16 @@ export function CommentActionSheet({
   const isEditing = Boolean(comment && editingCommentId === comment.id);
   const options: ActionOption[] = comment
     ? [
-        {
-          icon: <Copy color={colors.textSoft} size={14} />,
-          key: 'copy',
-          label: tr.cards.copy,
-          onPress: () => onCopy(comment),
-        },
+        ...(comment.content.trim()
+          ? [
+              {
+                icon: <Copy color={colors.textSoft} size={14} />,
+                key: 'copy',
+                label: tr.cards.copy,
+                onPress: () => onCopy(comment),
+              } satisfies ActionOption,
+            ]
+          : []),
         ...(comment.canEdit
           ? [
               {
@@ -140,6 +150,7 @@ export function CommentActionSheet({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <InstantPressable
@@ -221,18 +232,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...typography.compactTitleText,
     color: colors.text,
   },
   subtitle: {
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
   },
   options: {
     gap: 8,
   },
   actionRow: {
+    minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -254,8 +265,8 @@ const styles = StyleSheet.create({
   },
   actionRowLabel: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   actionRowLabelDanger: {

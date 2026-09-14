@@ -59,6 +59,7 @@ describe('JWT verification and gateway identity', () => {
     const token = await jwt.signToken();
     const originRequests: Request[] = [];
     const apiLimiter = createRateLimitStub();
+    const coarseIpLimiter = createRateLimitStub();
     const fetchFunction = toFetchFunction(async (request) => {
       if (new URL(request.url).pathname.endsWith('/.well-known/jwks.json')) {
         return jsonOriginResponse(jwt.jwks);
@@ -72,7 +73,7 @@ describe('JWT verification and gateway identity', () => {
         headers: { 'Cf-Ray': 'abc123-IST' },
         token,
       }),
-      createTestEnv({ API_RATE_LIMITER: apiLimiter }),
+      createTestEnv({ API_RATE_LIMITER: apiLimiter, COARSE_IP_RATE_LIMITER: coarseIpLimiter }),
       createDependencies(fetchFunction),
     );
 
@@ -89,10 +90,10 @@ describe('JWT verification and gateway identity', () => {
     );
     expect(originRequest?.headers.has('cookie')).toBe(false);
     expect(originRequest?.headers.has('x-service-role-key')).toBe(false);
-    expect(apiLimiter.keys).toHaveLength(2);
-    expect(apiLimiter.keys[0]).toMatch(/^coarse-ip:[A-Za-z0-9_-]+$/);
-    expect(apiLimiter.keys[0]).not.toContain('203.0.113.9');
-    expect(apiLimiter.keys[1]).toBe(`user:${TEST_USER_ID}:/v1/maps-geocoding:search`);
+    expect(coarseIpLimiter.keys).toHaveLength(1);
+    expect(coarseIpLimiter.keys[0]).toMatch(/^coarse-ip:[A-Za-z0-9_-]+$/);
+    expect(coarseIpLimiter.keys[0]).not.toContain('203.0.113.9');
+    expect(apiLimiter.keys).toEqual([`user:${TEST_USER_ID}:/v1/maps-geocoding:search`]);
   });
 
   it('rejects invalid signature, issuer, audience, expiry, and nbf before the origin', async () => {
@@ -187,7 +188,7 @@ describe('JWT verification and gateway identity', () => {
     });
     const denied = await handleWorkerRequest(
       createJsonRequest('/v1/maps-geocoding', { action: 'search', query: 'Istanbul' }, { token }),
-      createTestEnv({ API_RATE_LIMITER: createRateLimitStub({ success: false }) }),
+      createTestEnv({ COARSE_IP_RATE_LIMITER: createRateLimitStub({ success: false }) }),
       createDependencies(fetchFunction),
     );
 
@@ -198,7 +199,7 @@ describe('JWT verification and gateway identity', () => {
     const unavailable = await handleWorkerRequest(
       createJsonRequest('/v1/maps-geocoding', { action: 'search', query: 'Istanbul' }, { token }),
       createTestEnv({
-        API_RATE_LIMITER: createRateLimitStub({ error: new Error('binding unavailable') }),
+        COARSE_IP_RATE_LIMITER: createRateLimitStub({ error: new Error('binding unavailable') }),
       }),
       createDependencies(fetchFunction),
     );

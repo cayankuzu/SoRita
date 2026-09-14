@@ -12,7 +12,14 @@ import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  layout,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 
 const NOTIFICATION_COUNT_REFRESH_WINDOW_MS = 1000 * 60;
@@ -138,8 +145,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   notificationButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
   },
   notificationBadge: {
     position: 'absolute',
@@ -157,7 +164,7 @@ const styles = StyleSheet.create({
   },
   notificationBadgeText: {
     fontSize: typography.metadataText.fontSize,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

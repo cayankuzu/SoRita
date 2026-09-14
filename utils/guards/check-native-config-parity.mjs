@@ -41,6 +41,12 @@ const expoScheme = pick(appConfig, /const appScheme = '([^']+)'/, 'appScheme', a
 const expoVersion = pick(appConfig, /\n {2}version: '([^']+)'/, 'version', appConfigPath);
 const expoPackage = pick(appConfig, /\n {4}package: '([^']+)'/, 'android.package', appConfigPath);
 const expoVersionCode = pick(appConfig, /\n {4}versionCode: (\d+)/, 'android.versionCode', appConfigPath);
+const expoDefaultNotificationChannel = pick(
+  appConfig,
+  /defaultChannel: '([^']+)'/,
+  'expo-notifications.defaultChannel',
+  appConfigPath,
+);
 const expoBundleId = pick(
   appConfig,
   /\n {4}bundleIdentifier: '([^']+)'/,
@@ -57,6 +63,12 @@ const gradleVersionCode = pick(gradle, /versionCode (\d+)/, 'versionCode', gradl
 const manifestSchemes = new Set(
   [...manifest.matchAll(/android:scheme="([^"]+)"/g)].map((match) => match[1]),
 );
+const manifestDefaultNotificationChannel = pick(
+  manifest,
+  /android:name="com\.google\.firebase\.messaging\.default_notification_channel_id"\s+android:value="([^"]+)"/,
+  'Firebase default notification channel',
+  manifestPath,
+);
 
 function expect(label, expoValue, nativeValue, expoLabel, nativeLabel) {
   if (expoValue === null || nativeValue === null) return;
@@ -71,6 +83,13 @@ expect('App identity', expoPackage, gradleApplicationId, 'app.config.ts android.
 expect('Android namespace', expoPackage, gradleNamespace, 'app.config.ts android.package', 'build.gradle namespace');
 expect('Version name', expoVersion, gradleVersionName, 'app.config.ts version', 'build.gradle versionName');
 expect('Version code', expoVersionCode, gradleVersionCode, 'app.config.ts android.versionCode', 'build.gradle versionCode');
+expect(
+  'Default notification channel',
+  expoDefaultNotificationChannel,
+  manifestDefaultNotificationChannel,
+  'app.config.ts expo-notifications.defaultChannel',
+  'AndroidManifest.xml Firebase default channel',
+);
 
 // iOS has no committed native project, so the bundle identifier can only be
 // checked for internal consistency with the Android package - they are the same
@@ -104,5 +123,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  `[native-config-parity] OK (identity ${expoPackage}, version ${expoVersion} (${expoVersionCode}), scheme ${expoScheme} registered in the manifest)`,
+  `[native-config-parity] OK (identity ${expoPackage}, version ${expoVersion} (${expoVersionCode}), notification channel ${expoDefaultNotificationChannel}, scheme ${expoScheme} registered in the manifest)`,
 );

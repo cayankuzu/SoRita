@@ -9,6 +9,9 @@ const clearScreenIndexesForUserMock = vi.fn();
 const clearPersistedVisibleDataSnapshotMock = vi.fn();
 const clearEntityCacheForUserMock = vi.fn();
 const clearOutboxForUserMock = vi.fn();
+const clearPersistedListEditorDraftsForOwnerMock = vi.fn();
+const clearPersistedMapScreenStateMock = vi.fn();
+const clearPersistedNavigationStateMock = vi.fn();
 const loggerErrorMock = vi.fn();
 
 vi.mock('@/mobile/app/data/query/queryClient', () => ({
@@ -46,6 +49,18 @@ vi.mock('@/mobile/app/data/outbox/outboxStorage', () => ({
   clearOutboxForUser: clearOutboxForUserMock,
 }));
 
+vi.mock('@/mobile/app/platform/storage/listEditorDraft', () => ({
+  clearPersistedListEditorDraftsForOwner: clearPersistedListEditorDraftsForOwnerMock,
+}));
+
+vi.mock('@/mobile/app/platform/storage/mapScreenState', () => ({
+  clearPersistedMapScreenState: clearPersistedMapScreenStateMock,
+}));
+
+vi.mock('@/mobile/app/platform/storage/navigationState', () => ({
+  clearPersistedNavigationState: clearPersistedNavigationStateMock,
+}));
+
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: { error: loggerErrorMock },
 }));
@@ -62,6 +77,9 @@ describe('purgeAuthenticatedUserState', () => {
       clearPersistedVisibleDataSnapshotMock,
       clearEntityCacheForUserMock,
       clearOutboxForUserMock,
+      clearPersistedListEditorDraftsForOwnerMock,
+      clearPersistedMapScreenStateMock,
+      clearPersistedNavigationStateMock,
       loggerErrorMock,
     ].forEach((mock) => mock.mockReset());
     cancelQueriesMock.mockResolvedValue(undefined);
@@ -71,6 +89,9 @@ describe('purgeAuthenticatedUserState', () => {
     clearPersistedVisibleDataSnapshotMock.mockResolvedValue(undefined);
     clearEntityCacheForUserMock.mockResolvedValue(undefined);
     clearOutboxForUserMock.mockResolvedValue(undefined);
+    clearPersistedListEditorDraftsForOwnerMock.mockResolvedValue(undefined);
+    clearPersistedMapScreenStateMock.mockResolvedValue(undefined);
+    clearPersistedNavigationStateMock.mockResolvedValue(undefined);
   });
 
   it('clears volatile and durable state for only the signed-out user', async () => {
@@ -89,6 +110,9 @@ describe('purgeAuthenticatedUserState', () => {
     expect(clearPersistedVisibleDataSnapshotMock).toHaveBeenCalledWith('user-1');
     expect(clearEntityCacheForUserMock).toHaveBeenCalledWith('user-1');
     expect(clearOutboxForUserMock).toHaveBeenCalledWith('user-1');
+    expect(clearPersistedListEditorDraftsForOwnerMock).toHaveBeenCalledWith('user-1');
+    expect(clearPersistedMapScreenStateMock).toHaveBeenCalledWith('user-1');
+    expect(clearPersistedNavigationStateMock).toHaveBeenCalledWith('user-1');
   });
 
   it('continues every cleanup, logs sanitized operation names, and rejects once', async () => {
@@ -106,6 +130,9 @@ describe('purgeAuthenticatedUserState', () => {
     expect(clearQueriesMock).toHaveBeenCalledTimes(1);
     expect(clearScreenIndexesForUserMock).toHaveBeenCalledWith('user-2');
     expect(clearOutboxForUserMock).toHaveBeenCalledWith('user-2');
+    expect(clearPersistedListEditorDraftsForOwnerMock).toHaveBeenCalledWith('user-2');
+    expect(clearPersistedMapScreenStateMock).toHaveBeenCalledWith('user-2');
+    expect(clearPersistedNavigationStateMock).toHaveBeenCalledWith('user-2');
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'auth',
       'Authenticated user state purge was incomplete.',

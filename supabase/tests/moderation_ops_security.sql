@@ -1,10 +1,11 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(51);
 
 select has_table('public', 'moderation_cases', 'moderation case ledger exists');
 select has_table('public', 'moderation_case_events', 'moderation audit event ledger exists');
+select has_table('public', 'moderation_account_sanctions', 'enforced moderation sanction ledger exists');
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.moderation_cases'::regclass),
   'moderation cases enforce RLS'
@@ -81,6 +82,40 @@ select ok(
   ),
   'service role can use the audited moderation transition RPC'
 );
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.reinstate_moderation_sanction(uuid,text,text,text,text)',
+    'execute'
+  ),
+  'authenticated users cannot reinstate moderation sanctions'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.reinstate_moderation_sanction(uuid,text,text,text,text)',
+    'execute'
+  ),
+  'service role can use the audited reinstatement RPC'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'private.has_active_moderation_sanction(uuid)',
+    'execute'
+  ),
+  'authenticated RLS evaluation can execute the sanction predicate'
+);
+select is(
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and policyname like 'moderation_hides_sanctioned_%'
+  ),
+  11,
+  'all sanctioned UGC and engagement read surfaces have restrictive policies'
+);
 select is(
   (
     select count(*)::integer
@@ -114,7 +149,13 @@ values
     'test',
     timezone('utc', now()),
     '{"provider":"email","providers":["email"]}',
-    '{"name":"Reporter","username":"moderation_reporter"}',
+    jsonb_build_object(
+      'name', 'Reporter',
+      'username', 'moderation_reporter',
+      'legal_consent_version', '2026-09-08-terms-community-privacy',
+      'legal_consent_documents', jsonb_build_array('community', 'kvkk', 'privacy', 'terms'),
+      'legal_consent_at', timezone('utc', now())
+    ),
     timezone('utc', now()),
     timezone('utc', now())
   ),
@@ -127,7 +168,13 @@ values
     'test',
     timezone('utc', now()),
     '{"provider":"email","providers":["email"]}',
-    '{"name":"Target","username":"moderation_target"}',
+    jsonb_build_object(
+      'name', 'Target',
+      'username', 'moderation_target',
+      'legal_consent_version', '2026-09-08-terms-community-privacy',
+      'legal_consent_documents', jsonb_build_array('community', 'kvkk', 'privacy', 'terms'),
+      'legal_consent_at', timezone('utc', now())
+    ),
     timezone('utc', now()),
     timezone('utc', now())
   );
@@ -333,6 +380,30 @@ select is(
   'sanction decisions require an external enforcement evidence reference'
 );
 select is(
+  (select user_id from public.moderation_account_sanctions where case_id = (
+    select id from public.moderation_cases where report_id = '30000000-0000-0000-0000-000000000010'
+  )),
+  '30000000-0000-0000-0000-000000000002'::uuid,
+  'a user-target sanction creates an enforced account sanction record'
+);
+select ok(
+  (select banned_until = 'infinity'::timestamptz from auth.users where id = '30000000-0000-0000-0000-000000000002'),
+  'a user-target sanction bans the account in Supabase Auth'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"30000000-0000-0000-0000-000000000001"}',
+  true
+);
+select is(
+  (select count(*) from public.profiles where id = '30000000-0000-0000-0000-000000000002'),
+  0::bigint,
+  'sanctioned profile content is immediately hidden from authenticated users'
+);
+reset role;
+select set_config('request.jwt.claims', '', true);
+select is(
   (
     select status
     from public.moderation_transition_case(
@@ -347,6 +418,71 @@ select is(
   ),
   'appealed',
   'appeal intake is represented as an audited case transition'
+);
+select is(
+  (
+    select status
+    from public.reinstate_moderation_sanction(
+      (select id from public.moderation_cases where report_id = '30000000-0000-0000-0000-000000000010'),
+      'ops:test',
+      'Appeal approved after review',
+      'test-reinstate-0001',
+      'evidence://appeal/approved-0001'
+    )
+  ),
+  'closed',
+  'approved appeals close the case through the dedicated reinstatement RPC'
+);
+select ok(
+  (select revoked_at is not null from public.moderation_account_sanctions where case_id = (
+    select id from public.moderation_cases where report_id = '30000000-0000-0000-0000-000000000010'
+  )),
+  'reinstatement revokes the active sanction without deleting its audit record'
+);
+select ok(
+  (select banned_until is null from auth.users where id = '30000000-0000-0000-0000-000000000002'),
+  'reinstatement restores the account Auth ban state'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"30000000-0000-0000-0000-000000000001"}',
+  true
+);
+select is(
+  (select count(*) from public.profiles where id = '30000000-0000-0000-0000-000000000002'),
+  1::bigint,
+  'reinstated profile content is visible again under the normal privacy policy'
+);
+reset role;
+select set_config('request.jwt.claims', '', true);
+select is(
+  (
+    select revision
+    from public.reinstate_moderation_sanction(
+      (select id from public.moderation_cases where report_id = '30000000-0000-0000-0000-000000000010'),
+      'ops:test',
+      'Appeal approved after review',
+      'test-reinstate-0001',
+      'evidence://appeal/approved-0001'
+    )
+  ),
+  5::bigint,
+  'replaying reinstatement is idempotent'
+);
+select is(
+  (
+    select status
+    from public.moderation_transition_case(
+      (select id from public.moderation_cases where report_id = '30000000-0000-0000-0000-000000000010'),
+      'reopen',
+      'ops:test',
+      'Continue post-appeal review',
+      'test-reopen-0001'
+    )
+  ),
+  'in_review',
+  'a reinstated closed case can be reopened for follow-up review'
 );
 select is(
   (
@@ -385,7 +521,7 @@ select is(
     join public.moderation_cases as moderation_case on moderation_case.id = event.case_id
     where moderation_case.report_id = '30000000-0000-0000-0000-000000000010'
   ),
-  6::bigint,
+  8::bigint,
   'the complete lifecycle has one immutable event per accepted operation'
 );
 

@@ -2,10 +2,37 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { PLACE_CATEGORY_META } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { compareLocalizedText, normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
 export function normalizePlaceIdentity(value?: string) {
   return normalizeSearchText(value);
+}
+
+const NON_PERSISTABLE_PLACE_IDENTITIES = new Set(
+  [
+    tr.map.resolvingAddress,
+    tr.map.addressUnavailable,
+    tr.placeEditor.locationFallback(),
+    tr.placeEditor.placeNamePlaceholder,
+  ].map(normalizePlaceIdentity),
+);
+
+export function normalizePersistablePlaceIdentity(value?: string | null) {
+  const trimmedValue = value?.trim() || '';
+
+  if (
+    !trimmedValue ||
+    NON_PERSISTABLE_PLACE_IDENTITIES.has(normalizePlaceIdentity(trimmedValue))
+  ) {
+    return '';
+  }
+
+  return trimmedValue;
+}
+
+export function hasValidPlaceIdentity(values: ReadonlyArray<string | null | undefined>) {
+  return values.some((value) => Boolean(normalizePersistablePlaceIdentity(value)));
 }
 
 export function isEquivalentTargetPlace(
@@ -84,6 +111,18 @@ export function toggleArrayValue(value: string, setter: Dispatch<SetStateAction<
   setter((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
 }
 
+export function getErrorMessage(error: unknown, fallbackMessage: string) {
+  return error instanceof Error && error.message.trim() ? error.message : fallbackMessage;
+}
+
+export function sanitizeNumericInput(value: string) {
+  return value.replace(/[^\d]/g, '');
+}
+
+export function isValidPriceRange(priceMin: string, priceMax: string) {
+  return !priceMin || !priceMax || Number(priceMin) <= Number(priceMax);
+}
+
 export function getInitialSelectedCategories(existingPlace?: Place | null) {
   if (existingPlace?.categories?.length) {
     return existingPlace.categories;
@@ -112,6 +151,19 @@ export function getInitialSelectedLists(existingPlace: Place | null | undefined,
   }
 
   return [];
+}
+
+export function getDuplicateListIds(
+  lists: PlaceList[],
+  reference: { id?: string | null; name?: string; lat: number; lng: number },
+) {
+  return new Set(
+    lists
+      .filter((list) =>
+        list.places.some((candidate) => isEquivalentTargetPlace(candidate, reference)),
+      )
+      .map((list) => list.id),
+  );
 }
 
 export function sortSelectedCategories(categories: string[]) {

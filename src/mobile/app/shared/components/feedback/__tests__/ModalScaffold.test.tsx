@@ -24,13 +24,14 @@ describe('ModalScaffold accessibility', () => {
 
   it('announces the modal without grouping its interactive descendants', () => {
     const announce = vi.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    const onClose = vi.fn();
     let renderer!: TestRenderer.ReactTestRenderer;
 
     act(() => {
       renderer = TestRenderer.create(
         <ModalScaffold
           accessibilityLabel="İşlem menüsü"
-          onClose={vi.fn()}
+          onClose={onClose}
           visible
         >
           <Text accessibilityRole="button">Seçenek</Text>
@@ -43,13 +44,14 @@ describe('ModalScaffold accessibility', () => {
     });
 
     expect(announce).toHaveBeenCalledWith('İşlem menüsü');
-    expect(
-      renderer.root.findAll(
-        (node) =>
-          String(node.type) === 'KeyboardAvoidingView' &&
-          node.props.accessibilityViewIsModal === true,
-      ),
-    ).toHaveLength(1);
+    const modalSurface = renderer.root.find(
+      (node) =>
+        String(node.type) === 'KeyboardAvoidingView' &&
+        node.props.accessibilityViewIsModal === true,
+    );
+    expect(modalSurface.props.onAccessibilityEscape).toEqual(expect.any(Function));
+    act(() => modalSurface.props.onAccessibilityEscape());
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(
       renderer.root.findAll((node) => node.props.accessible === true),
     ).toHaveLength(0);

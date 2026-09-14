@@ -19,6 +19,8 @@ type FeedActionState = ReturnType<typeof useFeedActionBarState>;
 
 type FeedActionOverlaysProps = {
   comments?: FeedActionComment[];
+  commentsErrorMessage?: string | null;
+  commentsInitialLoading?: boolean;
   currentUserName?: string;
   currentUserPhoto?: string;
   hasNextCommentsPage?: boolean;
@@ -35,6 +37,8 @@ type FeedActionOverlaysProps = {
 
 export function FeedActionOverlays({
   comments = [],
+  commentsErrorMessage = null,
+  commentsInitialLoading = false,
   currentUserName,
   currentUserPhoto,
   hasNextCommentsPage = false,
@@ -54,6 +58,8 @@ export function FeedActionOverlays({
         <CommentPanel
           visible
           comments={comments}
+          errorMessage={commentsErrorMessage}
+          initialLoading={commentsInitialLoading}
           commentText={state.commentText}
           editingCommentId={state.editingCommentId}
           activeReportCommentId={state.activeReportCommentId}
@@ -71,7 +77,7 @@ export function FeedActionOverlays({
           onCancelReply={() => state.setReplyingTo(null)}
           onDeleteComment={state.setConfirmDeleteCommentId}
           onLoadMoreComments={() => void onCommentsLoadMore?.()}
-          onToggleCommentLike={(commentId) => void state.handleCommentLikeToggle(commentId)}
+          onToggleCommentLike={(commentId) => state.handleCommentLikeToggle(commentId)}
           onStartReport={state.handleStartReport}
           onCloseReport={() => {
             state.setActiveReportCommentId(null);
@@ -109,6 +115,7 @@ export function FeedActionOverlays({
       {state.showReportSheet ? (
         <ReportActionSheet
           visible
+          targetType="place"
           title={reportTitle}
           description={reportDescription}
           reportDetails={state.itemReportDetails}

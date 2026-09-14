@@ -88,7 +88,11 @@ export function SettingsEditProfileFlow({
   const bioInputRef = React.useRef<TextInput>(null);
 
   return (
-    <Screen refreshing={refreshing} onRefresh={onRefresh} variant="settings">
+    <Screen
+      refreshing={!isSavingProfile && refreshing}
+      onRefresh={isSavingProfile ? undefined : onRefresh}
+      variant="settings"
+    >
       <SettingsHeader
         title={tr.settings.editProfile.title}
         onBack={onBack}
@@ -99,13 +103,13 @@ export function SettingsEditProfileFlow({
 
       <View style={styles.stepHeader}>
         <AuthStepDots current={editStep} total={steps.length} />
-        <Text style={styles.stepCounter}>
+        <Text accessibilityLiveRegion="polite" style={styles.stepCounter}>
           {tr.settings.editProfile.stepCounter(editStep + 1, steps.length)}
         </Text>
       </View>
 
       <View style={styles.stepCopy}>
-        <Text style={styles.stepTitle}>{currentEditStep.title}</Text>
+        <Text accessibilityRole="header" style={styles.stepTitle}>{currentEditStep.title}</Text>
         <Text style={styles.stepDescription}>{currentEditStep.description}</Text>
       </View>
 
@@ -115,6 +119,7 @@ export function SettingsEditProfileFlow({
             label={tr.settings.editProfile.nameLabel}
             value={editName}
             onChangeText={onChangeName}
+            editable={!isSavingProfile}
             maxLength={USER_NAME_MAX_LENGTH}
             returnKeyType="next"
             onSubmitEditing={() => usernameInputRef.current?.focus()}
@@ -124,6 +129,7 @@ export function SettingsEditProfileFlow({
             label={tr.settings.editProfile.usernameLabel}
             value={editUsername}
             onChangeText={onChangeUsername}
+            editable={!isSavingProfile}
             autoCapitalize="none"
             helper={usernameHelper}
             helperTone={usernameHelperTone}
@@ -136,6 +142,7 @@ export function SettingsEditProfileFlow({
             label={tr.settings.editProfile.bioLabel}
             value={editBio}
             onChangeText={onChangeBio}
+            editable={!isSavingProfile}
             multilineRows={4}
             placeholder={tr.settings.editProfile.bioPlaceholder}
             maxLength={USER_BIO_MAX_LENGTH}
@@ -156,16 +163,22 @@ export function SettingsEditProfileFlow({
             options={PROFILE_INTEREST_OPTIONS}
             selectedValues={editInterests}
             onToggle={toggleInterest}
+            disabled={isSavingProfile}
           />
 
-          <Text style={styles.selectionMeta}>
+          <Text accessibilityLiveRegion="polite" style={styles.selectionMeta}>
             {tr.settings.editProfile.interestsSelection(editInterests.length)}
           </Text>
         </View>
       ) : null}
 
       {editStep === 2 ? (
-        <View style={styles.form}>
+        <View
+          accessibilityElementsHidden={isSavingProfile}
+          importantForAccessibility={isSavingProfile ? 'no-hide-descendants' : 'auto'}
+          pointerEvents={isSavingProfile ? 'none' : 'auto'}
+          style={styles.form}
+        >
           <View style={styles.photoSection}>
             <AuthImagePicker
               uri={profilePhoto}
@@ -191,7 +204,13 @@ export function SettingsEditProfileFlow({
       ) : null}
 
       {isSavingProfile ? (
-        <View style={styles.loadingCard}>
+        <View
+          accessibilityLabel={saveProfileMessage || tr.settings.editProfile.saveInFlight}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="progressbar"
+          accessibilityState={{ busy: true }}
+          style={styles.loadingCard}
+        >
           <ActivityIndicator color={colors.primary} />
           <View style={styles.loadingCardBody}>
             <Text style={styles.loadingCardTitle}>{tr.settings.editProfile.saveInFlightTitle}</Text>

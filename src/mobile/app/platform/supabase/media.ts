@@ -121,14 +121,12 @@ async function performMediaFunctionRequest<TPayload extends Record<string, unkno
   payload: TPayload,
   accessToken: string,
   signal?: AbortSignal,
-  legacySignature = false,
 ) {
   const bodyText = JSON.stringify(payload);
   const signedHeaders = await createSignedEdgeHeaders({
     accessToken,
     bodyText,
     functionName: env.supabaseMediaAssetsFunctionName,
-    ...(legacySignature ? { legacy: true } : {}),
     method: 'POST',
   });
 
@@ -219,8 +217,6 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
 ): Promise<TResult> {
   let accessToken = requestSession?.accessToken ?? await getAccessToken(signal);
   let refreshedSessionAfterUnauthorized = false;
-  let retriedWithLegacySignature = false;
-  let useLegacySignature = false;
 
   for (let attempt = 0; attempt < MAX_MEDIA_REQUEST_ATTEMPTS; attempt += 1) {
     throwIfAborted(signal);
@@ -231,7 +227,6 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
         payload,
         accessToken,
         signal,
-        useLegacySignature,
       );
     } catch (error) {
       if (
@@ -250,10 +245,8 @@ async function callMediaFunction<TPayload extends Record<string, unknown>, TResu
       return (await response.json()) as TResult;
     }
 
-    if (!retriedWithLegacySignature && await isInvalidSignatureResponse(response)) {
-      retriedWithLegacySignature = true;
-      useLegacySignature = true;
-      continue;
+    if (await isInvalidSignatureResponse(response)) {
+      throw new Error(await readMediaFunctionError(response));
     }
 
     if (response.status === 401 && !refreshedSessionAfterUnauthorized) {
@@ -349,6 +342,7 @@ export async function uploadImageAsset(params: {
   try {
     await uploadLocalFileToSignedUrl({
       contentType,
+      errorBucket: bucket,
       fileSizeBytes,
       maxUploadBytes,
       signal: params.signal,
@@ -382,14 +376,14 @@ export async function uploadImageAsset(params: {
     await callMediaFunction<
       {
         action: 'delete';
-        bucket: PrivateMediaBucket;
+        bucket: PublicMediaBucket;
         paths: string[];
         uploadSessionId: string;
       },
       { success: true }
     >({
       action: 'delete',
-      bucket: PRIVATE_PLACE_MEDIA_BUCKET,
+      bucket,
       paths: [prepared.objectPath],
       uploadSessionId,
     }, undefined, requestSession).catch(() => undefined);
@@ -418,6 +412,7 @@ function isRetriableStorageUploadStatus(status: number) {
 
 async function uploadLocalFileToSignedUrl(params: {
   contentType: string;
+  errorBucket: PublicMediaBucket;
   fileSizeBytes: number;
   maxUploadBytes: number;
   onProgress?: UploadPlaceMediaAssetParams['onProgress'];
@@ -490,7 +485,7 @@ async function uploadLocalFileToSignedUrl(params: {
     const uploadError = new Error(
       readStorageUploadError({
         bodyText: uploadResult.body,
-        bucket: 'place-media',
+        bucket: params.errorBucket,
         fallbackMessage: `Media upload failed (${uploadResult.status})`,
         maxUploadBytes: params.maxUploadBytes,
         status: uploadResult.status,
@@ -567,6 +562,7 @@ export async function uploadPlaceMediaAsset(params: UploadPlaceMediaAssetParams)
   try {
     await uploadLocalFileToSignedUrl({
       contentType,
+      errorBucket: 'place-media',
       fileSizeBytes,
       maxUploadBytes: PLACE_MEDIA_MAX_BYTES,
       onProgress: ({ sentBytes, totalBytes }) => {

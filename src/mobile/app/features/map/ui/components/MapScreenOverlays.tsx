@@ -4,7 +4,7 @@ import { Globe, Layers3, Lock, X } from 'lucide-react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -116,13 +116,15 @@ export function MapAddHint({ bottom, onClose }: { bottom: number; onClose: () =>
   return (
     <View style={[styles.addHint, { bottom }]}>
       <Text style={styles.addHintText}>{tr.map.addPlaceHint}</Text>
-      <InstantPressable
+      <IconButton
         accessibilityLabel={tr.common.close}
-        accessibilityRole="button"
         onPress={onClose}
+        size="sm"
+        style={styles.addHintClose}
+        variant="inverse"
       >
         <X color={colors.onPrimary} size={14} />
-      </InstantPressable>
+      </IconButton>
     </View>
   );
 }
@@ -165,5 +167,9 @@ const styles = StyleSheet.create({
     flex: 1,
     ...typography.captionText,
     color: colors.onPrimary,
+  },
+  addHintClose: {
+    marginVertical: -8,
+    marginRight: -8,
   },
 });

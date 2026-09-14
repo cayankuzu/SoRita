@@ -6,52 +6,35 @@ import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { isInfiniteData } from '@/mobile/app/data/query/queryDataHelpers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
-import { ensureAndroidPushChannel } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import {
+  getNotificationCount,
   getNotificationsPage,
   type MobileNotification,
 } from '@/mobile/app/data/repositories/notificationRepository';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
+import { ensureForegroundNotificationPresentation } from '@/mobile/app/platform/notifications/foregroundNotificationPresentation';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { normalizePushPayload } from '@/mobile/app/app-shell/notifications/pushNavigation';
 import { usePushRegistration } from '@/mobile/app/app-shell/notifications/usePushRegistration';
 import { useVerifiedPushTapNavigation } from '@/mobile/app/app-shell/notifications/useVerifiedPushTapNavigation';
 
-async function loadNotificationsModule() {
-  return import('expo-notifications');
+let notificationsModulePromise: Promise<typeof import('expo-notifications')> | null = null;
+
+function loadNotificationsModule() {
+  notificationsModulePromise ??= import('expo-notifications').catch((error) => {
+    notificationsModulePromise = null;
+    throw error;
+  });
+  return notificationsModulePromise;
 }
 
-let notificationPresentationPromise: Promise<void> | null = null;
 const NOTIFICATIONS_SYNC_PAGE_SIZE = 20;
 const NOTIFICATION_EVENT_DEDUPE_MS = 8000;
 const NOTIFICATION_SYNC_DEDUPE_MS = 1200;
 const REALTIME_BACKOFF_MS = [5000, 15000, 30000, 60000, 300000] as const;
 
-export async function ensureForegroundNotificationPresentation() {
-  if (!notificationRuntime.supportsNotificationObservers) {
-    return;
-  }
-
-  if (!notificationPresentationPromise) {
-    notificationPresentationPromise = (async () => {
-      await ensureAndroidPushChannel().catch((err) => { logger.debug('push', 'Failed to ensure Android push channel', err); });
-      const Notifications = await loadNotificationsModule();
-
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowBanner: true,
-          shouldShowList: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-        }),
-      });
-    })();
-  }
-
-  await notificationPresentationPromise;
-}
+export { ensureForegroundNotificationPresentation };
 
 function buildNotificationQueryKey(userId: string) {
   return queryKeys.notifications.list(userId);
@@ -62,7 +45,6 @@ function setLatestNotificationsCache(
   notifications: MobileNotification[],
 ) {
   const queryKey = buildNotificationQueryKey(userId);
-  const unreadCount = notifications.filter((item) => !item.read).length;
 
   queryClient.setQueryData<
     InfiniteData<MobileNotification[], number> | MobileNotification[] | undefined
@@ -84,7 +66,6 @@ function setLatestNotificationsCache(
           : [notifications],
     };
   });
-  queryClient.setQueryData(queryKeys.notifications.unreadCount(userId), unreadCount);
 }
 
 type HydrateLatestNotifications = (
@@ -181,8 +162,41 @@ function useNotificationsRealtimeSubscription(params: {
 export function PushNotificationsController() {
   const { booted, user } = useAuth();
   const userId = user?.id;
-  const lastHydrateAtRef = useRef(0);
+  const hydrationScopeRef = useRef({ generation: 0, userId });
+  const latestHydrationSequenceByUserRef = useRef<Map<string, number>>(new Map());
+  const mountedRef = useRef(false);
+  const lastHydrateRef = useRef<{ at: number; userId?: string }>({ at: 0 });
   const recentNotificationEventsRef = useRef<Map<string, number>>(new Map());
+
+  if (hydrationScopeRef.current.userId !== userId) {
+    hydrationScopeRef.current = {
+      generation: hydrationScopeRef.current.generation + 1,
+      userId,
+    };
+    lastHydrateRef.current = { at: 0, userId };
+    recentNotificationEventsRef.current.clear();
+  }
+
+  useEffect(() => {
+    const latestHydrationSequenceByUser = latestHydrationSequenceByUserRef.current;
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      const activeUserId = hydrationScopeRef.current.userId;
+
+      hydrationScopeRef.current = {
+        ...hydrationScopeRef.current,
+        generation: hydrationScopeRef.current.generation + 1,
+      };
+
+      if (activeUserId) {
+        const invalidationSequence =
+          (latestHydrationSequenceByUser.get(activeUserId) ?? 0) + 1;
+        latestHydrationSequenceByUser.set(activeUserId, invalidationSequence);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     void ensureForegroundNotificationPresentation();
@@ -192,16 +206,28 @@ export function PushNotificationsController() {
     userId: string,
     options: { force?: boolean; notificationId?: string; reason?: string } = {},
   ) => {
+    const hydrationGeneration = hydrationScopeRef.current.generation;
+    const isCurrentAuthScope = () => (
+      mountedRef.current
+      && hydrationScopeRef.current.generation === hydrationGeneration
+      && hydrationScopeRef.current.userId === userId
+    );
+
+    if (!isCurrentAuthScope()) {
+      return;
+    }
+
     const now = Date.now();
 
     if (options.notificationId) {
-      const previousEventAt = recentNotificationEventsRef.current.get(options.notificationId) || 0;
+      const eventKey = `${userId}:${options.notificationId}`;
+      const previousEventAt = recentNotificationEventsRef.current.get(eventKey) || 0;
 
       if (now - previousEventAt < NOTIFICATION_EVENT_DEDUPE_MS) {
         return;
       }
 
-      recentNotificationEventsRef.current.set(options.notificationId, now);
+      recentNotificationEventsRef.current.set(eventKey, now);
       for (const [notificationId, seenAt] of recentNotificationEventsRef.current.entries()) {
         if (now - seenAt > NOTIFICATION_EVENT_DEDUPE_MS) {
           recentNotificationEventsRef.current.delete(notificationId);
@@ -209,23 +235,57 @@ export function PushNotificationsController() {
       }
     }
 
-    if (!options.force && now - lastHydrateAtRef.current < NOTIFICATION_SYNC_DEDUPE_MS) {
+    if (
+      !options.force
+      && lastHydrateRef.current.userId === userId
+      && now - lastHydrateRef.current.at < NOTIFICATION_SYNC_DEDUPE_MS
+    ) {
       return;
     }
 
-    lastHydrateAtRef.current = now;
+    lastHydrateRef.current = { at: now, userId };
 
-    try {
-      const notifications = await getNotificationsPage(
-        userId,
-        0,
-        NOTIFICATIONS_SYNC_PAGE_SIZE,
-      );
+    const hydrationSequence =
+      (latestHydrationSequenceByUserRef.current.get(userId) ?? 0) + 1;
+    latestHydrationSequenceByUserRef.current.set(userId, hydrationSequence);
 
-      setLatestNotificationsCache(userId, notifications);
-    } catch (error) {
-      logger.warn('push', `Failed to hydrate latest notifications cache (${options.reason || 'unknown'})`, error);
-    }
+    const canCommitHydration = () => (
+      isCurrentAuthScope()
+      && latestHydrationSequenceByUserRef.current.get(userId) === hydrationSequence
+    );
+
+    const reason = options.reason || 'unknown';
+    const notificationsPromise = getNotificationsPage(
+      userId,
+      0,
+      NOTIFICATIONS_SYNC_PAGE_SIZE,
+    )
+      .then((notifications) => {
+        if (canCommitHydration()) {
+          setLatestNotificationsCache(userId, notifications);
+        }
+      })
+      .catch((error) => {
+        if (canCommitHydration()) {
+          logger.warn('push', `Failed to hydrate latest notifications cache (${reason})`, error);
+        }
+      });
+    const unreadCountPromise = getNotificationCount(userId)
+      .then((unreadCount) => {
+        if (canCommitHydration()) {
+          queryClient.setQueryData(queryKeys.notifications.unreadCount(userId), unreadCount);
+        }
+      })
+      .catch((error) => {
+        if (canCommitHydration()) {
+          logger.warn('push', `Failed to hydrate notification unread count (${reason})`, error);
+        }
+      });
+
+    await Promise.all([
+      notificationsPromise,
+      unreadCountPromise,
+    ]);
   }, []);
 
   useNotificationsRealtimeSubscription({
@@ -234,7 +294,7 @@ export function PushNotificationsController() {
     userId,
   });
 
-  const { syncPushRegistration } = usePushRegistration({ booted, userId });
+  const { recoverPushRegistration } = usePushRegistration({ booted, userId });
   const { openPushTarget } = useVerifiedPushTapNavigation(userId);
 
   useEffect(() => {
@@ -272,7 +332,7 @@ export function PushNotificationsController() {
             response.notification.request.content.data as Record<string, unknown> | undefined,
           );
 
-          openPushTarget(payload);
+          openPushTarget(payload, response.notification.request.identifier);
         });
       })
       .catch((error) => {
@@ -291,22 +351,40 @@ export function PushNotificationsController() {
       return;
     }
 
+    let cancelled = false;
+
     void loadNotificationsModule()
-      .then((Notifications) => Notifications.getLastNotificationResponseAsync())
-      .then((response) => {
-        if (!response) {
+      .then(async (Notifications) => {
+        const response = await Notifications.getLastNotificationResponseAsync();
+
+        if (!response || cancelled) {
           return;
         }
 
         const payload = normalizePushPayload(
           response.notification.request.content.data as Record<string, unknown> | undefined,
         );
+        const responseId = response.notification.request.identifier;
 
-        openPushTarget(payload);
+        try {
+          await Notifications.clearLastNotificationResponseAsync();
+        } catch (error) {
+          logger.debug('push', 'Failed to clear the consumed notification response', {
+            error: error instanceof Error ? error.name : 'unknown',
+          });
+        }
+
+        if (!cancelled) {
+          openPushTarget(payload, responseId);
+        }
       })
       .catch((error) => {
         logger.warn('push', 'Failed to inspect last notification response', error);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [booted, openPushTarget]);
 
   useEffect(() => {
@@ -323,7 +401,7 @@ export function PushNotificationsController() {
         void ensureForegroundNotificationPresentation().catch((error) => {
           logger.warn('push', 'Failed to refresh foreground notification presentation', error);
         });
-        void syncPushRegistration();
+        void recoverPushRegistration();
       }
 
       if (userId) {
@@ -334,7 +412,7 @@ export function PushNotificationsController() {
     return () => {
       subscription.remove();
     };
-  }, [booted, hydrateLatestNotifications, syncPushRegistration, userId]);
+  }, [booted, hydrateLatestNotifications, recoverPushRegistration, userId]);
 
   return null;
 }

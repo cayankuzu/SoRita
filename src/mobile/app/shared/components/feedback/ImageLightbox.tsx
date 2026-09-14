@@ -1,6 +1,8 @@
 import React from 'react';
 import {
+  AccessibilityInfo,
   FlatList,
+  findNodeHandle,
   Modal,
   Platform,
   StyleSheet,
@@ -15,13 +17,20 @@ import {
   ActionMenuSheet,
   type ActionMenuSheetItem,
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
+import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { saveUriToGallery } from '@/mobile/app/platform/media/gallery';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalSafeAreaPadding,
@@ -48,6 +57,9 @@ export function ImageLightbox({
   const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const previousAnnouncedIndexRef = React.useRef<number | null>(null);
+  const suppressNextAnnouncementRef = React.useRef(true);
   const imageUris = React.useMemo(() => {
     const nextUris = (uris || []).filter(Boolean);
 
@@ -79,6 +91,11 @@ export function ImageLightbox({
     1,
   );
   const currentUri = imageUris[currentIndex] ?? imageUris[startIndex] ?? null;
+  const positionLabel = getLightboxPositionLabel(
+    tr.placeEditor.photo,
+    currentIndex,
+    imageUris.length,
+  );
 
   const handleDownloadCurrent = React.useCallback(async () => {
     if (!currentUri) {
@@ -109,8 +126,54 @@ export function ImageLightbox({
   );
 
   React.useEffect(() => {
+    suppressNextAnnouncementRef.current = true;
     setCurrentIndex(startIndex);
-  }, [startIndex]);
+    previousAnnouncedIndexRef.current = startIndex;
+    const resetAnnouncementTimer = setTimeout(() => {
+      suppressNextAnnouncementRef.current = false;
+    }, 0);
+
+    return () => clearTimeout(resetAnnouncementTimer);
+  }, [flatListKey, startIndex]);
+
+  React.useEffect(() => {
+    if (imageUris.length === 0) {
+      previousAnnouncedIndexRef.current = null;
+      return undefined;
+    }
+
+    if (menuVisible) {
+      return undefined;
+    }
+
+    const focusTimer = setTimeout(() => {
+      const titleHandle = titleRef.current ? findNodeHandle(titleRef.current) : null;
+      if (titleHandle) {
+        AccessibilityInfo.setAccessibilityFocus(titleHandle);
+      }
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [flatListKey, imageUris.length, menuVisible]);
+
+  React.useEffect(() => {
+    if (suppressNextAnnouncementRef.current) {
+      suppressNextAnnouncementRef.current = false;
+      return;
+    }
+
+    if (
+      imageUris.length === 0 ||
+      previousAnnouncedIndexRef.current == null ||
+      previousAnnouncedIndexRef.current === currentIndex
+    ) {
+      previousAnnouncedIndexRef.current = currentIndex;
+      return;
+    }
+
+    previousAnnouncedIndexRef.current = currentIndex;
+    AccessibilityInfo.announceForAccessibility(positionLabel);
+  }, [currentIndex, imageUris.length, positionLabel]);
 
   React.useEffect(() => {
     if (menuItems.length === 0) {
@@ -134,6 +197,7 @@ export function ImageLightbox({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <View style={[styles.topBar, { width: pageWidth }]}>
@@ -147,13 +211,16 @@ export function ImageLightbox({
           </IconButton>
 
           <View style={styles.topBarCopy}>
-            <Text accessibilityRole="header" style={styles.topBarTitle}>
+            <Text
+              ref={titleRef}
+              accessibilityLabel={`${tr.common.previewTitle}. ${positionLabel}`}
+              accessibilityRole="header"
+              style={styles.topBarTitle}
+            >
               {tr.common.previewTitle}
             </Text>
-            <Text style={styles.topBarSubtitle}>
-              {imageUris.length > 1
-                ? `${tr.placeEditor.photo} ${currentIndex + 1}/${imageUris.length}`
-                : tr.placeEditor.photo}
+            <Text accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
+              {positionLabel}
             </Text>
           </View>
 
@@ -199,7 +266,11 @@ export function ImageLightbox({
                     uri={item}
                     style={styles.image}
                     resizeMode="contain"
-                    accessibilityLabel={tr.common.enlargedPhotoLabel(index + 1)}
+                    accessibilityLabel={`${tr.common.enlargedPhotoLabel(index + 1)}. ${getLightboxPositionLabel(
+                      tr.placeEditor.photo,
+                      index,
+                      imageUris.length,
+                    )}`}
                     backgroundColor="transparent"
                   />
                 </View>
@@ -219,6 +290,7 @@ export function ImageLightbox({
           title={tr.common.contentActionsTitle}
           items={menuItems}
           onClose={() => setMenuVisible(false)}
+          returnFocusRef={titleRef}
         />
       </View>
     </Modal>
@@ -240,8 +312,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   topActionButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -250,8 +322,8 @@ const styles = StyleSheet.create({
     borderColor: colors.controlsBorder,
   },
   topActionSpacer: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
   },
   topBarCopy: {
     flex: 1,
@@ -265,13 +337,13 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     color: colors.onPrimary,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
   },
   topBarSubtitle: {
     color: colors.onDarkMuted,
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   carouselViewport: {
     alignSelf: 'center',

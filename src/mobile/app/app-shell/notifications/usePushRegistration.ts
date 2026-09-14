@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { onlineManager } from '@tanstack/react-query';
 
 import {
   flushPendingPushTokenCleanupTombstones,
@@ -13,6 +14,7 @@ const PUSH_REGISTRATION_RETRY_MS = [5000, 15000, 60000, 300000] as const;
 const PUSH_REGISTRATION_MAX_RETRY_ATTEMPTS = 8;
 const PUSH_REGISTRATION_RETRY_WINDOW_MS = 30 * 60 * 1000;
 const PUSH_REGISTRATION_JITTER_RATIO = 0.2;
+const PUSH_REGISTRATION_HEARTBEAT_MS = 15 * 60 * 1000;
 
 function withRetryJitter(delayMs: number) {
   const multiplier = 1 - PUSH_REGISTRATION_JITTER_RATIO
@@ -24,17 +26,10 @@ async function loadNotificationsModule() {
   return import('expo-notifications');
 }
 
-export function usePushRegistration(params: { booted: boolean; userId?: string }) {
-  const { booted, userId } = params;
-  const currentUserIdRef = useRef<string | null>(userId ?? null);
-  const registeredTokenRef = useRef<string | null>(null);
-  const registeredUserIdRef = useRef<string | null>(null);
-  const registrationInFlightUserIdRef = useRef<string | null>(null);
+function useRegistrationRetryController() {
   const registrationRetryAttemptRef = useRef(0);
   const registrationRetryWindowStartedAtRef = useRef<number | null>(null);
   const registrationRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  currentUserIdRef.current = userId ?? null;
 
   const clearRegistrationRetry = useCallback(() => {
     if (registrationRetryTimeoutRef.current) {
@@ -78,7 +73,39 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
     }, delay);
   }, []);
 
-  const syncPushRegistration = useCallback(async function syncPushRegistration() {
+  return { resetRegistrationRetryBudget, scheduleRegistrationRetry };
+}
+
+export function usePushRegistration(params: { booted: boolean; userId?: string }) {
+  const { booted, userId } = params;
+  const currentUserIdRef = useRef<string | null>(userId ?? null);
+  const mountedRef = useRef(true);
+  const registeredTokenRef = useRef<string | null>(null);
+  const registeredUserIdRef = useRef<string | null>(null);
+  const registeredAtRef = useRef(0);
+  const registrationInFlightUserIdRef = useRef<string | null>(null);
+  const pendingTokenRefreshUserIdRef = useRef<string | null>(null);
+  const {
+    resetRegistrationRetryBudget,
+    scheduleRegistrationRetry,
+  } = useRegistrationRetryController();
+
+  currentUserIdRef.current = userId ?? null;
+
+  const cleanupStaleRegistration = useCallback(async (token: string) => {
+    try {
+      await prepareRegisteredPushTokenAccountSwitchCleanup(token);
+      await flushPendingPushTokenCleanupTombstones();
+    } catch (error) {
+      logger.debug('push', 'Stale push registration cleanup remains pending.', {
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  }, []);
+
+  const syncPushRegistration = useCallback(async function syncPushRegistration(
+    options: { force?: boolean } = {},
+  ) {
     if (!booted || !notificationRuntime.supportsRemotePushRegistration) {
       return;
     }
@@ -95,19 +122,26 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
       resetRegistrationRetryBudget();
       registeredTokenRef.current = null;
       registeredUserIdRef.current = null;
+      registeredAtRef.current = 0;
       registrationInFlightUserIdRef.current = null;
       return;
     }
 
     const targetUserId = userId;
 
-    if (registeredUserIdRef.current === targetUserId) {
+    if (
+      registeredUserIdRef.current === targetUserId
+      && (
+        !options.force
+        || Date.now() - registeredAtRef.current < PUSH_REGISTRATION_HEARTBEAT_MS
+      )
+    ) {
       return;
     }
 
     if (registrationInFlightUserIdRef.current) {
       scheduleRegistrationRetry(() => {
-        void syncPushRegistration();
+        void syncPushRegistration(options);
       });
       return;
     }
@@ -131,13 +165,16 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
         return;
       }
 
-      if (currentUserIdRef.current !== targetUserId) {
+      if (!mountedRef.current || currentUserIdRef.current !== targetUserId) {
         return;
       }
 
       const nextToken = await registerPushNotifications(targetUserId);
 
-      if (currentUserIdRef.current !== targetUserId) {
+      if (!mountedRef.current || currentUserIdRef.current !== targetUserId) {
+        if (nextToken) {
+          await cleanupStaleRegistration(nextToken);
+        }
         return;
       }
 
@@ -145,24 +182,56 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
         resetRegistrationRetryBudget();
         registeredTokenRef.current = nextToken;
         registeredUserIdRef.current = targetUserId;
-      } else {
-        scheduleRegistrationRetry(() => {
-          void syncPushRegistration();
-        });
+        registeredAtRef.current = Date.now();
       }
     } catch (error) {
       logger.warn('push', 'Push registration or cleanup failed', {
         error: error instanceof Error ? error.name : 'unknown',
       });
-      scheduleRegistrationRetry(() => {
-        void syncPushRegistration();
-      });
+      if (mountedRef.current && currentUserIdRef.current === targetUserId) {
+        scheduleRegistrationRetry(() => {
+          void syncPushRegistration(options);
+        });
+      }
     } finally {
       if (registrationInFlightUserIdRef.current === targetUserId) {
         registrationInFlightUserIdRef.current = null;
       }
+
+      if (
+        pendingTokenRefreshUserIdRef.current === targetUserId
+        && mountedRef.current
+        && currentUserIdRef.current === targetUserId
+      ) {
+        pendingTokenRefreshUserIdRef.current = null;
+        registeredUserIdRef.current = null;
+        registeredAtRef.current = 0;
+        void syncPushRegistration({ force: true });
+      }
     }
-  }, [booted, resetRegistrationRetryBudget, scheduleRegistrationRetry, userId]);
+  }, [
+    booted,
+    cleanupStaleRegistration,
+    resetRegistrationRetryBudget,
+    scheduleRegistrationRetry,
+    userId,
+  ]);
+
+  const recoverPushRegistration = useCallback(() => {
+    resetRegistrationRetryBudget();
+    return syncPushRegistration({ force: true });
+  }, [resetRegistrationRetryBudget, syncPushRegistration]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      currentUserIdRef.current = null;
+      pendingTokenRefreshUserIdRef.current = null;
+      resetRegistrationRetryBudget();
+    };
+  }, [resetRegistrationRetryBudget]);
 
   useEffect(() => () => {
     resetRegistrationRetryBudget();
@@ -187,22 +256,17 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
           resetRegistrationRetryBudget();
 
           if (registrationInFlightUserIdRef.current) {
-            scheduleRegistrationRetry(() => {
-              void syncPushRegistration();
-            });
+            pendingTokenRefreshUserIdRef.current = targetUserId;
+            registeredUserIdRef.current = null;
+            registeredAtRef.current = 0;
             return;
           }
 
           void (async () => {
-            const previousToken = registeredTokenRef.current;
             registrationInFlightUserIdRef.current = targetUserId;
             registeredUserIdRef.current = null;
 
             try {
-              if (previousToken) {
-                await prepareRegisteredPushTokenAccountSwitchCleanup(previousToken);
-              }
-
               const cleanup = await flushPendingPushTokenCleanupTombstones();
 
               if (cleanup.pending > 0) {
@@ -212,13 +276,16 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
                 return;
               }
 
-              if (cancelled || currentUserIdRef.current !== targetUserId) {
+              if (cancelled || !mountedRef.current || currentUserIdRef.current !== targetUserId) {
                 return;
               }
 
               const nextToken = await registerDevicePushToken(targetUserId, devicePushToken);
 
-              if (cancelled || currentUserIdRef.current !== targetUserId) {
+              if (cancelled || !mountedRef.current || currentUserIdRef.current !== targetUserId) {
+                if (nextToken) {
+                  await cleanupStaleRegistration(nextToken);
+                }
                 return;
               }
 
@@ -226,22 +293,33 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
                 resetRegistrationRetryBudget();
                 registeredTokenRef.current = nextToken;
                 registeredUserIdRef.current = targetUserId;
+                registeredAtRef.current = Date.now();
                 return;
               }
-
-              scheduleRegistrationRetry(() => {
-                void syncPushRegistration();
-              });
             } catch (error) {
               logger.warn('push', 'Push token refresh registration or cleanup failed', {
                 error: error instanceof Error ? error.name : 'unknown',
               });
-              scheduleRegistrationRetry(() => {
-                void syncPushRegistration();
-              });
+              if (!cancelled && mountedRef.current && currentUserIdRef.current === targetUserId) {
+                scheduleRegistrationRetry(() => {
+                  void syncPushRegistration({ force: true });
+                });
+              }
             } finally {
               if (registrationInFlightUserIdRef.current === targetUserId) {
                 registrationInFlightUserIdRef.current = null;
+              }
+
+              if (
+                pendingTokenRefreshUserIdRef.current === targetUserId
+                && !cancelled
+                && mountedRef.current
+                && currentUserIdRef.current === targetUserId
+              ) {
+                pendingTokenRefreshUserIdRef.current = null;
+                registeredUserIdRef.current = null;
+                registeredAtRef.current = 0;
+                void syncPushRegistration({ force: true });
               }
             }
           })();
@@ -257,11 +335,34 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
       cancelled = true;
       subscription?.remove();
     };
-  }, [booted, resetRegistrationRetryBudget, scheduleRegistrationRetry, syncPushRegistration, userId]);
+  }, [
+    booted,
+    cleanupStaleRegistration,
+    resetRegistrationRetryBudget,
+    scheduleRegistrationRetry,
+    syncPushRegistration,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (!booted || !userId || !notificationRuntime.supportsRemotePushRegistration) {
+      return;
+    }
+
+    return onlineManager.subscribe((online) => {
+      if (online) {
+        void recoverPushRegistration();
+      }
+    });
+  }, [booted, recoverPushRegistration, userId]);
 
   useEffect(() => {
     void syncPushRegistration();
   }, [syncPushRegistration]);
 
-  return { syncPushRegistration };
+  return { recoverPushRegistration, syncPushRegistration };
 }
+
+export const pushRegistrationInternals = {
+  PUSH_REGISTRATION_HEARTBEAT_MS,
+};

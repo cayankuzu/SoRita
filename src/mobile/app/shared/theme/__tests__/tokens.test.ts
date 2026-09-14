@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { colors, semanticColors, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  letterSpacing,
+  semanticColors,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 function hexToRgb(hex: string) {
   const normalized = hex.replace('#', '');
@@ -126,5 +131,51 @@ describe('theme contrast tokens', () => {
       .map(([name, value]) => `${name} (${value.lineHeight}/${value.fontSize})`);
 
     expect(tight).toEqual([]);
+  });
+
+  it('keeps compatibility font-size aliases tied to semantic styles', () => {
+    expect(typography.screenTitle).toBe(typography.title.fontSize);
+    expect(typography.sectionTitle).toBe(typography.section.fontSize);
+    expect(typography.body).toBe(typography.bodyText.fontSize);
+    expect(typography.caption).toBe(typography.captionText.fontSize);
+  });
+
+  it('preserves compact and headline roles without ad hoc screen metrics', () => {
+    expect(typography.headlineText).toMatchObject({
+      fontSize: 24,
+      lineHeight: 30,
+      fontWeight: '700',
+    });
+    expect(typography.compactSectionText).toMatchObject({
+      fontSize: 16,
+      lineHeight: 21,
+      fontWeight: '700',
+    });
+    expect(typography.compactBodyText).toMatchObject({
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: '400',
+    });
+    expect(typography.compactTitleText).toMatchObject({
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: '700',
+    });
+    expect(typography.inputText).toMatchObject({
+      fontSize: 16,
+      lineHeight: 22,
+      fontWeight: '400',
+    });
+    expect(typography.readingBodyText.lineHeight).toBeGreaterThan(
+      typography.bodyText.lineHeight,
+    );
+  });
+
+  it('keeps the approved tracking values centralized', () => {
+    expect(letterSpacing).toEqual({
+      brandTitle: -0.8,
+      brandTagline: 0.4,
+      emphasizedMetadata: 0.1,
+    });
   });
 });

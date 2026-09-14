@@ -5,6 +5,7 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -12,7 +13,7 @@ import {
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { spacing } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import { getResponsiveGalleryColumnCount } from '@/mobile/app/shared/utils/layout';
+import { getResponsiveGridLayout } from '@/mobile/app/shared/utils/layout';
 
 type VirtualizedDiscoveryGridRenderInfo<ItemT> = {
   columnCount: number;
@@ -40,6 +41,8 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
   onScrollOffsetChange?: (offset: number) => void;
+  progressViewOffset?: number;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
   refreshing?: boolean;
   scrollEnabled?: boolean;
 };
@@ -62,14 +65,17 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   onEndReachedThreshold = 0.55,
   onRefresh,
   onScrollOffsetChange,
+  progressViewOffset,
+  refreshControl,
   refreshing = false,
   scrollEnabled = true,
 }: VirtualizedDiscoveryGridProps<ItemT>) {
   const appLayout = useAppLayout();
-  const { columnCount: discoveryColumnCount, columnGap, height, screenPadding, width } = appLayout;
-  const columnCount = columnStrategy === 'gallery'
-    ? getResponsiveGalleryColumnCount(width, height)
-    : discoveryColumnCount;
+  const { columnGap, height, screenPadding, width } = appLayout;
+  const { columnCount, columnWidth } = getResponsiveGridLayout(width, height, {
+    gap: columnGap,
+    strategy: columnStrategy,
+  });
   const visibleAnchorIndexRef = React.useRef(0);
   const pendingAnchorIndexRef = React.useRef<number | null>(null);
   const previousColumnCountRef = React.useRef(columnCount);
@@ -80,12 +86,6 @@ export function VirtualizedDiscoveryGrid<ItemT>({
     pendingAnchorIndexRef.current = visibleAnchorIndexRef.current;
     previousColumnCountRef.current = columnCount;
   }
-  const columnWidth = Math.max(
-    120,
-    Math.floor(
-      (width - screenPadding * 2 - columnGap * (columnCount - 1)) / columnCount,
-    ),
-  );
   const listProps = React.useMemo(
     () =>
       buildAdaptiveFlatListProps({
@@ -188,6 +188,8 @@ export function VirtualizedDiscoveryGrid<ItemT>({
         contentContainerStyle,
         bottomClearanceStyle,
       ]}
+      progressViewOffset={progressViewOffset}
+      refreshControl={refreshControl}
       refreshing={refreshing}
       onRefresh={onRefresh}
       onEndReached={onEndReached}

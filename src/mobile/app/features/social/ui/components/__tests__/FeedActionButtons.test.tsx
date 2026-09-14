@@ -24,18 +24,21 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 
 describe('FeedActionButtons hierarchy', () => {
   it('keeps three primary actions plus overflow and collapses secondary actions', () => {
+    const likePromise = Promise.resolve();
+    const onLikePress = vi.fn(() => likePromise);
+    const onLikersPress = vi.fn();
     let renderer!: TestRenderer.ReactTestRenderer;
 
     act(() => {
       renderer = TestRenderer.create(
         <FeedActionButtons
           commentCount={0}
-          likeCount={0}
+          likeCount={3}
           liked={false}
           onCommentPress={vi.fn()}
           onCommentsIntent={vi.fn()}
-          onLikePress={vi.fn()}
-          onLikersPress={vi.fn()}
+          onLikePress={onLikePress}
+          onLikersPress={onLikersPress}
           onOverflowPress={vi.fn()}
           onSharePress={vi.fn()}
           overflowActionLabel={tr.profile.actions.menuTitle}
@@ -52,6 +55,7 @@ describe('FeedActionButtons hierarchy', () => {
     );
     expect(actions.map((action) => action.props.accessibilityLabel)).toEqual([
       tr.cards.likeAction,
+      `${tr.cards.likedBy}: 3`,
       tr.cards.commentAction,
       tr.cards.share,
       tr.profile.actions.menuTitle,
@@ -62,5 +66,18 @@ describe('FeedActionButtons hierarchy', () => {
       expect(style.minHeight).toBeGreaterThanOrEqual(44);
       expect(style.minWidth).toBeGreaterThanOrEqual(44);
     });
+
+    let likeResult: unknown;
+    act(() => {
+      likeResult = actions[0]?.props.onPress();
+    });
+    expect(likeResult).toBe(likePromise);
+    expect(onLikePress).toHaveBeenCalledOnce();
+    expect(onLikersPress).not.toHaveBeenCalled();
+
+    act(() => {
+      actions[1]?.props.onPress();
+    });
+    expect(onLikersPress).toHaveBeenCalledOnce();
   });
 });

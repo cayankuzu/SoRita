@@ -18,8 +18,9 @@ export function PrivacyOption({ active, icon, title, description, disabled = fal
   return (
     <InstantPressable
       accessibilityLabel={title}
+      accessibilityHint={description}
       accessibilityRole="radio"
-      accessibilityState={{ checked: active, disabled }}
+      accessibilityState={{ busy: active && disabled, checked: active, disabled }}
       disabled={disabled}
       hapticFeedback="selection"
       style={[styles.privacyCard, active ? styles.privacyCardActive : null]}
@@ -74,14 +75,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   privacyTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   privacyDescription: {
     marginTop: 3,
-    ...typography.metadataText,
-    lineHeight: 15,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   activeCheck: {

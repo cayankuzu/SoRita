@@ -1,6 +1,14 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, layout, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  layout,
+  minTouchSize,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const discoveryTileStyles = StyleSheet.create({
   tile: {
@@ -20,10 +28,18 @@ export const discoveryTileStyles = StyleSheet.create({
   userTile: {
     minHeight: 0,
   },
+  userTileMainAction: {
+    width: '100%',
+  },
   tilePressable: {
     width: '100%',
   },
+  tileActionShell: {
+    position: 'relative',
+    width: '100%',
+  },
   ownerHeader: {
+    minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -35,9 +51,7 @@ export const discoveryTileStyles = StyleSheet.create({
     flex: 1,
   },
   ownerName: {
-    fontSize: typography.compactCardTitleText.fontSize,
-    lineHeight: typography.compactCardTitleText.lineHeight,
-    fontWeight: '700',
+    ...typography.compactCardTitleText,
     color: colors.text,
   },
   ownerUsername: {
@@ -57,7 +71,7 @@ export const discoveryTileStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   placeholderEmoji: {
-    fontSize: 18,
+    fontSize: typography.dialogTitleText.fontSize,
   },
   visibilityBadge: {
     position: 'absolute',
@@ -73,8 +87,8 @@ export const discoveryTileStyles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   visibilityBadgeText: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    fontWeight: '700',
+    ...typography.compactCardMetaText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   iconBadgeRight: {
@@ -111,21 +125,29 @@ export const discoveryTileStyles = StyleSheet.create({
     gap: 4,
   },
   mediaFooterBadgeText: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    fontWeight: '700',
+    ...typography.compactCardMetaText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   singleActionBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 0,
+    right: 0,
+    width: touch.android,
+    height: touch.android,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 4,
+    paddingRight: 4,
+    zIndex: 2,
+  },
+  singleActionBadgeVisual: {
     width: 20,
     height: 20,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.overlay,
-    zIndex: 2,
   },
   tileBody: {
     minHeight: 58,
@@ -147,6 +169,14 @@ export const discoveryTileStyles = StyleSheet.create({
     minWidth: 0,
   },
   titleActionButton: {
+    width: touch.android,
+    height: touch.android,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 14,
+    paddingRight: 8,
+  },
+  titleActionButtonVisual: {
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -156,6 +186,16 @@ export const discoveryTileStyles = StyleSheet.create({
   },
   titleActionButtonActive: {
     backgroundColor: colors.primaryBg,
+  },
+  titleActionOverlay: {
+    position: 'absolute',
+    top: layout.discoveryTileHeight - 8,
+    right: 0,
+    zIndex: 2,
+  },
+  titleActionPlaceholder: {
+    width: 20,
+    height: 20,
   },
   tileTitle: {
     ...typography.compactCardTitleText,
@@ -201,9 +241,7 @@ export const discoveryTileStyles = StyleSheet.create({
     gap: 4,
   },
   listContextTitle: {
-    fontSize: typography.compactCardTitleText.fontSize,
-    lineHeight: typography.compactCardTitleText.lineHeight,
-    fontWeight: '700',
+    ...typography.compactCardTitleText,
     color: colors.text,
   },
   listContextMetaRow: {
@@ -213,9 +251,7 @@ export const discoveryTileStyles = StyleSheet.create({
     marginTop: 1,
   },
   listContextMetaText: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    lineHeight: typography.compactCardMetaText.lineHeight,
-    fontWeight: '600',
+    ...typography.compactCardMetaText,
     color: colors.textSoft,
   },
   listContextMetaTextPrivate: {
@@ -233,9 +269,7 @@ export const discoveryTileStyles = StyleSheet.create({
     gap: 3,
   },
   tileMeta: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    lineHeight: typography.compactCardMetaText.lineHeight,
-    fontWeight: '600',
+    ...typography.compactCardMetaText,
     color: colors.textSoft,
   },
   tileTimestamp: {
@@ -267,9 +301,8 @@ export const discoveryTileStyles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    fontSize: typography.compactCardMetaText.fontSize,
+    ...typography.compactCardMetaText,
     color: colors.warningText,
-    fontWeight: '600',
   },
   photoCountBadge: {
     position: 'absolute',
@@ -297,8 +330,8 @@ export const discoveryTileStyles = StyleSheet.create({
     backgroundColor: colors.controlsDivider,
   },
   photoCountText: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    fontWeight: '700',
+    ...typography.compactCardMetaText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   userCover: {
@@ -325,9 +358,14 @@ export const discoveryTileStyles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 7,
   },
+  userTileBodyMain: {
+    paddingBottom: 0,
+  },
   followButton: {
-    minHeight: 34,
+    minHeight: minTouchSize,
+    marginHorizontal: 8,
     marginTop: 6,
+    marginBottom: 7,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
@@ -336,9 +374,14 @@ export const discoveryTileStyles = StyleSheet.create({
   followButtonPassive: {
     backgroundColor: colors.surfaceMuted,
   },
+  followButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   followButtonText: {
-    fontSize: typography.compactCardTitleText.fontSize,
-    fontWeight: '700',
+    ...typography.compactCardTitleText,
     color: colors.onPrimary,
   },
   followButtonTextPassive: {

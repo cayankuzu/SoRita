@@ -1,3 +1,9 @@
+import { navigationTr, notificationsTr } from '@/mobile/app/shared/i18n/trSections';
+import {
+  settingsDataRightsTr,
+  settingsPrivacyTr,
+} from '@/mobile/app/shared/i18n/settingsPrivacyTr';
+
 export const tr = {
   common: {
     andConnector: ' ve ',
@@ -25,6 +31,8 @@ export const tr = {
     list: 'Liste',
     loading: 'Yükleniyor',
     loadingMore: 'Yükleniyor...',
+    refreshing: 'Yenileniyor...',
+    optional: 'İsteğe bağlı',
     mediaPhoto: 'Fotoğraf',
     mediaVideo: 'Video',
     mediaRemoveDescription: 'Seçili medya bu karttan kaldırılacak.',
@@ -53,12 +61,7 @@ export const tr = {
     unexpectedError: 'İşlem tamamlanamadı. Lütfen tekrar dene.',
     yes: 'Evet',
   },
-  navigation: {
-    explore: 'Keşfet',
-    home: 'Ana Sayfa',
-    map: 'Harita',
-    profile: 'Profil',
-  },
+  navigation: navigationTr,
   brand: {
     copyright: (year: number) => `Copyright © ${year} SoRita. Tüm hakları saklıdır.`,
     developer: 'MeMoDe',
@@ -93,7 +96,10 @@ export const tr = {
     multiMediaDescription: 'Aynı anda birden fazla fotoğraf ve video seçebilirsin. En fazla toplam 6 içerik eklenebilir.',
     permissionDescription:
       'Fotoğraf ve videoları yükleyebilmek için galeri erişimine izin vermen gerekiyor.',
+    permissionBlockedDescription:
+      'Galeri izni cihaz ayarlarından kapatılmış. Medya seçebilmek için Ayarlar’dan erişimi aç.',
     permissionTitle: 'Galeri izni gerekli',
+    openSettings: 'Ayarları aç',
     previewAdjustApply: 'Görünümü kaydet',
     previewAdjustAvatarDescription: 'Yuvarlak alanda nasıl görüneceğini ayarla.',
     previewAdjustAvatarTitle: 'Profil fotoğrafını ayarla',
@@ -112,11 +118,18 @@ export const tr = {
     videoRecorderAutoStop: (max: string, remaining: string) =>
       `Kayıt ${max} sonunda otomatik tamamlanır. Kalan süre ${remaining}.`,
     videoRecorderGrantPermissions: 'İzinleri ver',
+    videoRecorderOpenSettings: 'Ayarları aç',
+    videoRecorderPermissionBlockedDescription:
+      'Kamera veya mikrofon izni cihaz ayarlarından kapatılmış. Video çekebilmek için Ayarlar’dan erişimi aç.',
     videoRecorderHint: '720p video kaydını başlat. Kayıt 3:00 olduğunda otomatik durur.',
     videoRecorderPermissionDescription:
       'Video çekebilmek için kamera ve mikrofon izni gerekiyor.',
     videoRecorderPermissionTitle: 'Video kaydı için izin gerekli',
     videoRecorderPreparing: 'Kamera hazırlanıyor',
+    videoRecorderRetryCamera: 'Kamerayı yeniden başlat',
+    videoRecorderUnavailable: 'Kamera şu anda başlatılamadı. Yeniden deneyebilirsin.',
+    videoRecorderUnexpectedError: 'Video kaydı tamamlanamadı. Kaydı yeniden deneyebilirsin.',
+    videoRecorderElapsed: (elapsed: string) => `Kayıt süresi ${elapsed}`,
     videoRecorderStart: 'Video kaydını başlat',
     videoRecorderStop: 'Video kaydını durdur',
     videoRecorderSwitchCamera: 'Ön ve arka kamera arasında geçiş yap',
@@ -126,9 +139,10 @@ export const tr = {
   },
   system: {
     configErrorDescription:
-      'Bu sürüm gerekli ortam değişkenleri olmadan üretilmiş. Dağıtım ortamındaki EXPO_PUBLIC_* değerlerini kontrol et.',
+      'Bu sürüm güvenli biçimde başlatılamıyor. Uygulamanın güncel sürümünü kullanıp yeniden dene.',
+    configErrorDeveloperDetails: 'Geliştirme yapılandırmasında eksik değerler:',
     configErrorHint:
-      'Gerekli ortam değişkenlerini güvenli dağıtım paneline ekleyip uygulamayı yeniden yayımla.',
+      'Sorun devam ederse uygulama desteğiyle iletişime geç.',
     configErrorTitle: 'Uygulama başlatılamadı',
     connectionSlow: 'Bağlantı geç yanıt veriyor. Lütfen tekrar dene.',
     connectionUnavailable:
@@ -244,6 +258,7 @@ export const tr = {
       requestSent: 'İstek gönderildi',
       report: 'Şikâyet et',
       settings: 'Ayarlar',
+      unfollow: 'Takibi bırak',
       unblock: 'Engeli kaldır',
     },
     connections: {
@@ -253,6 +268,7 @@ export const tr = {
       following: 'Takip edilenler',
       searchNoResult: 'Sonuç bulunamadı',
       searchPlaceholder: 'Kullanıcı ara...',
+      resultCount: (count: number) => `${count} sonuç`,
       searchTryDifferent: 'Farklı bir arama dene.',
     },
     deleteList: {
@@ -314,6 +330,7 @@ export const tr = {
       lists: 'Listeler',
       places: 'Mekânlar',
     },
+    tabAccessibilityLabel: (label: string, count: number) => `${label}, ${count} öğe`,
     toast: {
       blockFailed: 'Kullanıcı engellenemedi',
       followFailed: 'Takip işlemi yapılamadı',
@@ -352,6 +369,7 @@ export const tr = {
     deletePlaceSuccess: 'Mekân silindi',
     deletePlaceTitle: 'Mekânı sil?',
     emptyDescription: 'Bu listede henüz mekân bulunmuyor.',
+    emptyOwnerDescription: 'Bu liste henüz boş. Harita sekmesinden ilk mekânını ekleyebilirsin.',
     emptyTitle: 'Henüz mekân eklenmemiş',
     editorDiscardDescription: 'Kaydedilmemiş liste değişiklikleri silinecek.',
     editorDiscardTitle: 'Değişiklikler iptal edilsin mi?',
@@ -399,6 +417,8 @@ export const tr = {
     basicsTitle: 'Temel bilgiler',
     basicsHint: 'Listeyi hızlıca anlaşılır yap',
     save: 'Kaydet',
+    saveFailed: 'Liste değişiklikleri kaydedilemedi. Taslağın korunuyor.',
+    saveFailedTitle: 'Liste kaydedilemedi',
     subtitle:
       'Mevcut bilgiler dolu gelir. İstediklerini güncelleyebilir, kapağı değiştirebilirsin.',
     title: 'Listeyi düzenle',
@@ -418,6 +438,7 @@ export const tr = {
     deleteConfirm:
       'Hesabını silmek istediğine emin misin? Tüm listelerin, mekânların ve verilerin kalıcı olarak silinecek.',
     deleteDescription: 'Bu işlem geri alınamaz',
+    ...settingsDataRightsTr,
     editProfile: {
       basicsDescription:
         'Ad soyad, kullanıcı adı ve biyografi bilgilerini düzenle.',
@@ -491,18 +512,7 @@ export const tr = {
       title: 'Şifre güncelle',
       tooShort: 'Yeni şifre en az 8 karakter olmalı',
     },
-    privacy: {
-      accountStatus: 'Hesap durumu',
-      description: 'Profil görünürlüğünü yönet.',
-      private: 'Gizli hesap',
-      privateDescription: 'Sadece takipçilerin profilini görebilir',
-      privateSaved: 'Hesap gizli yapıldı',
-      public: 'Herkese açık',
-      publicDescription: 'Herkes profilini ve listelerini görebilir',
-      publicQuestion: 'Herkes profilini görebilsin mi?',
-      publicSaved: 'Hesap herkese açık yapıldı',
-      title: 'Gizlilik',
-    },
+    privacy: settingsPrivacyTr,
     sections: {
       account: 'Hesap',
       other: 'Diğer',
@@ -598,6 +608,7 @@ export const tr = {
       passwordLabel: 'Şifre',
       passwordPlaceholder: 'Şifreniz',
       forgotPassword: 'Şifremi unuttum',
+      missingCredentials: 'Geçerli e-posta adresini ve şifreni gir.',
       register: 'Kayıt ol',
       resendConfirmation: 'Onay mailini tekrar gönder',
       submit: 'Giriş yap',
@@ -609,16 +620,28 @@ export const tr = {
       complexity: 'Şifre büyük harf, küçük harf, rakam ve sembol içermeli.',
       good: 'İyi',
       min: 'En az 8 karakter',
+      missingRequirements: (requirements: string) => `Eksik koşullar: ${requirements}`,
       mismatch: 'Şifreler eşleşmiyor',
       remaining: (count: number) => `${count} karakter daha`,
+      requirementLabels: {
+        lowercase: 'küçük harf',
+        minimumLength: 'en az 8 karakter',
+        number: 'rakam',
+        symbol: 'sembol',
+        uppercase: 'büyük harf',
+      },
+      requirements: 'En az 8 karakter; büyük ve küçük harf, rakam ve sembol kullan.',
+      requirementsMet: 'Tüm şifre koşulları sağlandı.',
+      requirementsProgress: (met: number, total: number) => `${total} koşuldan ${met} tanesi sağlandı`,
+      requirementsTitle: 'Şifre koşulları',
       strong: 'Güçlü şifre',
     },
     register: {
-      bioLabel: 'Biyografi',
+      bioLabel: 'Biyografi (isteğe bağlı)',
       bioPlaceholder: 'Kendinden kısaca bahset...',
       continue: 'Devam et',
       coverPhotoAdd: 'Kapak fotoğrafı ekle',
-      coverPhotoOptional: 'Kapak görseli zorunlu değil',
+      coverPhotoOptional: 'Kapak görseli isteğe bağlıdır.',
       coverPhotoPicked: 'Kapak fotoğrafı seçildi',
       createAccount: 'Hesabı oluştur',
       emailLabel: 'E-posta',
@@ -630,11 +653,11 @@ export const tr = {
       emailUnavailable: 'Önce geçerli ve benzersiz bir e-posta gir',
       emailUsable: 'Bu e-posta kullanılabilir',
       hasAccount: 'Zaten hesabın var mı?',
-      interestsRequired: 'En az bir ilgi alanı seç',
       interestsDescription:
-        'Sana uyan ilgi alanlarını seç. Bunlar profilinde rozet olarak görünür.',
-      interestsSelectedCount: (count: number) => `${count} ilgi alanı seçildi`,
-      interestsTitle: 'İlgi alanlarını seç',
+        'İstersen profilinde rozet olarak görünecek ilgi alanlarını seçebilir veya bu adımı atlayabilirsin.',
+      interestsSelectedCount: (count: number) =>
+        count > 0 ? `${count} ilgi alanı seçildi` : 'Henüz seçim yapmadın; bu alan isteğe bağlıdır.',
+      interestsTitle: 'İlgi alanları (isteğe bağlı)',
       login: 'Giriş yap',
       nameLabel: 'İsim soyisim',
       namePlaceholder: 'Adınız Soyadınız',
@@ -646,12 +669,13 @@ export const tr = {
       previewLabel: 'Ön izleme',
       previewNameFallback: 'İsim',
       profilePhotoAdd: 'Fotoğraf ekle',
-      profilePhotoHelper: 'Profil fotoğrafını seç',
+      profilePhotoHelper: 'Profil fotoğrafı isteğe bağlıdır.',
       profilePhotoPicked: 'Profil fotoğrafı seçildi',
       skipPhoto: 'Fotoğraf eklemeden devam et',
+      registrationFailed: 'Hesap şu anda oluşturulamadı. Bilgilerini kontrol edip tekrar dene.',
       steps: [
         {
-          subtitle: 'Ad soyad, kullanıcı adı ve biyografini ekle',
+          subtitle: 'Ad soyad ve kullanıcı adını gir; biyografi isteğe bağlıdır',
           title: 'Temel bilgiler',
         },
         {
@@ -659,11 +683,11 @@ export const tr = {
           title: 'Hesap bilgileri',
         },
         {
-          subtitle: 'Profilinde görünmesini istediğin ilgi alanlarını seç',
+          subtitle: 'İstersen profilinde görünecek ilgi alanlarını seç',
           title: 'İlgi alanları',
         },
         {
-          subtitle: 'Profil ve kapak görsellerini ekle',
+          subtitle: 'İstersen profil ve kapak görsellerini ekle',
           title: 'Fotoğraflar',
         },
         {
@@ -697,6 +721,7 @@ export const tr = {
     },
     resetPassword: {
       checkingLink: 'Sıfırlama bağlantısı kontrol ediliyor',
+      confirmRequired: 'Yeni şifreni tekrar gir.',
       description: 'Hesabına tekrar girebilmek için güçlü bir şifre seç.',
       errorTitle: 'Şifre sıfırlama açılamadı',
       mismatch: 'Şifreler eşleşmiyor.',
@@ -710,8 +735,11 @@ export const tr = {
       title: 'Yeni şifreni belirle',
       tooShort: 'Yeni şifre en az 8 karakter olmalı.',
       updateFailed: 'Şifre güncellenemedi.',
+      weak: 'Daha zor tahmin edilebilen farklı bir şifre seç.',
     },
     toast: {
+      accountLocked:
+        'Çok sayıda başarısız deneme nedeniyle giriş geçici olarak durduruldu. Bir süre sonra tekrar dene.',
       confirmationResendError: 'Onay maili tekrar gönderilemedi',
       confirmationResent: 'Onay maili tekrar gönderildi',
       confirmationSent:
@@ -724,6 +752,7 @@ export const tr = {
       loginSuccess: 'Giriş başarılı',
       passwordMismatch: 'Şifreler eşleşmiyor',
       passwordTooShort: 'Şifre en az 8 karakter olmalı',
+      rateLimited: 'Çok fazla deneme yapıldı. Lütfen kısa bir süre sonra tekrar dene.',
       usernameTooShort: 'Kullanıcı adı en az 3 karakter olmalı',
       welcome: 'Hoş geldin',
     },
@@ -736,7 +765,7 @@ export const tr = {
     filterButton: 'Pin filtresi',
     refreshButton: 'Haritayı yenile',
     filterMixed: 'Sadece ikisi',
-    filterNone: 'Hiçbiri',
+    filterNone: 'Tüm pinleri gizle',
     filterPrivate: 'Özel',
     filterPublic: 'Herkese açık',
     filterTitle: 'Harita pinleri',
@@ -769,6 +798,7 @@ export const tr = {
     resolvingAddress: 'Adres yükleniyor...',
     savePlaceUnexpected: 'Mekân kaydedilirken bir sorun oluştu.',
     searchButton: 'Ara',
+    clearSearch: 'Aramayı temizle',
     searchError: 'Arama sonucu alınamadı',
     searchResultCount: (count: number) => `${count} öneri`,
     searchPlaceholder: 'Mekân, adres veya şehir ara...',
@@ -778,6 +808,9 @@ export const tr = {
     selectedPlaceCard: 'Seçili mekân kartı',
     reopenPreview: 'Önizlemeyi yeniden aç',
     locateMe: 'Konumuma git',
+    mapLoading: 'Harita yükleniyor',
+    mapMarkerState: (count: number) =>
+      count === 0 ? 'Haritada görünür pin yok' : `Haritada ${count} pin var`,
   },
   placeEditor: {
     discardDescription:
@@ -813,7 +846,10 @@ export const tr = {
     selectionCount: (count: number, label: string) => `${count} ${label} seçildi`,
     optionSelectionCount: (count: number) => `${count} seçenek seçildi`,
     listCreateFailed: 'Liste oluşturulamadı',
-    listDescriptionPlaceholder: 'Açıklama (opsiyonel)',
+    listDescriptionLabel: 'Liste açıklaması (isteğe bağlı)',
+    listDescriptionPlaceholder: 'Kısa bir açıklama ekle',
+    listNameLabel: 'Liste adı',
+    listPrivacyLabel: 'Liste görünürlüğü',
     listHintTitle: 'Liste ipucu',
     listNamePlaceholder: 'Liste adı',
     locationFallback: () => 'Adres bilgisi bulunamadı',
@@ -834,12 +870,16 @@ export const tr = {
     mediaPreviewTitle: 'İçerik önizleme',
     mediaReorderHint:
       'Büyütmek için dokun. Sıralamayı değiştirmek için bir içeriğe 0.5 sn basılı tut.',
+    mediaItemLabel: (index: number, count: number, type: string) =>
+      `${type}, ${count} içerik içinde ${index}. sırada`,
+    mediaMoveEarlier: 'Daha önceye taşı',
+    mediaMoveLater: 'Daha sonraya taşı',
     mediaSwapHint:
       'İçerik seçildi. İptal etmek için aynı içeriğe, yer değiştirmek için diğer içeriğe dokun.',
     mediaTitle: 'Fotoğraf ve videolar',
     minimizedNewTitle: 'Yeni mekân',
-    minPrice: 'Min fiyat',
-    maxPrice: 'Max fiyat',
+    minPrice: 'Minimum fiyat',
+    maxPrice: 'Maksimum fiyat',
     newList: 'Yeni liste',
     newListCreated: 'Yeni liste oluşturuldu',
     newListCoverChangeHint: 'Değiştirmek için dokun.',
@@ -876,9 +916,12 @@ export const tr = {
       index ? `${name} fotoğraf ${index}` : `${name} fotoğrafı`,
     placeNameLabel: 'Mekân adı',
     placeNamePlaceholder: 'Örnek: Petra Roasting Co.',
+    placeIdentityRequired: 'Devam etmek için mekân adı ya da adres alanlarından en az birini doldur.',
     placeSaveFailed: 'Mekân kaydedilemedi',
     placeUpdateFailed: 'Mekân güncellenemedi',
     pricePlaceholder: '0',
+    priceRangeHelper: 'Türk lirası (₺) cinsinden tam sayı gir.',
+    priceRangeInvalid: 'Minimum fiyat, maksimum fiyattan büyük olamaz.',
     privateList: 'Özel',
     publicList: 'Herkese açık',
     previewDescription:
@@ -895,6 +938,8 @@ export const tr = {
     rating: 'Puan',
     ratingHelper: 'Yarım yıldız için bir kez, tam yıldız için iki kez dokun',
     removeCoverPhoto: 'Kapak fotoğrafını kaldır',
+    requirementsTitle: 'Kaydetme koşulu',
+    requirementsDescription: 'Mekân adı ya da adres alanlarından en az birini doldurmalısın. Son adımda da en az bir hedef liste seçmelisin; diğer ayrıntılar isteğe bağlıdır.',
     selectedLocation: 'Seçilen konum',
     selectedList: 'Seçili liste',
     additionalLists: (count: number) => `+${count} liste daha`,
@@ -915,7 +960,7 @@ export const tr = {
       },
     ],
     studentDiscount: 'Öğrenci dostu mu?',
-    targetLists: 'Hedef listeler',
+    targetLists: 'Hedef listeler (zorunlu)',
     targetListsHelper:
       'Aynı mekânı zaten içeren listeler seçilemez.',
     timeSelectionCount: (count: number) => `${count} zaman seçildi`,
@@ -994,9 +1039,6 @@ export const tr = {
     loginRequiredForReport: 'Mekânı bildirmek için giriş yapmalısın',
     map: 'Harita',
     menuLinkLabel: 'Menü',
-    menuLinkCollapsedHint: 'Bağlantıyı gösterir. Menüyü açmak için 0,5 saniye basılı tutun',
-    menuLinkExpandedHint: 'Bağlantıyı gizler. Menüyü açmak için 0,5 saniye basılı tutun',
-    menuLinkHoldHint: 'Açmak için 0,5 sn basılı tutun',
     menuLinkOpenHint: 'Menüyü güvenli tarayıcıda aç',
     menuLinkUrlLabel: 'Menü bağlantısı',
     menuLinkUnsafe: 'Bu bağlantı güvenli olmadığı için açılamadı',
@@ -1046,44 +1088,5 @@ export const tr = {
     shareToInstagramStories: 'Instagram Stories',
     instagramStoryShareFailed: 'Instagram Stories açılamadı',
   },
-  notifications: {
-    accept: 'Onayla',
-    categories: {
-      all: 'Tümü',
-      comments: 'Yorumlar',
-      follows: 'Takip',
-      likes: 'Beğeniler',
-      places: 'Mekânlar',
-      quotes: 'Alıntılar',
-    },
-    emptyDescription: 'Bu kategoride şu an içerik bulunmuyor.',
-    emptyTitle: 'Bildirim yok',
-    errorTitle: 'Bildirimler açılamıyor',
-    errorDescription: 'Bildirimler şu an yüklenemiyor. Lütfen tekrar dene.',
-    newCount: (count: number) => `${count} yeni bildirim`,
-    unreadHint: (count: number) => `${count} okunmamış bildirim`,
-    partialDescription:
-      'Kayıtlı bildirimler gösteriliyor. Bağlantı düzelince tekrar deneyebilirsin.',
-    partialTitle: 'Bazı bildirimler güncellenemedi',
-    relativeTime: {
-      days: (count: number) => `${count} gün önce`,
-      hours: (count: number) => `${count} saat önce`,
-      minutes: (count: number) => `${count} dk önce`,
-      weeks: (count: number) => `${count} hafta önce`,
-    },
-    reject: 'Reddet',
-    toast: {
-      followRequestAccepted: 'Takip isteği onaylandı',
-      followRequestRejected: 'Takip isteği reddedildi',
-    },
-    status: {
-      accepted: 'Onaylandı',
-      rejected: 'Reddedildi',
-    },
-    systemPushFallbackBody: 'Yeni sistem bildirimi',
-    title: 'Bildirimler',
-    channelName: 'SoRita anlık bildirimleri',
-    channelDescription:
-      'Takipler, yorumlar, alıntılar ve diğer sosyal hareketler için yüksek öncelikli bildirimler',
-  },
+  notifications: notificationsTr,
 } as const;

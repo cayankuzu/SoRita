@@ -1,5 +1,6 @@
 export type AppWindowClass = 'compact' | 'medium' | 'expanded';
 export type AppHeightClass = 'short' | 'regular' | 'tall';
+export type ResponsiveGridStrategy = 'discovery' | 'gallery';
 
 export type AppLayoutMetrics = {
   bottomObstruction: number;
@@ -76,12 +77,43 @@ export function getResponsiveDiscoveryColumnCount(
 export function getResponsiveGalleryColumnCount(
   viewportWidth: number,
   viewportHeight: number,
+  gap = 10,
 ) {
   const horizontalPadding = getResponsiveScreenPadding(viewportWidth, viewportHeight);
   const usableWidth = Math.max(0, viewportWidth - horizontalPadding * 2);
   const approximateThumbnailWidth = 112;
 
-  return Math.max(3, Math.min(6, Math.floor(usableWidth / approximateThumbnailWidth)));
+  return Math.max(
+    3,
+    Math.min(6, Math.floor((usableWidth + gap) / (approximateThumbnailWidth + gap))),
+  );
+}
+
+export function getResponsiveGridLayout(
+  viewportWidth: number,
+  viewportHeight: number,
+  {
+    gap = 10,
+    strategy = 'discovery',
+  }: {
+    gap?: number;
+    strategy?: ResponsiveGridStrategy;
+  } = {},
+) {
+  const horizontalPadding = getResponsiveScreenPadding(viewportWidth, viewportHeight);
+  const columnCount = strategy === 'gallery'
+    ? getResponsiveGalleryColumnCount(viewportWidth, viewportHeight, gap)
+    : getResponsiveDiscoveryColumnCount(viewportWidth, viewportHeight);
+  const availableWidth = Math.max(
+    0,
+    viewportWidth - horizontalPadding * 2 - gap * (columnCount - 1),
+  );
+
+  return {
+    columnCount,
+    columnWidth: Math.floor(availableWidth / columnCount),
+    horizontalPadding,
+  };
 }
 
 export function getResponsiveDiscoveryTileWidth(
@@ -89,12 +121,10 @@ export function getResponsiveDiscoveryTileWidth(
   viewportHeight: number,
   gap = 10,
 ) {
-  const horizontalPadding = getResponsiveScreenPadding(viewportWidth, viewportHeight);
-  const columnCount = getResponsiveDiscoveryColumnCount(viewportWidth, viewportHeight);
-  const availableWidth =
-    viewportWidth - horizontalPadding * 2 - gap * (columnCount - 1);
-
-  return Math.max(120, Math.floor(availableWidth / columnCount));
+  return getResponsiveGridLayout(viewportWidth, viewportHeight, {
+    gap,
+    strategy: 'discovery',
+  }).columnWidth;
 }
 
 export function calculateAppLayout(params: {

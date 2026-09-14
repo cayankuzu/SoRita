@@ -245,6 +245,20 @@ describe('route, method, CORS, body, and action contracts', () => {
     ).toMatchObject({ success: false });
   });
 
+  it('accepts only the exact authenticated personal-data export contract', () => {
+    const route = ROUTE_DEFINITIONS['/v1/personal-data'];
+
+    expect(validatePayload(route, { action: 'export' })).toMatchObject({
+      action: 'export',
+      authRequired: true,
+      success: true,
+    });
+    expect(validatePayload(route, {})).toMatchObject({ success: false });
+    expect(validatePayload(route, { action: 'export', userId: TEST_USER_ID })).toMatchObject({
+      success: false,
+    });
+  });
+
   it('keeps media limits and metadata relationships aligned with the origin contract', () => {
     const route = ROUTE_DEFINITIONS['/v1/media-assets'];
     const uploadSessionId = '30000000-0000-4000-8000-000000000003';
@@ -407,6 +421,40 @@ describe('route, method, CORS, body, and action contracts', () => {
 
     expect(response.status).toBe(200);
     expect(originCalled).toBe(true);
+  });
+
+  it('proxies only an authenticated, bounded personal-data export response', async () => {
+    const jwt = await createJwtFixture();
+    const token = await jwt.signToken();
+    let personalDataOriginCalled = false;
+    const fetchFunction = toFetchFunction((request) => {
+      const pathname = new URL(request.url).pathname;
+
+      if (pathname.endsWith('/.well-known/jwks.json')) {
+        return jsonOriginResponse(jwt.jwks);
+      }
+
+      expect(pathname).toBe('/functions/v1/personal-data');
+      personalDataOriginCalled = true;
+      return jsonOriginResponse({
+        data: {
+          format_version: 2,
+          profile: { username: 'subject' },
+        },
+      });
+    });
+    const response = await handleWorkerRequest(
+      createJsonRequest('/v1/personal-data', { action: 'export' }, { token }),
+      createTestEnv(),
+      createDependencies(fetchFunction),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: { format_version: 2 },
+    });
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(personalDataOriginCalled).toBe(true);
   });
 
   it('binds authenticated actor IDs to account availability and moderation payloads', async () => {

@@ -1,12 +1,18 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from 'vitest/config';
+
+const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-      'react-native': path.resolve(__dirname, 'src/mobile/app/test/mocks/react-native.ts'),
+      '@': path.resolve(configDirectory, 'src'),
+      'react-native': path.resolve(
+        configDirectory,
+        'src/mobile/app/test/mocks/react-native.ts',
+      ),
     },
   },
   test: {

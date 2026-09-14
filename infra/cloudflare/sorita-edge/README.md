@@ -15,6 +15,7 @@ All paths are exact. Query strings and trailing slashes are rejected. Browser pr
 | `/v1/maps-geocoding` | `POST` | 4 KiB | required | `maps-geocoding` |
 | `/v1/moderation-reports` | `POST` | 8 KiB | required; `reporterUserId` must equal JWT `sub` | `moderation-reports` |
 | `/v1/media-assets` | `POST` | 64 KiB | required | `media-assets` |
+| `/v1/personal-data` | `POST` | 1 KiB | required | `personal-data` |
 | `/v1/delete-user` | `POST` | 1 KiB | required | `delete-user` |
 
 The only auth actions allowed without a bearer token are:
@@ -36,7 +37,7 @@ The media route permits only `create-upload-url`, `complete-upload`, `create-rea
 - JWKS data has a bounded ten-minute fresh TTL and five-minute stale-on-network-error grace. Only resolved, structured-cloneable key data is cached across requests; fetch promises, responses, and streams are never shared between Worker invocations. Concurrent refreshes remain request-owned, while a bounded negative cache and cooldown limit sequential random-`kid` refresh amplification. Stale keys never bypass signature, issuer, audience, time, or subject validation.
 - Deployment gate: the Supabase project must use an asymmetric ES256 or RS256 signing key. Legacy shared-secret tokens are intentionally rejected because they cannot be verified from the public JWKS endpoint.
 - The Worker forwards the original user bearer token and the environment's publishable/anon key. There is no service-role binding.
-- Every proxied request first consumes a coarse HMAC-hashed `CF-Connecting-IP` key before request-body or JWT/JWKS work. A second action-level check uses the verified user ID when available, otherwise another hashed-IP key. Binding failures return `503` and never reach the origin.
+- Every proxied request first consumes a coarse HMAC-hashed `CF-Connecting-IP` key from a dedicated, high-ceiling `COARSE_IP_RATE_LIMITER` before request-body or JWT/JWKS work. A separate action-level limiter uses the verified user ID when available, otherwise another hashed-IP key. Keeping the coarse circuit breaker separate avoids double-counting normal calls and reduces carrier-NAT false positives; exact thresholds still require staged traffic evidence. Binding failures return `503` and never reach the origin.
 - Cloudflare's Rate Limiting API is deliberately a coarse abuse-control layer. It is per-location and eventually consistent. Exact login lockouts and business quotas remain atomic Supabase/Postgres responsibilities.
 - JSON is read as a bounded byte stream even when `Content-Length` is absent. Compressed bodies, non-JSON content, unknown methods, paths, actions, and fields fail closed.
 - Every response, including health, errors, preflights, and upstream responses, is `Cache-Control: private, no-store`. Origin cookies and cache headers are never forwarded. Origin JSON bodies are byte-bounded, UTF-8/JSON parsed, validated against the selected route/action response contract, and reserialized before they reach a client.
@@ -75,7 +76,7 @@ The matching `ORIGIN_HMAC_SECRET` must be installed as a Cloudflare Worker secre
 Before any deployment:
 
 1. Replace every `.invalid` browser origin and `replace-*-project-ref` Supabase URL with the approved environment-specific values.
-2. Allocate Rate Limiting namespace IDs that are unique in the Cloudflare account. Namespace IDs in the checked-in file are reserved placeholders, not globally guaranteed values.
+2. Allocate three Rate Limiting namespace IDs per environment (`AUTH_RATE_LIMITER`, `API_RATE_LIMITER`, and `COARSE_IP_RATE_LIMITER`) that are unique in the Cloudflare account. Namespace IDs in the checked-in file are reserved placeholders, not globally guaranteed values. Validate the coarse 1,200/minute circuit breaker against carrier-NAT traffic before production rollout; keep the lower action limits keyed by authenticated user.
 3. For production, add the approved stable custom API domain/route while keeping `workers_dev: false` and `preview_urls: false`. Do not guess a production hostname in source control or temporarily enable a personal `workers.dev` endpoint.
 4. Configure WAF/body/method/bot protection separately. The Worker binding is the second rate-limit layer, not a WAF replacement.
 5. Verify that the origin HMAC validator is deployed in observation mode before enforcing origin bypass protection.

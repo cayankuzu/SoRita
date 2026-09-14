@@ -1,4 +1,4 @@
-export const LEGAL_CONSENT_VERSION = '2026-08-17-terms-community';
+export const LEGAL_CONSENT_VERSION = '2026-09-08-terms-community-privacy';
 
 export type LegalDocumentId = 'terms' | 'community' | 'privacy' | 'kvkk';
 
@@ -40,7 +40,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocument> = {
       {
         title: 'Moderasyon ve Yaptırım',
         body: [
-          'Kullanıcı raporları en geç 24 saat içinde incelenir.',
+          'Kullanıcı raporları önem ve risk düzeyine göre moderasyon incelemesine alınır.',
           'Uygunsuz olduğu tespit edilen içerikler kaldırılır; ihlali yapan hesaplar geçici veya kalıcı olarak sistemden çıkarılabilir.',
           'Bloklanan kullanıcıların içerikleri feed, yorum ve profil görünümlerinden anında gizlenir.',
         ],
@@ -86,6 +86,9 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocument> = {
         title: 'İşlenen Veriler',
         body: [
           'Hesap oluşturma sırasında kimlik ve profil bilgileri; liste, mekân, yorum ve fotoğraf içerikleri; güvenlik ve moderasyon kayıtları işlenir.',
+          'Sentry etkin olduğunda çökme ve hata kayıtları, performans izleri, ekran veya işlem adı ve düşük kardinaliteli sınırlı ürün olayı metrikleri işlenebilir; bu kayıtlar hesap güvenliği ve hata incelemesi için dahili kullanıcı kimliğiyle ilişkilendirilebilir.',
+          'İsteğe bağlı PostHog ürün analitiği varsayılan olarak kapalıdır ve yalnızca Ayarlar üzerinden açıkça etkinleştirdiğinizde çalışır. Bu akışta anonim kurulum tanımlayıcısı, olay türü, ekran veya işlem adı ile sınırlı süre ve sayaç ölçümleri işlenebilir; hesap kimliği, kullanıcı içeriği, arama metni, medya adresi ve hassas konum gönderilmez.',
+          'SoRita reklam kimliği veya reklam ilişkilendirme (attribution) SDK’sı kullanmaz.',
           'Raporlama, engelleme ve güvenlik incelemeleri sırasında gerekli olduğunda moderasyon verileri saklanır.',
         ],
       },
@@ -94,6 +97,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocument> = {
         body: [
           'Veriler; hizmet sunumu, hesap güvenliği, kötüye kullanım tespiti, yasal yükümlülükler ve topluluk moderasyonu amaçlarıyla işlenir.',
           'Raporlanan içerikler ve güvenlik olayları, inceleme ve yasal gereklilikler için gerekli olduğu sürece tutulur.',
+          'İsteğe bağlı ürün analitiği tercihini dilediğiniz zaman Ayarlar üzerinden kapatabilirsiniz; bu işlem yeni ürün olayı gönderimini durdurur. Daha önce iletilmiş anonim ölçümlerin saklama süresi ve silme işlemleri, yayın öncesinde onaylanan sağlayıcı saklama politikasıyla sınırlandırılır.',
         ],
       },
     ],

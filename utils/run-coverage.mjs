@@ -24,9 +24,11 @@ const result = spawnSync(
     localStorageOption,
     vitestBin,
     'run',
+    '--configLoader',
+    'runner',
     '--pool=threads',
     '--coverage',
-    '--coverage.clean=false',
+    '--coverage.clean=true',
   ].filter(Boolean),
   {
     env: { ...process.env, NODE_OPTIONS: nodeOptions },

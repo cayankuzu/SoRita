@@ -4,7 +4,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type OwnProfileActionBarProps = {
   onOpenSettings: () => void;
@@ -30,14 +36,14 @@ const styles = StyleSheet.create({
     minWidth: 96,
   },
   actionButton: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     paddingHorizontal: 10,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
   },
   actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.labelText,
+    fontWeight: fontWeight.medium,
     color: colors.textMuted,
   },
 });

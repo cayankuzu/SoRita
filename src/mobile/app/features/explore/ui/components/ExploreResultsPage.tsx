@@ -17,7 +17,7 @@ import type { ExploreTabType } from '@/mobile/app/features/explore/ui/components
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
 export type ExploreListItem = {
@@ -36,7 +36,6 @@ type ExploreResultsPageProps = {
   isFetchingNextPage: boolean;
   listMarkerLists: PlaceList[];
   listRef: React.Ref<FlatList<ExploreGridItem>>;
-  listHeader?: React.ReactElement | null;
   onContentReady: () => void;
   onClearSearch: () => void;
   onEndReached: () => void;
@@ -250,7 +249,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   isFetchingNextPage,
   listMarkerLists,
   listRef,
-  listHeader = null,
   onContentReady,
   onClearSearch,
   onEndReached,
@@ -279,7 +277,13 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   );
   const footer =
     active && hasNextPage && isFetchingNextPage ? (
-      <View style={styles.loadMoreStatus} accessibilityRole="progressbar">
+      <View
+        accessibilityLabel={tr.common.loadingMore}
+        accessibilityLiveRegion="polite"
+        accessibilityRole="progressbar"
+        accessibilityState={{ busy: true }}
+        style={styles.loadMoreStatus}
+      >
         <ActivityIndicator color={colors.primary} size="small" />
         <Text style={styles.loadMoreLabel}>{tr.common.loadingMore}</Text>
       </View>
@@ -355,7 +359,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
           tab={tab}
         />
       }
-      ListHeaderComponent={listHeader}
       ListFooterComponent={footer}
       keyExtractor={keyExtractor}
       renderItem={renderResult}
@@ -369,9 +372,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   loadMoreLabel: {
+    ...typography.metadataText,
     color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   loadMoreStatus: {
     alignItems: 'center',

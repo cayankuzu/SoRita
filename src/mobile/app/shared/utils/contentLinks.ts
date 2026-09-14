@@ -1,7 +1,7 @@
 import { env } from '@/mobile/app/platform/config/env';
 
 function getAppPrefix() {
-  return `${env.appScheme}://`;
+  return env.appLinkDomain ? `https://${env.appLinkDomain}` : `${env.appScheme}://`;
 }
 
 export function buildDownloadUrl() {
@@ -14,5 +14,6 @@ export function buildListContentUrl(listId?: string | null, placeId?: string | n
   }
 
   const placeQuery = placeId ? `?placeId=${encodeURIComponent(placeId)}` : '';
-  return `${getAppPrefix()}lists/${encodeURIComponent(listId)}${placeQuery}`;
+  const pathSeparator = env.appLinkDomain ? '/' : '';
+  return `${getAppPrefix()}${pathSeparator}lists/${encodeURIComponent(listId)}${placeQuery}`;
 }

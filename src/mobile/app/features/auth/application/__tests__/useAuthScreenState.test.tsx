@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { LEGAL_CONSENT_VERSION } from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import {
   EMAIL_MAX_LENGTH,
   USER_BIO_MAX_LENGTH,
@@ -238,8 +239,8 @@ describe('useAuthScreenState', () => {
       interests: ['coffee'],
       legalConsent: {
         acceptedAt: expect.any(String),
-        documentsAccepted: ['terms', 'community'],
-        version: '2026-08-17-terms-community',
+        documentsAccepted: ['terms', 'community', 'privacy', 'kvkk'],
+        version: LEGAL_CONSENT_VERSION,
       },
       name: 'Ada Lovelace',
       password: 'Str0ng#2026',
@@ -254,11 +255,12 @@ describe('useAuthScreenState', () => {
   });
 
   it('blocks invalid register input paths', async () => {
+    const registerMock = vi.fn().mockResolvedValue({ success: false, code: 'unexpected' });
     const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
     const hook = renderHook(() =>
       hooks.useAuthScreenState({
         login: vi.fn(),
-        register: vi.fn(),
+        register: registerMock,
         resendConfirmationEmail: vi.fn(),
       }),
     );
@@ -278,7 +280,6 @@ describe('useAuthScreenState', () => {
     expect(hook.result.current.regStep).toBe(0);
     expect(hook.result.current.registerFieldErrors.username).toBe(tr.auth.toast.usernameTooShort);
     expect(hook.result.current.registerFieldErrors.password).toBe(tr.auth.passwordHint.min);
-    expect(hook.result.current.registerFieldErrors.interests).toBe(tr.auth.register.interestsRequired);
 
     act(() => {
       hook.result.current.setRegPassword('short');
@@ -341,13 +342,18 @@ describe('useAuthScreenState', () => {
       availability: { status: 'available', message: 'email ok' },
     });
     hook.rerender();
+    act(() => {
+      hook.result.current.setRegEmail('ada@example.com');
+    });
     await act(async () => {
       await hook.result.current.handleRegister();
     });
-    expect(hook.result.current.regStep).toBe(2);
-    expect(hook.result.current.registerFieldErrors.interests).toBe(tr.auth.register.interestsRequired);
-
-    expect(showToastMock).not.toHaveBeenCalled();
+    expect(hook.result.current.regStep).toBe(1);
+    expect(hook.result.current.registerFieldErrors).toEqual({});
+    expect(registerMock).toHaveBeenCalledOnce();
+    expect(hook.result.current.registerSubmissionError).toBe(
+      tr.auth.register.registrationFailed,
+    );
   });
 
   it('handles register result errors and thrown failures', async () => {
@@ -398,9 +404,10 @@ describe('useAuthScreenState', () => {
       await hook.result.current.handleRegister();
     });
 
-    expect(showToastMock).toHaveBeenCalledWith('custom failure', 'error');
-    expect(showToastMock).toHaveBeenCalledWith('network down', 'error');
-    expect(showToastMock).toHaveBeenCalledWith(tr.auth.toast.duplicateAccount, 'error');
+    expect(showToastMock).toHaveBeenCalledWith(tr.auth.register.registrationFailed, 'error');
+    expect(hook.result.current.registerSubmissionError).toBe(
+      tr.auth.register.registrationFailed,
+    );
   });
 
   it('keeps composition-invalid passwords on the password step when continue is pressed', async () => {
@@ -698,7 +705,7 @@ describe('useAuthScreenState', () => {
   });
 
   it('restores persisted legal consent and keeps it synced when toggled', async () => {
-    getPersistedLegalConsentVersionMock.mockResolvedValue('2026-08-17-terms-community');
+    getPersistedLegalConsentVersionMock.mockResolvedValue(LEGAL_CONSENT_VERSION);
     const hooks = await import('@/mobile/app/features/auth/application/useAuthScreenState');
     const hook = renderHook(() =>
       hooks.useAuthScreenState({
@@ -725,7 +732,7 @@ describe('useAuthScreenState', () => {
       hook.result.current.toggleLegalConsent();
     });
 
-    expect(savePersistedLegalConsentVersionMock).toHaveBeenCalledWith('2026-08-17-terms-community');
+    expect(savePersistedLegalConsentVersionMock).toHaveBeenCalledWith(LEGAL_CONSENT_VERSION);
     expect(hook.result.current.hasAcceptedLegal).toBe(true);
   });
 
@@ -820,6 +827,6 @@ describe('useAuthScreenState', () => {
       hook.result.current.goToPreviousRegisterStep();
       hook.result.current.handleRegisterBack();
     });
-    expect(hook.result.current.passwordHint).toBe(tr.auth.passwordHint.good);
+    expect(hook.result.current.passwordHint).toBe(tr.auth.passwordHint.requirementsMet);
   });
 });

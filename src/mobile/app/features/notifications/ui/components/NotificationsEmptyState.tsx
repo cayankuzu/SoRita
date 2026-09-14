@@ -2,7 +2,7 @@ import React from 'react';
 import { Heart } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationsEmptyStateProps = {
   title: string;
@@ -39,13 +39,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   description: {
     marginTop: 4,
-    fontSize: 12,
+    ...typography.compactBodyText,
     textAlign: 'center',
     color: colors.textMuted,
   },

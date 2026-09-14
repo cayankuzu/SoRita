@@ -38,6 +38,7 @@ export function createTestEnv(overrides: Partial<Env> = {}): Env {
   const baseEnv = {
     API_RATE_LIMITER: createRateLimitStub(),
     AUTH_RATE_LIMITER: createRateLimitStub(),
+    COARSE_IP_RATE_LIMITER: createRateLimitStub(),
     BUILD_SHA: TEST_BUILD_SHA,
     CORS_ALLOWLIST: TEST_ORIGIN,
     ENVIRONMENT: 'development',

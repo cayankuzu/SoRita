@@ -1,7 +1,61 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(57);
+select plan(68);
+
+select is(
+  private.normalize_search_text('  Özgür   Çelik  '),
+  'ozgur celik',
+  'search normalization transliterates Turkish letters and collapses whitespace'
+);
+select is(
+  private.normalize_search_text('ÇĞIİÖŞÜçğıöşü'),
+  'cgiiosucgiosu',
+  'search normalization covers every supported Turkish case variant'
+);
+select is(
+  private.normalize_search_text(null),
+  '',
+  'search normalization safely coalesces null input'
+);
+select is(
+  (
+    select proc.provolatile::text || proc.proparallel::text
+    from pg_proc proc
+    where proc.oid = 'private.normalize_search_text(text)'::regprocedure
+  ),
+  'is',
+  'search normalization is immutable and parallel safe'
+);
+select is(
+  (
+    select proc.proconfig
+    from pg_proc proc
+    where proc.oid = 'private.normalize_search_text(text)'::regprocedure
+  ),
+  array['search_path=pg_catalog']::text[],
+  'search normalization pins its search path to pg_catalog'
+);
+select ok(
+  has_schema_privilege('authenticated', 'private', 'usage'),
+  'authenticated RPC callers can resolve private helper functions'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'private.normalize_search_text(text)',
+    'execute'
+  ),
+  'anonymous callers cannot execute search normalization'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'private.normalize_search_text(text)',
+    'execute'
+  ),
+  'authenticated security-invoker RPC callers can execute search normalization'
+);
 
 select has_table('public', 'account_deletion_jobs', 'account deletion ledger exists');
 select ok(
@@ -284,7 +338,13 @@ values
     'test',
     timezone('utc', now()),
     '{"provider":"email","providers":["email"]}',
-    '{"name":"RLS A","username":"rls_a"}',
+    jsonb_build_object(
+      'name', 'RLS A',
+      'username', 'rls_a',
+      'legal_consent_version', '2026-09-08-terms-community-privacy',
+      'legal_consent_documents', jsonb_build_array('community', 'kvkk', 'privacy', 'terms'),
+      'legal_consent_at', timezone('utc', now())
+    ),
     timezone('utc', now()),
     timezone('utc', now())
   ),
@@ -297,7 +357,13 @@ values
     'test',
     timezone('utc', now()),
     '{"provider":"email","providers":["email"]}',
-    '{"name":"RLS B","username":"rls_b"}',
+    jsonb_build_object(
+      'name', 'RLS B',
+      'username', 'rls_b',
+      'legal_consent_version', '2026-09-08-terms-community-privacy',
+      'legal_consent_documents', jsonb_build_array('community', 'kvkk', 'privacy', 'terms'),
+      'legal_consent_at', timezone('utc', now())
+    ),
     timezone('utc', now()),
     timezone('utc', now())
   );
@@ -324,10 +390,41 @@ values
   (
     '10000000-0000-0000-0000-000000000012',
     '10000000-0000-0000-0000-000000000001',
-    'Public A',
+    'Özgür Mekân',
     true,
     'sorita-storage://place-media-private/10000000-0000-0000-0000-000000000001/10000000-0000-0000-0000-000000000012/cover-public.jpg'
   );
+
+select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000002', true);
+set local role authenticated;
+select is(
+  (
+    select count(*)::integer
+    from public.explore_page('lists', 'ozgur', null, null, 20)
+    where item_id = '10000000-0000-0000-0000-000000000012'
+  ),
+  1,
+  'explore search matches Turkish content with an ASCII query'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.explore_page_complete('lists', 'ozgur', null, null, 20)
+    where item_id = '10000000-0000-0000-0000-000000000012'
+  ),
+  1,
+  'the complete Explore wrapper preserves accent-tolerant search'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.explore_page_complete('lists', '%_', null, null, 20)
+    where item_id = '10000000-0000-0000-0000-000000000012'
+  ),
+  0,
+  'Explore treats percent and underscore syntax as literal search text'
+);
+reset role;
 
 select throws_ok(
   $$

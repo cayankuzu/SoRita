@@ -54,7 +54,6 @@ export function ExploreFeedView({
     listRef,
     safeStartIndex,
     initialScrollIndex,
-    getItemLayout,
     handleContentSizeChange,
     handleScrollToIndexFailed,
   } = useInitialFlatListIndex<PlaceFeedCardItem>({
@@ -96,7 +95,6 @@ export function ExploreFeedView({
         {...listProps}
         ref={listRef}
         data={items}
-        getItemLayout={getItemLayout}
         initialScrollIndex={initialScrollIndex}
         initialNumToRender={Math.max(
           listProps.initialNumToRender ?? 4,

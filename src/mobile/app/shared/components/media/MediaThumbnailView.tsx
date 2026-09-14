@@ -10,7 +10,7 @@ import { Image as ImageIcon, Play } from 'lucide-react-native';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MediaThumbnailViewProps = {
   accessibilityLabel?: string;
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

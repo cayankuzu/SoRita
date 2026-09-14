@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapInteractionHintProps = {
   visible: boolean;
@@ -33,14 +33,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   description: {
     marginTop: 4,
     ...typography.metadataText,
-    lineHeight: 15,
     color: colors.onPrimary,
   },
 });

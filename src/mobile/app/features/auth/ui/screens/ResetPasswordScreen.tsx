@@ -13,12 +13,13 @@ import {
   normalizeAuthRedirectParams,
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
+import { validateResetPasswordInput } from '@/mobile/app/features/auth/application/resetPasswordValidation';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
+import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
-import { PASSWORD_MIN_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
+import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ScreenState =
   | { status: 'loading' }
@@ -40,7 +41,9 @@ export function ResetPasswordScreen() {
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [formError, setFormError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
+  const [submissionError, setSubmissionError] = useState('');
   const passwordConfirmRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
@@ -48,7 +51,12 @@ export function ResetPasswordScreen() {
 
     const fail = (message: string) => {
       if (active) {
-        setScreenState({ status: 'error', message });
+        setScreenState({
+          status: 'error',
+          message: message === tr.auth.callback.passwordResetLinkInvalid
+            ? message
+            : tr.auth.resetPassword.startFailed,
+        });
       }
     };
 
@@ -69,22 +77,20 @@ export function ResetPasswordScreen() {
   }, [payload]);
 
   const submitPassword = useCallback(async () => {
-    if (password.length < PASSWORD_MIN_LENGTH) {
-      setFormError(tr.auth.resetPassword.tooShort);
+    const validation = validateResetPasswordInput(password, passwordConfirm);
+    setPasswordError(validation.passwordError);
+    setConfirmError(validation.confirmError);
+    setSubmissionError('');
+
+    if (validation.passwordError || validation.confirmError) {
       return;
     }
 
-    if (password !== passwordConfirm) {
-      setFormError(tr.auth.resetPassword.mismatch);
-      return;
-    }
-
-    setFormError('');
     setScreenState({ status: 'updating' });
     try {
       await updateRecoveredPassword(password);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : tr.auth.resetPassword.updateFailed);
+    } catch {
+      setSubmissionError(tr.auth.resetPassword.updateFailed);
       setScreenState({ status: 'ready' });
       return;
     }
@@ -98,9 +104,16 @@ export function ResetPasswordScreen() {
         variant="form"
         contentContainerStyle={styles.content}
       >
-        <View style={styles.centered}>
+        <View
+          accessibilityLabel={tr.auth.resetPassword.checkingLink}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="progressbar"
+          accessibilityState={{ busy: true }}
+          accessible
+          style={styles.centered}
+        >
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.title}>{tr.auth.resetPassword.checkingLink}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.checkingLink}</Text>
         </View>
       </Screen>
     );
@@ -110,8 +123,8 @@ export function ResetPasswordScreen() {
     return (
       <Screen variant="form" contentContainerStyle={styles.content}>
         <View style={styles.centered}>
-          <View style={styles.card}>
-            <Text style={styles.title}>{tr.auth.resetPassword.errorTitle}</Text>
+          <View accessibilityLiveRegion="assertive" style={styles.card}>
+            <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.errorTitle}</Text>
             <Text style={styles.description}>{screenState.message}</Text>
             <PrimaryButton
               title={tr.auth.resetPassword.requestNewMail}
@@ -126,35 +139,62 @@ export function ResetPasswordScreen() {
   return (
     <Screen variant="form" contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={styles.title}>{tr.auth.resetPassword.title}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.title}</Text>
         <Text style={styles.description}>{tr.auth.resetPassword.description}</Text>
 
         <AuthField
           label={tr.auth.resetPassword.newPasswordLabel}
           placeholder={tr.auth.resetPassword.newPasswordPlaceholder}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            setPassword(value);
+            setPasswordError('');
+            setSubmissionError('');
+          }}
+          autoComplete="new-password"
+          editable={screenState.status !== 'updating'}
           secureTextEntry
           autoCapitalize="none"
+          textContentType="newPassword"
           returnKeyType="next"
           onSubmitEditing={() => passwordConfirmRef.current?.focus()}
           icon={<Lock color={colors.textMuted} size={14} />}
+          status={passwordError
+            ? { kind: 'invalid', message: passwordError }
+            : { kind: 'idle', message: tr.auth.passwordHint.requirements }}
         />
+        <AuthPasswordRequirements password={password} />
         <AuthField
           ref={passwordConfirmRef}
           label={tr.auth.resetPassword.newPasswordConfirmLabel}
           placeholder={tr.auth.resetPassword.newPasswordConfirmPlaceholder}
           value={passwordConfirm}
-          onChangeText={setPasswordConfirm}
+          onChangeText={(value) => {
+            setPasswordConfirm(value);
+            setConfirmError('');
+            setSubmissionError('');
+          }}
+          autoComplete="new-password"
+          editable={screenState.status !== 'updating'}
           secureTextEntry
           autoCapitalize="none"
+          textContentType="newPassword"
           returnKeyType="done"
           onSubmitEditing={() => {
             void submitPassword();
           }}
           icon={<Lock color={colors.textMuted} size={14} />}
+          status={confirmError ? { kind: 'invalid', message: confirmError } : undefined}
         />
-        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+        {submissionError ? (
+          <Text
+            accessibilityLiveRegion="assertive"
+            accessibilityRole="alert"
+            style={styles.formError}
+          >
+            {submissionError}
+          </Text>
+        ) : null}
         <PrimaryButton
           title={tr.auth.resetPassword.submit}
           loading={screenState.status === 'updating'}
@@ -185,20 +225,19 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.dialogTitleText,
     textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     textAlign: 'center',
   },
   formError: {
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerBg,
     color: colors.danger,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+    ...typography.supportingLabelText,
+    padding: 10,
   },
 });

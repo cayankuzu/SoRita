@@ -5,7 +5,7 @@ import {
   View,
 } from 'react-native';
 
-import { colors, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileStat = {
   label: string;
@@ -18,7 +18,12 @@ type ProfileStatsRowProps = {
 
 export function ProfileStatsRow({ stats }: ProfileStatsRowProps) {
   return (
-    <View style={styles.row}>
+    <View
+      accessible
+      accessibilityLabel={stats.map((stat) => `${stat.value} ${stat.label}`).join(', ')}
+      accessibilityRole="summary"
+      style={styles.row}
+    >
       {stats.map((stat) => (
         <View key={stat.label} style={styles.item}>
           <Text style={styles.value}>{stat.value}</Text>
@@ -42,8 +47,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   value: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.compactSectionText,
+    fontWeight: fontWeight.medium,
     color: colors.text,
   },
   label: {

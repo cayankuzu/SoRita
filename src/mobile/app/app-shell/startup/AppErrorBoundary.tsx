@@ -1,12 +1,17 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { captureAppException } from '@/mobile/app/platform/observability/sentry';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 const isDevMode = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
@@ -29,10 +34,15 @@ function AppCrashFallback({
 }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.card}>
-          <Text style={styles.title}>{tr.system.crashTitle}</Text>
-          <Text style={styles.description}>{tr.system.crashDescription}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{tr.system.crashTitle}</Text>
+          <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.description}>
+            {tr.system.crashDescription}
+          </Text>
           {isDevMode && error?.message ? (
             <View style={styles.debugBox}>
               <Text style={styles.debugLabel}>{tr.system.developmentMessage}</Text>
@@ -41,7 +51,7 @@ function AppCrashFallback({
           ) : null}
           <PrimaryButton title={tr.system.crashRetry} onPress={onRetry} />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -97,7 +107,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
@@ -113,13 +123,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: typography.dialogTitleText.fontSize,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 19,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   debugBox: {
@@ -129,13 +138,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   debugLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.labelText.fontSize,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   debugMessage: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.text,
   },
 });

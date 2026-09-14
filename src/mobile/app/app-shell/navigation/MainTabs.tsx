@@ -28,7 +28,14 @@ import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  layout,
+  minTouchSize,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { markNavigationStarted } from '@/mobile/app/shared/performance/navigationPerformance';
 import { runAfterNextPaint, waitForNextPaint } from '@/mobile/app/shared/utils/interaction';
 
@@ -223,13 +230,12 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   tabItem: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
   },
   tabLabel: {
-    fontSize: typography.metadataText.fontSize,
-    fontWeight: '700',
-    lineHeight: typography.metadataText.lineHeight,
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
   },
   tabIcon: {
     width: 30,

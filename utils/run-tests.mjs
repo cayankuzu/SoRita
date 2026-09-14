@@ -21,7 +21,14 @@ const testSuites = [
 
 for (const suite of testSuites) {
   const result = Array.isArray(suite)
-    ? spawnSync(process.execPath, [localStorageOption, vitestBin, 'run', ...suite].filter(Boolean), {
+    ? spawnSync(process.execPath, [
+        localStorageOption,
+        vitestBin,
+        'run',
+        '--configLoader',
+        'runner',
+        ...suite,
+      ].filter(Boolean), {
         env: childEnv,
         stdio: 'inherit',
       })

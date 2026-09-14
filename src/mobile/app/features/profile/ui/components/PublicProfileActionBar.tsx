@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -10,7 +11,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
@@ -29,6 +30,26 @@ export function PublicProfileActionBar({
   onMorePress,
   onUnblockPress,
 }: PublicProfileActionBarProps) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const disabled = hasPendingFollowRequest || isSubmitting;
+  const actionLabel = isFollowing
+    ? tr.profile.actions.unfollow
+    : hasPendingFollowRequest
+      ? tr.profile.actions.requestSent
+      : tr.profile.actions.follow;
+  const handleFollowPress = async () => {
+    if (disabled) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onFollowPress();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.profileActionRow}>
       {isBlockedByCurrent ? (
@@ -42,21 +63,27 @@ export function PublicProfileActionBar({
       ) : (
         <InstantPressable
           accessibilityLabel={
-            isFollowing
-              ? tr.profile.actions.following
-              : hasPendingFollowRequest
-                ? tr.profile.actions.requestSent
-                : tr.profile.actions.follow
+            actionLabel
           }
           accessibilityRole="button"
-          accessibilityState={{ selected: isFollowing || hasPendingFollowRequest }}
-          onPress={onFollowPress}
+          accessibilityState={{
+            busy: isSubmitting,
+            disabled,
+            selected: isFollowing || hasPendingFollowRequest,
+          }}
+          disabled={disabled}
+          onPress={handleFollowPress}
           style={[
             styles.followButton,
             isFollowing || hasPendingFollowRequest ? styles.followButtonPassive : null,
           ]}
         >
-          {isFollowing ? (
+          {isSubmitting ? (
+            <ActivityIndicator
+              color={isFollowing ? colors.textMuted : colors.onPrimary}
+              size="small"
+            />
+          ) : isFollowing ? (
             <UserMinus color={colors.textMuted} size={12} />
           ) : (
             <UserPlus
@@ -70,11 +97,7 @@ export function PublicProfileActionBar({
               isFollowing || hasPendingFollowRequest ? styles.followTextPassive : null,
             ]}
           >
-            {isFollowing
-              ? tr.profile.actions.following
-              : hasPendingFollowRequest
-                ? tr.profile.actions.requestSent
-                : tr.profile.actions.follow}
+            {actionLabel}
           </Text>
         </InstantPressable>
       )}
@@ -110,24 +133,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   followText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.onPrimary,
   },
   followTextPassive: {
     color: colors.textMuted,
   },
   unblockButton: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     paddingHorizontal: 10,
   },
   unblockButtonText: {
-    fontSize: 12,
+    ...typography.labelText,
     color: colors.textMuted,
   },
   moreButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.md,
   },
 });

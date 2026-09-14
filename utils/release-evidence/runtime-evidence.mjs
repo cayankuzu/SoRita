@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
+import {
+  createHash,
+  createPublicKey,
+  verify as verifySignature,
+} from "node:crypto";
 import {
   existsSync,
   lstatSync,
@@ -198,6 +202,11 @@ const ajv = new Ajv({ allErrors: true, jsonPointers: true, schemaId: "auto" });
 const validateManifest = ajv.compile(manifestSchema);
 const validateReceipt = ajv.compile(receiptSchema);
 
+export const RUNTIME_RECEIPT_DOMAIN_SEPARATOR = Buffer.from(
+  "sorita-runtime-evidence-receipt-v3\0",
+  "utf8",
+);
+
 function fail(message) {
   throw new Error(message);
 }
@@ -217,9 +226,102 @@ function hashFile(filePath) {
   return hashBuffer(readFileSync(filePath));
 }
 
-export const RUNTIME_PROBE_SOURCE_PATH =
-  "utils/release-evidence/runtime-evidence.mjs";
-export const RUNTIME_PROBE_SOURCE_SHA256 = hashFile(fileURLToPath(import.meta.url));
+function assertWellFormedUnicode(value) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xdc00 || next > 0xdfff) {
+        fail("Canonical JSON contains an unpaired high surrogate");
+      }
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      fail("Canonical JSON contains an unpaired low surrogate");
+    }
+  }
+}
+
+function canonicalizeJson(value) {
+  if (value === null) return "null";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) fail("Canonical JSON contains a non-finite number");
+    return JSON.stringify(value);
+  }
+  if (typeof value === "string") {
+    assertWellFormedUnicode(value);
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalizeJson(item)).join(",")}]`;
+  }
+  if (typeof value === "object") {
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => {
+        assertWellFormedUnicode(key);
+        return `${JSON.stringify(key)}:${canonicalizeJson(value[key])}`;
+      });
+    return `{${entries.join(",")}}`;
+  }
+  fail(`Canonical JSON cannot encode ${typeof value}`);
+}
+
+export function canonicalizeRuntimeReceipt(receipt) {
+  return canonicalizeJson(receipt);
+}
+
+export function runtimeReceiptSigningBytes(receipt) {
+  return Buffer.concat([
+    RUNTIME_RECEIPT_DOMAIN_SEPARATOR,
+    Buffer.from(canonicalizeRuntimeReceipt(receipt), "utf8"),
+  ]);
+}
+
+function decodeCanonicalBase64(value, label, expectedLength) {
+  if (
+    typeof value !== "string"
+    || value.length === 0
+    || value.length > 4096
+    || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(value)
+  ) {
+    fail(`${label} is not canonical base64`);
+  }
+  const decoded = Buffer.from(value, "base64");
+  if (decoded.toString("base64") !== value) fail(`${label} is not canonical base64`);
+  if (expectedLength !== undefined && decoded.length !== expectedLength) {
+    fail(`${label} has the wrong byte length`);
+  }
+  return decoded;
+}
+
+function createVerificationContext(expected) {
+  if (!/^sha256:[a-f0-9]{64}$/u.test(expected.keyId ?? "")) {
+    fail("Expected runtime signing key ID is invalid");
+  }
+  const spki = decodeCanonicalBase64(
+    expected.publicKeySpkiBase64,
+    "Runtime signing public key",
+  );
+  let publicKey;
+  try {
+    publicKey = createPublicKey({ key: spki, format: "der", type: "spki" });
+  } catch {
+    fail("Runtime signing public key is not valid SPKI DER");
+  }
+  if (publicKey.asymmetricKeyType !== "ed25519") {
+    fail("Runtime signing public key must be Ed25519");
+  }
+  const canonicalSpki = publicKey.export({ format: "der", type: "spki" });
+  if (!Buffer.from(canonicalSpki).equals(spki)) {
+    fail("Runtime signing public key is not canonical SPKI DER");
+  }
+  const derivedKeyId = `sha256:${hashBuffer(spki)}`;
+  if (derivedKeyId !== expected.keyId) {
+    fail("Runtime signing public key does not match the expected key ID");
+  }
+  return { keyId: derivedKeyId, publicKey };
+}
 
 function assertExpectedIdentity(value, expected, label) {
   if (value !== expected)
@@ -302,6 +404,47 @@ function assertScenarioContract(receipt) {
   }
 }
 
+function assertProducerContract(receipt, expected) {
+  assertExpectedIdentity(
+    receipt.producer.keyId,
+    expected.keyId,
+    "Runtime receipt signing key",
+  );
+  let provenanceUrl;
+  try {
+    provenanceUrl = new URL(receipt.producer.buildProvenanceUri);
+  } catch {
+    fail(`${receipt.check} producer build provenance URI is invalid`);
+  }
+  if (
+    provenanceUrl.protocol !== "https:"
+    || provenanceUrl.username
+    || provenanceUrl.password
+  ) {
+    fail(`${receipt.check} producer build provenance must be credential-free HTTPS`);
+  }
+}
+
+function producerIdentity(receipt) {
+  const identity = { ...receipt.producer };
+  delete identity.executionId;
+  return canonicalizeJson(identity);
+}
+
+function assertPacketProducerContract(receipts, expected) {
+  const identities = new Set(receipts.map(producerIdentity));
+  if (identities.size !== 1) {
+    fail("Runtime receipts do not share one signed harness producer identity");
+  }
+  const executionIds = receipts.map((receipt) => receipt.producer.executionId);
+  if (new Set(executionIds).size !== executionIds.length) {
+    fail("Runtime receipts reuse a producer execution ID");
+  }
+  if (receipts.some((receipt) => receipt.producer.keyId !== expected.keyId)) {
+    fail("Runtime receipts do not share the expected signing key ID");
+  }
+}
+
 export function validateRuntimeReceipt(receipt, expected, now = new Date()) {
   if (!validateReceipt(receipt))
     schemaError("Runtime receipt", validateReceipt);
@@ -330,16 +473,7 @@ export function validateRuntimeReceipt(receipt, expected, now = new Date()) {
     EXPECTED_PROBES[expected.check],
     "Runtime receipt probe",
   );
-  assertExpectedIdentity(
-    receipt.probe.sourcePath,
-    RUNTIME_PROBE_SOURCE_PATH,
-    "Runtime receipt probe source path",
-  );
-  assertExpectedIdentity(
-    receipt.probe.sourceSha256,
-    RUNTIME_PROBE_SOURCE_SHA256,
-    "Runtime receipt probe source checksum",
-  );
+  assertProducerContract(receipt, expected);
   assertRecentObservation(receipt.observedAt, now);
   assertRequiredSubjects(receipt);
   assertScenarioContract(receipt);
@@ -358,25 +492,46 @@ function resolveRawArtifact(root, check, artifact) {
   if (lstatSync(artifactPath).isSymbolicLink()) {
     fail(`Runtime raw artifact cannot be a symlink: ${artifact.path}`);
   }
-  if (statSync(artifactPath).size !== artifact.bytes) {
+  const bytes = readFileSync(artifactPath);
+  if (bytes.length !== artifact.bytes) {
     fail(`Runtime raw artifact byte count changed: ${artifact.path}`);
   }
-  if (hashFile(artifactPath) !== artifact.sha256) {
+  if (hashBuffer(bytes) !== artifact.sha256) {
     fail(`Runtime raw artifact checksum changed: ${artifact.path}`);
   }
-  return artifactPath;
+  return bytes;
 }
 
 function stageRawArtifacts(source, output, receipt) {
   for (const scenario of receipt.scenarios) {
-    const sourcePath = resolveRawArtifact(source, receipt.check, scenario.rawArtifact);
+    const sourceBytes = resolveRawArtifact(source, receipt.check, scenario.rawArtifact);
     const outputPath = resolve(output, scenario.rawArtifact.path);
     mkdirSync(dirname(outputPath), { recursive: true });
-    writeFileSync(outputPath, readFileSync(sourcePath), { flag: "wx" });
+    writeFileSync(outputPath, sourceBytes, { flag: "wx" });
   }
 }
 
-function readReceipt(receiptPath, expected, now) {
+function readSignatureFile(signaturePath) {
+  if (!existsSync(signaturePath) || !statSync(signaturePath).isFile()) {
+    fail(`Runtime receipt signature is missing: ${signaturePath}`);
+  }
+  if (lstatSync(signaturePath).isSymbolicLink()) {
+    fail(`Runtime receipt signature cannot be a symlink: ${signaturePath}`);
+  }
+  const fileBytes = readFileSync(signaturePath);
+  const encoded = fileBytes.toString("utf8");
+  if (fileBytes.length !== 89 || !encoded.endsWith("\n")) {
+    fail(`Runtime receipt signature is not one canonical base64 line: ${signaturePath}`);
+  }
+  const signature = decodeCanonicalBase64(
+    encoded.slice(0, -1),
+    "Runtime receipt signature",
+    64,
+  );
+  return { fileBytes, signature };
+}
+
+function readReceipt(receiptPath, signaturePath, expected, verification, now) {
   if (!existsSync(receiptPath) || !statSync(receiptPath).isFile()) {
     fail(`Runtime receipt is missing: ${receiptPath}`);
   }
@@ -384,13 +539,34 @@ function readReceipt(receiptPath, expected, now) {
     fail(`Runtime receipt cannot be a symlink: ${receiptPath}`);
   if (statSync(receiptPath).size > 1024 * 1024)
     fail(`Runtime receipt is too large: ${receiptPath}`);
+  const receiptBytes = readFileSync(receiptPath);
   let receipt;
   try {
-    receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    receipt = JSON.parse(receiptBytes.toString("utf8"));
   } catch {
     fail(`Runtime receipt is not valid JSON: ${receiptPath}`);
   }
-  return validateRuntimeReceipt(receipt, expected, now);
+  const canonicalBytes = Buffer.from(canonicalizeRuntimeReceipt(receipt), "utf8");
+  if (!receiptBytes.equals(canonicalBytes)) {
+    fail(`Runtime receipt is not canonical JSON: ${receiptPath}`);
+  }
+  validateRuntimeReceipt(receipt, expected, now);
+  const signature = readSignatureFile(signaturePath);
+  if (
+    !verifySignature(
+      null,
+      runtimeReceiptSigningBytes(receipt),
+      verification.publicKey,
+      signature.signature,
+    )
+  ) {
+    fail(`Runtime receipt Ed25519 signature is invalid: ${receiptPath}`);
+  }
+  return {
+    receipt,
+    receiptBytes,
+    signatureBytes: signature.fileBytes,
+  };
 }
 
 export function stageRuntimeEvidence({
@@ -408,28 +584,54 @@ export function stageRuntimeEvidence({
   if (!Number.isInteger(expected.runAttempt) || expected.runAttempt < 1) {
     fail("Runtime workflow run attempt is invalid");
   }
+  const verification = createVerificationContext(expected);
+
+  const validatedReceipts = REQUIRED_RUNTIME_CHECKS.map((check) =>
+    readReceipt(
+      resolve(source, `${check}.json`),
+      resolve(source, `${check}.sig`),
+      { ...expected, check },
+      verification,
+      now,
+    ),
+  );
+  assertPacketProducerContract(
+    validatedReceipts.map(({ receipt }) => receipt),
+    expected,
+  );
 
   const stagedReceipts = [];
-  for (const check of REQUIRED_RUNTIME_CHECKS) {
-    const sourcePath = resolve(source, `${check}.json`);
-    const receipt = readReceipt(sourcePath, { ...expected, check }, now);
+  for (const validated of validatedReceipts) {
+    const { receipt, receiptBytes, signatureBytes } = validated;
+    const check = receipt.check;
     stageRawArtifacts(source, output, receipt);
-    const outputPath = resolve(output, "evidence", `${check}.json`);
-    mkdirSync(dirname(outputPath), { recursive: true });
-    writeFileSync(outputPath, `${JSON.stringify(receipt, null, 2)}\n`, {
+    const receiptPath = resolve(output, "evidence", `${check}.json`);
+    const signaturePath = resolve(output, "evidence", `${check}.sig`);
+    mkdirSync(dirname(receiptPath), { recursive: true });
+    writeFileSync(receiptPath, receiptBytes, {
       flag: "wx",
     });
+    writeFileSync(signaturePath, signatureBytes, { flag: "wx" });
     stagedReceipts.push({
       check,
-      path: `evidence/${check}.json`,
-      mediaType: "application/vnd.sorita.runtime-probe+json",
-      bytes: statSync(outputPath).size,
-      sha256: hashFile(outputPath),
+      receipt: {
+        path: `evidence/${check}.json`,
+        mediaType: "application/vnd.sorita.runtime-probe+json",
+        bytes: statSync(receiptPath).size,
+        sha256: hashFile(receiptPath),
+      },
+      signature: {
+        path: `evidence/${check}.sig`,
+        mediaType: "application/vnd.sorita.ed25519-signature",
+        bytes: statSync(signaturePath).size,
+        sha256: hashFile(signaturePath),
+        keyId: verification.keyId,
+      },
     });
   }
 
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     repository: expected.repository,
     commitSha: expected.commitSha,
     runtimeVersion: expected.runtimeVersion,
@@ -439,6 +641,7 @@ export function stageRuntimeEvidence({
       runId: expected.runId,
       runAttempt: expected.runAttempt,
     },
+    signingKeyId: verification.keyId,
     checks: Object.fromEntries(
       REQUIRED_RUNTIME_CHECKS.map((check) => [check, "pass"]),
     ),
@@ -466,17 +669,46 @@ function resolvePacketArtifact(root, artifact) {
   return artifactPath;
 }
 
+function verifyPacketArtifact(root, artifact) {
+  const artifactPath = resolvePacketArtifact(root, artifact);
+  if (!existsSync(artifactPath) || !statSync(artifactPath).isFile()) {
+    fail(`Runtime artifact is missing: ${artifact.path}`);
+  }
+  if (lstatSync(artifactPath).isSymbolicLink()) {
+    fail(`Runtime artifact cannot be a symlink: ${artifact.path}`);
+  }
+  if (statSync(artifactPath).size !== artifact.bytes) {
+    fail(`Runtime artifact byte count changed: ${artifact.path}`);
+  }
+  if (hashFile(artifactPath) !== artifact.sha256) {
+    fail(`Runtime artifact checksum changed: ${artifact.path}`);
+  }
+  return artifactPath;
+}
+
 export function verifyRuntimeEvidence({
   packetDirectory,
   expected,
   now = new Date(),
 }) {
   const root = resolve(packetDirectory);
+  const verification = createVerificationContext(expected);
   const manifestPath = resolve(root, "manifest.json");
   if (!existsSync(manifestPath) || !statSync(manifestPath).isFile()) {
     fail("Runtime evidence manifest is missing");
   }
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (lstatSync(manifestPath).isSymbolicLink()) {
+    fail("Runtime evidence manifest cannot be a symlink");
+  }
+  if (statSync(manifestPath).size > 1024 * 1024) {
+    fail("Runtime evidence manifest is too large");
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch {
+    fail("Runtime evidence manifest is not valid JSON");
+  }
   if (!validateManifest(manifest))
     schemaError("Runtime evidence manifest", validateManifest);
 
@@ -505,43 +737,57 @@ export function verifyRuntimeEvidence({
     expected.runAttempt,
     "Runtime manifest workflow attempt",
   );
+  assertExpectedIdentity(
+    manifest.signingKeyId,
+    verification.keyId,
+    "Runtime manifest signing key",
+  );
   assertRecentObservation(manifest.generatedAt, now);
 
   const seenChecks = new Set();
   const seenPaths = new Set();
+  const receipts = [];
   for (const artifact of manifest.artifacts) {
     if (seenChecks.has(artifact.check))
       fail(`Duplicate runtime check artifact: ${artifact.check}`);
-    if (seenPaths.has(artifact.path))
-      fail(`Duplicate runtime artifact path: ${artifact.path}`);
+    const expectedReceiptPath = `evidence/${artifact.check}.json`;
+    const expectedSignaturePath = `evidence/${artifact.check}.sig`;
+    if (
+      artifact.receipt.path !== expectedReceiptPath
+      || artifact.signature.path !== expectedSignaturePath
+    ) {
+      fail(`Runtime artifact paths do not match check ${artifact.check}`);
+    }
+    for (const descriptor of [artifact.receipt, artifact.signature]) {
+      if (seenPaths.has(descriptor.path)) {
+        fail(`Duplicate runtime artifact path: ${descriptor.path}`);
+      }
+      seenPaths.add(descriptor.path);
+    }
     seenChecks.add(artifact.check);
-    seenPaths.add(artifact.path);
-    const artifactPath = resolvePacketArtifact(root, artifact);
-    if (!existsSync(artifactPath) || !statSync(artifactPath).isFile()) {
-      fail(`Runtime artifact is missing: ${artifact.path}`);
-    }
-    if (lstatSync(artifactPath).isSymbolicLink()) {
-      fail(`Runtime artifact cannot be a symlink: ${artifact.path}`);
-    }
-    if (statSync(artifactPath).size !== artifact.bytes) {
-      fail(`Runtime artifact byte count changed: ${artifact.path}`);
-    }
-    if (hashFile(artifactPath) !== artifact.sha256) {
-      fail(`Runtime artifact checksum changed: ${artifact.path}`);
-    }
-    const receipt = JSON.parse(readFileSync(artifactPath, "utf8"));
-    validateRuntimeReceipt(
-      receipt,
+    assertExpectedIdentity(
+      artifact.signature.keyId,
+      verification.keyId,
+      `Runtime ${artifact.check} signature key`,
+    );
+    const receiptPath = verifyPacketArtifact(root, artifact.receipt);
+    const signaturePath = verifyPacketArtifact(root, artifact.signature);
+    const validated = readReceipt(
+      receiptPath,
+      signaturePath,
       { ...expected, check: artifact.check },
+      verification,
       now,
     );
-    for (const scenario of receipt.scenarios) {
-      resolveRawArtifact(root, receipt.check, scenario.rawArtifact);
+    receipts.push(validated.receipt);
+    for (const scenario of validated.receipt.scenarios) {
+      resolveRawArtifact(root, validated.receipt.check, scenario.rawArtifact);
     }
   }
   if (seenChecks.size !== REQUIRED_RUNTIME_CHECKS.length) {
     fail("Runtime evidence packet does not cover every required runtime check");
   }
+  assertPacketProducerContract(receipts, expected);
   return manifest;
 }
 
@@ -570,6 +816,8 @@ function parseArguments(argv) {
     "runtime",
     "runId",
     "runAttempt",
+    "publicKeySpkiBase64",
+    "keyId",
   ];
   if (command === "stage") required.push("source");
   for (const name of required) if (!values[name]) fail(`--${name} is required`);
@@ -584,6 +832,8 @@ function main() {
     runtimeVersion: options.runtime,
     runId: Number(options.runId),
     runAttempt: Number(options.runAttempt),
+    publicKeySpkiBase64: options.publicKeySpkiBase64,
+    keyId: options.keyId,
   };
   const manifest =
     options.command === "stage"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { ChevronDown, ChevronUp, ExternalLink, UtensilsCrossed } from 'lucide-react-native';
+import { ExternalLink, UtensilsCrossed } from 'lucide-react-native';
 
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -13,53 +13,39 @@ type PlaceMenuButtonProps = {
 };
 
 export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const longPressTriggeredRef = React.useRef(false);
+  const openingRef = React.useRef(false);
+  const [isOpening, setIsOpening] = React.useState(false);
 
   const openMenu = async () => {
-    const opened = await openSafeExternalUrl(menuUrl);
+    if (openingRef.current) {
+      return;
+    }
 
-    if (!opened) {
-      showToast(tr.cards.menuLinkUnsafe, 'error');
+    openingRef.current = true;
+    setIsOpening(true);
+
+    try {
+      const opened = await openSafeExternalUrl(menuUrl);
+
+      if (!opened) {
+        showToast(tr.cards.menuLinkUnsafe, 'error');
+      }
+    } finally {
+      openingRef.current = false;
+      setIsOpening(false);
     }
   };
 
   return (
     <Pressable
-      accessibilityActions={[
-        { name: 'longpress', label: tr.cards.menuLinkOpenHint },
-      ]}
-      accessibilityHint={
-        isExpanded
-          ? tr.cards.menuLinkExpandedHint
-          : tr.cards.menuLinkCollapsedHint
-      }
+      accessibilityHint={tr.cards.menuLinkOpenHint}
       accessibilityLabel={tr.cards.menuLinkLabel}
       accessibilityRole="link"
-      accessibilityState={{ expanded: isExpanded }}
-      delayLongPress={500}
+      accessibilityState={{ busy: isOpening, disabled: isOpening }}
+      disabled={isOpening}
       hitSlop={4}
-      onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'longpress') {
-          void openMenu();
-        }
-      }}
       onPress={(event) => {
         event.stopPropagation();
-
-        if (longPressTriggeredRef.current) {
-          longPressTriggeredRef.current = false;
-          return;
-        }
-
-        setIsExpanded((current) => !current);
-      }}
-      onPressIn={() => {
-        longPressTriggeredRef.current = false;
-      }}
-      onLongPress={(event) => {
-        event.stopPropagation();
-        longPressTriggeredRef.current = true;
         void openMenu();
       }}
       style={({ pressed }) => [
@@ -72,29 +58,8 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
           <UtensilsCrossed color={colors.primary} size={12} />
         </View>
         <Text style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</Text>
-        {isExpanded ? (
-          <ChevronUp color={colors.primary} size={12} />
-        ) : (
-          <ChevronDown color={colors.primary} size={12} />
-        )}
+        <ExternalLink color={colors.primary} size={12} />
       </View>
-      {isExpanded ? (
-        <View style={styles.menuUrlPreview}>
-          <Text
-            accessibilityLabel={tr.cards.menuLinkUrlLabel}
-            ellipsizeMode="middle"
-            numberOfLines={3}
-            selectable
-            style={styles.menuUrlText}
-          >
-            {menuUrl}
-          </Text>
-          <View style={styles.menuHoldHintRow}>
-            <ExternalLink color={colors.textSoft} size={12} />
-            <Text style={styles.menuHoldHintText}>{tr.cards.menuLinkHoldHint}</Text>
-          </View>
-        </View>
-      ) : null}
     </Pressable>
   );
 }

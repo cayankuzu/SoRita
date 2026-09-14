@@ -8,6 +8,7 @@ const errors = new Rate('read_model_errors');
 const latency = new Trend('read_model_latency', true);
 const targetVUs = Number.parseInt(__ENV.SORITA_LOAD_TARGET_VUS || '10000', 10);
 const thinkTimeSeconds = Number.parseFloat(__ENV.SORITA_LOAD_THINK_TIME_SECONDS || '1');
+const exploreQuery = (__ENV.SORITA_LOAD_EXPLORE_QUERY || 'kahve').trim();
 
 if (!Number.isInteger(targetVUs) || targetVUs < 1 || targetVUs > 10000) {
   throw new Error('SORITA_LOAD_TARGET_VUS must be an integer between 1 and 10000.');
@@ -15,6 +16,10 @@ if (!Number.isInteger(targetVUs) || targetVUs < 1 || targetVUs > 10000) {
 
 if (!Number.isFinite(thinkTimeSeconds) || thinkTimeSeconds < 0) {
   throw new Error('SORITA_LOAD_THINK_TIME_SECONDS must be zero or greater.');
+}
+
+if (exploreQuery.length < 3 || exploreQuery.length > 120) {
+  throw new Error('SORITA_LOAD_EXPLORE_QUERY must contain between 3 and 120 characters.');
 }
 
 export const options = {
@@ -81,7 +86,9 @@ const endpoints = [
       p_cursor_rank: null,
       p_kind: 'all',
       p_limit: 20,
-      p_query: '',
+      // Every other Explore request exercises the indexed search path; the
+      // remaining requests continue to cover the empty-query discovery feed.
+      p_query: Math.floor(__ITER / endpoints.length) % 2 === 0 ? '' : exploreQuery,
     }),
   },
   {

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
+import type { User } from '@/mobile/app/data/contracts/entities';
 import {
   EMAIL_MAX_LENGTH,
   USER_BIO_MAX_LENGTH,
@@ -9,8 +11,6 @@ import {
 } from '@/mobile/app/shared/validation/contentLimits';
 
 const persistAuthSessionMock = vi.fn();
-const persistResolvedAuthUserMock = vi.fn();
-const resolveImmediateAuthUserMock = vi.fn();
 const syncAuthenticatedUserMock = vi.fn();
 const createTrackedAuthRedirectMock = vi.fn();
 const discardPendingAuthRedirectStateMock = vi.fn();
@@ -47,10 +47,17 @@ class MockEdgeFunctionError extends Error {
   }
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+
+  return { promise, resolve };
+}
+
 vi.mock('@/mobile/app/app-shell/auth/session/authSessionSupport', () => ({
   persistAuthSession: persistAuthSessionMock,
-  persistResolvedAuthUser: persistResolvedAuthUserMock,
-  resolveImmediateAuthUser: resolveImmediateAuthUserMock,
   syncAuthenticatedUser: syncAuthenticatedUserMock,
 }));
 
@@ -119,8 +126,6 @@ vi.mock('@/mobile/app/shared/utils/contentModeration', () => ({
 describe('useAuthActions', () => {
   beforeEach(() => {
     persistAuthSessionMock.mockReset();
-    persistResolvedAuthUserMock.mockReset();
-    resolveImmediateAuthUserMock.mockReset();
     syncAuthenticatedUserMock.mockReset();
     createTrackedAuthRedirectMock.mockReset();
     discardPendingAuthRedirectStateMock.mockReset();
@@ -206,11 +211,25 @@ describe('useAuthActions', () => {
     purgeAuthenticatedUserStateMock.mockResolvedValue(undefined);
   });
 
-  it('logs in, seeds the immediate user, then syncs the authenticated user', async () => {
+  it('leaves an A-to-B login race to the lifecycle owner coordinator', async () => {
     const setUser = vi.fn();
-    const authUser = { id: 'user-1', email: 'ada@example.com' };
-    const immediateUser = { id: 'user-1', email: 'ada@example.com', name: 'Ada' };
-    const syncedUser = { ...immediateUser, username: 'ada' };
+    const userA = {
+      id: 'user-a',
+      email: 'a@example.com',
+      name: 'User A',
+      username: 'user_a',
+    };
+    const authUserB = { id: 'user-b', email: 'b@example.com' };
+    let resolveSetSession!: (value: {
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: typeof authUserB;
+      };
+      error: null;
+    }) => void;
+    const pendingSetSession = new Promise<Parameters<typeof resolveSetSession>[0]>((resolve) => {
+      resolveSetSession = resolve;
+    });
 
     callJsonEdgeFunctionMock.mockResolvedValue({
       session: {
@@ -218,45 +237,745 @@ describe('useAuthActions', () => {
         refreshToken: 'edge-refresh',
       },
     });
-    setSessionMock.mockResolvedValue({
+    setSessionMock.mockReturnValue(pendingSetSession);
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: userA, setUser }));
+    const loginResult = hook.result.current.login(' b@example.com ', 'secret');
+
+    await waitFor(() => {
+      expect(setSessionMock).toHaveBeenCalledWith({
+        access_token: 'edge-access',
+        refresh_token: 'edge-refresh',
+      });
+    });
+    expect(setUser).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+
+    resolveSetSession({
       data: {
         session: {
           access_token: 'edge-access',
           refresh_token: 'edge-refresh',
         },
-        user: authUser,
+        user: authUserB,
       },
       error: null,
     });
-    resolveImmediateAuthUserMock.mockReturnValue(immediateUser);
-    syncAuthenticatedUserMock.mockResolvedValue(syncedUser);
 
-    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
-    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
-
-    await act(async () => {
-      const result = await hook.result.current.login(' ada@example.com ', 'secret');
-      expect(result).toEqual({ success: true });
-    });
+    await expect(loginResult).resolves.toEqual({ success: true });
 
     expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith('auth-gateway', {
       action: 'login',
-      email: 'ada@example.com',
+      email: 'b@example.com',
       password: 'secret',
     });
-    expect(setSessionMock).toHaveBeenCalledWith({
-      access_token: 'edge-access',
-      refresh_token: 'edge-refresh',
-    });
-    expect(persistAuthSessionMock).toHaveBeenCalledWith({
-      access_token: 'edge-access',
-      refresh_token: 'edge-refresh',
-    });
-    expect(setUser).toHaveBeenCalledWith(immediateUser);
+    expect(setUser).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() => {
-      expect(setUser).toHaveBeenCalledWith(syncedUser);
+  it('lets only the latest concurrent login response commit a session', async () => {
+    const setUser = vi.fn();
+    const loginBResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    const loginCResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) =>
+        payload.email === 'b@example.com' ? loginBResponse.promise : loginCResponse.promise,
+    );
+    setSessionMock.mockImplementation(
+      ({ access_token, refresh_token }: { access_token: string; refresh_token: string }) =>
+        Promise.resolve({
+          data: {
+            session: { access_token, refresh_token },
+            user: { id: access_token === 'access-b' ? 'user-b' : 'user-c' },
+          },
+          error: null,
+        }),
+    );
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+    const loginB = hook.result.current.login('b@example.com', 'secret-b');
+    const loginC = hook.result.current.login('c@example.com', 'secret-c');
+
+    loginCResponse.resolve({
+      session: { accessToken: 'access-c', refreshToken: 'refresh-c' },
     });
+    await expect(loginC).resolves.toEqual({ success: true });
+
+    loginBResponse.resolve({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+    await expect(loginB).resolves.toEqual({ success: false, code: 'unexpected' });
+
+    expect(setSessionMock).toHaveBeenCalledTimes(1);
+    expect(setSessionMock).toHaveBeenCalledWith({
+      access_token: 'access-c',
+      refresh_token: 'refresh-c',
+    });
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('does not let a pending login reopen a session after logout', async () => {
+    const setUser = vi.fn();
+    const loginResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    callJsonEdgeFunctionMock.mockReturnValue(loginResponse.promise);
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a' },
+      setUser,
+    }));
+    const loginResult = hook.result.current.login('b@example.com', 'secret');
+
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+    await hook.result.current.logout();
+    loginResponse.resolve({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+
+    await expect(loginResult).resolves.toEqual({ success: false, code: 'unexpected' });
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+    expect(setSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('finishes an in-flight logout before committing a newer login', async () => {
+    const setUser = vi.fn();
+    const signOutResult = createDeferred<{ error: null }>();
+    signOutMock.mockReturnValue(signOutResult.promise);
+    callJsonEdgeFunctionMock.mockResolvedValue({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+    setSessionMock.mockResolvedValue({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a' },
+      setUser,
+    }));
+    const logoutResult = hook.result.current.logout();
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalledOnce());
+    const loginResult = hook.result.current.login('b@example.com', 'secret');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+    expect(setSessionMock).not.toHaveBeenCalled();
+
+    let resolvedLoginResult: Awaited<typeof loginResult> | undefined;
+    await act(async () => {
+      signOutResult.resolve({ error: null });
+      await logoutResult;
+      resolvedLoginResult = await loginResult;
+    });
+
+    expect(resolvedLoginResult).toEqual({ success: true });
+    expect(persistAuthSessionMock.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      setSessionMock.mock.invocationCallOrder[0] as number,
+    );
+  });
+
+  it('commits a newer login after logout updates the real provider user state', async () => {
+    const userA = {
+      id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a',
+    };
+    const signOutResult = createDeferred<{ error: null }>();
+    signOutMock.mockReturnValue(signOutResult.promise);
+    callJsonEdgeFunctionMock.mockResolvedValue({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+    setSessionMock.mockResolvedValue({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(userA);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        currentUser,
+        setCurrentUser,
+      };
+    });
+    const logoutResult = hook.result.current.actions.logout();
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalledOnce());
+    const loginResult = hook.result.current.actions.login('b@example.com', 'secret');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+    expect(setSessionMock).not.toHaveBeenCalled();
+
+    act(() => {
+      hook.result.current.setCurrentUser(null);
+    });
+    await waitFor(() => expect(hook.result.current.currentUser).toBeNull());
+    expect(setSessionMock).not.toHaveBeenCalled();
+
+    let resolvedLoginResult: Awaited<typeof loginResult> | undefined;
+    await act(async () => {
+      signOutResult.resolve({ error: null });
+      await logoutResult;
+      resolvedLoginResult = await loginResult;
+    });
+
+    expect(resolvedLoginResult).toEqual({ success: true });
+    expect(hook.result.current.currentUser).toBeNull();
+    expect(setSessionMock).toHaveBeenCalledOnce();
+  });
+
+  it('retains the logout transition until a delayed SIGNED_OUT render is consumed', async () => {
+    const userA = {
+      id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a',
+    };
+    const signOutResult = createDeferred<{ error: null }>();
+    const purgeResult = createDeferred<void>();
+    signOutMock.mockReturnValue(signOutResult.promise);
+    purgeAuthenticatedUserStateMock.mockReturnValueOnce(purgeResult.promise);
+    callJsonEdgeFunctionMock.mockResolvedValue({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+    setSessionMock.mockResolvedValue({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(userA);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        setCurrentUser,
+      };
+    });
+    const logoutResult = hook.result.current.actions.logout();
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalledOnce());
+    const loginResult = hook.result.current.actions.login('b@example.com', 'secret');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+
+    signOutResult.resolve({ error: null });
+    await waitFor(() => expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledOnce());
+    act(() => {
+      hook.result.current.setCurrentUser(null);
+    });
+    expect(setSessionMock).not.toHaveBeenCalled();
+
+    purgeResult.resolve();
+    await expect(logoutResult).resolves.toBeUndefined();
+    await expect(loginResult).resolves.toEqual({ success: true });
+    expect(setSessionMock).toHaveBeenCalledOnce();
+  });
+
+  it('invalidates a pending login after an external A-to-B owner transition', async () => {
+    const userA = {
+      id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a',
+    };
+    const userB = {
+      id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b',
+    };
+    const loginResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    callJsonEdgeFunctionMock.mockReturnValue(loginResponse.promise);
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(userA);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        currentUser,
+        setCurrentUser,
+      };
+    });
+    const loginResult = hook.result.current.actions.login('c@example.com', 'secret');
+
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+    act(() => {
+      hook.result.current.setCurrentUser(userB);
+    });
+    await waitFor(() => expect(hook.result.current.currentUser).toEqual(userB));
+
+    loginResponse.resolve({
+      session: { accessToken: 'access-c', refreshToken: 'refresh-c' },
+    });
+    await expect(loginResult).resolves.toEqual({ success: false, code: 'unexpected' });
+    expect(setSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('lets a newer login win after an older setSession emits SIGNED_IN before resolving', async () => {
+    const userB = {
+      id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b',
+    };
+    const setSessionBResult = createDeferred<{
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: { id: string; email: string };
+      };
+      error: null;
+    }>();
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) => Promise.resolve({
+        session: payload.email === 'b@example.com'
+          ? { accessToken: 'access-b', refreshToken: 'refresh-b' }
+          : { accessToken: 'access-c', refreshToken: 'refresh-c' },
+      }),
+    );
+    setSessionMock.mockImplementation(
+      ({ access_token, refresh_token }: { access_token: string; refresh_token: string }) =>
+        access_token === 'access-b'
+          ? setSessionBResult.promise
+          : Promise.resolve({
+              data: {
+                session: { access_token, refresh_token },
+                user: { id: 'user-c', email: 'c@example.com' },
+              },
+              error: null,
+            }),
+    );
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(null);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        setCurrentUser,
+      };
+    });
+    const loginB = hook.result.current.actions.login('b@example.com', 'secret-b');
+
+    await waitFor(() => expect(setSessionMock).toHaveBeenCalledTimes(1));
+    const loginC = hook.result.current.actions.login('c@example.com', 'secret-c');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledTimes(2));
+    expect(setSessionMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      hook.result.current.setCurrentUser(userB);
+    });
+    setSessionBResult.resolve({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    await expect(loginB).resolves.toEqual({ success: true });
+    await expect(loginC).resolves.toEqual({ success: true });
+    expect(setSessionMock).toHaveBeenNthCalledWith(2, {
+      access_token: 'access-c',
+      refresh_token: 'refresh-c',
+    });
+  });
+
+  it('preserves the installed login result when a newer gateway attempt fails pre-commit', async () => {
+    const userB = {
+      id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b',
+    };
+    const setSessionBResult = createDeferred<{
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: { id: string; email: string };
+      };
+      error: null;
+    }>();
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) =>
+        payload.email === 'b@example.com'
+          ? Promise.resolve({
+              session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+            })
+          : Promise.reject(new Error('gateway rejected login-c')),
+    );
+    setSessionMock.mockReturnValue(setSessionBResult.promise);
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(null);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        currentUser,
+        setCurrentUser,
+      };
+    });
+    const loginB = hook.result.current.actions.login('b@example.com', 'secret-b');
+
+    await waitFor(() => expect(setSessionMock).toHaveBeenCalledOnce());
+    const loginC = hook.result.current.actions.login('c@example.com', 'secret-c');
+    await expect(loginC).resolves.toMatchObject({ success: false });
+
+    act(() => {
+      hook.result.current.setCurrentUser(userB);
+    });
+    setSessionBResult.resolve({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    await expect(loginB).resolves.toEqual({ success: true });
+    expect(hook.result.current.currentUser).toEqual(userB);
+    expect(setSessionMock).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the newest login valid through an older B-to-null-to-C lifecycle transition', async () => {
+    const userB = {
+      id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b',
+    };
+    const userC = {
+      id: 'user-c', email: 'c@example.com', name: 'User C', username: 'user_c',
+    };
+    const setSessionCResult = createDeferred<{
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: { id: string; email: string };
+      };
+      error: null;
+    }>();
+    const loginDResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) =>
+        payload.email === 'c@example.com'
+          ? Promise.resolve({
+              session: { accessToken: 'access-c', refreshToken: 'refresh-c' },
+            })
+          : loginDResponse.promise,
+    );
+    setSessionMock.mockImplementation(
+      ({ access_token, refresh_token }: { access_token: string; refresh_token: string }) =>
+        access_token === 'access-c'
+          ? setSessionCResult.promise
+          : Promise.resolve({
+              data: {
+                session: { access_token, refresh_token },
+                user: { id: 'user-d', email: 'd@example.com' },
+              },
+              error: null,
+            }),
+    );
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(userB);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        currentUser,
+        setCurrentUser,
+      };
+    });
+    const loginC = hook.result.current.actions.login('c@example.com', 'secret-c');
+
+    await waitFor(() => expect(setSessionMock).toHaveBeenCalledOnce());
+    const loginD = hook.result.current.actions.login('d@example.com', 'secret-d');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledTimes(2));
+
+    act(() => {
+      hook.result.current.setCurrentUser(null);
+    });
+    await act(async () => {
+      setSessionCResult.resolve({
+        data: {
+          session: { access_token: 'access-c', refresh_token: 'refresh-c' },
+          user: { id: 'user-c', email: 'c@example.com' },
+        },
+        error: null,
+      });
+      await loginC;
+    });
+    act(() => {
+      hook.result.current.setCurrentUser(userC);
+    });
+
+    loginDResponse.resolve({
+      session: { accessToken: 'access-d', refreshToken: 'refresh-d' },
+    });
+    await expect(loginD).resolves.toEqual({ success: true });
+    expect(setSessionMock).toHaveBeenNthCalledWith(2, {
+      access_token: 'access-d',
+      refresh_token: 'refresh-d',
+    });
+  });
+
+  it('chains overlapping owner transitions without invalidating the newest queued login', async () => {
+    const users = {
+      b: { id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b' },
+      c: { id: 'user-c', email: 'c@example.com', name: 'User C', username: 'user_c' },
+      d: { id: 'user-d', email: 'd@example.com', name: 'User D', username: 'user_d' },
+    } satisfies Record<string, User>;
+    const setSessionCResult = createDeferred<{
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: { id: string; email: string };
+      };
+      error: null;
+    }>();
+    const setSessionDResult = createDeferred<{
+      data: {
+        session: { access_token: string; refresh_token: string };
+        user: { id: string; email: string };
+      };
+      error: null;
+    }>();
+    const loginEResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) => {
+        if (payload.email === 'e@example.com') {
+          return loginEResponse.promise;
+        }
+
+        const suffix = payload.email === 'c@example.com' ? 'c' : 'd';
+        return Promise.resolve({
+          session: { accessToken: `access-${suffix}`, refreshToken: `refresh-${suffix}` },
+        });
+      },
+    );
+    setSessionMock.mockImplementation(
+      ({ access_token, refresh_token }: { access_token: string; refresh_token: string }) => {
+        if (access_token === 'access-c') {
+          return setSessionCResult.promise;
+        }
+        if (access_token === 'access-d') {
+          return setSessionDResult.promise;
+        }
+        return Promise.resolve({
+          data: {
+            session: { access_token, refresh_token },
+            user: { id: 'user-e', email: 'e@example.com' },
+          },
+          error: null,
+        });
+      },
+    );
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => {
+      const [currentUser, setCurrentUser] = useState<User | null>(users.b);
+      return {
+        actions: useAuthActions({ user: currentUser, setUser: setCurrentUser }),
+        setCurrentUser,
+      };
+    });
+    const loginC = hook.result.current.actions.login('c@example.com', 'secret-c');
+
+    await waitFor(() => expect(setSessionMock).toHaveBeenCalledTimes(1));
+    const loginD = hook.result.current.actions.login('d@example.com', 'secret-d');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledTimes(2));
+    act(() => {
+      hook.result.current.setCurrentUser(null);
+    });
+    setSessionCResult.resolve({
+      data: {
+        session: { access_token: 'access-c', refresh_token: 'refresh-c' },
+        user: { id: 'user-c', email: 'c@example.com' },
+      },
+      error: null,
+    });
+    await expect(loginC).resolves.toEqual({ success: true });
+    await waitFor(() => expect(setSessionMock).toHaveBeenCalledTimes(2));
+
+    const loginE = hook.result.current.actions.login('e@example.com', 'secret-e');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledTimes(3));
+    act(() => {
+      hook.result.current.setCurrentUser(users.c);
+    });
+    act(() => {
+      hook.result.current.setCurrentUser(null);
+    });
+    setSessionDResult.resolve({
+      data: {
+        session: { access_token: 'access-d', refresh_token: 'refresh-d' },
+        user: { id: 'user-d', email: 'd@example.com' },
+      },
+      error: null,
+    });
+    await expect(loginD).resolves.toEqual({ success: true });
+    act(() => {
+      hook.result.current.setCurrentUser(users.d);
+    });
+
+    loginEResponse.resolve({
+      session: { accessToken: 'access-e', refreshToken: 'refresh-e' },
+    });
+    await expect(loginE).resolves.toEqual({ success: true });
+    expect(setSessionMock).toHaveBeenNthCalledWith(3, {
+      access_token: 'access-e',
+      refresh_token: 'refresh-e',
+    });
+  });
+
+  it('prunes a coalesced stale logout marker before a later external sign-out', async () => {
+    const users = {
+      a: { id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a' },
+      b: { id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b' },
+    } satisfies Record<string, User>;
+    const signOutResult = createDeferred<{ error: null }>();
+    const loginCResponse = createDeferred<{
+      session: { accessToken: string; refreshToken: string };
+    }>();
+    signOutMock.mockReturnValue(signOutResult.promise);
+    callJsonEdgeFunctionMock.mockImplementation(
+      (_functionName: string, payload: { email?: string }) => {
+        if (payload.email === 'c@example.com') {
+          return loginCResponse.promise;
+        }
+
+        const suffix = payload.email === 'b@example.com' ? 'b' : 'a';
+        return Promise.resolve({
+          session: { accessToken: `access-${suffix}`, refreshToken: `refresh-${suffix}` },
+        });
+      },
+    );
+    setSessionMock.mockImplementation(
+      ({ access_token, refresh_token }: { access_token: string; refresh_token: string }) => {
+        const suffix = access_token === 'access-b' ? 'b' : 'a';
+        return Promise.resolve({
+          data: {
+            session: { access_token, refresh_token },
+            user: { id: `user-${suffix}`, email: `${suffix}@example.com` },
+          },
+          error: null,
+        });
+      },
+    );
+
+    let currentUser: User | null = users.a;
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: currentUser, setUser }));
+    const logout = hook.result.current.logout();
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalledOnce());
+    const loginB = hook.result.current.login('b@example.com', 'secret-b');
+    signOutResult.resolve({ error: null });
+    await expect(logout).resolves.toBeUndefined();
+    await expect(loginB).resolves.toEqual({ success: true });
+
+    currentUser = users.b;
+    hook.rerender();
+    await expect(hook.result.current.login('a@example.com', 'secret-a')).resolves.toEqual({
+      success: true,
+    });
+    currentUser = users.a;
+    hook.rerender();
+
+    const loginC = hook.result.current.login('c@example.com', 'secret-c');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledTimes(3));
+    currentUser = null;
+    hook.rerender();
+    loginCResponse.resolve({
+      session: { accessToken: 'access-c', refreshToken: 'refresh-c' },
+    });
+
+    await expect(loginC).resolves.toEqual({ success: false, code: 'unexpected' });
+    expect(setSessionMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a queued logout terminal when a newer login fails before commit', async () => {
+    const userA = {
+      id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a',
+    };
+    const refreshResult = createDeferred<{
+      data: {
+        session: {
+          access_token: string;
+          refresh_token: string;
+          user: { id: string };
+        };
+      };
+      error: null;
+    }>();
+    refreshSessionMock.mockReturnValue(refreshResult.promise);
+    callJsonEdgeFunctionMock.mockRejectedValue(new Error('gateway rejected login-c'));
+
+    const setUser = vi.fn();
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: userA, setUser }));
+    const refresh = hook.result.current.refreshUser();
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledOnce());
+    const logout = hook.result.current.logout();
+    const loginC = hook.result.current.login('c@example.com', 'secret-c');
+    await expect(loginC).resolves.toMatchObject({ success: false });
+    expect(signOutMock).not.toHaveBeenCalled();
+
+    refreshResult.resolve({
+      data: {
+        session: {
+          access_token: 'access-a',
+          refresh_token: 'refresh-a',
+          user: { id: 'user-a' },
+        },
+      },
+      error: null,
+    });
+    await expect(refresh).resolves.toBeUndefined();
+    await expect(logout).resolves.toBeUndefined();
+
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+    expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-a');
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('serializes push cleanup preparation before a newer login commit', async () => {
+    const setUser = vi.fn();
+    const preparedCleanup = createDeferred<null>();
+    preparePushNotificationLogoutCleanupMock.mockReturnValue(preparedCleanup.promise);
+    callJsonEdgeFunctionMock.mockResolvedValue({
+      session: { accessToken: 'access-b', refreshToken: 'refresh-b' },
+    });
+    setSessionMock.mockResolvedValue({
+      data: {
+        session: { access_token: 'access-b', refresh_token: 'refresh-b' },
+        user: { id: 'user-b', email: 'b@example.com' },
+      },
+      error: null,
+    });
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a' },
+      setUser,
+    }));
+    const logoutResult = hook.result.current.logout();
+
+    await waitFor(() => expect(preparePushNotificationLogoutCleanupMock).toHaveBeenCalledOnce());
+    const loginResult = hook.result.current.login('b@example.com', 'secret');
+    await waitFor(() => expect(callJsonEdgeFunctionMock).toHaveBeenCalledOnce());
+    expect(setSessionMock).not.toHaveBeenCalled();
+
+    preparedCleanup.resolve(null);
+    await expect(logoutResult).resolves.toBeUndefined();
+    await expect(loginResult).resolves.toEqual({ success: true });
+
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expect(persistAuthSessionMock.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      setSessionMock.mock.invocationCallOrder[0] as number,
+    );
   });
 
   it('fails closed when the auth gateway is missing', async () => {
@@ -528,37 +1247,99 @@ describe('useAuthActions', () => {
     expect(savePendingSignupMediaMock).not.toHaveBeenCalled();
   });
 
-  it('refreshes the current user and clears local auth state when no authenticated user exists', async () => {
+  it('routes refresh hydration through the lifecycle auth event', async () => {
     const setUser = vi.fn();
-    const syncedUser = { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' };
-
-    getUserMock
-      .mockResolvedValueOnce({
-        data: {
-          user: { id: 'user-1', email: 'ada@example.com' },
+    refreshSessionMock.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'refreshed-session-token',
+          refresh_token: 'refreshed-refresh-token',
+          user: { id: 'user-1' },
         },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: {
-          user: null,
-        },
-        error: null,
-      });
-    syncAuthenticatedUserMock.mockResolvedValue(syncedUser);
+      },
+      error: null,
+    });
 
     const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
-    const hook = renderHook(() => useAuthActions({ user: null, setUser }));
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
 
     await act(async () => {
       await hook.result.current.refreshUser();
-      await hook.result.current.refreshUser();
     });
 
-    expect(setUser).toHaveBeenCalledWith(syncedUser);
-    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
-    expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith(null);
-    expect(setUser).toHaveBeenCalledWith(null);
+    expect(refreshSessionMock).toHaveBeenCalledOnce();
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(purgeAuthenticatedUserStateMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('publishes missing refresh sessions as lifecycle-owned local sign-outs', async () => {
+    const setUser = vi.fn();
+    refreshSessionMock.mockResolvedValue({
+      data: { session: null, user: null },
+      error: null,
+    });
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.refreshUser()).resolves.toBeUndefined();
+
+    expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(purgeAuthenticatedUserStateMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('cannot apply a stale refresh result after an A-to-B account switch', async () => {
+    const setUser = vi.fn();
+    let currentUser = {
+      id: 'user-a', email: 'a@example.com', name: 'User A', username: 'user_a',
+    };
+    let resolveRefresh!: (value: {
+      data: {
+        session: { access_token: string; refresh_token: string; user: { id: string } } | null;
+        user: { id: string } | null;
+      };
+      error: null;
+    }) => void;
+    const pendingRefresh = new Promise<Parameters<typeof resolveRefresh>[0]>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    refreshSessionMock.mockReturnValue(pendingRefresh);
+
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({ user: currentUser, setUser }));
+    const refreshResult = hook.result.current.refreshUser();
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledOnce());
+    currentUser = {
+      id: 'user-b', email: 'b@example.com', name: 'User B', username: 'user_b',
+    };
+    hook.rerender();
+
+    resolveRefresh({
+      data: {
+        session: null,
+        user: null,
+      },
+      error: null,
+    });
+    await expect(refreshResult).resolves.toBeUndefined();
+
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
   });
 
   it('routes password reset, resend confirmation, and logout through the auth gateway', async () => {
@@ -649,10 +1430,8 @@ describe('useAuthActions', () => {
     expect(setUser).not.toHaveBeenCalled();
   });
 
-  it('keeps immediate login state when background profile sync returns null or fails', async () => {
+  it('does not start direct hydration across repeated successful logins', async () => {
     const setUser = vi.fn();
-    const immediate = { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' };
-    resolveImmediateAuthUserMock.mockReturnValue(immediate);
     setSessionMock.mockResolvedValue({
       data: {
         session: { access_token: 'edge-access', refresh_token: 'edge-refresh' },
@@ -661,16 +1440,14 @@ describe('useAuthActions', () => {
       error: null,
     });
     callJsonEdgeFunctionMock.mockResolvedValue({ session: { accessToken: 'edge-access', refreshToken: 'edge-refresh' } });
-    syncAuthenticatedUserMock.mockResolvedValueOnce(null).mockRejectedValueOnce(new Error('sync failed'));
     const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
     const hook = renderHook(() => useAuthActions({ user: null, setUser }));
 
     await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toEqual({ success: true });
     await expect(hook.result.current.login('ada@example.com', 'secret')).resolves.toEqual({ success: true });
-    await waitFor(() => expect(loggerWarnMock).toHaveBeenCalledWith(
-      'auth', 'Failed to sync authenticated user after login', expect.any(Error),
-    ));
-    expect(setUser).toHaveBeenCalledWith(immediate);
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
   });
 
   it('maps gateway registration and resend failures and discards redirect state', async () => {
@@ -803,8 +1580,179 @@ describe('useAuthActions', () => {
 
     await expect(hook.result.current.logout()).rejects.toBe(remoteError);
 
+    expect(signOutMock).toHaveBeenNthCalledWith(1);
+    expect(signOutMock).toHaveBeenNthCalledWith(2, { scope: 'local' });
     expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
     expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-1');
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('reports a local provider error without masking the remote sign-out failure', async () => {
+    const setUser = vi.fn();
+    const remoteError = new Error('remote sign-out failed');
+    const localError = new Error('local sign-out failed');
+    signOutMock
+      .mockResolvedValueOnce({ error: remoteError })
+      .mockResolvedValueOnce({ error: localError });
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toBe(remoteError);
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'auth',
+      'Local Supabase sign-out failed after a remote sign-out failure.',
+      { error: 'Error' },
+    );
+    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+    expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-1');
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('contains thrown remote and primitive local provider sign-out failures', async () => {
+    const setUser = vi.fn();
+    const remoteError = new Error('remote sign-out threw');
+    signOutMock.mockRejectedValueOnce(remoteError).mockRejectedValueOnce('local sign-out threw');
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toBe(remoteError);
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'auth',
+      'Local Supabase sign-out threw after a remote sign-out failure.',
+      { error: 'unknown' },
+    );
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('reports an Error thrown by local sign-out after a remote failure', async () => {
+    const setUser = vi.fn();
+    const remoteError = new Error('remote sign-out failed');
+    const localError = new Error('local sign-out threw');
+    signOutMock.mockResolvedValueOnce({ error: remoteError }).mockRejectedValueOnce(localError);
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toBe(remoteError);
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'auth',
+      'Local Supabase sign-out threw after a remote sign-out failure.',
+      { error: 'Error' },
+    );
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('surfaces local sign-out errors when refresh discovers a missing session', async () => {
+    const setUser = vi.fn();
+    const localError = new Error('local sign-out failed');
+    refreshSessionMock.mockResolvedValue({
+      data: { session: null, user: null },
+      error: null,
+    });
+    signOutMock.mockResolvedValueOnce({ error: localError });
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.refreshUser()).rejects.toBe(localError);
+
+    expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('surfaces generic refresh failures without publishing a local sign-out', async () => {
+    const setUser = vi.fn();
+    const refreshError = new Error('refresh network failure');
+    refreshSessionMock.mockResolvedValue({
+      data: { session: null, user: null },
+      error: refreshError,
+    });
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.refreshUser()).rejects.toBe(refreshError);
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('keeps logout fail-closed for primitive push-cleanup preparation failures', async () => {
+    const setUser = vi.fn();
+    preparePushNotificationLogoutCleanupMock.mockRejectedValueOnce('secure storage unavailable');
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toBe('secure storage unavailable');
+
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      'auth',
+      'Push cleanup could not be prepared; logout was kept fail-closed.',
+      { error: 'unknown' },
+    );
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('reports a persisted-session cleanup failure after completing logout', async () => {
+    const setUser = vi.fn();
+    persistAuthSessionMock.mockRejectedValueOnce(new Error('secure session cleanup failed'));
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toThrow(
+      'Local logout cleanup was incomplete.',
+    );
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'auth',
+      'Local logout cleanup was incomplete.',
+      { failedOperations: ['persisted-auth-session'] },
+    );
+    expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-1');
+    expect(setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('reports an authenticated-user-state cleanup failure after completing logout', async () => {
+    const setUser = vi.fn();
+    purgeAuthenticatedUserStateMock.mockRejectedValueOnce(new Error('user cache cleanup failed'));
+    const { useAuthActions } = await import('@/mobile/app/app-shell/auth/session/useAuthActions');
+    const hook = renderHook(() => useAuthActions({
+      user: { id: 'user-1', email: 'ada@example.com', name: 'Ada', username: 'ada' },
+      setUser,
+    }));
+
+    await expect(hook.result.current.logout()).rejects.toThrow(
+      'Local logout cleanup was incomplete.',
+    );
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'auth',
+      'Local logout cleanup was incomplete.',
+      { failedOperations: ['authenticated-user-state'] },
+    );
+    expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
     expect(setUser).toHaveBeenCalledWith(null);
   });
 });

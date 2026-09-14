@@ -9,16 +9,12 @@ import type { ActionMenuSheetItem } from '@/mobile/app/shared/components/feedbac
 import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
-import {
-  MINI_MAP_RESET_LONG_PRESS_MS,
-  useMiniMapInteraction,
-} from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
+import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, layout } from '@/mobile/app/shared/theme/tokens';
+import { colors, layout } from '@/mobile/app/shared/theme/tokens';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import {
   getMapMarkers,
@@ -48,7 +44,6 @@ type ListTileMediaProps = {
   compact: boolean;
   coverLoadFailed: boolean;
   coverPhoto: string | null;
-  hasMenuActions: boolean;
   hasMiniMap: boolean;
   isMapInteractive: boolean;
   list: PlaceList;
@@ -56,7 +51,6 @@ type ListTileMediaProps = {
   markers: React.ComponentProps<typeof MiniMapPreview>['places'];
   onCoverLoadError: () => void;
   onMapGesture: () => void;
-  onOpenMenu: () => void;
   placeCount: number;
   showInteractionHint: boolean;
   showPrivacyBadge: boolean;
@@ -66,7 +60,6 @@ function ListTileMedia({
   compact,
   coverLoadFailed,
   coverPhoto,
-  hasMenuActions,
   hasMiniMap,
   isMapInteractive,
   list,
@@ -74,7 +67,6 @@ function ListTileMedia({
   markers,
   onCoverLoadError,
   onMapGesture,
-  onOpenMenu,
   placeCount,
   showInteractionHint,
   showPrivacyBadge,
@@ -122,21 +114,6 @@ function ListTileMedia({
         </View>
       ) : null}
 
-      {hasMenuActions ? (
-        <Pressable
-          accessibilityLabel={tr.common.contentActionsTitle}
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={(event) => {
-            event.stopPropagation();
-            onOpenMenu();
-          }}
-          style={styles.singleActionBadge}
-        >
-          <Ellipsis color={colors.onPrimary} size={10} />
-        </Pressable>
-      ) : null}
-
       {(list.likes || 0) > 0 ? (
         <View style={styles.mediaFooterRow}>
           <View style={styles.mediaFooterBadge}>
@@ -146,6 +123,49 @@ function ListTileMedia({
         </View>
       ) : null}
     </View>
+  );
+}
+
+function ListMiniMapToggle({
+  activateMap,
+  compact,
+  deactivateMap,
+  hasMiniMap,
+  isMapInteractive,
+}: {
+  activateMap: () => void;
+  compact: boolean;
+  deactivateMap: () => void;
+  hasMiniMap: boolean;
+  isMapInteractive: boolean;
+}) {
+  if (!hasMiniMap || compact) {
+    return null;
+  }
+
+  return (
+    <Pressable
+      accessibilityLabel={isMapInteractive ? tr.cards.hideMiniMap : tr.cards.focusMiniMap}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isMapInteractive }}
+      onPress={() => {
+        if (isMapInteractive) {
+          deactivateMap();
+        } else {
+          activateMap();
+        }
+      }}
+      style={[styles.titleActionButton, styles.titleActionOverlay]}
+    >
+      <View
+        style={[
+          styles.titleActionButtonVisual,
+          isMapInteractive ? styles.titleActionButtonActive : null,
+        ]}
+      >
+        <Crosshair color={colors.primary} size={10} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -174,7 +194,6 @@ function ListGridTileComponent({
   const [coverLoadFailed, setCoverLoadFailed] = React.useState(false);
   const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
   const lastMapGestureAtRef = React.useRef(0);
-  const handledLongPressRef = React.useRef(false);
   const [menuVisible, setMenuVisible] = React.useState(false);
   const hasMiniMap = (!coverPhoto || coverLoadFailed) && list.places.length > 0;
   const miniMapMarkers = React.useMemo(
@@ -224,87 +243,82 @@ function ListGridTileComponent({
       {showOwner && owner && !compact ? (
         <OwnerHeader owner={owner} onPress={onOwnerPress} onPressIn={onOwnerPressIn} />
       ) : null}
-      <Pressable
-        accessibilityLabel={list.name}
-        accessibilityRole="button"
-        onPress={handleTilePress}
-        onPressIn={onPressIn}
-        style={styles.tilePressable}
-      >
-        <ListTileMedia
-          compact={compact}
-          coverLoadFailed={coverLoadFailed}
-          coverPhoto={coverPhoto}
-          hasMenuActions={Boolean(menuActions?.length)}
-          hasMiniMap={hasMiniMap}
-          isMapInteractive={isMapInteractive}
-          list={list}
-          mapFocusKey={mapFocusKey}
-          markers={miniMapMarkers}
-          onCoverLoadError={() => setCoverLoadFailed(true)}
-          onMapGesture={() => {
-            lastMapGestureAtRef.current = Date.now();
-          }}
-          onOpenMenu={() => setMenuVisible(true)}
-          placeCount={placeCount}
-          showInteractionHint={showInteractionHint}
-          showPrivacyBadge={showPrivacyBadge}
-        />
+      <View style={styles.tileActionShell}>
+        <Pressable
+          accessible={!isMapInteractive}
+          accessibilityLabel={
+            isMapInteractive
+              ? undefined
+              : `${tr.common.list}: ${list.name}. ${tr.cards.placesCount(placeCount)}${
+                  showPrivacyBadge
+                    ? `. ${list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}`
+                    : ''
+                }`
+          }
+          accessibilityRole={isMapInteractive ? undefined : 'button'}
+          onPress={isMapInteractive ? undefined : handleTilePress}
+          onPressIn={isMapInteractive ? undefined : onPressIn}
+          pointerEvents={isMapInteractive ? 'box-none' : 'auto'}
+          style={styles.tilePressable}
+        >
+          <ListTileMedia
+            compact={compact}
+            coverLoadFailed={coverLoadFailed}
+            coverPhoto={coverPhoto}
+            hasMiniMap={hasMiniMap}
+            isMapInteractive={isMapInteractive}
+            list={list}
+            mapFocusKey={mapFocusKey}
+            markers={miniMapMarkers}
+            onCoverLoadError={() => setCoverLoadFailed(true)}
+            onMapGesture={() => {
+              lastMapGestureAtRef.current = Date.now();
+            }}
+            placeCount={placeCount}
+            showInteractionHint={showInteractionHint}
+            showPrivacyBadge={showPrivacyBadge}
+          />
 
-        <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
-          <View style={styles.tileTitleRow}>
-            <View style={styles.tileTitleContent}>
-              <ExpandableText
-                text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
-                collapsedLines={1}
-                textStyle={styles.tileTitle}
-                showIndicator={false}
-                renderContent={() => (
+          <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
+            <View style={styles.tileTitleRow}>
+              <View style={styles.tileTitleContent}>
+                <Text numberOfLines={1} style={styles.tileTitle}>
                   <HighlightedText
                     query={searchQuery}
                     text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
                   />
-                )}
-              />
+                </Text>
+              </View>
+              {hasMiniMap && !compact ? <View style={styles.titleActionPlaceholder} /> : null}
             </View>
-            {hasMiniMap && !compact ? (
-              <Pressable
-                accessibilityLabel={tr.cards.focusMiniMap}
-                accessibilityRole="button"
-                delayLongPress={MINI_MAP_RESET_LONG_PRESS_MS}
-                onPressIn={() => {
-                  handledLongPressRef.current = false;
-                }}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  if (handledLongPressRef.current) {
-                    handledLongPressRef.current = false;
-                    return;
-                  }
-
-                  activateMap();
-                }}
-                onLongPress={(event) => {
-                  event.stopPropagation();
-                  handledLongPressRef.current = true;
-                  deactivateMap();
-                }}
-                hitSlop={hitSlopFor(20)}
-                style={[
-                  styles.titleActionButton,
-                  isMapInteractive ? styles.titleActionButtonActive : null,
-                ]}
-              >
-                <Crosshair color={colors.primary} size={10} />
-              </Pressable>
-            ) : null}
+            <Text numberOfLines={2} style={styles.tileMetaSummary}>
+              {tr.cards.placesCount(placeCount)}
+              {!compact && timestampText ? ` · ${timestampText}` : ''}
+            </Text>
           </View>
-          <Text numberOfLines={2} style={styles.tileMetaSummary}>
-            {tr.cards.placesCount(placeCount)}
-            {!compact && timestampText ? ` · ${timestampText}` : ''}
-          </Text>
-        </View>
-      </Pressable>
+        </Pressable>
+
+        {menuActions?.length ? (
+          <Pressable
+            accessibilityLabel={tr.common.contentActionsTitle}
+            accessibilityRole="button"
+            onPress={() => setMenuVisible(true)}
+            style={styles.singleActionBadge}
+          >
+            <View style={styles.singleActionBadgeVisual}>
+              <Ellipsis color={colors.onPrimary} size={10} />
+            </View>
+          </Pressable>
+        ) : null}
+
+        <ListMiniMapToggle
+          activateMap={activateMap}
+          compact={compact}
+          deactivateMap={deactivateMap}
+          hasMiniMap={hasMiniMap}
+          isMapInteractive={isMapInteractive}
+        />
+      </View>
 
       {menuVisible && menuActions?.length ? (
         <DeferredActionMenuSheet

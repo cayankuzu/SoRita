@@ -8,11 +8,12 @@ import { Globe, ImagePlus, Lock, Plus, X } from 'lucide-react-native';
 import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
+import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -61,7 +62,13 @@ export function PlaceEditorNewListForm({
 
   if (!showNewListForm) {
     return (
-      <InstantPressable style={styles.createListTrigger} onPress={() => onShowNewListFormChange(true)}>
+      <InstantPressable
+        accessibilityLabel={tr.placeEditor.createList}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: false }}
+        style={styles.createListTrigger}
+        onPress={() => onShowNewListFormChange(true)}
+      >
         <Plus color={colors.primary} size={16} />
         <Text style={styles.createListTriggerText}>{tr.placeEditor.createList}</Text>
       </InstantPressable>
@@ -72,24 +79,32 @@ export function PlaceEditorNewListForm({
     <View style={styles.createListCard}>
       <View style={styles.createListHeader}>
         <Text style={styles.sectionTitle}>{tr.placeEditor.newList}</Text>
-        <InstantPressable
+        <IconButton
           accessibilityLabel={tr.common.close}
           accessibilityState={{ disabled: isCreatingList }}
           disabled={isCreatingList}
           onPress={() => onShowNewListFormChange(false)}
+          size="sm"
         >
           <X color={colors.textSoft} size={16} />
-        </InstantPressable>
+        </IconButton>
       </View>
 
       <View style={styles.coverPickerRow}>
-        <InstantPressable
-          disabled={isCreatingList}
-          onPress={onPickListCover}
-          style={[styles.coverPicker, newListCoverImage ? styles.coverPickerSelected : null]}
-        >
+        <View style={[styles.coverPicker, newListCoverImage ? styles.coverPickerSelected : null]}>
           <View style={styles.coverPickerHeader}>
-            <View style={styles.coverPickerHeaderCopy}>
+            <InstantPressable
+              accessibilityLabel={tr.placeEditor.chooseCoverPhoto}
+              accessibilityRole="button"
+              accessibilityState={{
+                busy: isPickingListCover,
+                disabled: isCreatingList || isPickingListCover,
+                selected: Boolean(newListCoverImage),
+              }}
+              disabled={isCreatingList || isPickingListCover}
+              onPress={onPickListCover}
+              style={styles.coverPickerHeaderCopy}
+            >
               <View style={styles.coverPickerIconWrap}>
                 <ImagePlus color={colors.secondary} size={16} />
               </View>
@@ -105,17 +120,14 @@ export function PlaceEditorNewListForm({
                     : tr.placeEditor.newListCoverUsageHint}
                 </Text>
               </View>
-            </View>
+            </InstantPressable>
 
             {newListCoverImage ? (
               <InstantPressable
-              accessibilityLabel={tr.listEditor.coverPreviewExpand}
+                accessibilityLabel={tr.listEditor.coverPreviewExpand}
                 accessibilityRole="imagebutton"
                 disabled={isCreatingList || isPickingListCover}
-                onPress={(event) => {
-                  event.stopPropagation?.();
-                  setCoverPreviewVisible(true);
-                }}
+                onPress={() => setCoverPreviewVisible(true)}
                 style={styles.selectionBadge}
               >
                 <Text style={styles.selectionBadgeText}>{tr.common.previewTitle}</Text>
@@ -128,29 +140,32 @@ export function PlaceEditorNewListForm({
             uri={newListCoverImage}
             variant="list-cover"
           />
-        </InstantPressable>
+        </View>
 
         {newListCoverImage ? (
-          <InstantPressable
+          <IconButton
             accessibilityLabel={tr.listEditor.removeCover}
             accessibilityState={{ disabled: isCreatingList || isPickingListCover }}
             disabled={isCreatingList || isPickingListCover}
             onPress={() => onNewListCoverImageChange('')}
-            hitSlop={hitSlopFor(30)}
+            size="sm"
             style={styles.coverClearInline}
+            variant="inverse"
           >
             <X color={colors.onPrimary} size={14} />
-          </InstantPressable>
+          </IconButton>
         ) : null}
       </View>
 
       <TextField
+        label={tr.placeEditor.listNameLabel}
         value={newListName}
         onChangeText={onNewListNameChange}
         placeholder={tr.placeEditor.listNamePlaceholder}
         maxLength={LIST_NAME_MAX_LENGTH}
       />
       <TextField
+        label={tr.placeEditor.listDescriptionLabel}
         value={newListDescription}
         onChangeText={onNewListDescriptionChange}
         placeholder={tr.placeEditor.listDescriptionPlaceholder}
@@ -158,8 +173,14 @@ export function PlaceEditorNewListForm({
         maxLength={LIST_DESCRIPTION_MAX_LENGTH}
       />
 
-      <View style={styles.privacyRow}>
+      <View
+        accessibilityLabel={tr.placeEditor.listPrivacyLabel}
+        accessibilityRole="radiogroup"
+        style={styles.privacyRow}
+      >
         <InstantPressable
+          accessibilityRole="radio"
+          accessibilityState={{ checked: newListPublic, disabled: isCreatingList }}
           disabled={isCreatingList}
           style={[styles.privacyButton, newListPublic ? styles.privacyButtonActive : null]}
           onPress={() => onNewListPublicChange(true)}
@@ -170,6 +191,8 @@ export function PlaceEditorNewListForm({
           </Text>
         </InstantPressable>
         <InstantPressable
+          accessibilityRole="radio"
+          accessibilityState={{ checked: !newListPublic, disabled: isCreatingList }}
           disabled={isCreatingList}
           style={[styles.privacyButton, !newListPublic ? styles.privateButtonActive : null]}
           onPress={() => onNewListPublicChange(false)}

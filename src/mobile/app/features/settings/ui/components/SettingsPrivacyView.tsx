@@ -1,6 +1,6 @@
 import React from 'react';
-import { Globe, LockKeyhole } from 'lucide-react-native';
-import { View } from 'react-native';
+import { BarChart3, Globe, LockKeyhole } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 
 import { PrivacyOption } from '@/mobile/app/features/settings/ui/components/PrivacyOption';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
@@ -10,19 +10,25 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsPrivacyViewProps = {
+  analyticsConsentGranted: boolean;
   isPublicAccount: boolean;
+  isSavingAnalyticsConsent: boolean;
   isSavingPrivacy: boolean;
   onBack: () => void;
   onRefresh: () => void;
+  onSaveAnalyticsConsent: (value: boolean) => void;
   onSavePrivacy: (value: boolean) => void;
   refreshing: boolean;
 };
 
 export function SettingsPrivacyView({
+  analyticsConsentGranted,
   isPublicAccount,
+  isSavingAnalyticsConsent,
   isSavingPrivacy,
   onBack,
   onRefresh,
+  onSaveAnalyticsConsent,
   onSavePrivacy,
   refreshing,
 }: SettingsPrivacyViewProps) {
@@ -40,6 +46,29 @@ export function SettingsPrivacyView({
             onSavePrivacy(true);
           }}
         />
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          {tr.settings.privacy.analyticsTitle}
+        </Text>
+        <PrivacyOption
+          active={analyticsConsentGranted}
+          disabled={isSavingAnalyticsConsent}
+          icon={<BarChart3 color={analyticsConsentGranted ? colors.primary : colors.textMuted} size={18} />}
+          title={tr.settings.privacy.analyticsEnabled}
+          description={tr.settings.privacy.analyticsEnabledDescription}
+          onPress={() => {
+            onSaveAnalyticsConsent(true);
+          }}
+        />
+        <PrivacyOption
+          active={!analyticsConsentGranted}
+          disabled={isSavingAnalyticsConsent}
+          icon={<BarChart3 color={!analyticsConsentGranted ? colors.primary : colors.textMuted} size={18} />}
+          title={tr.settings.privacy.analyticsDisabled}
+          description={tr.settings.privacy.analyticsDisabledDescription}
+          onPress={() => {
+            onSaveAnalyticsConsent(false);
+          }}
+        />
         <PrivacyOption
           active={!isPublicAccount}
           disabled={isSavingPrivacy}
@@ -50,6 +79,15 @@ export function SettingsPrivacyView({
             onSavePrivacy(false);
           }}
         />
+        {isSavingPrivacy || isSavingAnalyticsConsent ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            style={styles.savingStatus}
+          >
+            {isSavingPrivacy ? tr.settings.privacy.saving : tr.settings.privacy.analyticsSaving}
+          </Text>
+        ) : null}
       </View>
     </Screen>
   );

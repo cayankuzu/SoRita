@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type InlineNoticeProps = {
   title: string;
@@ -47,7 +47,7 @@ export function InlineNotice({
 
   return (
     <View
-      accessibilityRole="alert"
+      accessibilityLiveRegion={tone === 'danger' ? 'assertive' : 'polite'}
       style={[
         styles.container,
         {
@@ -56,7 +56,12 @@ export function InlineNotice({
         },
       ]}
     >
-      <Text style={[styles.title, { color: palette.titleColor }]}>{title}</Text>
+      <Text
+        accessibilityRole={tone === 'danger' ? 'alert' : undefined}
+        style={[styles.title, { color: palette.titleColor }]}
+      >
+        {title}
+      </Text>
       {description ? (
         <Text style={[styles.description, { color: palette.descriptionColor }]}>
           {description}
@@ -81,7 +86,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.captionText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   description: {
     ...typography.captionText,
@@ -92,6 +97,6 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     ...typography.captionText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
 });

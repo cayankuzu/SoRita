@@ -23,7 +23,10 @@ import {
 } from '@/mobile/app/platform/storage/listEditorDraft';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
+import { logger } from '@/mobile/app/platform/feedback/logger';
 import { t } from '@/mobile/app/shared/i18n';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
@@ -63,6 +66,7 @@ function serializeListEditorState(state: {
 type ListEditorModalProps = {
   visible: boolean;
   list: PlaceList | null;
+  ownerUserId: string;
   resumeDraft?: PersistedListEditorDraft | null;
   onClose: () => void;
   onSave: (list: PlaceList) => Promise<void> | void;
@@ -71,6 +75,7 @@ type ListEditorModalProps = {
 export function ListEditorModal({
   visible,
   list,
+  ownerUserId,
   resumeDraft = null,
   onClose,
   onSave,
@@ -99,13 +104,12 @@ export function ListEditorModal({
   const [coverPreviewVisible, setCoverPreviewVisible] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isPickingCover, setIsPickingCover] = useState(false);
   const isPickingCoverRef = React.useRef(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const initialStateSourceRef = React.useRef<string | null>(null);
   const initialStateSignatureRef = React.useRef<string | null>(null);
-  const nameCount = `${name.trim().length}/${LIST_NAME_MAX_LENGTH}`;
-  const descriptionCount = `${description.trim().length}/${LIST_DESCRIPTION_MAX_LENGTH}`;
   const initialStateSource = list
     ? resumeDraft?.listId === list.id
       ? `draft:${list.id}`
@@ -129,6 +133,8 @@ export function ListEditorModal({
       return;
     }
 
+    setSaveError(null);
+
     if (resumeDraft?.listId === list.id) {
       setName(resumeDraft.name);
       setDescription(resumeDraft.description);
@@ -149,7 +155,7 @@ export function ListEditorModal({
     }
 
     const timeoutId = setTimeout(() => {
-      void savePersistedListEditorDraft({
+      void savePersistedListEditorDraft(ownerUserId, {
         coverImage,
         description,
         isPublic,
@@ -161,7 +167,7 @@ export function ListEditorModal({
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [coverImage, description, isPublic, list, name, visible]);
+  }, [coverImage, description, isPublic, list, name, ownerUserId, visible]);
 
   useEffect(() => {
     if (!visible || !coverImage) {
@@ -238,6 +244,7 @@ export function ListEditorModal({
     }
 
     setLoading(true);
+    setSaveError(null);
 
     try {
       await onSave({
@@ -251,7 +258,10 @@ export function ListEditorModal({
         isPublic,
         updatedAt: new Date().toISOString(),
       });
-      await clearPersistedListEditorDraft(list.id);
+      await clearPersistedListEditorDraft(ownerUserId, list.id);
+    } catch (error) {
+      logger.error('list-editor', 'Failed to save list edits', error);
+      setSaveError(getUserFacingErrorMessage(error, t.listEditor.saveFailed));
     } finally {
       setLoading(false);
     }
@@ -273,6 +283,7 @@ export function ListEditorModal({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={handleRequestClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <Pressable
@@ -334,11 +345,9 @@ export function ListEditorModal({
             <ListEditorForm
               coverImage={coverImage}
               description={description}
-              descriptionCount={descriptionCount}
               isPublic={isPublic}
               loading={loading}
               name={name}
-              nameCount={nameCount}
               onCoverPress={() => void handlePickCover()}
               onDescriptionChange={(value) =>
                 setDescription(clampMultilineTextLength(value, LIST_DESCRIPTION_MAX_LENGTH))
@@ -348,6 +357,13 @@ export function ListEditorModal({
               onRemoveCover={() => setCoverImage('')}
               onVisibilityChange={setIsPublic}
             />
+            {saveError ? (
+              <InlineNotice
+                description={saveError}
+                title={t.listEditor.saveFailedTitle}
+                tone="danger"
+              />
+            ) : null}
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: footerPaddingBottom }]}>

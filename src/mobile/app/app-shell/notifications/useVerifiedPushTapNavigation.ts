@@ -19,14 +19,36 @@ import {
 export function useVerifiedPushTapNavigation(userId?: string) {
   const currentUserIdRef = useRef<string | null>(userId ?? null);
   const lastHandledNotificationIdRef = useRef<string | null>(null);
+  const handledResponseIdsRef = useRef<Set<string>>(new Set());
   const navigationRetryRef = useRef<NavigationRetryHandle | null>(null);
   const navigationRequestIdRef = useRef(0);
 
   currentUserIdRef.current = userId ?? null;
 
-  const openPushTarget = useCallback((payload: PushPayload) => {
+  const openPushTarget = useCallback((payload: PushPayload, responseId?: string) => {
+    if (responseId && handledResponseIdsRef.current.has(responseId)) {
+      return;
+    }
+
     if (payload.notificationId && payload.notificationId === lastHandledNotificationIdRef.current) {
       return;
+    }
+
+    if (responseId) {
+      handledResponseIdsRef.current.add(responseId);
+
+      if (handledResponseIdsRef.current.size > 64) {
+        const oldestResponseId = handledResponseIdsRef.current.values().next().value;
+        if (oldestResponseId) {
+          handledResponseIdsRef.current.delete(oldestResponseId);
+        }
+      }
+    }
+
+    // Claim the provider event before asynchronous verification/navigation so
+    // the live listener and cold-start response cannot race each other.
+    if (payload.notificationId) {
+      lastHandledNotificationIdRef.current = payload.notificationId;
     }
 
     navigationRetryRef.current?.cancel();
@@ -71,7 +93,6 @@ export function useVerifiedPushTapNavigation(userId?: string) {
           return;
         }
 
-        lastHandledNotificationIdRef.current = notification.id;
         const target = resolveVerifiedPushNavigationTarget(notification);
 
         if (target.screen === 'ListDetail') {
@@ -121,6 +142,7 @@ export function useVerifiedPushTapNavigation(userId?: string) {
 
   useEffect(() => {
     lastHandledNotificationIdRef.current = null;
+    handledResponseIdsRef.current.clear();
     navigationRequestIdRef.current += 1;
     navigationRetryRef.current?.cancel();
     navigationRetryRef.current = null;

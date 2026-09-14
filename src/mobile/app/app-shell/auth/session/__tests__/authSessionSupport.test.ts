@@ -310,6 +310,49 @@ describe('authSessionSupport', () => {
     expect(support.getAuthErrorCode('other')).toBe('unexpected');
   });
 
+  it('drops a stale authenticated-user sync before cache or persistence writes', async () => {
+    const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
+    const authUser = {
+      id: 'user-a',
+      email: 'a@example.com',
+      email_confirmed_at: '2026-06-29T10:00:00.000Z',
+      user_metadata: { name: 'A', username: 'user_a' },
+    };
+    const context = {
+      currentUser: {
+        id: 'user-a', email: 'a@example.com', name: 'A', username: 'user_a',
+      },
+      users: [],
+      allUsers: [],
+      blockRows: [],
+    };
+    let current = true;
+    let resolveContext!: (value: typeof context) => void;
+    const pendingContext = new Promise<typeof context>((resolve) => {
+      resolveContext = resolve;
+    });
+
+    maybeSingleMock.mockResolvedValue({ data: { id: authUser.id }, error: null });
+    getPendingSignupMediaMock.mockResolvedValue(null);
+    fetchVisibleDataContextMock.mockReturnValue(pendingContext);
+
+    const sync = support.syncAuthenticatedUser(authUser as never, {
+      isCurrent: () => current,
+    });
+
+    await vi.waitFor(() => {
+      expect(fetchVisibleDataContextMock).toHaveBeenCalledWith(authUser.id);
+    });
+
+    current = false;
+    resolveContext(context);
+
+    await expect(sync).resolves.toBeNull();
+    expect(setQueryDataMock).not.toHaveBeenCalled();
+    expect(savePersistedAuthUserMock).not.toHaveBeenCalled();
+    expect(refreshNotificationsMock).not.toHaveBeenCalled();
+  });
+
   it('verifies auth users against the auth service and detects missing accounts', async () => {
     const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
     const session = { access_token: 'token', refresh_token: 'refresh' };
@@ -503,5 +546,148 @@ describe('authSessionSupport', () => {
     const error = new Error('auth unavailable');
     getUserMock.mockResolvedValueOnce({ data: { user: null }, error });
     await expect(support.getVerifiedAuthUser({ access_token: 'token' } as never)).rejects.toThrow(error);
+  });
+
+  it('checks every authenticated-user sync ownership boundary', async () => {
+    const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
+    const authUser = {
+      id: 'user-guard',
+      email: 'guard@example.com',
+      email_confirmed_at: '2026-09-07T10:00:00.000Z',
+      user_metadata: {},
+    };
+    const currentUser = {
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Guard',
+      username: 'guard',
+    };
+    const context = {
+      allUsers: [currentUser],
+      blockRows: [],
+      currentUser,
+      users: [currentUser],
+    };
+
+    for (const firstStaleCheck of [1, 2, 4, 6, 7, 8, 9]) {
+      let ownershipChecks = 0;
+      const isCurrent = () => {
+        ownershipChecks += 1;
+        return ownershipChecks < firstStaleCheck;
+      };
+      maybeSingleMock.mockReset().mockResolvedValue({ data: { id: authUser.id }, error: null });
+      getPendingSignupMediaMock.mockReset().mockResolvedValue(null);
+      fetchVisibleDataContextMock.mockReset().mockResolvedValue(context);
+      savePersistedAuthUserMock.mockReset().mockResolvedValue(undefined);
+      refreshNotificationsMock.mockReset().mockResolvedValue([]);
+
+      await support.syncAuthenticatedUser(authUser as never, { isCurrent });
+      await vi.waitFor(() => {
+        expect(ownershipChecks).toBeGreaterThanOrEqual(firstStaleCheck);
+      });
+    }
+  });
+
+  it('checks every pending-media ownership boundary', async () => {
+    const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
+    const authUser = { id: 'user-media', email: 'media@example.com' };
+    const pendingMedia = { coverPhoto: 'new-cover.jpg', profilePhoto: 'new-profile.jpg' };
+    const currentUser = {
+      coverPhoto: '',
+      email: authUser.email,
+      id: authUser.id,
+      name: 'Media',
+      profilePhoto: '',
+      username: 'media',
+    };
+
+    for (const firstStaleCheck of [1, 2, 3, 4, 5]) {
+      let ownershipChecks = 0;
+      getPendingSignupMediaMock.mockReset().mockResolvedValue(pendingMedia);
+      fetchUserByIdIncludingBlockedMock.mockReset().mockResolvedValue(currentUser);
+      updateUserMock.mockReset().mockResolvedValue(undefined);
+      clearPendingSignupMediaMock.mockReset().mockResolvedValue(undefined);
+
+      await support.syncPendingProfileMedia(authUser as never, {
+        isCurrent: () => {
+          ownershipChecks += 1;
+          return ownershipChecks < firstStaleCheck;
+        },
+      });
+      expect(ownershipChecks).toBeGreaterThanOrEqual(firstStaleCheck);
+    }
+
+    let sameImageChecks = 0;
+    fetchUserByIdIncludingBlockedMock.mockReset().mockResolvedValue({
+      ...currentUser,
+      coverPhoto: pendingMedia.coverPhoto,
+      profilePhoto: pendingMedia.profilePhoto,
+    });
+    getPendingSignupMediaMock.mockReset().mockResolvedValue(pendingMedia);
+    await support.syncPendingProfileMedia(authUser as never, {
+      isCurrent: () => {
+        sameImageChecks += 1;
+        return sameImageChecks < 4;
+      },
+    });
+    expect(sameImageChecks).toBe(4);
+  });
+
+  it('covers sparse profile and session-email fallback branches', async () => {
+    const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
+    const sparseAuthUser = {
+      id: 'fallback-user',
+      email: null,
+      email_confirmed_at: '2026-09-07T10:00:00.000Z',
+    };
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    insertMock.mockResolvedValue({ error: null });
+
+    await support.ensureProfileExists(sparseAuthUser as never);
+    await support.ensureProfileExists({
+      ...sparseAuthUser,
+      user_metadata: {
+        bio: 'Bio',
+        cover_photo_url: 'cover.jpg',
+        interests: ['coffee'],
+        profile_photo_url: 'profile.jpg',
+      },
+    } as never);
+
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      bio: null,
+      email: '',
+      name: 'Yeni Kullanıcı',
+    }));
+    expect(support.createUserFromAuthUser(sparseAuthUser as never)).toMatchObject({
+      bio: undefined,
+      email: '',
+      name: 'Yeni Kullanıcı',
+    });
+    expect(support.createUserFromAuthUser({
+      ...sparseAuthUser,
+      user_metadata: { bio: 'Bio' },
+    } as never)).toMatchObject({ bio: 'Bio' });
+
+    const currentUser = {
+      email: '', id: sparseAuthUser.id, name: 'Fallback', username: 'fallback',
+    };
+    fetchVisibleDataContextMock.mockResolvedValue({
+      allUsers: [currentUser], blockRows: [], currentUser, users: [currentUser],
+    });
+    getSessionMock
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValueOnce({
+        data: { session: { user: { email: null, id: sparseAuthUser.id } } },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { session: { user: { email: 'ignored@example.com', id: sparseAuthUser.id } } },
+        error: new Error('session failed'),
+      });
+
+    await expect(support.resolveCurrentUser(sparseAuthUser.id)).resolves.toMatchObject({ email: '' });
+    await expect(support.resolveCurrentUser(sparseAuthUser.id)).resolves.toMatchObject({ email: '' });
+    await expect(support.resolveCurrentUser(sparseAuthUser.id)).resolves.toMatchObject({ email: '' });
   });
 });

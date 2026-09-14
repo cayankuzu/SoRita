@@ -10,6 +10,7 @@ import {
   type ExploreKind,
   type ExplorePage,
 } from '@/mobile/app/data/repositories/exploreRepository';
+import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
 export const EXPLORE_STALE_TIME_MS = 1000 * 60 * 5;
 
@@ -25,7 +26,7 @@ export function useExploreQuery(
 ) {
   const enabled = options.enabled ?? true;
   const kind = options.kind ?? 'all';
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
 
   return useInfiniteQuery<
     ExplorePage,

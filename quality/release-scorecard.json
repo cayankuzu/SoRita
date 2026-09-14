@@ -1,12 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "repository": "https://github.com/cayankuzu/SoRita",
-  "commitSha": "b8c8dd9bc822d4d66f55befcbde88ecb38704c3c",
-  "generatedAt": "2026-09-03",
+  "generatedAt": "2026-09-07",
   "targetScore": 9.8,
-  "scoringRule": "A category may only score at or above targetScore when evidenceLevel is RUNTIME_VERIFIED and at least one runtimeEvidence receipt is bound to commitSha.",
+  "scoringRule": "The checked-in scorecard is a NO-GO baseline and cannot assert runtime verification. Final GO exists only in a checksum-bound release-evidence workflow artifact for the exact candidate SHA.",
   "verdict": "NO-GO",
-  "verdictStatement": "IMPLEMENTATION COMPLETE, RELEASE NO-GO UNTIL THE LISTED SAME-SHA RUNTIME/PROVIDER EVIDENCE IS VERIFIED.",
+  "verdictStatement": "REPOSITORY BASELINE ONLY. RELEASE NO-GO UNTIL THE CHECKSUM-BOUND SAME-SHA WORKFLOW ATTESTATION VERIFIES EVERY REQUIRED RUNTIME AND PROVIDER CHECK.",
   "categories": [
     {
       "id": 1,
@@ -52,14 +51,14 @@
       "score": 9.5,
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
-        "security:verify (117 tests across 8 files)",
+        "security:verify (303 tests across 20 files)",
         "pgTAP RLS and IDOR (180 tests across 6 files)",
         "architecture:check secret-boundary rules",
         "security:audit:prod (0 critical, 0 high)",
-        "text-encoding:check (769 files)"
+        "text-encoding:check (782 files)"
       ],
       "runtimeEvidence": [],
-      "gap": "No staging RLS/IDOR run against the hosted project; no provider-side review."
+      "gap": "A historical Sentry auth credential incident remains open; no hosted staging RLS/IDOR run or provider-side review is attached."
     },
     {
       "id": 5,
@@ -168,13 +167,13 @@
       "score": 9.5,
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
-        "932 unit and component tests across 167 files",
+        "995 unit and component tests across 167 files",
         "180 pgTAP tests across 6 suites",
         "34 Worker contract tests",
-        "test:coverage branches 90.08%, statements 94.53%, lines 94.74%, functions 94.10%"
+        "test:coverage branches 90.25%, statements 94.63%, lines 94.86%, functions 94.26%"
       ],
       "runtimeEvidence": [],
-      "gap": "No device end-to-end run bound to this commit. Only 1 of 12 device-required flows has Maestro evidence."
+      "gap": "No device end-to-end run is bound to an immutable candidate SHA. Only 1 of 12 device-required flows has a mapped Maestro YAML definition, not an execution result."
     },
     {
       "id": 14,
@@ -230,11 +229,11 @@
       "score": 9.4,
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
-        "deployment-workflows:test (15)",
-        "docker:test end to end"
+        "deployment-workflows:test (17)",
+        "docker:verify (8 stages)"
       ],
       "runtimeEvidence": [],
-      "gap": "No protected production run executed on this commit."
+      "gap": "No protected production run is bound to an immutable candidate SHA."
     },
     {
       "id": 19,
@@ -273,7 +272,7 @@
         "dead-code:check"
       ],
       "runtimeEvidence": [],
-      "gap": "One moderate advisory (decode-uri-component) is accepted with owner, reason, exploitability and a 2026-12-01 expiry because the only patched release is ESM-only and its CommonJS consumer would break. SBOM is produced in CI but not attached to a release for this commit."
+      "gap": "One moderate advisory (decode-uri-component) is accepted with owner, reason, exploitability and a 2026-12-01 expiry because the only patched release is ESM-only and its CommonJS consumer would break. No SBOM is attached to a release for an immutable candidate SHA."
     },
     {
       "id": 22,
@@ -293,10 +292,12 @@
       "evidenceLevel": "AUTOMATED",
       "automatedEvidence": [
         "expo:check",
-        "native parity guards"
+        "native parity guards",
+        "bundle:android:check (Hermes bytecode within budget)",
+        "local debug APK v2 signature inspection"
       ],
       "runtimeEvidence": [],
-      "gap": "No signed artifact inspected."
+      "gap": "No production-signed AAB/IPA or store artifact inspected."
     },
     {
       "id": 24,
@@ -321,7 +322,7 @@
         "ops CLIs"
       ],
       "runtimeEvidence": [],
-      "gap": "No owner signoff or rehearsed incident bound to this commit."
+      "gap": "No owner signoff or rehearsed incident is bound to an immutable candidate SHA."
     },
     {
       "id": 26,

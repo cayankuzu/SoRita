@@ -10,7 +10,7 @@ not evidence that any provider-side build, update, channel, secret, or deploymen
 
 | Concern | Repository contract |
 | --- | --- |
-| App/runtime version | Expo app version `1.0.102`; `runtimeVersion.policy` is `appVersion`. |
+| App/runtime version | Expo app version `1.0.106`; `runtimeVersion.policy` is `appVersion`. |
 | Update URL | Derived only as `https://u.expo.dev/<EXPO_PUBLIC_EXPO_PROJECT_ID>`. Production config fails closed when the project ID is absent or malformed. |
 | Launch behavior | Updates are checked on load with zero launch wait. The cached or embedded update starts immediately; a newly downloaded update normally applies on the next cold start. |
 | Embedded fallback | `useEmbeddedUpdate` is enabled. This is a fallback mechanism, not proof that a remote rollback has been tested. |
@@ -27,12 +27,12 @@ look compatible, so the classifier and binary-source evidence remain mandatory.
 ## First OTA-capable binary is mandatory
 
 No OTA update can safely precede the binaries that contain its update URL, runtime, channel, and
-embedded fallback. Before the first preview or production OTA for runtime `1.0.102`, retain all of:
+embedded fallback. Before the first preview or production OTA for runtime `1.0.106`, retain all of:
 
 1. One immutable binary source SHA.
 2. An OTA-enabled Android build ID and signed AAB/installable artifact produced from that SHA.
 3. An OTA-enabled iOS build ID and signed IPA/TestFlight artifact produced from that same SHA.
-4. Inspection evidence showing runtime `1.0.102`, the expected EAS project, and the intended channel
+4. Inspection evidence showing runtime `1.0.106`, the expected EAS project, and the intended channel
    in each artifact.
 5. Real-device evidence that the embedded update starts offline, an update downloads, and the new
    update applies after a cold restart on both platforms.
@@ -40,7 +40,7 @@ embedded fallback. Before the first preview or production OTA for runtime `1.0.1
 The workflows bind this evidence to the native baseline using this exact non-secret format:
 
 ```text
-android=<build-id>;ios=<build-id>;runtime=1.0.102;source=<40-character-binary-source-sha>
+android=<build-id>;ios=<build-id>;runtime=1.0.106;source=<40-character-binary-source-sha>
 ```
 
 The complete value must match the environment-scoped approval secret:

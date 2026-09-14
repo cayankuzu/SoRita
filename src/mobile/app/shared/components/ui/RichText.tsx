@@ -13,7 +13,7 @@ import {
   parseRichTextSegments,
   type RichTextVariant,
 } from '@/mobile/app/shared/utils/richText';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type RichTextProps = Omit<TextProps, 'children' | 'style'> & {
@@ -89,6 +89,7 @@ export function RichText({
               <Text
                 accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
                 accessibilityRole="button"
+                accessibilityState={{ expanded: isExpanded }}
                 onPress={(event) => {
                   event.stopPropagation?.();
                   handleToggleLink(index);
@@ -118,6 +119,7 @@ export function RichText({
             <Text
               accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
               accessibilityRole="button"
+              accessibilityState={{ expanded: isExpanded }}
               onPress={(event) => {
                 event.stopPropagation?.();
                 handleToggleLink(index);
@@ -137,7 +139,7 @@ export function RichText({
 const styles = StyleSheet.create({
   safeLink: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     textDecorationLine: 'underline',
   },
   unsafeLink: {
@@ -147,10 +149,10 @@ const styles = StyleSheet.create({
   },
   linkToggle: {
     color: colors.textSoft,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   mention: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
 });

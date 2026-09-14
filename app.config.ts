@@ -50,15 +50,62 @@ const supabaseAuthGatewayFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_AUTH_GATEWAY_FUNCTION_NAME ?? 'auth-gateway';
 const supabaseModerationReportsFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_MODERATION_REPORTS_FUNCTION_NAME ?? 'moderation-reports';
+const supabasePersonalDataFunctionName =
+  process.env.EXPO_PUBLIC_SUPABASE_PERSONAL_DATA_FUNCTION_NAME ?? 'personal-data';
 const supabaseMapsFunctionName =
   process.env.EXPO_PUBLIC_SUPABASE_MAPS_FUNCTION_NAME ?? 'maps-geocoding';
 const appScheme = 'sorita';
+const rawAppLinkDomain = process.env.EXPO_PUBLIC_APP_LINK_DOMAIN?.trim().toLowerCase() ?? '';
+let appLinkDomain = '';
+
+// A custom scheme remains the safe development fallback. Only opt a signed
+// binary into Universal Links/App Links when the release environment supplies
+// one canonical HTTPS host; never manufacture a host from another service URL.
+if (rawAppLinkDomain) {
+  try {
+    const parsedAppLinkDomain = new URL(`https://${rawAppLinkDomain}`);
+    if (
+      parsedAppLinkDomain.hostname !== rawAppLinkDomain ||
+      parsedAppLinkDomain.port ||
+      parsedAppLinkDomain.username ||
+      parsedAppLinkDomain.password ||
+      parsedAppLinkDomain.pathname !== '/' ||
+      parsedAppLinkDomain.search ||
+      parsedAppLinkDomain.hash ||
+      rawAppLinkDomain === 'localhost' ||
+      rawAppLinkDomain.endsWith('.localhost')
+    ) {
+      throw new Error('unsafe_domain');
+    }
+    appLinkDomain = parsedAppLinkDomain.hostname;
+  } catch {
+    throw new Error(
+      'Invalid app-link configuration: EXPO_PUBLIC_APP_LINK_DOMAIN must be one HTTPS hostname without a scheme, path, port, credentials, query, or fragment.',
+    );
+  }
+}
 const facebookAppId = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '';
 const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID?.trim() ?? '';
-const enablePushNotifications = process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS;
+const rawEnablePushNotifications =
+  process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS?.trim().toLowerCase();
+const enablePushNotifications = rawEnablePushNotifications || undefined;
+
+if (
+  enablePushNotifications !== undefined &&
+  enablePushNotifications !== 'true' &&
+  enablePushNotifications !== 'false'
+) {
+  throw new Error(
+    'Invalid push notification configuration: EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS must be true or false.',
+  );
+}
 const systemNotificationFcmTopic =
   process.env.EXPO_PUBLIC_SYSTEM_NOTIFICATION_FCM_TOPIC ?? 'system-all-users-v1';
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
+const posthogProjectApiKey = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_API_KEY?.trim() ?? '';
+const rawPosthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST?.trim() ?? '';
+const rawEnableProductAnalytics = process.env.EXPO_PUBLIC_ENABLE_PRODUCT_ANALYTICS?.trim().toLowerCase();
+const productAnalyticsEnabled = rawEnableProductAnalytics === 'true';
 const sentryOrg = process.env.SENTRY_ORG ?? '';
 const sentryProject = process.env.SENTRY_PROJECT ?? '';
 const sentryUrl = process.env.SENTRY_URL ?? '';
@@ -76,6 +123,16 @@ const releaseEnvironmentCandidate =
 const edgeCutoverMode = process.env.EXPO_PUBLIC_EDGE_CUTOVER_MODE?.trim().toLowerCase() || 'direct';
 const releaseEnvironment = releaseEnvironmentCandidate?.toLowerCase() || 'development';
 const rawEdgeApiUrl = process.env.EXPO_PUBLIC_EDGE_API_URL?.trim() ?? '';
+
+if (
+  rawEnableProductAnalytics !== undefined &&
+  rawEnableProductAnalytics !== 'true' &&
+  rawEnableProductAnalytics !== 'false'
+) {
+  throw new Error(
+    'Invalid product analytics configuration: EXPO_PUBLIC_ENABLE_PRODUCT_ANALYTICS must be true or false.',
+  );
+}
 
 if (edgeCutoverMode !== 'direct' && edgeCutoverMode !== 'gateway') {
   throw new Error('Invalid public runtime configuration: edgeCutoverMode must be direct or gateway.');
@@ -109,6 +166,7 @@ if (releaseEnvironment === 'production' && !expoProjectId) {
 const expoUpdatesUrl = expoProjectId ? `https://u.expo.dev/${expoProjectId}` : undefined;
 
 let edgeApiUrl = '';
+let posthogHost = '';
 
 if (rawEdgeApiUrl) {
   try {
@@ -139,10 +197,35 @@ if (edgeCutoverMode === 'gateway' && !edgeApiUrl) {
   );
 }
 
+if (rawPosthogHost) {
+  try {
+    const parsedPosthogHost = new URL(rawPosthogHost);
+    if (
+      parsedPosthogHost.protocol !== 'https:' ||
+      parsedPosthogHost.username ||
+      parsedPosthogHost.password ||
+      parsedPosthogHost.pathname !== '/' ||
+      parsedPosthogHost.search ||
+      parsedPosthogHost.hash
+    ) {
+      throw new Error('unsafe_url');
+    }
+
+    posthogHost = parsedPosthogHost.origin;
+  } catch {
+    throw new Error(
+      'Invalid product analytics configuration: PostHog host must be an HTTPS origin without credentials, path, query, or fragment.',
+    );
+  }
+}
+
 const publicRuntimeConfig = {
+  appLinkDomain,
   edgeApiUrl,
   edgeCutoverMode,
   releaseEnvironment,
+  posthogHost,
+  productAnalyticsEnabled,
 };
 
 type SoRitaExpoConfig = ExpoConfig & {
@@ -153,7 +236,7 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-  version: '1.0.102',
+  version: '1.0.107',
   newArchEnabled: true,
   orientation: 'default',
   scheme: appScheme,
@@ -184,6 +267,7 @@ const config: SoRitaExpoConfig = {
   },
   plugins: [
     'expo-image',
+    'expo-localization',
     'expo-video',
     'expo-secure-store',
     [
@@ -191,7 +275,11 @@ const config: SoRitaExpoConfig = {
       {
         // Remote messages without an explicit channel use the same stable
         // channel as foreground/system notifications in new native builds.
-        defaultChannel: 'sorita-alerts-v4',
+        defaultChannel: 'sorita-alerts-v5',
+        // Keep generated entitlements deterministic for each signed build
+        // class. Internal preview builds use distribution provisioning and
+        // therefore the production APNs environment, like App Store builds.
+        mode: releaseEnvironment === 'development' ? 'development' : 'production',
       },
     ],
     [
@@ -283,7 +371,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 107,
+    versionCode: 112,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -308,11 +396,24 @@ const config: SoRitaExpoConfig = {
       backgroundColor: '#ffffff',
     },
     icon: './assets/app-icons_background_removed/playstore.png',
+    ...(appLinkDomain
+      ? {
+          intentFilters: [
+            {
+              action: 'VIEW',
+              autoVerify: true,
+              category: ['BROWSABLE', 'DEFAULT'],
+              data: [{ scheme: 'https', host: appLinkDomain, pathPrefix: '/' }],
+            },
+          ],
+        }
+      : {}),
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '87',
+    buildNumber: '92',
     googleServicesFile: './GoogleService-Info.plist',
+    ...(appLinkDomain ? { associatedDomains: [`applinks:${appLinkDomain}`] } : {}),
     infoPlist: {
       CFBundleDevelopmentRegion: 'tr',
       CFBundleLocalizations: ['tr'],
@@ -363,13 +464,18 @@ const config: SoRitaExpoConfig = {
     supabaseMediaAssetsFunctionName,
     supabaseAuthGatewayFunctionName,
     supabaseModerationReportsFunctionName,
+    supabasePersonalDataFunctionName,
     supabaseMapsFunctionName,
     appScheme,
+    appLinkDomain: publicRuntimeConfig.appLinkDomain,
     facebookAppId,
     expoProjectId,
     enablePushNotifications,
     systemNotificationFcmTopic,
     sentryDsn,
+    posthogProjectApiKey,
+    posthogHost: publicRuntimeConfig.posthogHost,
+    productAnalyticsEnabled: publicRuntimeConfig.productAnalyticsEnabled,
     authRedirectPath: 'auth/callback',
     edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
     edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,

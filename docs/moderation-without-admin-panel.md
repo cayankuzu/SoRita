@@ -38,8 +38,10 @@ proposes a separate internal lifecycle:
   event metadata;
 - RLS and revoked client privileges; service role can read the minimal ledgers
   and execute `public.moderation_transition_case`;
-- source-defined transitions for review, sanction, close, appeal, reopen and
-  SLA assignment, with invalid transitions rejected.
+- source-defined transitions for review, sanction, close, appeal, evidence-backed
+  reinstatement, reopen and SLA assignment, with invalid transitions rejected;
+- enforced Auth bans and immediate RLS removal of sanctioned UGC, plus a
+  reversible, audited reinstatement path that preserves any pre-existing ban.
 
 The source is not hosted proof. Until database reset/tests and a staging apply
 pass, operators must not assume these tables or RPC exist in any provider
@@ -111,10 +113,12 @@ state supplies the missing case lifecycle.
 4. If there is credible imminent harm, suspected illegality, security impact or
    personal-data exposure, preserve evidence and escalate through
    [`docs/security-incident-response.md`](./security-incident-response.md).
-5. Select the least-expansive policy outcome. A `sanction` transition records a
-   decision/reference; it does not itself delete content or restrict an account.
-6. Obtain required approval before the separately audited enforcement action.
-   This runbook supplies no destructive SQL.
+5. Select the least-expansive policy outcome. A `sanction` transition records
+   the decision, bans the target account and removes its UGC from authenticated
+   read models without permanently deleting evidence.
+6. Obtain required approval before sanctioning. An approved appeal must use the
+   dedicated `reinstate` command and an external evidence reference; direct
+   Auth/table edits are forbidden.
 7. Invoke the corresponding CLI transition with case ID, operator reference,
    concise policy reason, unique idempotency key and any required external
    reference. Mutations require the checked-in

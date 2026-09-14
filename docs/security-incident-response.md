@@ -92,10 +92,10 @@ values.
 ### Coordinated origin HMAC rotation
 
 The working tree now contains matching Worker signing, Supabase origin
-verification and a nonce-claim migration for the five selected Functions. The
+verification and nonce-claim migrations for the six selected Functions. The
 origin code deliberately preserves direct compatibility until
 `CLOUDFLARE_ORIGIN_SIGNATURE_REQUIRED` is enabled. These sources are
-uncommitted/unapplied and provider state is `UNVERIFIED`; HMAC cutover therefore
+implemented locally but provider cutover evidence is `UNVERIFIED`; HMAC cutover therefore
 remains `NO-GO`, and `EXPO_PUBLIC_EDGE_CUTOVER_MODE` must remain `direct` until
 same-SHA local, staging deployment and external negative tests pass.
 

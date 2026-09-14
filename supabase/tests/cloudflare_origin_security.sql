@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 select has_table(
   'private',
@@ -61,6 +61,22 @@ select ok(
     'auth-gateway'
   ),
   'a replayed origin nonce claim fails closed'
+);
+select ok(
+  public.claim_cloudflare_origin_nonce(
+    '30000000-0000-4000-8000-000000000013',
+    'personal-data'
+  ),
+  'the personal-data route can claim an origin nonce'
+);
+select is(
+  (
+    select function_name
+    from private.cloudflare_origin_nonces
+    where nonce = '30000000-0000-4000-8000-000000000013'::uuid
+  ),
+  'personal-data',
+  'the replay ledger constraint accepts only the expected personal-data name'
 );
 select is(
   (

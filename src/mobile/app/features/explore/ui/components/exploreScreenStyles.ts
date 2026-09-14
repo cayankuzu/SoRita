@@ -12,8 +12,7 @@ export const exploreScreenStyles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: typography.screenTitle,
-    fontWeight: '700',
+    ...typography.title,
     color: colors.text,
   },
   subtitle: {
@@ -82,6 +81,11 @@ export const exploreScreenStyles = StyleSheet.create({
   tabTextActive: {
     color: colors.onPrimary,
   },
+  resultStatus: {
+    ...typography.metadataText,
+    color: colors.textSoft,
+    fontWeight: fontWeight.strong,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -105,8 +109,8 @@ export const exploreScreenStyles = StyleSheet.create({
     borderRadius: radius.md,
   },
   feedTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   feedContent: {

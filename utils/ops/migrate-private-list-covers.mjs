@@ -152,7 +152,7 @@ async function sha256Blob(blob) {
   return createHash('sha256').update(Buffer.from(await blob.arrayBuffer())).digest('hex');
 }
 
-async function uploadOrVerifyExisting({ client, destinationPath, sourceBlob }) {
+async function uploadOrVerifyExisting({ client, destinationPath, sourceBlob, sourceHash }) {
   const upload = await client.storage.from(PRIVATE_BUCKET).upload(destinationPath, sourceBlob, {
     cacheControl: '3600',
     contentType: sourceBlob.type || 'application/octet-stream',
@@ -163,10 +163,7 @@ async function uploadOrVerifyExisting({ client, destinationPath, sourceBlob }) {
   const existing = await client.storage.from(PRIVATE_BUCKET).download(destinationPath);
   if (existing.error || !existing.data) fail('Destination upload failed and no identical object exists');
   if (existing.data.size !== sourceBlob.size) fail('Existing destination object has a different size');
-  const [existingHash, sourceHash] = await Promise.all([
-    sha256Blob(existing.data),
-    sha256Blob(sourceBlob),
-  ]);
+  const existingHash = await sha256Blob(existing.data);
   if (existingHash !== sourceHash) fail('Existing destination object has different content');
   return { created: false };
 }
@@ -180,11 +177,13 @@ async function migrateOne({ client, row, source, supabaseUrl }) {
   const downloaded = await client.storage.from(PUBLIC_BUCKET).download(source.path);
   if (downloaded.error || !downloaded.data) fail('Source object could not be downloaded');
   if (downloaded.data.size > MAXIMUM_OBJECT_BYTES) fail('Source object exceeds the migration safety limit');
+  const contentSha256 = await sha256Blob(downloaded.data);
 
   const upload = await uploadOrVerifyExisting({
     client,
     destinationPath: destination.path,
     sourceBlob: downloaded.data,
+    sourceHash: contentSha256,
   });
   const updated = await client
     .from('lists')
@@ -217,9 +216,11 @@ async function migrateOne({ client, row, source, supabaseUrl }) {
       outcome: 'cleanup_deferred',
       critical: false,
       failure: {
+        contentSha256,
         destinationPath: destination.path,
         listId: row.id,
         originalCover: row.cover_image_url,
+        sizeBytes: downloaded.data.size,
         sourcePath: source.path,
       },
     };
@@ -229,26 +230,28 @@ async function migrateOne({ client, row, source, supabaseUrl }) {
     return { outcome: 'shared_source_preserved' };
   }
 
-  const removedSource = await client.storage.from(PUBLIC_BUCKET).remove([source.path]);
-  if (!removedSource.error) return { outcome: 'migrated' };
-
   return {
-    outcome: 'cleanup_deferred',
-    critical: false,
-    failure: {
+    outcome: 'source_retained',
+    cleanupCandidate: {
       destinationPath: destination.path,
+      contentSha256,
       listId: row.id,
-      originalCover: row.cover_image_url,
+      sizeBytes: downloaded.data.size,
       sourcePath: source.path,
     },
   };
 }
 
-function writeFailureJournal(failures) {
-  if (failures.length === 0) return null;
-  const journalPath = resolve('artifacts/private-cover-migration-failures.json');
+function writeJournal({ entries, filename, kind }) {
+  if (entries.length === 0) return null;
+  const journalPath = resolve(`artifacts/${filename}`);
   mkdirSync(dirname(journalPath), { recursive: true });
-  writeFileSync(journalPath, `${JSON.stringify({ failures }, null, 2)}\n`, {
+  writeFileSync(journalPath, `${JSON.stringify({
+    createdAt: new Date().toISOString(),
+    entries,
+    kind,
+    schemaVersion: 1,
+  }, null, 2)}\n`, {
     flag: 'wx',
     mode: 0o600,
   });
@@ -270,12 +273,15 @@ export async function runMigration({ argv = process.argv.slice(2) } = {}) {
     raceSkipped: 0,
     sharedSourcePreserved: 0,
     cleanupDeferred: 0,
+    sourceRetained: 0,
     unsupported: 0,
     failures: 0,
     criticalFailures: 0,
     failureJournal: null,
+    cleanupJournal: null,
   };
   const failures = [];
+  const cleanupCandidates = [];
 
   let cursor = null;
   while (summary.scanned < options.maximumRows) {
@@ -324,6 +330,11 @@ export async function runMigration({ argv = process.argv.slice(2) } = {}) {
           summary.migrated += 1;
           summary.sharedSourcePreserved += 1;
         }
+        else if (result.outcome === 'source_retained') {
+          summary.migrated += 1;
+          summary.sourceRetained += 1;
+          cleanupCandidates.push(result.cleanupCandidate);
+        }
         else {
           summary.failures += 1;
           summary.cleanupDeferred += 1;
@@ -337,7 +348,16 @@ export async function runMigration({ argv = process.argv.slice(2) } = {}) {
     if (rows.length < pageLength) break;
   }
 
-  summary.failureJournal = writeFailureJournal(failures);
+  summary.failureJournal = writeJournal({
+    entries: failures,
+    filename: 'private-cover-migration-failures.json',
+    kind: 'migration-failures',
+  });
+  summary.cleanupJournal = writeJournal({
+    entries: cleanupCandidates,
+    filename: 'private-cover-source-cleanup-candidates.json',
+    kind: 'retained-public-source-cleanup-candidates',
+  });
   process.stdout.write(`${JSON.stringify(summary)}\n`);
   if (summary.failures > 0 || summary.unsupported > 0) process.exitCode = 1;
   return summary;

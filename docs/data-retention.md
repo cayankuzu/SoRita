@@ -18,6 +18,13 @@
 | Cached visible data | Viewer-scoped TTL cache, currently 6 hours |
 | Signed media URLs | Must not be durably persisted |
 | Logs/Sentry | Redacted; retention configured in provider |
+| Opt-in PostHog product analytics | Anonymous installation identifier plus allowlisted low-cardinality events only; disabled by default; retention configured and approved in provider |
+
+The local PostHog preference is cleared on a logged-out boot, logout, or direct
+account switch so one account cannot grant analytics for another account on a
+shared device. Remote allow decisions expire after five minutes and fail closed
+until a fresh response is received; successful-event sampling never suppresses
+Worker error logs at the Cloudflare platform layer.
 
 ## Required Deletion Evidence
 
@@ -25,7 +32,7 @@
 - Backend delete-user function test.
 - Storage object cleanup.
 - Auth user deletion.
-- Analytics/Sentry provider deletion or anonymization policy.
+- PostHog/Sentry provider retention, deletion, anonymization and data-region policy.
 - Backup/PITR limitation documented in privacy policy.
 
 ## External Evidence Required

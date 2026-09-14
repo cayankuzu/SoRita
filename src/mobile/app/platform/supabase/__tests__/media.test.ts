@@ -220,6 +220,57 @@ describe('platform/supabase/media', () => {
     expect(JSON.stringify(requestBodies)).not.toContain('fileBase64');
   });
 
+  it('cleans up a failed public upload from its real bucket and maps its size policy', async () => {
+    const requestBodies: unknown[] = [];
+
+    server.use(
+      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+        const body = await request.json() as { action: string };
+        requestBodies.push(body);
+
+        if (body.action === 'create-upload-url') {
+          return HttpResponse.json({
+            objectPath: 'user-1/pending-public/profile-media/profile-failed.jpg',
+            signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-failed',
+            uploadSessionId,
+          });
+        }
+
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    uploadAsyncMock.mockResolvedValueOnce({
+      body: 'Payload too large',
+      status: 413,
+    });
+
+    const { uploadImageAsset } = await import('@/mobile/app/platform/supabase/media');
+    await expect(uploadImageAsset({
+      bucket: 'profile-media',
+      prefix: 'profile',
+      uri: 'file:///tmp/avatar.jpg',
+      userId: 'user-1',
+    })).rejects.toThrow('Media upload failed (5 MB max)');
+
+    expect(requestBodies).toEqual([
+      {
+        action: 'create-upload-url',
+        bucket: 'profile-media',
+        contentType: 'image/jpeg',
+        extension: 'jpg',
+        fileSizeBytes: 1024,
+        prefix: 'profile',
+        uploadSessionId,
+      },
+      {
+        action: 'delete',
+        bucket: 'profile-media',
+        paths: ['user-1/pending-public/profile-media/profile-failed.jpg'],
+        uploadSessionId,
+      },
+    ]);
+  });
+
   it('rejects an untrusted signed upload destination before reading local media bytes', async () => {
     server.use(
       http.post('https://example.supabase.co/functions/v1/media-assets', async () =>
@@ -718,36 +769,19 @@ describe('platform/supabase/media', () => {
     ]);
   });
 
-  it('retries with the legacy signing protocol when the deployed function rejects v2', async () => {
+  it('fails closed instead of downgrading when the deployed function rejects v2 signing', async () => {
     let requestCount = 0;
-    const publicUrl = 'https://example.supabase.co/storage/v1/object/public/profile-media/user-1/profile-legacy-signature.jpg';
 
     server.use(
-      http.post('https://example.supabase.co/functions/v1/media-assets', async ({ request }) => {
+      http.post('https://example.supabase.co/functions/v1/media-assets', async () => {
         requestCount += 1;
-
-        if (requestCount === 1) {
-          return HttpResponse.json(
-            {
-              code: 'invalid_signature',
-              error: 'Request signature verification failed',
-            },
-            { status: 401 },
-          );
-        }
-
-        const body = await request.json() as { action: string };
-        return body.action === 'create-upload-url'
-          ? HttpResponse.json({
-              objectPath: 'user-1/pending-public/profile-media/profile-legacy-signature.jpg',
-              signedUrl: 'https://example.supabase.co/storage/v1/object/upload/sign/profile-legacy-signature',
-              uploadSessionId,
-            })
-          : HttpResponse.json({
-              objectPath: 'user-1/profile-legacy-signature.jpg',
-              publicUrl,
-              verified: true,
-            });
+        return HttpResponse.json(
+          {
+            code: 'invalid_signature',
+            error: 'Request signature verification failed',
+          },
+          { status: 401 },
+        );
       }),
     );
 
@@ -757,14 +791,14 @@ describe('platform/supabase/media', () => {
       prefix: 'profile',
       uri: 'file:///tmp/avatar.jpg',
       userId: 'user-1',
-    })).resolves.toBe(publicUrl);
+    })).rejects.toThrow('Request signature verification failed');
 
+    expect(requestCount).toBe(1);
     expect(refreshSessionMock).not.toHaveBeenCalled();
     expect(createSignedEdgeHeadersMock.mock.calls).toEqual([
       [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
-      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', legacy: true, method: 'POST' }],
-      [{ accessToken: 'session-token', bodyText: expect.any(String), functionName: 'media-assets', method: 'POST' }],
     ]);
+    expect(createUploadTaskMock).not.toHaveBeenCalled();
   });
 
   it('fails closed when the edge function is not deployed', async () => {

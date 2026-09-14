@@ -10,7 +10,6 @@ import {
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -61,6 +60,9 @@ export function ListDetailHeader({
       <View style={styles.heroCard}>
         <View style={styles.heroMediaWrap}>
           <Pressable
+            accessibilityLabel={
+              list.coverImage ? `${list.name}, ${tr.listDetail.openCover}` : undefined
+            }
             accessibilityRole={list.coverImage ? 'imagebutton' : undefined}
             disabled={!list.coverImage}
             onPress={onOpenCover}
@@ -92,12 +94,9 @@ export function ListDetailHeader({
         </View>
 
         <View style={styles.heroBody}>
-          <ExpandableText
-            text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
-            collapsedLines={2}
-            textStyle={styles.title}
-            showIndicator={false}
-          />
+          <Text accessibilityRole="header" numberOfLines={2} style={styles.title}>
+            {`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
+          </Text>
 
           <View style={styles.heroMetaRow}>
             <MetaChip

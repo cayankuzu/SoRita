@@ -17,18 +17,25 @@ import {
 } from '@/mobile/app/platform/analytics/analyticsEvents';
 import { sentryAnalyticsProvider } from '@/mobile/app/platform/analytics/sentryAnalyticsProvider';
 import {
+  initializePostHogAnalytics,
+  posthogAnalyticsProvider,
+  refreshPostHogRemoteKillSwitches,
+} from '@/mobile/app/platform/analytics/posthogAnalyticsProvider';
+import { hydrateAnalyticsConsent } from '@/mobile/app/platform/analytics/analyticsConsent';
+import {
   getAppLaunchBreakdown,
   getAppLaunchElapsedMs,
 } from '@/mobile/app/shared/performance/appLaunch';
+import { REMOTE_KILL_SWITCH_TTL_MS } from '@/mobile/app/platform/analytics/remoteKillSwitches';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 import { StartupShellReadyContext } from '@/mobile/app/app-shell/startup/StartupShellReadyContext';
+import { shouldShowStartupSplash } from '@/mobile/app/app-shell/startup/startupSplashState';
 
 let appStartTracked = false;
 const CURRENT_YEAR = new Date().getFullYear();
-const MINIMUM_BRANDED_SPLASH_MS = 800;
 
 type AppProvidersProps = {
   children: React.ReactNode;
@@ -37,6 +44,9 @@ type AppProvidersProps = {
 export function AppProviders({ children }: AppProvidersProps) {
   useEffect(() => {
     const unregister = registerAnalyticsProvider(sentryAnalyticsProvider);
+    const unregisterPostHog = registerAnalyticsProvider(posthogAnalyticsProvider);
+    void initializePostHogAnalytics();
+    void hydrateAnalyticsConsent();
 
     if (!appStartTracked) {
       appStartTracked = true;
@@ -50,24 +60,41 @@ export function AppProviders({ children }: AppProvidersProps) {
       });
     }
 
-    return unregister;
+    return () => {
+      unregisterPostHog();
+      unregister();
+    };
   }, []);
 
   useEffect(() => {
     let backgroundedAt: number | null = null;
+    const remoteFlagRefreshInterval = setInterval(() => {
+      // The capability gate also expires independently at this TTL, so a
+      // delayed timer cannot leave a stale remote allow decision active.
+      void refreshPostHogRemoteKillSwitches();
+    }, REMOTE_KILL_SWITCH_TTL_MS);
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && backgroundedAt != null) {
-        trackEvent({
-          name: 'app_foreground',
-          params: { backgroundDurationMs: Date.now() - backgroundedAt },
-        });
+      if (nextState === 'active') {
+        // Invalidate stale flags synchronously, then refresh them before any
+        // subsequent PostHog event is eligible for capture.
+        void refreshPostHogRemoteKillSwitches();
+
+        if (backgroundedAt != null) {
+          trackEvent({
+            name: 'app_foreground',
+            params: { backgroundDurationMs: Date.now() - backgroundedAt },
+          });
+        }
         backgroundedAt = null;
       } else if (nextState === 'background') {
         backgroundedAt = Date.now();
       }
     });
 
-    return () => subscription.remove();
+    return () => {
+      clearInterval(remoteFlagRefreshInterval);
+      subscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -108,8 +135,7 @@ function StartupSplashGate({ children }: AppProvidersProps) {
   const { booted, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [shellReady, setShellReady] = React.useState(false);
-  const [minimumSplashElapsed, setMinimumSplashElapsed] = React.useState(false);
-  const showSplash = !booted || !shellReady || !minimumSplashElapsed;
+  const showSplash = shouldShowStartupSplash({ booted, shellReady });
   const firstShellTrackedRef = React.useRef(false);
   const nativeSplashHiddenRef = React.useRef(false);
   const markShellReady = React.useCallback(() => {
@@ -122,14 +148,6 @@ function StartupSplashGate({ children }: AppProvidersProps) {
 
     nativeSplashHiddenRef.current = true;
     void NativeSplashScreen.hideAsync().catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setMinimumSplashElapsed(true);
-    }, MINIMUM_BRANDED_SPLASH_MS);
-
-    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -218,13 +236,13 @@ const styles = StyleSheet.create({
   startupMetaText: {
     ...typography.metadataText,
     color: colors.textSoft,
-    lineHeight: 15,
+    lineHeight: typography.compactTitleText.fontSize,
     textAlign: 'center',
   },
   startupDeveloperText: {
     ...typography.metadataText,
     color: colors.text,
-    fontWeight: '700',
-    lineHeight: 15,
+    fontWeight: fontWeight.strong,
+    lineHeight: typography.compactTitleText.fontSize,
   },
 });

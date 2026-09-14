@@ -24,7 +24,12 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -158,6 +163,7 @@ export function MediaPickerPromptHost() {
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={() => resolveMediaPickerPrompt(null)}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <Pressable
@@ -278,13 +284,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.compactBodyText,
     color: colors.textMuted,
   },
   options: {
@@ -314,13 +318,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   optionDescription: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
 });

@@ -44,5 +44,5 @@ const deviceCoveredFlows = deviceRequiredFlows.filter((flow) => flow.deviceEvide
 
 console.log(
   `[critical-flow-evidence] OK (${flows.length}/30 flows mapped; ` +
-    `${deviceCoveredFlows.length}/${deviceRequiredFlows.length} device-required flows have Maestro evidence)`,
+    `${deviceCoveredFlows.length}/${deviceRequiredFlows.length} device-required flows map to Maestro YAML definitions; execution is not verified here)`,
 );

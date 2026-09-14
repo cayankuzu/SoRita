@@ -4,6 +4,7 @@ import {
   View,
 } from 'react-native';
 
+import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 type AuthStepDotsProps = {
@@ -12,10 +13,21 @@ type AuthStepDotsProps = {
 };
 
 export function AuthStepDots({ current, total }: AuthStepDotsProps) {
+  const progressLabel = tr.settings.editProfile.stepCounter(current + 1, total);
+
   return (
-    <View style={styles.row}>
+    <View
+      accessibilityLabel={progressLabel}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="progressbar"
+      accessibilityValue={{ max: total, min: 1, now: current + 1, text: progressLabel }}
+      accessible
+      style={styles.row}
+    >
       {Array.from({ length: total }).map((_, index) => (
         <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           key={index}
           style={[
             styles.dot,

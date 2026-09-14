@@ -35,6 +35,11 @@
         "ascAppId": "6762198781",
         "appleTeamId": "HBRG8P523Z",
         "bundleIdentifier": "com.cayan.sorita.socialmap"
+      },
+      "android": {
+        "applicationId": "com.cayan.sorita.socialmap",
+        "track": "internal",
+        "releaseStatus": "completed"
       }
     }
   }

@@ -1024,7 +1024,11 @@ describe('useMapScreenState', () => {
     getCurrentPositionAsyncMock.mockRejectedValueOnce(new Error('gps unavailable'));
     await act(async () => {
       await hook.result.current.handleLocateUser();
-      await hook.result.current.handleDeletePlace('place-1');
+    });
+    await act(async () => {
+      await expect(
+        hook.result.current.handleDeletePlace('place-1'),
+      ).rejects.toThrow('delete failed');
     });
     expect(showToastMock).toHaveBeenCalledWith(expect.any(String), 'error');
 

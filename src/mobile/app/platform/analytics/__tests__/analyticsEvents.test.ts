@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const loggerDebug = vi.hoisted(() => vi.fn());
+
+vi.mock('@/mobile/app/platform/feedback/logger', () => ({
+  logger: { debug: loggerDebug },
+}));
+
 import {
   registerAnalyticsProvider,
   setAnalyticsUserId,
@@ -51,5 +57,17 @@ describe('analyticsEvents', () => {
 
     expect(() => trackEvent({ name: 'offline_entered', params: {} })).not.toThrow();
     expect(healthyProvider.trackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('never writes raw parameters, identifiers, or errors to the app logger', () => {
+    trackEvent({
+      name: 'error',
+      params: {
+        context: 'account-id=user-private-123',
+        message: 'private server response',
+      },
+    });
+
+    expect(loggerDebug).not.toHaveBeenCalled();
   });
 });

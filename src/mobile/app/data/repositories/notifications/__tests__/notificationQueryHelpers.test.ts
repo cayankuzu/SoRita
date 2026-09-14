@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fromMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock('@/mobile/app/platform/supabase/client', () => ({
   supabase: {
+    auth: { getSession: getSessionMock },
     from: fromMock,
   },
 }));
@@ -37,6 +39,11 @@ describe('notificationQueryHelpers', () => {
   beforeEach(() => {
     vi.resetModules();
     fromMock.mockReset();
+    getSessionMock.mockReset();
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'viewer' } } },
+      error: null,
+    });
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-01-08T12:00:00.000Z'));
   });

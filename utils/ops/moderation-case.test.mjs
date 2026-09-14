@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildReinstatementPayload,
   buildTransitionPayload,
   parseModerationArguments,
   runModerationCommand,
@@ -34,6 +35,56 @@ test('mutation parsing is fail-closed and requires explicit confirmation and ide
     () => parseModerationArguments(['show', '--case-id', 'not-a-uuid']),
     /--case-id must be a UUID/u,
   );
+});
+
+test('reinstatement requires evidence and uses only the dedicated audited RPC contract', async () => {
+  assert.throws(
+    () => parseModerationArguments([
+      'reinstate',
+      '--case-id', caseId,
+      '--operator', 'ops:test',
+      '--reason', 'Appeal approved',
+      '--idempotency-key', 'case-reinstate-0001',
+      '--confirm', 'MODERATION_CASE_TRANSITION',
+    ]),
+    /reinstate requires --reference/u,
+  );
+
+  const options = parseModerationArguments([
+    'reinstate',
+    '--case-id', caseId,
+    '--operator', 'ops:test',
+    '--reason', 'Appeal approved',
+    '--idempotency-key', 'case-reinstate-0001',
+    '--reference', 'evidence://appeal/approved-0001',
+    '--confirm', 'MODERATION_CASE_TRANSITION',
+  ]);
+  let requestBody;
+
+  const result = await runModerationCommand(options, {
+    environment,
+    fetchImpl: async (url, init) => {
+      assert.match(String(url), /rpc\/reinstate_moderation_sanction$/u);
+      requestBody = JSON.parse(init.body);
+      return new Response(JSON.stringify({
+        assigned_operator_id: 'ops:test',
+        closed_at: '2026-09-14T00:00:00Z',
+        created_at: '2026-08-30T00:00:00Z',
+        id: caseId,
+        last_event_at: '2026-09-14T00:00:00Z',
+        report_id: '7d6c5847-8fd2-4f90-8e53-7ee0ccf20be8',
+        revision: 5,
+        sanction_reference: 'evidence://sanction/original',
+        sla_due_at: null,
+        sla_policy_version: null,
+        status: 'closed',
+        updated_at: '2026-09-14T00:00:00Z',
+      }), { headers: { 'Content-Type': 'application/json' }, status: 200 });
+    },
+  });
+
+  assert.deepEqual(requestBody, buildReinstatementPayload(options));
+  assert.equal(result.status, 'closed');
 });
 
 test('transition payload contains only the audited RPC contract', () => {

@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, AppState, type AppStateStatus } from 'react-native';
 
 import { act, renderHook, waitFor } from '@/mobile/app/test/hookTestUtils';
-import { AUTH_BOOTSTRAP_SHELL_FALLBACK_MS } from '@/mobile/app/shared/performance/budgets';
+import {
+  AUTH_BOOTSTRAP_SHELL_FALLBACK_MS,
+  STARTUP_CACHE_RESTORE_BUDGET_MS,
+} from '@/mobile/app/shared/performance/budgets';
 
 const clearCurrentUserStateMock = vi.fn();
 const getActiveOrPersistedSessionMock = vi.fn();
@@ -163,7 +166,9 @@ describe('useAuthSessionLifecycle', () => {
     dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: authUser });
     await waitFor(() => {
       expect(persistAuthSessionMock).toHaveBeenCalled();
-      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser);
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser, {
+        isCurrent: expect.any(Function),
+      });
     });
 
     persistAuthSessionMock.mockClear();
@@ -275,12 +280,180 @@ describe('useAuthSessionLifecycle', () => {
     resolveImmediateAuthUserMock.mockReturnValue({
       id: 'user-b', email: 'b@example.com', name: 'B', username: 'user_b',
     });
+    const cleanupError = new Error('push cleanup unavailable');
+    stageActivePushTokenCleanupForAuthTransitionMock.mockRejectedValueOnce(cleanupError);
     dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: userB });
 
     await waitFor(() => {
       expect(stageActivePushTokenCleanupForAuthTransitionMock).toHaveBeenCalledOnce();
       expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith('user-a');
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Could not stage push cleanup during auth transition.',
+        { error: 'Error' },
+      );
     });
+  });
+
+  it('does not let a stale user sync overwrite a newer auth scope', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const userA = { id: 'user-a', email: 'a@example.com' };
+    const userB = { id: 'user-b', email: 'b@example.com' };
+    const immediateUserA = {
+      id: userA.id, email: userA.email, name: 'A', username: 'user_a',
+    };
+    const immediateUserB = {
+      id: userB.id, email: userB.email, name: 'B', username: 'user_b',
+    };
+    const bootstrappedUserA = { ...immediateUserA, bio: 'bootstrapped' };
+    const staleSyncedUserA = { ...immediateUserA, bio: 'stale-result' };
+    const syncedUserB = { ...immediateUserB, bio: 'current-result' };
+    let resolveStaleUserA!: (user: typeof staleSyncedUserA) => void;
+    let staleUserAGuard: () => boolean = () => false;
+    const staleUserASync = new Promise<typeof staleSyncedUserA>((resolve) => {
+      resolveStaleUserA = resolve;
+    });
+    let authChangeHandler: ((event: string, session: { user: typeof userA } | null) => void) | null = null;
+
+    getActiveOrPersistedSessionMock.mockResolvedValue({ user: userA });
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getVerifiedAuthUserMock.mockImplementation(async (session) => session?.user ?? null);
+    resolveImmediateAuthUserMock.mockImplementation((authUser) =>
+      authUser.id === userA.id ? immediateUserA : immediateUserB);
+    syncAuthenticatedUserMock
+      .mockResolvedValueOnce(bootstrappedUserA)
+      .mockImplementationOnce((_authUser, options) => {
+        staleUserAGuard = options?.isCurrent ?? (() => false);
+        return staleUserASync;
+      })
+      .mockResolvedValueOnce(syncedUserB);
+    onAuthStateChangeMock.mockImplementation((callback) => {
+      authChangeHandler = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(setUser).toHaveBeenCalledWith(bootstrappedUserA);
+    });
+
+    setUser.mockClear();
+    syncAuthenticatedUserMock.mockClear();
+    dispatchAuthChange(authChangeHandler, 'TOKEN_REFRESHED', { user: userA });
+
+    await waitFor(() => {
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledTimes(1);
+      expect(staleUserAGuard()).toBe(true);
+    });
+
+    dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: userB });
+
+    expect(staleUserAGuard()).toBe(false);
+    expect(setUser).toHaveBeenCalledWith(null);
+    expect(syncAuthenticatedUserMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveStaleUserA(staleSyncedUserA);
+      await staleUserASync;
+    });
+
+    await waitFor(() => {
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledTimes(2);
+      expect(setUser).toHaveBeenCalledWith(syncedUserB);
+    });
+
+    expect(setUser).not.toHaveBeenCalledWith(staleSyncedUserA);
+    expect(syncAuthenticatedUserMock.mock.calls[1]?.[0]).toEqual(userB);
+  });
+
+  it('keeps a new auth scope closed until the previous user purge succeeds', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const userA = { id: 'user-a', email: 'a@example.com' };
+    const userB = { id: 'user-b', email: 'b@example.com' };
+    const immediateUserA = {
+      id: 'user-a', email: 'a@example.com', name: 'A', username: 'user_a',
+    };
+    const immediateUserB = {
+      id: 'user-b', email: 'b@example.com', name: 'B', username: 'user_b',
+    };
+    const purgeError = new Error('purge failed');
+    let rejectPendingPurge: ((reason: Error) => void) | null = null;
+    const pendingPurge = new Promise<void>((_resolve, reject) => {
+      rejectPendingPurge = reject;
+    });
+    let authChangeHandler: ((event: string, session: { user: typeof userA } | null) => void) | null = null;
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+
+    getActiveOrPersistedSessionMock
+      .mockResolvedValueOnce({ user: userA })
+      .mockResolvedValue({ user: userB });
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getVerifiedAuthUserMock.mockImplementation(async (session) => session?.user ?? null);
+    resolveImmediateAuthUserMock.mockImplementation((authUser) =>
+      authUser.id === userA.id ? immediateUserA : immediateUserB);
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockImplementation((callback) => {
+      authChangeHandler = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(setUser).toHaveBeenCalledWith(immediateUserA);
+    });
+
+    setUser.mockClear();
+    clearCurrentUserStateMock.mockClear();
+    resolveImmediateAuthUserMock.mockClear();
+    persistResolvedAuthUserMock.mockClear();
+    purgeAuthenticatedUserStateMock.mockClear();
+    purgeAuthenticatedUserStateMock
+      .mockImplementationOnce(() => pendingPurge)
+      .mockResolvedValue(undefined);
+
+    dispatchAuthChange(authChangeHandler, 'SIGNED_IN', { user: userB });
+
+    await waitFor(() => {
+      expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith(userA.id);
+      expect(clearCurrentUserStateMock).toHaveBeenCalled();
+      expect(setUser).toHaveBeenCalledWith(null);
+    });
+
+    expect(resolveImmediateAuthUserMock).not.toHaveBeenCalledWith(userB);
+    expect(persistResolvedAuthUserMock).not.toHaveBeenCalledWith(immediateUserB);
+
+    await act(async () => {
+      rejectPendingPurge?.(purgeError);
+      await pendingPurge.catch(() => undefined);
+    });
+
+    await waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to fully purge the previous auth scope.',
+        { name: 'Error' },
+      );
+      expect(setUser).toHaveBeenLastCalledWith(null);
+    });
+
+    dispatchAppStateChange(appStateHandler, 'active');
+
+    await waitFor(() => {
+      expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledTimes(2);
+      expect(setUser).toHaveBeenCalledWith(immediateUserB);
+    });
+
+    expect(purgeAuthenticatedUserStateMock).toHaveBeenNthCalledWith(2, userA.id);
   });
 
   it('alerts and signs the user out when the authenticated account is missing', async () => {
@@ -376,7 +549,9 @@ describe('useAuthSessionLifecycle', () => {
     );
 
     await waitFor(() => {
-      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser);
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser, {
+        isCurrent: expect.any(Function),
+      });
     });
 
     expect(refreshSessionMock).not.toHaveBeenCalled();
@@ -466,7 +641,9 @@ describe('useAuthSessionLifecycle', () => {
     const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
 
     await waitFor(() => {
-      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser);
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser, {
+        isCurrent: expect.any(Function),
+      });
     });
 
     dispatchAppStateChange(appStateHandler, 'active');
@@ -504,6 +681,452 @@ describe('useAuthSessionLifecycle', () => {
 
     expect(setUser).toHaveBeenCalledWith(null);
 
+    hook.unmount();
+  });
+
+  it('shows a persisted user immediately and waits only for the cache-restore budget', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const setBooted = vi.fn();
+      const setUser = vi.fn();
+      const persistedUser = {
+        id: 'persisted-user',
+        email: 'persisted@example.com',
+        name: 'Persisted',
+        username: 'persisted',
+      };
+      const authUser = { id: persistedUser.id, email: persistedUser.email };
+
+      getPersistedAuthUserSnapshotMock.mockResolvedValue(persistedUser);
+      restorePersistedVisibleDataSnapshotMock.mockReturnValue(new Promise(() => undefined));
+      getActiveOrPersistedSessionMock.mockResolvedValue({ user: authUser });
+      getVerifiedAuthUserMock.mockResolvedValue(authUser);
+      resolveImmediateAuthUserMock.mockReturnValue(persistedUser);
+      syncAuthenticatedUserMock.mockResolvedValue(null);
+      onAuthStateChangeMock.mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      });
+
+      const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+      const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(setUser).toHaveBeenCalledWith(persistedUser);
+      expect(setBooted).not.toHaveBeenCalled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(STARTUP_CACHE_RESTORE_BUDGET_MS);
+        await Promise.resolve();
+      });
+
+      expect(setBooted).toHaveBeenCalledWith(true);
+      expect(syncAuthenticatedUserMock).toHaveBeenCalledWith(authUser, {
+        isCurrent: expect.any(Function),
+      });
+      hook.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('continues persisted bootstrap when local cache restoration fails', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const cacheError = new Error('cache unavailable');
+    const persistedUser = {
+      id: 'persisted-user',
+      email: 'persisted@example.com',
+      name: 'Persisted',
+      username: 'persisted',
+    };
+    const authUser = { id: persistedUser.id, email: persistedUser.email };
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(persistedUser);
+    restorePersistedVisibleDataSnapshotMock.mockRejectedValue(cacheError);
+    getActiveOrPersistedSessionMock.mockResolvedValue({ user: authUser });
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue(persistedUser);
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to restore cached startup data',
+        cacheError,
+      );
+      expect(setBooted).toHaveBeenCalledWith(true);
+    });
+
+    hook.unmount();
+  });
+
+  it('fails bootstrap closed and tolerates primitive cleanup failures', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const bootstrapError = new Error('session storage failed');
+    const persistedUser = {
+      id: 'persisted-user',
+      email: 'persisted@example.com',
+      name: 'Persisted',
+      username: 'persisted',
+    };
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(persistedUser);
+    getActiveOrPersistedSessionMock.mockRejectedValue(bootstrapError);
+    stageActivePushTokenCleanupForAuthTransitionMock.mockRejectedValue('push cleanup failed');
+    purgeAuthenticatedUserStateMock.mockRejectedValue('purge failed');
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(loggerErrorMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to bootstrap auth state',
+        bootstrapError,
+      );
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Could not stage push cleanup during auth transition.',
+        { error: 'unknown' },
+      );
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to fully purge the previous auth scope.',
+        { name: 'UnknownError' },
+      );
+      expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+      expect(setUser).toHaveBeenLastCalledWith(null);
+      expect(setBooted).toHaveBeenCalledWith(true);
+    });
+
+    hook.unmount();
+  });
+
+  it('ignores active-state revalidation during bootstrap and deduplicates it afterward', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const immediateUser = { id: authUser.id, email: authUser.email, name: 'Ada', username: 'ada' };
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+    let resolveBootstrap!: (session: { user: typeof authUser }) => void;
+    const bootstrapSession = new Promise<{ user: typeof authUser }>((resolve) => {
+      resolveBootstrap = resolve;
+    });
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockReturnValueOnce(bootstrapSession);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue(immediateUser);
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    dispatchAppStateChange(appStateHandler, 'active');
+    expect(getActiveOrPersistedSessionMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveBootstrap({ user: authUser });
+      await bootstrapSession;
+    });
+    await waitFor(() => expect(setBooted).toHaveBeenCalledWith(true));
+
+    let resolveRevalidation!: (session: { user: typeof authUser }) => void;
+    const revalidation = new Promise<{ user: typeof authUser }>((resolve) => {
+      resolveRevalidation = resolve;
+    });
+    getActiveOrPersistedSessionMock.mockReturnValue(revalidation);
+
+    dispatchAppStateChange(appStateHandler, 'active');
+    dispatchAppStateChange(appStateHandler, 'active');
+    expect(getActiveOrPersistedSessionMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      resolveRevalidation({ user: authUser });
+      await revalidation;
+    });
+    hook.unmount();
+  });
+
+  it('cancels scheduled revalidation while the app is in the background', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const session = {
+      expires_at: Math.floor((Date.now() + 60 * 60_000) / 1000),
+      user: authUser,
+    };
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockResolvedValue(session);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(syncAuthenticatedUserMock).toHaveBeenCalled());
+
+    clearTimeoutSpy.mockClear();
+    dispatchAppStateChange(appStateHandler, 'background');
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    hook.unmount();
+  });
+
+  it('logs current revalidation failures but ignores stale failures', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const session = { user: authUser };
+    const currentError = new Error('current revalidation failed');
+    const staleError = new Error('stale revalidation failed');
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+    let authChangeHandler: ((event: string, nextSession: typeof session | null) => void) | null = null;
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockResolvedValueOnce(session);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockImplementation((callback) => {
+      authChangeHandler = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(syncAuthenticatedUserMock).toHaveBeenCalled());
+
+    getActiveOrPersistedSessionMock.mockRejectedValueOnce(currentError);
+    dispatchAppStateChange(appStateHandler, 'active');
+    await waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to revalidate auth session',
+        currentError,
+      );
+    });
+
+    loggerWarnMock.mockClear();
+    let rejectStale!: (reason: Error) => void;
+    const staleRevalidation = new Promise<never>((_resolve, reject) => {
+      rejectStale = reject;
+    });
+    getActiveOrPersistedSessionMock.mockReturnValueOnce(staleRevalidation);
+    dispatchAppStateChange(appStateHandler, 'active');
+    dispatchAuthChange(authChangeHandler, 'SIGNED_OUT', null);
+
+    await act(async () => {
+      rejectStale(staleError);
+      await staleRevalidation.catch(() => undefined);
+    });
+
+    expect(loggerWarnMock).not.toHaveBeenCalledWith(
+      'auth',
+      'Failed to revalidate auth session',
+      staleError,
+    );
+    hook.unmount();
+  });
+
+  it('handles a missing account discovered by revalidation even when sign-out fails', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const session = { user: authUser };
+    const missingError = new Error('missing during revalidation');
+    const signOutError = new Error('sign out failed');
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock
+      .mockResolvedValueOnce(session)
+      .mockRejectedValueOnce(missingError);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    isMissingAuthenticatedAccountErrorMock.mockImplementation((error) => error === missingError);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    signOutMock.mockRejectedValue(signOutError);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(syncAuthenticatedUserMock).toHaveBeenCalled());
+
+    dispatchAppStateChange(appStateHandler, 'active');
+
+    await waitFor(() => {
+      expect(loggerDebugMock).toHaveBeenCalledWith(
+        'auth',
+        'Failed to sign out after missing account',
+        signOutError,
+      );
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(setUser).toHaveBeenCalledWith(null);
+    });
+    hook.unmount();
+  });
+
+  it('clears the active account when revalidation finds no session', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const session = { user: authUser };
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockResolvedValueOnce(session).mockResolvedValueOnce(null);
+    getVerifiedAuthUserMock.mockResolvedValue(authUser);
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(syncAuthenticatedUserMock).toHaveBeenCalled());
+
+    dispatchAppStateChange(appStateHandler, 'active');
+
+    await waitFor(() => {
+      expect(persistAuthSessionMock).toHaveBeenCalledWith(null);
+      expect(purgeAuthenticatedUserStateMock).toHaveBeenCalledWith(authUser.id);
+      expect(setUser).toHaveBeenLastCalledWith(null);
+    });
+    hook.unmount();
+  });
+
+  it('fails closed when revalidation verifies a different account', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+    const session = { user: authUser };
+    let appStateHandler: ((state: AppStateStatus) => void) | null = null;
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockResolvedValue(session);
+    getVerifiedAuthUserMock
+      .mockResolvedValueOnce(authUser)
+      .mockResolvedValueOnce({ id: 'user-2', email: 'other@example.com' });
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    syncAuthenticatedUserMock.mockResolvedValue(null);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      appStateHandler = callback;
+      return { remove: vi.fn() };
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+    await waitFor(() => expect(syncAuthenticatedUserMock).toHaveBeenCalled());
+
+    setUser.mockClear();
+    dispatchAppStateChange(appStateHandler, 'active');
+
+    await waitFor(() => expect(setUser).toHaveBeenLastCalledWith(null));
+    hook.unmount();
+  });
+
+  it('fails closed when verification returns a different account', async () => {
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const authUser = { id: 'user-1', email: 'user@example.com' };
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(null);
+    getActiveOrPersistedSessionMock.mockResolvedValue({ user: authUser });
+    getVerifiedAuthUserMock.mockResolvedValue({ id: 'user-2', email: 'other@example.com' });
+    resolveImmediateAuthUserMock.mockReturnValue({
+      id: authUser.id,
+      email: authUser.email,
+      name: 'Ada',
+      username: 'ada',
+    });
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(setUser).toHaveBeenLastCalledWith(null);
+      expect(syncAuthenticatedUserMock).not.toHaveBeenCalled();
+    });
     hook.unmount();
   });
 });

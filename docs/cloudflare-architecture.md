@@ -21,8 +21,9 @@ kanıtlanmadığı ve bu nedenle release kapısını geçemediği anlamına geli
    uygulama verisi ve idempotency/iş kuralları Postgres/RLS'de; Realtime Supabase Realtime'da; medya
    nesneleri Supabase Storage'dadır. Cloudflare Worker bunların hiçbirinin kopyası veya yeni otoritesi
    değildir.
-2. Worker yalnız mevcut beş Edge Function sınırında seçici bir güvenlik ve yönlendirme katmanıdır:
-   `auth-gateway`, `maps-geocoding`, `moderation-reports`, `media-assets` ve `delete-user`.
+2. Worker yalnız mevcut altı Edge Function sınırında seçici bir güvenlik ve yönlendirme katmanıdır:
+   `auth-gateway`, `maps-geocoding`, `moderation-reports`, `media-assets`, `personal-data` ve
+   `delete-user`.
 3. Genel amaçlı `/functions/v1/*` proxy'si yoktur. Tam yol, yöntem, JSON boyutu, action ve şema
    allowlist ile doğrulanır; sorgu dizeleri ve sondaki `/` reddedilir.
 4. Medya baytları Worker'dan geçmez. Worker yalnız imzalı upload/read URL kontrol çağrılarını ve
@@ -102,7 +103,10 @@ Detaylı sözleşme [cloudflare-route-matrix.md](./cloudflare-route-matrix.md), 
 | preview | `sorita-edge-preview` | 8.000 ms | 2.500 ms | 0,25 | deploy UNVERIFIED |
 | production | `sorita-edge-production` | 8.000 ms | 2.500 ms | 0,10 | deploy UNVERIFIED; NO-GO |
 
-Tüm `4xx/5xx` cevaplar örnekleme oranından bağımsız loglanır. Checked-in Supabase URL'leri,
+Tüm `4xx/5xx` cevaplar örnekleme oranından bağımsız loglanır.
+Workers Logs head sampling tüm ortamlarda 1,00 tutulur; tablodaki oran yalnız başarılı isteklerin
+Worker seviyesindeki örneklemesidir. Böylece platform, istek sonucunu görmeden hata loglarını
+örnek dışı bırakamaz; traces ayrıca örneklenmeye devam eder. Checked-in Supabase URL'leri,
 `.invalid` CORS origin'leri ve rate namespace ID'leri placeholder'dır. Production ayarında
 `workers_dev: false` ve `preview_urls: false` production için fail-closed kapıdır. Kaynakta bilinmeyen bir hostname
 uydurulmaz; onaylı özel domain/route eklenene kadar production Worker'ın erişilebilir ingress'i
@@ -131,7 +135,7 @@ geçmez; savunma katmanları birlikte kalır.
 
 ### Aşama 2 — Origin HMAC gözlem modu
 
-- Beş seçili Supabase function aynı canonical mesajı doğrular: timestamp, nonce, `POST`, canonical
+- Altı seçili Supabase function aynı canonical mesajı doğrular: timestamp, nonce, `POST`, canonical
   `/functions/v1/<name>` yolu ve exact body SHA-256.
 - İmza sabit zamanda karşılaştırılır; kısa freshness penceresi uygulanır; nonce replay kaydı
   Postgres'te atomik ve benzersiz tutulur. Worker belleği, KV veya başka eventual store replay

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/cayankuzu/SoRita/blob/main/release-evidence/runtime-manifest.schema.json",
-  "title": "SoRita provider and physical-device evidence packet",
+  "title": "SoRita signed provider and physical-device evidence packet",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,11 +11,12 @@
     "runtimeVersion",
     "generatedAt",
     "workflow",
+    "signingKeyId",
     "checks",
     "artifacts"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "repository": {
       "type": "string",
       "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
@@ -36,6 +37,7 @@
         "runAttempt": { "type": "integer", "minimum": 1 }
       }
     },
+    "signingKeyId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "checks": {
       "type": "object",
       "additionalProperties": false,
@@ -73,7 +75,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["check", "path", "mediaType", "bytes", "sha256"],
+        "required": ["check", "receipt", "signature"],
         "properties": {
           "check": {
             "enum": [
@@ -90,13 +92,35 @@
               "security-review"
             ]
           },
-          "path": {
-            "type": "string",
-            "pattern": "^evidence/[a-z0-9][a-z0-9-]*\\.json$"
+          "receipt": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "mediaType", "bytes", "sha256"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^evidence/[a-z0-9][a-z0-9-]*\\.json$"
+              },
+              "mediaType": { "const": "application/vnd.sorita.runtime-probe+json" },
+              "bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
           },
-          "mediaType": { "const": "application/vnd.sorita.runtime-probe+json" },
-          "bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
-          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          "signature": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "mediaType", "bytes", "sha256", "keyId"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^evidence/[a-z0-9][a-z0-9-]*\\.sig$"
+              },
+              "mediaType": { "const": "application/vnd.sorita.ed25519-signature" },
+              "bytes": { "const": 89 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "keyId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+            }
+          }
         }
       }
     }

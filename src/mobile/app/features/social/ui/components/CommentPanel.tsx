@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Dimensions,
   Keyboard,
@@ -36,6 +37,7 @@ import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPa
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
@@ -103,6 +105,7 @@ function CommentLikersModal({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={onClose}
         style={[styles.sheetOverlay, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
       >
         <Pressable accessible={false} style={StyleSheet.absoluteFillObject} onPress={onClose} />
@@ -132,6 +135,8 @@ function CommentLikersModal({
 type CommentPanelProps = {
   visible: boolean;
   comments: FeedActionComment[];
+  errorMessage?: string | null;
+  initialLoading?: boolean;
   commentText: string;
   editingCommentId?: string | null;
   activeReportCommentId?: string | null;
@@ -150,7 +155,7 @@ type CommentPanelProps = {
   onCancelReply: () => void;
   onDeleteComment: (commentId: string) => void;
   onLoadMoreComments?: () => void;
-  onToggleCommentLike: (commentId: string) => void;
+  onToggleCommentLike: (commentId: string) => void | Promise<void>;
   onStartReport: (commentId: string) => void;
   onCloseReport: () => void;
   onReportDetailsChange: (value: string) => void;
@@ -163,6 +168,52 @@ type CommentPanelProps = {
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
 };
+
+function CommentListEmptyState({
+  errorMessage,
+  initialLoading,
+  onRefresh,
+}: {
+  errorMessage: string | null;
+  initialLoading: boolean;
+  onRefresh?: () => void;
+}) {
+  if (initialLoading) {
+    return (
+      <View
+        accessibilityLabel={tr.common.loading}
+        accessibilityLiveRegion="polite"
+        accessibilityRole="progressbar"
+        accessibilityState={{ busy: true }}
+        style={styles.commentStatus}
+      >
+        <ActivityIndicator color={colors.primary} size="small" />
+        <Text style={styles.commentStatusText}>{tr.common.loading}</Text>
+      </View>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <View style={styles.commentNotice}>
+        <InlineNotice
+          tone="danger"
+          title={tr.cards.commentsTitle}
+          description={errorMessage}
+          actionLabel={onRefresh ? tr.common.retry : undefined}
+          onAction={onRefresh}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.emptyComments}>
+      <Text style={styles.emptyCommentsTitle}>{tr.cards.emptyComments}</Text>
+      <Text style={styles.emptyCommentsDescription}>{tr.cards.firstComment}</Text>
+    </View>
+  );
+}
 
 function useAndroidCommentKeyboardLift(params: {
   overlayBottomPadding: number;
@@ -249,6 +300,8 @@ function useAndroidCommentKeyboardLift(params: {
 export function CommentPanel({
   visible,
   comments,
+  errorMessage = null,
+  initialLoading = false,
   commentText,
   editingCommentId = null,
   activeReportCommentId = null,
@@ -387,6 +440,7 @@ export function CommentPanel({
         <View
           accessibilityViewIsModal
           importantForAccessibility="yes"
+          onAccessibilityEscape={handleClose}
           style={[
             styles.sheetOverlay,
             { paddingTop: overlayTopPadding, paddingBottom: modalBottomInset },
@@ -432,6 +486,9 @@ export function CommentPanel({
 
               <View style={styles.sheetBody}>
                 <FlatList
+                  accessibilityState={{
+                    busy: initialLoading || refreshing || isFetchingNextPage,
+                  }}
                   data={visibleComments}
                   keyExtractor={(item) => item.comment.id}
                   renderItem={({ item }) => (
@@ -468,15 +525,37 @@ export function CommentPanel({
                   updateCellsBatchingPeriod={32}
                   windowSize={7}
                   ListEmptyComponent={
-                    <View style={styles.emptyComments}>
-                      <Text style={styles.emptyCommentsTitle}>{tr.cards.emptyComments}</Text>
-                      <Text style={styles.emptyCommentsDescription}>{tr.cards.firstComment}</Text>
-                    </View>
+                    <CommentListEmptyState
+                      errorMessage={errorMessage}
+                      initialLoading={initialLoading}
+                      onRefresh={onRefreshComments}
+                    />
+                  }
+                  ListHeaderComponent={
+                    errorMessage && visibleComments.length > 0 ? (
+                      <View style={styles.commentNotice}>
+                        <InlineNotice
+                          tone="warning"
+                          title={tr.cards.commentsTitle}
+                          description={errorMessage}
+                          actionLabel={onRefreshComments ? tr.common.retry : undefined}
+                          onAction={onRefreshComments}
+                        />
+                      </View>
+                    ) : null
                   }
                   ListFooterComponent={
                     hasNextPage ? (
                         <Pressable
+                          accessibilityLabel={
+                            isFetchingNextPage ? tr.common.loadingMore : tr.cards.loadMoreComments
+                          }
+                          accessibilityLiveRegion={isFetchingNextPage ? 'polite' : 'none'}
                           accessibilityRole="button"
+                          accessibilityState={{
+                            busy: isFetchingNextPage,
+                            disabled: isFetchingNextPage,
+                          }}
                           disabled={isFetchingNextPage}
                           style={[styles.loadMoreButton, isFetchingNextPage ? styles.disabledAction : null]}
                           onPress={onLoadMoreComments}
@@ -512,6 +591,7 @@ export function CommentPanel({
 
       <ReportActionSheet
         visible={Boolean(activeReportCommentId)}
+        targetType="comment"
         title={tr.cards.reportCommentTitle}
         description={tr.cards.reportCommentDescription}
         reportDetails={reportDetails}

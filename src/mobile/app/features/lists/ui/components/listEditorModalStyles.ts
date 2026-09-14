@@ -1,6 +1,12 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
@@ -50,14 +56,13 @@ export const listEditorModalStyles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   subtitle: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   closeButton: {
@@ -89,8 +94,7 @@ export const listEditorModalStyles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   sectionHint: {
@@ -118,7 +122,7 @@ export const listEditorModalStyles = StyleSheet.create({
   },
   visibilityChipText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   visibilityChipTextPublic: {
     color: colors.secondary,
@@ -177,8 +181,7 @@ export const listEditorModalStyles = StyleSheet.create({
     gap: 3,
   },
   coverPickerText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.secondary,
   },
   coverPickerHint: {
@@ -197,7 +200,7 @@ export const listEditorModalStyles = StyleSheet.create({
   },
   selectionBadgeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   fieldCount: {
@@ -234,8 +237,7 @@ export const listEditorModalStyles = StyleSheet.create({
     gap: 4,
   },
   privacyText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   privacyTextActivePublic: {

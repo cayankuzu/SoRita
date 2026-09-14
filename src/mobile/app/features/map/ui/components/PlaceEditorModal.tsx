@@ -64,7 +64,7 @@ type PlaceEditorModalProps = {
   ) => Promise<void> | void;
   onSaveError?: (draft: PlaceEditorDraft) => void;
   onSaveStart?: PlaceEditorSaveStartHandler;
-  onDelete?: (placeId: string) => void;
+  onDelete?: (placeId: string) => Promise<void> | void;
   onCreateList?: (list: PlaceList) => Promise<void> | void;
   draft?: PlaceEditorDraft | null;
   onMinimize?: (draft: PlaceEditorDraft) => void;
@@ -114,7 +114,7 @@ function createInitialPlaceEditorDraft(params: {
     newListName: '',
     newListDescription: '',
     newListCoverImage: '',
-    newListPublic: true,
+    newListPublic: false,
     showNewListForm: false,
   } satisfies PlaceEditorDraft;
 }
@@ -175,6 +175,7 @@ export function PlaceEditorModal({
     handleAddMedia,
     handleCreateList,
     handleMediaPress,
+    handleMoveMedia,
     handlePickListCover,
     handleRemoveMedia,
     handleSave,
@@ -193,6 +194,7 @@ export function PlaceEditorModal({
     media,
     priceMax,
     priceMin,
+    priceRangeIsValid,
     rating,
     selectedCategories,
     selectedLists,
@@ -390,6 +392,7 @@ export function PlaceEditorModal({
           dietarySelections={dietarySelections}
           priceMax={priceMax}
           priceMin={priceMin}
+          priceRangeIsValid={priceRangeIsValid}
           studentFriendly={studentFriendly}
           onPriceMaxChange={setPriceMax}
           onPriceMinChange={setPriceMin}
@@ -428,6 +431,7 @@ export function PlaceEditorModal({
           onCreateList={handleCreateList}
           onMediaPreview={(index) => setPreviewMediaIndex(index)}
           onMediaSelection={handleMediaPress}
+          onMoveMedia={handleMoveMedia}
           onNewListCoverImageChange={setNewListCoverImage}
           onNewListDescriptionChange={setNewListDescription}
           onNewListNameChange={setNewListName}
@@ -482,6 +486,7 @@ export function PlaceEditorModal({
         accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         importantForAccessibility="yes"
+        onAccessibilityEscape={handleDismissEditor}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <Pressable
@@ -566,12 +571,17 @@ export function PlaceEditorModal({
             confirmLabel={tr.common.delete}
             confirmVariant="danger"
             onClose={() => setShowDeleteConfirm(false)}
-            onConfirm={() => {
-              setShowDeleteConfirm(false);
-              dismissKeyboardAndRunAfterInteractions(() => {
-                onDelete(existingPlace.id);
-              });
-            }}
+            onConfirm={() =>
+              new Promise<void>((resolve, reject) => {
+                dismissKeyboardAndRunAfterInteractions(() => {
+                  try {
+                    return Promise.resolve(onDelete(existingPlace.id)).then(resolve, reject);
+                  } catch (error) {
+                    reject(error);
+                  }
+                });
+              })
+            }
           />
         ) : null}
         {showDiscardConfirm ? (

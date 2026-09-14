@@ -70,7 +70,7 @@ Supabase Auth, RLS, RPC/constraint ve Edge Function iş kurallarında kalır.
 
 | ID | Tehdit / abuse case | Depo içinde mevcut kontrol | Kalan risk / zorunlu kontrol | Risk ve durum |
 | --- | --- | --- | --- | --- |
-| CF-01 | Saldırgan Worker'ı atlayıp seçili Supabase function URL'sini doğrudan çağırır | Mobil seçici gateway modu ve Worker'ın origin HMAC üretimi var; otomatik direct fallback yok | Origin beş function'da HMAC, freshness ve atomic nonce'ı enforce etmeli; doğrudan negatif test saklanmalı | **CRITICAL — UNVERIFIED, NO-GO** |
+| CF-01 | Saldırgan Worker'ı atlayıp seçili Supabase function URL'sini doğrudan çağırır | Mobil seçici gateway modu ve Worker'ın origin HMAC üretimi var; otomatik direct fallback yok | Origin altı function'da HMAC, freshness ve atomic nonce'ı enforce etmeli; doğrudan negatif test saklanmalı | **CRITICAL — UNVERIFIED, NO-GO** |
 | CF-02 | Sahte, süresi geçmiş, yanlış issuer/audience/alg JWT ile kullanıcı taklidi | ES256/RS256 JWKS doğrulaması; exact issuer/audience; `exp`, `nbf`, UUID `sub`; invalid token `401` | Canlı Supabase asymmetric key ve rotasyon prova edilmeli; token çalınması hâlâ oturum tehdididir | HIGH; live key UNVERIFIED |
 | CF-03 | JWKS endpoint bozuk, aşırı büyük, redirect veya timeout ile auth bypass/DoS | HTTPS Supabase origin, 64 KiB sınır, JSON/JWKS schema, manual redirect, 2,5/3 s timeout; yalnız çözülmüş key verisi için sınırlı TTL/LRU cache; request-owned refresh; hata `503` fail-closed | Cache miss/rotasyon sırasında availability bağımlılığı sürer; alarm ve Supabase SLO gerekir | MEDIUM; live SLO UNVERIFIED |
 | CF-04 | Credential stuffing, login/register/reset spam'i | Public action allowlist; AUTH binding 30/60; anonim anahtar HMAC-hash IP; origin auth limiti korunur | Binding POP-yerel/eventually consistent; invalid şema/token binding'i tüketmez; paylaşılan IP yan etkisi var. WAF/bot/credential kuralları gerekir | HIGH; WAF UNVERIFIED |
@@ -133,7 +133,7 @@ değerlendirilebilir:
 - Dashboard WAF, body/method/bot/rate katmanları ve cache bypass kuralları.
 - Ortama özel secrets ve benzersiz Rate Limiting namespace ID'leri.
 - Supabase asymmetric signing key/JWKS ve key rotation prova sonucu.
-- Beş origin function'da edge HMAC + freshness + atomic nonce enforcement.
+- Altı origin function'da edge HMAC + freshness + atomic nonce enforcement.
 - Direct-origin negatif matrisi, preview smoke/load ve canary SLO'ları.
 - Deploy SHA/Worker version, onay kaydı, önceki version ve rollback tatbikatı.
 

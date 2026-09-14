@@ -7,6 +7,7 @@ import {
   type NotificationCursor,
   type NotificationPage,
 } from '@/mobile/app/data/repositories/notifications/notificationQueryHelpers';
+import { assertNotificationSessionOwner } from '@/mobile/app/data/repositories/notifications/notificationOwnerGuard';
 import type { VerifiedPushNotificationTarget } from '@/mobile/app/data/contracts/notification';
 
 export type {
@@ -62,8 +63,10 @@ export function getNotificationsCursorPage(params: {
   return fetchNotificationsCursorPage(params);
 }
 
-export async function getNotificationCount(_userId: string): Promise<number> {
+export async function getNotificationCount(userId: string): Promise<number> {
+  await assertNotificationSessionOwner(userId);
   const { data, error } = await supabase.rpc('notification_unread_count');
+  await assertNotificationSessionOwner(userId);
 
   if (!error && typeof data === 'number') {
     return data;

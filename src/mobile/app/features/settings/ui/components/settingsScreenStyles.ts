@@ -1,6 +1,11 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const settingsScreenStyles = StyleSheet.create({
   sectionStack: {
@@ -9,6 +14,11 @@ export const settingsScreenStyles = StyleSheet.create({
   form: {
     gap: 12,
   },
+  sectionTitle: {
+    marginTop: 10,
+    ...typography.labelText,
+    color: colors.textSoft,
+  },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -16,8 +26,8 @@ export const settingsScreenStyles = StyleSheet.create({
     marginBottom: 10,
   },
   stepCounter: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   stepCopy: {
@@ -29,8 +39,7 @@ export const settingsScreenStyles = StyleSheet.create({
     color: colors.text,
   },
   stepDescription: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   helperCard: {
@@ -40,18 +49,15 @@ export const settingsScreenStyles = StyleSheet.create({
     padding: 10,
   },
   helperCardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   helperCardText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   selectionMeta: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   photoSection: {
@@ -71,13 +77,11 @@ export const settingsScreenStyles = StyleSheet.create({
     gap: 2,
   },
   loadingCardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   loadingCardText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   stepActions: {
@@ -97,6 +101,9 @@ export const settingsScreenStyles = StyleSheet.create({
   passwordField: {
     position: 'relative',
   },
+  passwordInput: {
+    paddingRight: 56,
+  },
   emailInfoCard: {
     gap: 6,
     borderRadius: radius.lg,
@@ -111,18 +118,16 @@ export const settingsScreenStyles = StyleSheet.create({
     gap: 6,
   },
   emailInfoLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   emailInfoValue: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   emailInfoText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   successCard: {
@@ -132,13 +137,11 @@ export const settingsScreenStyles = StyleSheet.create({
     padding: 10,
   },
   successTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.secondary,
   },
   successText: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...typography.captionText,
     color: colors.secondary,
   },
   blockedList: {
@@ -164,23 +167,27 @@ export const settingsScreenStyles = StyleSheet.create({
     flex: 1,
   },
   blockedUserName: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   blockedUserUsername: {
     marginTop: 2,
-    fontSize: 12,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   blockedUserBio: {
     marginTop: 4,
-    fontSize: 12,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   blockedUserAction: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.primary,
+  },
+  savingStatus: {
+    ...typography.captionText,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
 });

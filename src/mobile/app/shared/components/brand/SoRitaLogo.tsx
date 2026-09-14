@@ -3,7 +3,12 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { brandIconAsset } from '@/mobile/app/shared/components/brand/brandAssets';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  letterSpacing,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 type SoRitaLogoProps = {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -25,11 +30,11 @@ const iconSizes = {
   xl: 98,
 };
 
-const subtitleSizes = {
-  sm: 9,
-  md: 10,
-  lg: 11,
-  xl: 12,
+const subtitleTypography = {
+  sm: typography.metadataText,
+  md: typography.metadataText,
+  lg: typography.metadataText,
+  xl: typography.captionText,
 };
 
 const gaps = {
@@ -69,7 +74,7 @@ export function SoRitaLogo({
           <Text style={styles.brandSecondary}>{tr.brand.second}</Text>
         </Text>
         {showTagline ? (
-          <Text style={[styles.subtitle, { fontSize: subtitleSizes[size], lineHeight: subtitleSizes[size] + 2 }]}>
+          <Text style={[styles.subtitle, subtitleTypography[size]]}>
             <Text style={styles.brandPrimary}>{tr.brand.taglineFirst}</Text>
             <Text style={styles.brandSecondary}>{tr.brand.taglineSecond}</Text>
           </Text>
@@ -85,13 +90,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontWeight: '800',
-    letterSpacing: -0.8,
+    fontWeight: fontWeight.heavy,
+    letterSpacing: letterSpacing.brandTitle,
   },
   subtitle: {
     marginTop: -2,
-    fontWeight: '600',
-    letterSpacing: 0.4,
+    fontWeight: fontWeight.medium,
+    letterSpacing: letterSpacing.brandTagline,
   },
   brandPrimary: {
     color: colors.primary,

@@ -1,6 +1,6 @@
 # SoRita iddia kütüğü (claims register)
 
-Tarih: 2026-09-04
+Tarih: 2026-09-14
 Aday commit: `chore/final-release-candidate-aaa`
 Sahip: Cayan Kuzu
 
@@ -26,8 +26,8 @@ içinde bulunmalıdır.
 | # | İddia | Hedef kitle | Dayandığı yüzey | Kanıt | İzin verilen ifade | Yasak abartı | Durum |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | C1 | Mekânları haritada görüp kendi listelerini oluşturabilirsin | Şehirde yeni yer arayan kullanıcı | `Map`, `ListDetail`, `Home` | `quality/feature-surface.snapshot.json` (10 kök rota, 4 sekme, 13 ekran) | "Haritada gez, beğendiğin mekânı listene ekle." | "Tüm mekânlar", "eksiksiz rehber" | KANITLI |
-| C2 | Listeler ve mekânlar başka kullanıcılarla paylaşılabilir | Arkadaş grubuyla plan yapan kullanıcı | `ListDetail`, `UserProfile`, takip/beğeni/yorum yüzeyi | `docs/existing-feature-contract.md` "Mevcut kullanıcı kabiliyetleri" | "Listeni paylaş, arkadaşların da eklesin." | "Milyonlarca liste", "en popüler listeler" | KANITLI |
-| C3 | Uygulamada reklam ve pazarlama takip SDK'sı yoktur | Gizliliğe duyarlı kullanıcı | Üretim bağımlılıkları | `package.json` üretim bağımlılıklarında reklam/analitik/attribution SDK'sı yok; yalnız `@sentry/react-native` (çökme raporu) | "Reklam yok, pazarlama takip SDK'sı yok. Yalnız çökme raporu var." | "Hiçbir veri toplamıyoruz" (yanlış: çökme raporu ve hesap verisi var) | KANITLI |
+| C2 | Listeler ve mekânlar başka kullanıcılarla paylaşılabilir | Arkadaş grubuyla plan yapan kullanıcı | `ListDetail`, `UserProfile`, takip/beğeni/yorum yüzeyi | `docs/existing-feature-contract.md` "Mevcut kullanıcı kabiliyetleri" | "Listeni paylaş; arkadaşların görsün, takip etsin ve yorum yazsın." | "Ortaklaşa düzenleyin", "Milyonlarca liste", "en popüler listeler" | KANITLI |
+| C3 | Uygulamada reklam, sponsorlu yerleştirme veya attribution SDK'sı yoktur; Sentry teknik telemetriyi, PostHog ise yalnız açık kullanıcı izni ve uzaktan kill-switch sonrasında anonim sınırlı ürün ölçümlerini işleyebilir | Gizliliğe duyarlı kullanıcı | Üretim bağımlılıkları, izin deposu ve telemetri adaptörleri | `package.json`, `src/mobile/app/platform/observability/sentry.ts`, `src/mobile/app/platform/analytics/analyticsConsent.ts`, `src/mobile/app/platform/analytics/posthogAnalyticsProvider.ts`, `src/mobile/app/platform/analytics/sentryAnalyticsProvider.ts` | "Reklam/attribution SDK'sı yok. Teknik telemetri açıkça beyan edilir; anonim ürün analitiği varsayılan olarak kapalı ve isteğe bağlıdır." | "Hiçbir takip yok", "Yalnız çökme raporu var", "Hiçbir veri toplamıyoruz", "Tamamen anonim" | KANITLI |
 | C4 | Hesabını uygulama içinden silebilirsin | Çıkış yapmak isteyen kullanıcı | `Settings` hesap grubu | `supabase/functions/delete-user/` ve `handler.test.ts` | "Hesabını uygulamadan silebilirsin." | "Anında tamamen silinir" (silme akışı sunucu tarafında sıraya girer) | KANITLI |
 | C5 | Rahatsız eden kullanıcıyı engelleyip içerik bildirebilirsin | Güvenlik kaygısı olan kullanıcı | `Settings` engellenenler, raporlama yüzeyi | `supabase/functions/moderation-reports/handler.test.ts`, `docs/moderation-without-admin-panel.md` | "Engelle ve bildir; engel tüm akışlarda geçerlidir." | "Zararlı içerik %100 engellenir" | KANITLI |
 | C6 | Özel listeler ve özel hesap desteklenir | Mahremiyet isteyen kullanıcı | Gizlilik ayarları, RLS | `docs/existing-feature-contract.md`, Supabase RLS politikaları | "Listeni herkese açık ya da özel tutabilirsin." | "Askeri düzeyde şifreleme" | KANITLI |

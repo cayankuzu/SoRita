@@ -12,7 +12,10 @@ import { pickPlaceMediaFromPrompt } from '@/mobile/app/platform/media/images';
 import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMediaCounts } from '@/mobile/app/shared/utils/placeMedia';
-import { swapPhotos } from '@/mobile/app/features/map/application/placeEditorStateUtils';
+import {
+  reorderPhotos,
+  swapPhotos,
+} from '@/mobile/app/features/map/application/placeEditorStateUtils';
 
 export type MediaSelectionIssueSummary = {
   rejectedPhotos: number;
@@ -184,6 +187,25 @@ export function usePlaceEditorMediaController({
     [setMedia],
   );
 
+  const handleMoveMedia = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= media.length ||
+        toIndex >= media.length
+      ) {
+        return;
+      }
+
+      setMedia((items) => reorderPhotos(items, fromIndex, toIndex));
+      setSelectedMediaIndex(null);
+      setEditingVideoThumbnailIndex(null);
+    },
+    [media.length, setMedia],
+  );
+
   const handleEditMedia = useCallback(
     async (index: number) => {
       if (isAddingMedia || index < 0 || index >= media.length) {
@@ -271,6 +293,7 @@ export function usePlaceEditorMediaController({
     handleAddMedia,
     handleEditMedia,
     handleMediaPress,
+    handleMoveMedia,
     handleRemoveMedia,
     isAddingMedia,
     openVideoThumbnailEditor,

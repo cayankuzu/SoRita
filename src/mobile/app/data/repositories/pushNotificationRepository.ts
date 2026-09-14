@@ -1,16 +1,10 @@
-import type {
-  DevicePushToken,
-  NotificationPermissionsStatus,
-} from 'expo-notifications';
+import type { DevicePushToken } from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { ensureAndroidPushChannel } from '@/mobile/app/platform/notifications/androidPushChannel';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
-import {
-  androidNotificationChannelDescription,
-  androidNotificationChannelId,
-  androidNotificationChannelName,
-} from '@/mobile/app/platform/notifications/channels';
+import { resolvePushPermission } from '@/mobile/app/platform/notifications/pushPermission';
 import { env } from '@/mobile/app/platform/config/env';
 import {
   clearPushTokenCleanupTombstone,
@@ -28,96 +22,20 @@ type PushPermissionResult = {
   canAskAgain: boolean;
 };
 
+let pushRegistrationMutationQueue: Promise<void> = Promise.resolve();
+
+class PushTokenAcquisitionError extends Error {
+  constructor() {
+    super('Expo push token acquisition returned an empty token.');
+    this.name = 'PushTokenAcquisitionError';
+  }
+}
+
 async function loadNotificationsModule() {
   return import('expo-notifications');
 }
 
-export async function ensureAndroidPushChannel() {
-  if (Platform.OS !== 'android') {
-    return;
-  }
-
-  const Notifications = await loadNotificationsModule();
-
-  await Notifications.setNotificationChannelAsync(androidNotificationChannelId, {
-    description: androidNotificationChannelDescription,
-    name: androidNotificationChannelName,
-    importance: Notifications.AndroidImportance.MAX,
-    vibrationPattern: [0, 250, 150, 250],
-    lightColor: '#3b82f6',
-    bypassDnd: false,
-    enableLights: true,
-    enableVibrate: true,
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    showBadge: true,
-    audioAttributes: {
-      usage: Notifications.AndroidAudioUsage.NOTIFICATION_COMMUNICATION_INSTANT,
-      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
-      flags: {
-        enforceAudibility: false,
-        requestHardwareAudioVideoSynchronization: false,
-      },
-    },
-  });
-}
-
-function allowsIosDelivery(
-  permissions: NotificationPermissionsStatus,
-  Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
-) {
-  return (
-    permissions.granted ||
-    permissions.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-    permissions.ios?.status === Notifications.IosAuthorizationStatus.EPHEMERAL
-  );
-}
-
-function allowsIosInterruptions(
-  permissions: NotificationPermissionsStatus,
-  Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
-) {
-  const iosPermissions = permissions.ios;
-
-  if (!iosPermissions) {
-    return permissions.granted;
-  }
-
-  return (
-    iosPermissions.status === Notifications.IosAuthorizationStatus.AUTHORIZED &&
-    iosPermissions.allowsAlert !== false &&
-    iosPermissions.allowsSound !== false &&
-    iosPermissions.allowsDisplayOnLockScreen !== false &&
-    iosPermissions.allowsDisplayInNotificationCenter !== false
-  );
-}
-
-function buildPushPermissionResult(
-  permissions: NotificationPermissionsStatus,
-  Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
-): PushPermissionResult {
-  const granted =
-    Platform.OS === 'ios'
-      ? allowsIosDelivery(permissions, Notifications)
-      : permissions.granted;
-  const allowsInterruptions =
-    Platform.OS === 'ios'
-      ? allowsIosInterruptions(permissions, Notifications)
-      : permissions.granted;
-
-  return {
-    granted,
-    allowsInterruptions,
-    canAskAgain: permissions.canAskAgain,
-  };
-}
-
-async function getExistingPushPermissionState(): Promise<PushPermissionResult> {
-  const Notifications = await loadNotificationsModule();
-  return buildPushPermissionResult(
-    await Notifications.getPermissionsAsync(),
-    Notifications,
-  );
-}
+export { ensureAndroidPushChannel };
 
 function getExpoProjectId() {
   return env.expoProjectId || null;
@@ -130,36 +48,77 @@ async function resolveCurrentExpoPushToken() {
     return null;
   }
 
-  const Notifications = await loadNotificationsModule();
-  const permissions = buildPushPermissionResult(
-    await Notifications.getPermissionsAsync(),
-    Notifications,
-  );
+  const permissions = await resolvePushPermission();
 
   if (!permissions.granted) {
     return null;
   }
 
+  const Notifications = await loadNotificationsModule();
   return (await Notifications.getExpoPushTokenAsync({ projectId })).data || null;
 }
 
-async function upsertExpoPushToken(userId: string, expoPushToken: string) {
-  const capability = await rememberActivePushTokenCleanupCapability(expoPushToken);
-  const { error } = await supabase.rpc('upsert_user_push_token', {
-    input_cleanup_secret: capability.cleanupSecret,
-    input_token: expoPushToken,
-    input_platform: Platform.OS,
+function withPushRegistrationMutation<T>(operation: () => Promise<T>) {
+  const result = pushRegistrationMutationQueue.then(operation, operation);
+  pushRegistrationMutationQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+async function upsertExpoPushToken(_userId: string, expoPushToken: string) {
+  return withPushRegistrationMutation(async () => {
+    const previousCapability = await getActivePushTokenCleanupCapability();
+    const reusesExistingCapability = previousCapability?.token === expoPushToken;
+
+    if (previousCapability && !reusesExistingCapability) {
+      await stagePushTokenCleanupTombstone(previousCapability);
+    }
+
+    const capability = reusesExistingCapability
+      ? previousCapability
+      : await rememberActivePushTokenCleanupCapability(expoPushToken);
+
+    try {
+      const { error } = await supabase.rpc('upsert_user_push_token', {
+        input_cleanup_secret: capability.cleanupSecret,
+        input_token: expoPushToken,
+        input_platform: Platform.OS,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      if (!reusesExistingCapability) {
+        await clearPushTokenCleanupTombstone(capability).catch(() => undefined);
+
+        if (previousCapability) {
+          // The previous server binding is still authoritative because the new
+          // upsert failed. Remove the staged rotation tombstone before
+          // restoring it as active, otherwise the next cleanup pass would
+          // revoke the valid token and permanently block registration retries.
+          await clearPushTokenCleanupTombstone(previousCapability).catch(() => undefined);
+          await rememberActivePushTokenCleanupCapability(
+            previousCapability.token,
+            previousCapability.cleanupSecret,
+          ).catch(() => undefined);
+        }
+      }
+
+      throw error;
+    }
+
+    if (previousCapability && !reusesExistingCapability) {
+      // Registration of the new token is already durable. Old-token cleanup is
+      // best effort and retains its secure tombstone across offline failures.
+      await flushPendingPushTokenCleanupTombstones().catch(() => undefined);
+    }
+
+    logger.info('push', 'Push token registered');
+    return expoPushToken;
   });
-
-  if (error) {
-    // Do not leave a locally remembered capability for a token whose server
-    // binding failed. A future successful registration will create a fresh one.
-    await clearPushTokenCleanupTombstone(capability).catch(() => undefined);
-    throw error;
-  }
-
-  logger.info('push', `Push token registered for ${userId}`);
-  return expoPushToken;
 }
 
 async function resolveActiveOrCurrentPushTokenCapability() {
@@ -278,11 +237,9 @@ export async function registerPushNotifications(userId: string) {
     return null;
   }
 
-  // Registration runs during startup/foreground recovery and therefore must
-  // never open an OS permission prompt. A user-initiated product surface may
-  // request permission separately; this background path only observes the
-  // current state and registers when permission already exists.
-  const permissions = await getExistingPushPermissionState();
+  const permissions: PushPermissionResult = await resolvePushPermission({
+    requestIfPossible: true,
+  });
 
   if (!permissions.granted) {
     logger.warn('push', 'Push notification permission was not granted.');
@@ -301,7 +258,7 @@ export async function registerPushNotifications(userId: string) {
 
   if (!expoPushToken) {
     logger.warn('push', 'Expo push token could not be resolved.');
-    return null;
+    throw new PushTokenAcquisitionError();
   }
 
   return upsertExpoPushToken(userId, expoPushToken);
@@ -321,12 +278,22 @@ export async function registerDevicePushToken(userId: string, devicePushToken: D
     return null;
   }
 
+  // A native token refresh is not permission to resurrect a server binding
+  // after the user has disabled notifications. This is deliberately read-only:
+  // only the interactive registration path may display the OS prompt.
+  const permissions = await resolvePushPermission();
+
+  if (!permissions.granted) {
+    logger.warn('push', 'Push token refresh ignored because notification permission is not granted.');
+    return null;
+  }
+
   const Notifications = await loadNotificationsModule();
   const expoPushToken = (await Notifications.getExpoPushTokenAsync({ projectId, devicePushToken })).data;
 
   if (!expoPushToken) {
     logger.warn('push', 'Expo push token could not be resolved.');
-    return null;
+    throw new PushTokenAcquisitionError();
   }
 
   return upsertExpoPushToken(userId, expoPushToken);

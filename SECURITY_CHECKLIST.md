@@ -1,14 +1,15 @@
 # Security Checklist
 
-Last updated: 2026-08-30
+Last updated: 2026-09-07
 
-`[x]` means repository implementation and automated coverage exist. It does not
-claim that deployment, provider configuration, staging, or runtime evidence has
-been completed. Those external checks remain release gates.
+`[x]` means repository implementation and automated coverage exist. `[!]` marks
+an open release-blocking incident response item. Neither status claims that
+deployment, provider configuration, staging, or runtime evidence has been
+completed. Those external checks remain release gates.
 
 | Status | Area | Current repository state |
 | --- | --- | --- |
-| `[x]` | Secrets and runtime config | Client-visible Expo values and server-only secrets are separated in `.env.example`. Real service-role, HMAC, email-provider, EAS, Cloudflare, and Sentry secrets must stay in their protected provider environments and must not be committed. |
+| `[x]` | Current-tree secrets and runtime config | Client-visible Expo values and server-only secrets are separated in `.env.example`. Real service-role, HMAC, email-provider, EAS, Cloudflare, and Sentry secrets must stay in their protected provider environments and must not be committed. |
 | `[x]` | Authentication and authorization | Sensitive auth operations use `auth-gateway`; public responses are enumeration-safe, signed requests and access tokens are verified, availability cannot be called directly by anonymous/authenticated roles, and session refresh is single-flight. |
 | `[x]` | Rate limiting | High-risk Edge Functions use the atomic database limiter and fail closed when limiter storage is unavailable. The selective Cloudflare gateway adds route/user/IP controls without an in-memory global limiter. |
 | `[x]` | Input validation and request integrity | Auth, media, maps, moderation, and deletion handlers enforce bounded schemas, methods, signed request freshness/nonces, body limits, and controlled error contracts. Selective-Cloudflare requests additionally require a timestamped, replay-protected origin HMAC once the reviewed cutover flag is enabled. |
@@ -21,6 +22,7 @@ been completed. Those external checks remain release gates.
 | `[x]` | Account deletion and private state | Deletion is an idempotent leased saga with reconciliation. Logout/account changes purge owner-scoped query, snapshot, outbox, signed-URL, and media state. |
 | `[x]` | Durable upload cleanup source | Upload sessions use a private lease/state ledger, reference gates and repeated cleanup horizons. A protected bounded GitHub sweeper definition and unit guard exist; hosted execution remains an external gate. |
 | `[x]` | Supply-chain automation | Release workflows include production dependency audit, license/provenance checks, Semgrep, full-history Gitleaks, pinned critical actions, and same-SHA release evidence. |
+| `[!]` | Historical credential exposure | A non-placeholder Sentry auth credential remains reachable in historical `.env` commits. Automation is not closure: revoke/rotate it provider-side, review provider audit logs and scope, coordinate history remediation, then attach a clean full-history scan before any release. The credential value must never be copied into logs, tickets, or evidence. |
 | `[~]` | Dependency/runtime findings | Counts must come from the current immutable commit's `npm audit`, Expo Doctor, native build, and signed artifact evidence. This checklist intentionally does not preserve stale vulnerability counts. |
 | `[~]` | Deployment and runtime verification | Repository gates are prepared, but Supabase migration/function deployment, Cloudflare protected environments, EAS signing, staging tests, real-device tests, restore drills, canary, and rollback evidence remain external `NO-GO` gates. |
 
@@ -29,6 +31,7 @@ been completed. Those external checks remain release gates.
 Run from the repository root:
 
 ```powershell
+npm run typecheck
 npm run security:verify
 npm run security:audit:prod
 npm run security:licenses
@@ -37,21 +40,29 @@ npm run feature-surface:check
 npm run ops:test
 ```
 
-`security:verify` explicitly includes the `moderation-reports` handler suite as
-well as auth, client/origin request-signing, maps, media, deletion, and
-private-media coverage.
+`security:verify` explicitly covers client request signing, auth transition and
+snapshot ownership races, notification/list cache ownership, Android channel
+parity, media cleanup, and the auth, origin-security, maps, media, deletion, and
+`moderation-reports` server handlers.
 Database privilege and lifecycle behavior are covered by
 `supabase/tests/rls_and_security.sql`,
 `supabase/tests/account_deletion_moderation_retention.sql`,
-`supabase/tests/cloudflare_origin_security.sql`, and
-`supabase/tests/moderation_ops_security.sql` when `supabase test db` runs.
+`supabase/tests/cloudflare_origin_security.sql`,
+`supabase/tests/moderation_ops_security.sql`,
+`supabase/tests/compliance_data_rights_security.sql`, and
+`supabase/tests/compliance_gap_closure.sql` when `supabase test db` runs.
 
 ## Manual release gates
 
+- `[ ]` Complete the historical Sentry credential incident response first:
+  revoke/rotate provider-side, inspect access/audit logs, record blast radius,
+  coordinate any history rewrite with a mirror backup and every collaborator,
+  and re-run the full-history scanner on all refs. A current-tree-only scan is
+  insufficient.
 - `[ ]` Apply all pending migrations to isolated staging; run migration replay,
-  DB lint, both pgTAP suites, and dump/restore against the same commit SHA.
+  DB lint, all pgTAP suites, and dump/restore against the same commit SHA.
 - `[ ]` Deploy `auth-gateway`, `maps-geocoding`, `media-assets`, `moderation-reports`,
-  and `delete-user` with exact secrets/origin allowlists from protected storage.
+  `personal-data`, and `delete-user` with exact secrets/origin allowlists from protected storage.
 - `[ ]` Prove hosted Supabase Auth rate limits, CAPTCHA/bot controls, email
   confirmation/change behavior, exact redirect allowlist, password/leak policy
   and the recorded MFA decision for direct `/auth/v1` traffic.

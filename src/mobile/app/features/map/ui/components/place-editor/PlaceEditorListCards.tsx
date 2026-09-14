@@ -63,6 +63,14 @@ export function PlaceEditorListCards({
 
           return (
             <Pressable
+              accessibilityLabel={`${list.name}. ${
+                list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList
+              }`}
+              accessibilityHint={
+                blocked
+                  ? tr.placeEditor.duplicateListSelectionBlocked(list.name)
+                  : tr.placeEditor.targetListsHelper
+              }
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected, disabled: blocked }}
               key={list.id}

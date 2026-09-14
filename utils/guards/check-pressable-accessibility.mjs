@@ -89,12 +89,23 @@ function inspectPressables(filePath, sourceText) {
   function visit(node) {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tagName = node.tagName.getText(source);
-      if (labelledPressableNames.has(tagName)) {
-        const attributes = new Set(
-          node.attributes.properties
-            .filter(ts.isJsxAttribute)
-            .map((attribute) => attribute.name.getText(source)),
+      const attributes = new Set(
+        node.attributes.properties
+          .filter(ts.isJsxAttribute)
+          .map((attribute) => attribute.name.getText(source)),
+      );
+
+      if (
+        attributes.has('accessibilityViewIsModal') &&
+        !attributes.has('onAccessibilityEscape')
+      ) {
+        const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+        violations.push(
+          `${path.relative(workspace, filePath)}:${position.line + 1} modal has no accessibility escape handler`,
         );
+      }
+
+      if (labelledPressableNames.has(tagName)) {
         const hidden = isExplicitlyHidden(node.attributes.properties);
         const declaresSemantics =
           attributes.has('accessibilityRole') || attributes.has('accessible');
@@ -139,7 +150,7 @@ for (const filePath of await collectTsxFiles(sourceRoot)) {
 
 if (violations.length > 0) {
   throw new Error(
-    `Pressables must declare semantics and an accessible name:\n${violations.join('\n')}`,
+    `Interactive surfaces must declare complete accessibility semantics:\n${violations.join('\n')}`,
   );
 }
 

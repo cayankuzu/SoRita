@@ -57,6 +57,7 @@ geçersizse `401` döner ve geçerliyse rate-limit kullanıcı anahtarına geçe
 | `/v1/media-assets` | `create-read-url` | `POST` | JWT | 64 KiB | NS | J3/J2.5 + O10/O8 | H+R | E | P120, UID |
 | `/v1/media-assets` | `create-read-urls` | `POST` | JWT | 64 KiB | NS | J3/J2.5 + O10/O8 | H+R | E | P120, UID |
 | `/v1/media-assets` | `delete` | `POST` | JWT | 64 KiB | NS | J3/J2.5 + O10/O8 | H+N | E | P120, UID |
+| `/v1/personal-data` | `export` | `POST` | JWT | 1 KiB | NS | J3/J2.5 + O10/O8 | H+N | E | P120, UID; origin ayrıca 2/gün iş kotası uygular |
 | `/v1/delete-user` | sentetik action `delete-user` | `POST` | JWT | 1 KiB | NS | J3/J2.5 + O10/O8 | H+D | E | P120, UID |
 
 Cloudflare Rate Limiting binding'i per-location ve eventually consistent bir abuse kontrolüdür; kesin
@@ -83,7 +84,7 @@ değer üzerinde uygulanır. Sayılar JSON number olmalıdır.
 | --- | --- | --- |
 | `check-availability` | `email` veya `username` alanlarından en az biri | `email` valid ve en çok 254; `username` `^[a-z0-9_]{3,30}$`; `excludeUserId` UUID |
 | `login` | `email`, `password` | email en çok 254; password 1–128 |
-| `register` | `email`, `name`, `password`, `username`, `redirectUrl`, strict `legalConsent` | `name` 2–60; password 8–128 ve lower/upper/rakam/sembol; `bio` en çok 150; `profilePhoto`/`coverPhoto` valid URL en çok 500; `interests` en çok 20 öğe, her biri 1–40; `redirectUrl` URL en çok 400; consent `acceptedAt` datetime, `version` 1–32, `documentsAccepted` 1–10 öğe ve her biri 1–32 |
+| `register` | `email`, `name`, `password`, `username`, `redirectUrl`, strict `legalConsent` | `name` 2–60; password 8–128 ve lower/upper/rakam/sembol; `bio` en çok 150; `profilePhoto`/`coverPhoto` valid URL en çok 500; `interests` en çok 20 öğe, her biri 1–40; `redirectUrl` URL en çok 400; consent sürümü exact `2026-09-08-terms-community-privacy`, belgeler exact `community/kvkk/privacy/terms`, `acceptedAt` son 24 saat ile gelecek 5 dakika aralığında |
 | `resend-confirmation` | `email`, `redirectUrl` | email en çok 254; URL en çok 400 |
 | `request-password-reset` | `email`, `redirectUrl` | email en çok 254; URL en çok 400 |
 | `prepare-password-reset` | `email` | email en çok 254 |
@@ -132,9 +133,15 @@ media_body_proxy_forbidden` ile reddedilir. Dosya içeriği Worker'a gönderilem
 
 Gövde exact boş obje `{}` olmalıdır. Ek alan kabul edilmez.
 
+### `personal-data`
+
+Gövde exact `{ "action": "export" }` olmalıdır. Kullanıcı kimliği gövdeden kabul edilmez; JWT
+`sub` değerinden alınır. Başarılı origin cevabı exact `{ "data": <object> }` zarfıdır ve Worker'da
+5 MiB sınırını aşamaz.
+
 ## Global HTTP sözleşmesi
 
-- Yalnız `/health` için `GET`; beş proxy yolu için `POST`; exact browser preflight için `OPTIONS`.
+- Yalnız `/health` için `GET`; altı proxy yolu için `POST`; exact browser preflight için `OPTIONS`.
 - Query string bulunan her istek `400`; bilinmeyen veya trailing-slash yol `404`; yanlış yöntem `405`
   ve uygun `Allow` başlığı.
 - Proxy gövdesi yalnız `application/json` veya `application/json; charset=utf-8`; content encoding yok

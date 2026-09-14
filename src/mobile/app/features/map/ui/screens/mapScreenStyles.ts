@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const mapScreenStyles = StyleSheet.create({
   container: {
@@ -48,8 +48,8 @@ export const mapScreenStyles = StyleSheet.create({
   searchInput: {
     flex: 1,
     minHeight: 44,
-    fontSize: 13,
-    lineHeight: 18,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.text,
     backgroundColor: 'transparent',
     includeFontPadding: false,
@@ -102,8 +102,8 @@ export const mapScreenStyles = StyleSheet.create({
   filterMenuTitle: {
     paddingHorizontal: 4,
     paddingBottom: 4,
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   filterOption: {
@@ -128,8 +128,7 @@ export const mapScreenStyles = StyleSheet.create({
     borderColor: colors.textSoft,
   },
   filterOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   filterOptionTextActive: {
@@ -167,8 +166,8 @@ export const mapScreenStyles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   resultsHeaderText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   resultRow: {
@@ -181,14 +180,14 @@ export const mapScreenStyles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   resultTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   resultAddress: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   emptyResultsCard: {
@@ -200,14 +199,14 @@ export const mapScreenStyles = StyleSheet.create({
     paddingVertical: 10,
   },
   emptyResultsTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   emptyResultsDescription: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.metadataText,
+    fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   map: {
@@ -256,8 +255,8 @@ export const mapScreenStyles = StyleSheet.create({
     gap: 2,
   },
   reopenEditorTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   reopenEditorSubtitle: {

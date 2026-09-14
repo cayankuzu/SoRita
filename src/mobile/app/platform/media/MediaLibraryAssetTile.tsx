@@ -4,19 +4,19 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 type MediaLibraryAssetTileProps = {
   asset: MediaLibraryPickerAsset;
   disabled?: boolean;
-  onPress: () => void;
-  onPreviewError: () => void;
+  onPress: (asset: MediaLibraryPickerAsset) => void;
+  onPreviewError: (asset: MediaLibraryPickerAsset) => void;
   orderIndex: number;
   size: number;
 };
 
-export function MediaLibraryAssetTile({
+export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
   asset,
   disabled = false,
   onPress,
@@ -28,6 +28,11 @@ export function MediaLibraryAssetTile({
   const isSelected = orderIndex >= 0;
   const durationLabel =
     isVideo && asset.duration > 0 ? formatPlaceMediaDuration(asset.duration * 1000) : null;
+  const handlePress = React.useCallback(() => onPress(asset), [asset, onPress]);
+  const handlePreviewError = React.useCallback(
+    () => onPreviewError(asset),
+    [asset, onPreviewError],
+  );
 
   return (
     <Pressable
@@ -35,7 +40,7 @@ export function MediaLibraryAssetTile({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: isSelected, disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={handlePress}
       style={[
         styles.assetTile,
         { height: size, width: size },
@@ -54,7 +59,7 @@ export function MediaLibraryAssetTile({
         }}
         durationLabel={durationLabel ?? undefined}
         fallbackToVideoPreview
-        onPreviewError={onPreviewError}
+        onPreviewError={handlePreviewError}
         style={styles.assetPreview}
       />
 
@@ -71,7 +76,7 @@ export function MediaLibraryAssetTile({
       ) : null}
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   assetTile: {
@@ -107,7 +112,7 @@ const styles = StyleSheet.create({
   },
   orderBadgeText: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
   disabledOverlay: {
@@ -118,8 +123,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   disabledLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.onPrimary,
   },
 });

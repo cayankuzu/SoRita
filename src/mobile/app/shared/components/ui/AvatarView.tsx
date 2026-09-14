@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight } from '@/mobile/app/shared/theme/tokens';
 import { getUserAvatarText } from '@/mobile/app/shared/utils/format';
 
 type AvatarViewProps = {
@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
   },
   fallbackText: {
     color: colors.onPrimary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
 });

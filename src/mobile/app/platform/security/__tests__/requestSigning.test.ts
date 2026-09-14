@@ -34,7 +34,7 @@ describe('request signing', () => {
     });
   });
 
-  it('can sign the legacy protocol for an older deployed edge function', async () => {
+  it('binds the signature to the request method and edge function identity', async () => {
     const timestamp = 1_786_909_600_000;
     const bodyText = '{"action":"upload"}';
     vi.spyOn(Date, 'now').mockReturnValue(timestamp);
@@ -43,7 +43,7 @@ describe('request signing', () => {
       accessToken: 'session-token',
       bodyText,
       functionName: 'media-assets',
-      legacy: true,
+      method: 'POST',
     });
     const payloadHash = bytesToHex(sha256(utf8ToBytes(bodyText)));
     const expectedSignature = bytesToHex(
@@ -51,7 +51,7 @@ describe('request signing', () => {
         sha256,
         utf8ToBytes('session-token'),
         utf8ToBytes(
-          `device-1234:${timestamp}:${headers['x-nonce']}:${payloadHash}`,
+          `POST:media-assets:device-1234:${timestamp}:${headers['x-nonce']}:${payloadHash}`,
         ),
       ),
     );

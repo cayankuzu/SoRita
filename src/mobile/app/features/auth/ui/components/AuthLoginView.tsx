@@ -16,6 +16,7 @@ import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useA
 
 type AuthLoginViewProps = {
   confirmationEmail?: string | null;
+  error?: string;
   loginEmail: string;
   loginPassword: string;
   onBack: () => void;
@@ -29,6 +30,7 @@ type AuthLoginViewProps = {
 
 export function AuthLoginView({
   confirmationEmail,
+  error,
   loginEmail,
   loginPassword,
   onBack,
@@ -96,13 +98,13 @@ export function AuthLoginView({
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
-        <Text style={styles.screenTitle}>{tr.auth.login.title}</Text>
+        <Text accessibilityRole="header" style={styles.screenTitle}>{tr.auth.login.title}</Text>
         <Text style={styles.screenSubtitle}>{tr.auth.login.subtitle}</Text>
       </View>
 
       <View style={styles.formBlock}>
         {confirmationEmail ? (
-          <View style={styles.confirmationCard}>
+          <View accessibilityLiveRegion="polite" style={styles.confirmationCard}>
             <Text style={styles.confirmationTitle}>{tr.auth.login.confirmationTitle}</Text>
             <Text style={styles.confirmationText}>
               {tr.auth.login.confirmationText(confirmationEmail)}
@@ -120,8 +122,10 @@ export function AuthLoginView({
           placeholder={tr.auth.login.emailPlaceholder}
           value={loginEmail}
           onChangeText={onChangeEmail}
+          autoComplete="email"
           keyboardType="email-address"
           autoCapitalize="none"
+          textContentType="username"
           blurOnSubmit={false}
           returnKeyType="next"
           onSubmitEditing={() => passwordRef.current?.focus()}
@@ -133,8 +137,10 @@ export function AuthLoginView({
           placeholder={tr.auth.login.passwordPlaceholder}
           value={loginPassword}
           onChangeText={onChangePassword}
+          autoComplete="current-password"
           secureTextEntry
           autoCapitalize="none"
+          textContentType="password"
           onFocus={revealPasswordActions}
           returnKeyType="done"
           onSubmitEditing={() => onLogin()}
@@ -150,6 +156,15 @@ export function AuthLoginView({
             <Text style={styles.footerLink}>{tr.auth.login.forgotPassword}</Text>
           </InstantPressable>
         </View>
+        {error ? (
+          <Text
+            accessibilityLiveRegion="assertive"
+            accessibilityRole="alert"
+            style={styles.formError}
+          >
+            {error}
+          </Text>
+        ) : null}
         <PrimaryButton title={tr.auth.login.submit} onPress={onLogin} />
       </View>
 

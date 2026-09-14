@@ -1,6 +1,13 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  radius,
+  spacing,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const listDetailScreenStyles = StyleSheet.create({
   screenLoader: {
@@ -25,8 +32,8 @@ export const listDetailScreenStyles = StyleSheet.create({
   scrollTopButton: {
     position: 'absolute',
     right: 12,
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -85,8 +92,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   heroPlaceholderLabel: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.primaryDark,
   },
   heroPlaceholderEmojiWrap: {
@@ -100,7 +106,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   heroPlaceholderEmoji: {
-    fontSize: 20,
+    ...typography.title,
   },
   coverHintChip: {
     position: 'absolute',
@@ -115,8 +121,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   coverHintText: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.onPrimary,
   },
   heroBody: {
@@ -126,9 +131,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: typography.screenTitle,
-    lineHeight: 24,
-    fontWeight: '700',
+    ...typography.title,
     color: colors.text,
   },
   heroMetaRow: {
@@ -159,8 +162,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderColor: colors.dangerBorder,
   },
   heroMetaChipText: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   heroMetaChipTextAccent: {
@@ -170,8 +172,9 @@ export const listDetailScreenStyles = StyleSheet.create({
     color: colors.danger,
   },
   heroTimestamp: {
-    fontSize: typography.caption,
-    lineHeight: 15,
+    ...typography.captionText,
+    lineHeight: typography.compactTitleText.fontSize,
+    fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   sectionStack: {
@@ -202,14 +205,12 @@ export const listDetailScreenStyles = StyleSheet.create({
     minWidth: 0,
   },
   ownerEyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   ownerName: {
     marginTop: 2,
-    fontSize: 13,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   ownerUsername: {
@@ -224,8 +225,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   ownerBadgeText: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.primaryDark,
   },
   descriptionCard: {
@@ -238,13 +238,11 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: 6,
   },
   descriptionCardLabel: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
   mapSection: {
@@ -257,14 +255,13 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: 10,
   },
   mapCardEyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   mapCardTitle: {
     marginTop: 2,
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.bodyText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   mapFrame: {
@@ -276,7 +273,7 @@ export const listDetailScreenStyles = StyleSheet.create({
   },
   mapHelper: {
     ...typography.metadataText,
-    lineHeight: 15,
+    lineHeight: typography.compactTitleText.fontSize,
     color: colors.textSoft,
   },
   sectionHeader: {
@@ -290,20 +287,17 @@ export const listDetailScreenStyles = StyleSheet.create({
     flex: 1,
   },
   sectionEyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.textSoft,
   },
   sectionTitle: {
     marginTop: 2,
-    fontSize: typography.sectionTitle,
-    fontWeight: '700',
+    ...typography.section,
     color: colors.text,
   },
   sectionSubtitle: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.captionText,
     color: colors.textMuted,
   },
   feed: {
@@ -337,13 +331,12 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   highlightPillText: {
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.primaryDark,
   },
   emptyWrap: {
     marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
   },
 });

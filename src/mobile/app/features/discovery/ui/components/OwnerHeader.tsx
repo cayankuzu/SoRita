@@ -5,6 +5,7 @@ import type { User } from '@/mobile/app/data/contracts/entities';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
+import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type OwnerHeaderProps = {
   owner: User;
@@ -13,12 +14,15 @@ type OwnerHeaderProps = {
 };
 
 export function OwnerHeader({ owner, onPress, onPressIn }: OwnerHeaderProps) {
+  const interactive = Boolean(onPress);
+
   return (
     <Pressable
-      accessibilityLabel={`${owner.name}, @${owner.username}`}
-      accessibilityRole="button"
+      accessibilityLabel={`${tr.cards.profile}: ${owner.name}, @${owner.username}`}
+      accessibilityRole={interactive ? 'button' : undefined}
+      disabled={!interactive}
       onPress={onPress}
-      onPressIn={onPressIn}
+      onPressIn={interactive ? onPressIn : undefined}
       style={styles.ownerHeader}
     >
       <AvatarView uri={owner.profilePhoto} name={owner.name} size={16} />

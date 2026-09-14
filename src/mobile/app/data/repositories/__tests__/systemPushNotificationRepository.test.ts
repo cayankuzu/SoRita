@@ -4,6 +4,7 @@ import { androidNotificationChannelId } from '@/mobile/app/platform/notification
 
 const ensureAndroidPushChannelMock = vi.fn();
 const getPermissionsAsyncMock = vi.fn();
+const requestPermissionsAsyncMock = vi.fn();
 const scheduleNotificationAsyncMock = vi.fn();
 const registerDeviceForRemoteMessagesMock = vi.fn();
 const getTokenMock = vi.fn();
@@ -28,6 +29,7 @@ vi.mock('expo-notifications', () => ({
     EPHEMERAL: 4,
   },
   getPermissionsAsync: getPermissionsAsyncMock,
+  requestPermissionsAsync: requestPermissionsAsyncMock,
   scheduleNotificationAsync: scheduleNotificationAsyncMock,
 }));
 
@@ -67,7 +69,8 @@ describe('systemPushNotificationRepository', () => {
 
     const { env } = await import('@/mobile/app/platform/config/env');
     const { notificationRuntime } = await import('@/mobile/app/platform/notifications/runtime');
-    const { Platform } = await import('react-native');
+    const { pushPermissionInternals } = await import('@/mobile/app/platform/notifications/pushPermission');
+    const { AppState, Platform } = await import('react-native');
 
     env.systemNotificationFcmTopic = 'system-announcements';
     notificationRuntime.featureEnabled = true;
@@ -75,8 +78,15 @@ describe('systemPushNotificationRepository', () => {
     notificationRuntime.supportsNotificationObservers = true;
     notificationRuntime.supportsRemotePushRegistration = true;
     Platform.OS = 'android';
+    (AppState as typeof AppState & { currentState: 'active' }).currentState = 'active';
+    pushPermissionInternals.resetForTests();
 
-    getPermissionsAsyncMock.mockResolvedValue({ granted: true, ios: null });
+    getPermissionsAsyncMock.mockResolvedValue({ granted: true, canAskAgain: true, ios: null });
+    requestPermissionsAsyncMock.mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+      ios: null,
+    });
     getTokenMock.mockResolvedValue('fcm-token');
     registerDeviceForRemoteMessagesMock.mockResolvedValue(undefined);
     subscribeToTopicMock.mockResolvedValue(undefined);
@@ -96,6 +106,23 @@ describe('systemPushNotificationRepository', () => {
       messagingInstance,
       'system-announcements',
     );
+  });
+
+  it('creates the Android channel before requesting fresh notification permission', async () => {
+    getPermissionsAsyncMock.mockResolvedValue({
+      granted: false,
+      canAskAgain: true,
+      ios: null,
+    });
+    const repository = await import('@/mobile/app/data/repositories/systemPushNotificationRepository');
+
+    await expect(repository.syncSystemPushNotifications()).resolves.toBe('fcm-token');
+
+    expect(requestPermissionsAsyncMock).toHaveBeenCalledOnce();
+    expect(ensureAndroidPushChannelMock.mock.invocationCallOrder[0]).toBeLessThan(
+      requestPermissionsAsyncMock.mock.invocationCallOrder[0],
+    );
+    expect(subscribeToTopicMock).toHaveBeenCalledOnce();
   });
 
   it('accepts provisional and ephemeral iOS delivery permission', async () => {
@@ -138,11 +165,13 @@ describe('systemPushNotificationRepository', () => {
     expect(firebaseMessagingMock.getMessaging).not.toHaveBeenCalled();
   });
 
-  it('returns null when Firebase cannot provide a device token', async () => {
+  it('treats an empty Firebase token as a retryable acquisition failure', async () => {
     getTokenMock.mockResolvedValue('');
     const repository = await import('@/mobile/app/data/repositories/systemPushNotificationRepository');
 
-    await expect(repository.syncSystemPushNotifications()).resolves.toBeNull();
+    await expect(repository.syncSystemPushNotifications()).rejects.toMatchObject({
+      name: 'SystemPushTokenAcquisitionError',
+    });
 
     expect(warnMock).toHaveBeenCalledWith('push', 'FCM token could not be resolved.');
     expect(subscribeToTopicMock).not.toHaveBeenCalled();
@@ -194,7 +223,7 @@ describe('systemPushNotificationRepository', () => {
     expect(scheduleNotificationAsyncMock).toHaveBeenCalledWith({
       content: {
         body: 'Yeni sistem bildirimi',
-        data: { campaign: 'summer', source: 'system-fcm' },
+        data: { source: 'system-fcm' },
         sound: 'default',
         title: 'SoRita',
       },

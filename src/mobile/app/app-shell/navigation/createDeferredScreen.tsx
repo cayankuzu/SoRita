@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { SkeletonPlaceholder } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { tr } from '@/mobile/app/shared/i18n/tr';
+import { colors, spacing } from '@/mobile/app/shared/theme/tokens';
 import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 
 type DeferredScreenPlaceholder = 'header' | 'screen';
@@ -58,8 +59,10 @@ function DeferredPlaceholder({ kind }: { kind: DeferredScreenPlaceholder }) {
   if (kind === 'header') {
     return (
       <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
+        accessible
+        accessibilityLabel={tr.common.loading}
+        accessibilityRole="progressbar"
+        accessibilityState={{ busy: true }}
         style={styles.headerPlaceholder}
       >
         <SkeletonPlaceholder height={18} width={96} />
@@ -70,8 +73,10 @@ function DeferredPlaceholder({ kind }: { kind: DeferredScreenPlaceholder }) {
 
   return (
     <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
+      accessible
+      accessibilityLabel={tr.common.loading}
+      accessibilityRole="progressbar"
+      accessibilityState={{ busy: true }}
       style={styles.placeholder}
     >
       <View style={styles.placeholderHeader}>
@@ -88,19 +93,19 @@ const styles = StyleSheet.create({
   placeholder: {
     flex: 1,
     backgroundColor: colors.background,
-    gap: 12,
-    padding: 12,
+    gap: spacing.lg,
+    padding: spacing.screen,
   },
   placeholderHeader: {
-    gap: 8,
-    paddingVertical: 8,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   headerPlaceholder: {
     minHeight: 56,
     backgroundColor: colors.surface,
     borderBottomColor: colors.cardBorder,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.screen,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

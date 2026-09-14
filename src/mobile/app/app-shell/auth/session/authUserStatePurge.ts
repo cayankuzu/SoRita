@@ -5,6 +5,9 @@ import { clearPersistedVisibleDataSnapshot } from '@/mobile/app/data/cache/visib
 import { clearOutboxForUser } from '@/mobile/app/data/outbox/outboxStorage';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { clearPersistedListEditorDraftsForOwner } from '@/mobile/app/platform/storage/listEditorDraft';
+import { clearPersistedMapScreenState } from '@/mobile/app/platform/storage/mapScreenState';
+import { clearPersistedNavigationState } from '@/mobile/app/platform/storage/navigationState';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { purgePrivateSignedReadUrlState } from '@/mobile/app/platform/supabase/media';
 
@@ -57,6 +60,14 @@ async function purgeUserState(userId: string | null) {
       name: 'realtime-channels',
       run: () => supabase.removeAllChannels(),
     },
+    {
+      name: 'list-editor-drafts',
+      run: () => clearPersistedListEditorDraftsForOwner(userId),
+    },
+    {
+      name: 'navigation-state',
+      run: () => clearPersistedNavigationState(userId),
+    },
   ];
 
   if (userId) {
@@ -82,6 +93,10 @@ async function purgeUserState(userId: string | null) {
       {
         name: 'outbox',
         run: () => clearOutboxForUser(userId),
+      },
+      {
+        name: 'map-screen-state',
+        run: () => clearPersistedMapScreenState(userId),
       },
     );
   }

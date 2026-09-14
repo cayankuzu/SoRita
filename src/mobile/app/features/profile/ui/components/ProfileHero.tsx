@@ -19,7 +19,7 @@ import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, radius, typography } from "@/mobile/app/shared/theme/tokens";
+import { colors, minTouchSize, radius, spacing, typography } from "@/mobile/app/shared/theme/tokens";
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
@@ -79,7 +79,8 @@ export function ProfileHero({
         {coverPhoto ? (
           <Pressable
             accessibilityLabel={tr.profile.coverPhoto}
-            accessibilityRole="image"
+            accessibilityRole={onCoverPhotoPress ? "imagebutton" : "image"}
+            disabled={!onCoverPhotoPress}
             onPress={onCoverPhotoPress}
             style={styles.coverPressable}
           >
@@ -107,7 +108,8 @@ export function ProfileHero({
         <View style={styles.avatarRow}>
           <Pressable
             accessibilityLabel={tr.profile.profilePhoto}
-            accessibilityRole="image"
+            accessibilityRole={onProfilePhotoPress ? "imagebutton" : "image"}
+            disabled={!onProfilePhotoPress}
             onPress={onProfilePhotoPress}
             style={styles.avatarFrame}
           >
@@ -121,7 +123,7 @@ export function ProfileHero({
           {action ? <View style={styles.actionSlot}>{action}</View> : null}
         </View>
 
-        <Text style={styles.name}>{name}</Text>
+        <Text accessibilityRole="header" style={styles.name}>{name}</Text>
         <Text style={styles.username}>@{username}</Text>
         {bio ? (
           <ExpandableText
@@ -156,13 +158,13 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 10,
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.pill,
   },
   body: {
-    paddingHorizontal: 12,
-    paddingBottom: 14,
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.section,
     marginTop: -26,
   },
   avatarRow: {
@@ -186,13 +188,12 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   username: {
-    fontSize: 12,
+    ...typography.captionText,
     color: colors.textSoft,
   },
   bio: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
 });

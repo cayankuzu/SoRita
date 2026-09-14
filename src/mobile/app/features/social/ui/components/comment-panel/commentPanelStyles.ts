@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const commentPanelStyles = StyleSheet.create({
   sheetOverlay: {
@@ -53,13 +53,12 @@ export const commentPanelStyles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   sheetTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.compactSectionText,
     color: colors.text,
   },
   sheetSubtitle: {
     marginTop: 3,
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
   },
   sheetBody: {
@@ -84,21 +83,34 @@ export const commentPanelStyles = StyleSheet.create({
     paddingVertical: 24,
   },
   emptyCommentsTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   emptyCommentsDescription: {
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
+  },
+  commentNotice: {
+    paddingVertical: 4,
+  },
+  commentStatus: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 24,
+  },
+  commentStatusText: {
+    ...typography.labelText,
+    color: colors.textMuted,
   },
   loadMoreButton: {
     alignItems: 'center',
     paddingVertical: 4,
   },
   loadMoreLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   commentItem: {
@@ -161,8 +173,7 @@ export const commentPanelStyles = StyleSheet.create({
     minWidth: 0,
   },
   commentAuthor: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
     flexShrink: 1,
   },
@@ -174,7 +185,7 @@ export const commentPanelStyles = StyleSheet.create({
     minWidth: 0,
   },
   commentMeta: {
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
     flexShrink: 1,
   },
@@ -187,7 +198,7 @@ export const commentPanelStyles = StyleSheet.create({
   commentEdited: {
     ...typography.metadataText,
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
     paddingHorizontal: 6,
@@ -196,16 +207,27 @@ export const commentPanelStyles = StyleSheet.create({
   commentPending: {
     ...typography.metadataText,
     color: colors.warning,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     borderRadius: radius.pill,
     backgroundColor: colors.warningBg,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   commentLikeColumn: {
-    minWidth: 26,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+  },
+  commentLikeAction: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentLikersAction: {
+    minWidth: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   commentLikeButton: {
     width: 26,
@@ -220,24 +242,23 @@ export const commentPanelStyles = StyleSheet.create({
   },
   commentLikeCount: {
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   commentLikeCountActive: {
     color: colors.danger,
   },
   commentContent: {
-    fontSize: 13,
-    lineHeight: 19,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.text,
   },
   replyContent: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...typography.compactBodyText,
   },
   mentionText: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
   },
   commentActionRow: {
     flexDirection: 'row',
@@ -266,8 +287,8 @@ export const commentPanelStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   commentInlineActionText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
   commentInlineActionTextActive: {
@@ -296,8 +317,8 @@ export const commentPanelStyles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   replyToggleText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   composerDock: {
@@ -307,6 +328,12 @@ export const commentPanelStyles = StyleSheet.create({
     paddingHorizontal: 10,
     gap: 8,
     backgroundColor: colors.background,
+  },
+  composerPendingText: {
+    ...typography.metadataText,
+    alignSelf: 'center',
+    fontWeight: fontWeight.strong,
+    color: colors.primary,
   },
   reactionRow: {
     gap: 6,
@@ -327,7 +354,7 @@ export const commentPanelStyles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   reactionEmoji: {
-    fontSize: 17,
+    fontSize: typography.section.fontSize,
   },
   composerBanner: {
     paddingHorizontal: 10,
@@ -354,13 +381,13 @@ export const commentPanelStyles = StyleSheet.create({
     gap: 2,
   },
   composerBannerText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.text,
   },
   composerBannerSubtext: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   composerBannerActionButton: {
@@ -370,8 +397,8 @@ export const commentPanelStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   composerBannerAction: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.metadataText,
+    fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   composerRow: {
@@ -395,8 +422,8 @@ export const commentPanelStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   commentInput: {
-    fontSize: 13,
-    lineHeight: 18,
+    ...typography.captionText,
+    fontWeight: fontWeight.regular,
     color: colors.text,
     padding: 0,
     margin: 0,
@@ -406,7 +433,7 @@ export const commentPanelStyles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: 4,
     ...typography.metadataText,
-    fontWeight: '700',
+    fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
   commentInputCounterWarn: {

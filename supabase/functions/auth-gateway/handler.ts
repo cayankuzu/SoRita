@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { legalConsentSchema, REQUIRED_LEGAL_DOCUMENTS } from './legalConsentContract.ts';
 import { createEdgeRequestContext, logEdgeEvent } from '../_shared/edgeLogger.ts';
 import {
   type ErrorLike,
@@ -154,11 +155,7 @@ const authGatewayPayloadSchema = z.discriminatedUnion('action', [
     coverPhoto: z.string().trim().url().max(500).optional(),
     email: emailSchema,
     interests: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
-    legalConsent: z.object({
-      acceptedAt: z.string().datetime(),
-      documentsAccepted: z.array(z.string().trim().min(1).max(32)).min(1).max(10),
-      version: z.string().trim().min(1).max(32),
-    }),
+    legalConsent: legalConsentSchema,
     name: displayNameSchema,
     password: passwordSchema,
     profilePhoto: z.string().trim().url().max(500).optional(),
@@ -698,8 +695,8 @@ export function createAuthGatewayHandler({
               community_safety_acknowledged: true,
               cover_photo_url: payload.coverPhoto ?? null,
               interests: payload.interests?.length ? payload.interests : null,
-              legal_consent_at: payload.legalConsent.acceptedAt,
-              legal_consent_documents: payload.legalConsent.documentsAccepted,
+              legal_consent_at: new Date().toISOString(),
+              legal_consent_documents: [...REQUIRED_LEGAL_DOCUMENTS],
               legal_consent_version: payload.legalConsent.version,
               name: payload.name,
               profile_photo_url: payload.profilePhoto ?? null,

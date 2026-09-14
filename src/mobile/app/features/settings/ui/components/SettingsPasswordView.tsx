@@ -21,6 +21,7 @@ type SettingsPasswordViewProps = {
   onRefresh: () => void;
   onSendResetMail: () => void;
   onTogglePasswordVisibility: () => void;
+  passwordResetError?: string | null;
   refreshing: boolean;
   resetMailSent: boolean;
   showPassword: boolean;
@@ -36,6 +37,7 @@ export function SettingsPasswordView({
   onRefresh,
   onSendResetMail,
   onTogglePasswordVisibility,
+  passwordResetError,
   refreshing,
   resetMailSent,
   showPassword,
@@ -60,15 +62,20 @@ export function SettingsPasswordView({
             value={currentPassword}
             onChangeText={onChangeCurrentPassword}
             secureTextEntry={!showPassword}
-            helper={tr.settings.password.resetHint}
+            helper={passwordResetError || tr.settings.password.resetHint}
+            helperTone={passwordResetError ? 'danger' : 'muted'}
+            status={passwordResetError ? 'error' : 'default'}
             autoCapitalize="none"
+            autoComplete="current-password"
+            textContentType="password"
+            style={styles.passwordInput}
           />
           <PasswordToggle visible={showPassword} onPress={onTogglePasswordVisibility} />
         </View>
 
         <PrimaryButton
           title={tr.settings.password.resetAction}
-          disabled={isPasswordResetCoolingDown}
+          disabled={isPasswordResetCoolingDown || !currentPassword.trim()}
           loading={isSendingPasswordReset}
           onPress={onSendResetMail}
         />

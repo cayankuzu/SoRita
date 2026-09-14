@@ -16,7 +16,12 @@ import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, radius, touch } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  radius,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -95,16 +100,17 @@ export function PlacePreviewModal({
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
+        onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
         <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
           <Pressable
-            accessibilityLabel={tr.common.close}
+            accessibilityLabel={onMinimize ? tr.common.minimize : tr.common.close}
             accessibilityRole="button"
             style={styles.handleWrap}
-            onPress={onClose}
+            onPress={onMinimize ?? onClose}
           >
             <View style={styles.handle} />
           </Pressable>
@@ -228,12 +234,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.compactSectionText,
     color: colors.text,
   },
   headerSubtitle: {
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
   },
   headerActions: {

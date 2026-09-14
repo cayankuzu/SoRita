@@ -1,4 +1,3 @@
-import { logger } from '@/mobile/app/platform/feedback/logger';
 import type { PerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 
 type PartialPerformanceContext = Partial<PerformanceContext>;
@@ -108,8 +107,6 @@ export function registerAnalyticsProvider(provider: AnalyticsProvider) {
 }
 
 export function trackEvent(event: AnalyticsEvent) {
-  logger.debug('analytics', `${event.name}`, event.params);
-
   for (const provider of providers) {
     try {
       provider.trackEvent(event);

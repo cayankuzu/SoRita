@@ -14,7 +14,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, contentWidth, elevation, radius } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  contentWidth,
+  elevation,
+  radius,
+  spacing,
+} from '@/mobile/app/shared/theme/tokens';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
@@ -94,17 +100,20 @@ export function ModalScaffold({
       return () => clearTimeout(focusTimer);
     }
 
-    if (wasVisibleRef.current && returnFocusRef?.current) {
-      const restoreTimer = setTimeout(() => {
-        const targetHandle = findNodeHandle(returnFocusRef.current as FocusTarget);
-
-        if (targetHandle) {
-          AccessibilityInfo.setAccessibilityFocus(targetHandle);
-        }
-      }, 80);
-
+    if (wasVisibleRef.current) {
       wasVisibleRef.current = false;
-      return () => clearTimeout(restoreTimer);
+
+      if (returnFocusRef?.current) {
+        const restoreTimer = setTimeout(() => {
+          const targetHandle = findNodeHandle(returnFocusRef.current as FocusTarget);
+
+          if (targetHandle) {
+            AccessibilityInfo.setAccessibilityFocus(targetHandle);
+          }
+        }, 80);
+
+        return () => clearTimeout(restoreTimer);
+      }
     }
 
     return undefined;
@@ -125,6 +134,7 @@ export function ModalScaffold({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        onAccessibilityEscape={onClose}
         style={[
           styles.overlay,
           variant === 'sheet' ? styles.sheetOverlay : styles.dialogOverlay,
@@ -179,7 +189,7 @@ export function ModalScaffold({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.screen,
     backgroundColor: colors.overlay,
   },
   dialogOverlay: {
@@ -217,13 +227,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderStrong,
   },
   content: {
-    padding: 14,
-    gap: 12,
+    padding: spacing.section,
+    gap: spacing.lg,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.cardBorder,
-    padding: 14,
-    paddingTop: 10,
+    padding: spacing.section,
+    paddingTop: spacing.md,
   },
 });

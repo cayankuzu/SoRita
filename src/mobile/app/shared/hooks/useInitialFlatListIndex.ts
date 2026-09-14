@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { FlatList, FlatListProps } from 'react-native';
 
+const INITIAL_SCROLL_RETRY_DELAY_MS = 80;
+const MAX_INITIAL_SCROLL_RETRIES = 3;
+
 type UseInitialFlatListIndexParams = {
   estimatedItemLength?: number;
   itemCount: number;
@@ -14,27 +17,21 @@ export function useInitialFlatListIndex<ItemT>({
 }: UseInitialFlatListIndexParams) {
   const listRef = useRef<FlatList<ItemT>>(null);
   const hasAttemptedInitialScrollRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safeStartIndex = useMemo(
     () => Math.max(0, Math.min(startIndex, Math.max(0, itemCount - 1))),
     [itemCount, startIndex],
   );
   const initialScrollIndex = safeStartIndex > 0 ? safeStartIndex : undefined;
-  const getItemLayout = useMemo(() => {
-    if (!estimatedItemLength || estimatedItemLength <= 0) {
-      return undefined;
+  const clearRetryTimeout = useCallback(() => {
+    if (retryTimeoutRef.current == null) {
+      return;
     }
 
-    const layoutResolver: NonNullable<FlatListProps<ItemT>['getItemLayout']> = (
-      _,
-      index,
-    ) => ({
-      index,
-      length: estimatedItemLength,
-      offset: estimatedItemLength * index,
-    });
-
-    return layoutResolver;
-  }, [estimatedItemLength]);
+    clearTimeout(retryTimeoutRef.current);
+    retryTimeoutRef.current = null;
+  }, []);
 
   const scrollToTargetIndex = useCallback(
     (index = safeStartIndex) => {
@@ -57,6 +54,8 @@ export function useInitialFlatListIndex<ItemT>({
 
   useEffect(() => {
     hasAttemptedInitialScrollRef.current = false;
+    retryCountRef.current = 0;
+    clearRetryTimeout();
 
     const timeoutId = setTimeout(() => {
       if (!hasAttemptedInitialScrollRef.current) {
@@ -64,8 +63,11 @@ export function useInitialFlatListIndex<ItemT>({
       }
     }, 0);
 
-    return () => clearTimeout(timeoutId);
-  }, [itemCount, safeStartIndex, scrollToTargetIndex]);
+    return () => {
+      clearTimeout(timeoutId);
+      clearRetryTimeout();
+    };
+  }, [clearRetryTimeout, itemCount, safeStartIndex, scrollToTargetIndex]);
 
   const handleContentSizeChange = useCallback(() => {
     if (hasAttemptedInitialScrollRef.current) {
@@ -79,28 +81,40 @@ export function useInitialFlatListIndex<ItemT>({
     NonNullable<FlatListProps<ItemT>['onScrollToIndexFailed']>
   >(
     (info) => {
+      hasAttemptedInitialScrollRef.current = true;
       const targetIndex = Math.max(
         0,
         Math.min(info.index, Math.max(0, itemCount - 1)),
       );
+      const fallbackItemLength = info.averageItemLength > 0
+        ? info.averageItemLength
+        : Math.max(0, estimatedItemLength ?? 0);
 
-      listRef.current?.scrollToOffset({
-        offset: Math.max(0, info.averageItemLength * targetIndex),
-        animated: false,
-      });
+      if (fallbackItemLength > 0) {
+        listRef.current?.scrollToOffset({
+          offset: fallbackItemLength * targetIndex,
+          animated: false,
+        });
+      }
 
-      setTimeout(() => {
+      clearRetryTimeout();
+      if (retryCountRef.current >= MAX_INITIAL_SCROLL_RETRIES) {
+        return;
+      }
+
+      retryCountRef.current += 1;
+      retryTimeoutRef.current = setTimeout(() => {
+        retryTimeoutRef.current = null;
         scrollToTargetIndex(targetIndex);
-      }, 80);
+      }, INITIAL_SCROLL_RETRY_DELAY_MS);
     },
-    [itemCount, scrollToTargetIndex],
+    [clearRetryTimeout, estimatedItemLength, itemCount, scrollToTargetIndex],
   );
 
   return {
     listRef,
     safeStartIndex,
     initialScrollIndex,
-    getItemLayout,
     handleContentSizeChange,
     handleScrollToIndexFailed,
   };

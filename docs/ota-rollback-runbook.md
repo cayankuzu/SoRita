@@ -103,7 +103,7 @@ eas update:roll-back-to-embedded \
   --platform all --json --non-interactive
 ```
 
-For the currently configured binary generation, the expected runtime is `1.0.102`; never substitute
+For the currently configured binary generation, the expected runtime is `1.0.106`; never substitute
 that value blindly for older installed binaries. If Android and iOS have different verified runtime
 or embedded-state evidence, contain each platform separately with `--platform android` or
 `--platform ios`.

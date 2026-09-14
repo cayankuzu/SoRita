@@ -44,10 +44,13 @@ export function SettingsBlockedUsersView({
     <Screen scroll={false} variant="settings">
       <FlatList
         {...listProps}
+        accessibilityState={{ busy: refreshing }}
         data={blockedUsers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <InstantPressable
+            accessibilityLabel={`${tr.settings.blocked.viewProfile}: ${item.name}, @${item.username}`}
+            accessibilityRole="button"
             style={styles.blockedUserRow}
             onPress={() => onOpenBlockedUser(item.id)}
           >

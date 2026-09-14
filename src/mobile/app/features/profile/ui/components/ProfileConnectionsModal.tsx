@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -21,8 +23,9 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -42,9 +45,9 @@ type ProfileConnectionsModalProps = {
 
 function matchesUser(user: User, query: string) {
   return (
-    user.name.toLowerCase().includes(query) ||
-    user.username.toLowerCase().includes(query) ||
-    Boolean(user.bio?.toLowerCase().includes(query))
+    normalizeSearchText(user.name).includes(query) ||
+    normalizeSearchText(user.username).includes(query) ||
+    normalizeSearchText(user.bio).includes(query)
   );
 }
 
@@ -76,7 +79,7 @@ export function ProfileConnectionsModal({
     minHeight: 240,
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const q = searchQuery.trim().toLowerCase();
+  const q = normalizeSearchText(searchQuery);
   const filteredUsers = useMemo(
     () => (q ? users.filter((user) => matchesUser(user, q)) : users),
     [q, users],
@@ -92,10 +95,18 @@ export function ProfileConnectionsModal({
   );
 
   useEffect(() => {
-    if (!visible) {
+    if (visible) {
+      const announceTimer = setTimeout(() => {
+        AccessibilityInfo.announceForAccessibility(title);
+      }, 120);
+
+      return () => clearTimeout(announceTimer);
+    } else {
       setSearchQuery('');
     }
-  }, [visible]);
+
+    return undefined;
+  }, [title, visible]);
 
   return (
     <Modal
@@ -110,11 +121,20 @@ export function ProfileConnectionsModal({
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
-      <View
+      <KeyboardAvoidingView
         accessibilityViewIsModal
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         importantForAccessibility="yes"
+        onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
+        <Pressable
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          onPress={onClose}
+          style={StyleSheet.absoluteFillObject}
+        />
         <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
           <View accessibilityElementsHidden style={styles.handle} />
           <View style={styles.header}>
@@ -131,8 +151,11 @@ export function ProfileConnectionsModal({
 
           <FlatList
             {...listProps}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             data={filteredUsers}
             keyExtractor={(item) => item.id}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <Pressable
                 accessibilityLabel={`${item.name}, @${item.username}`}
@@ -153,26 +176,43 @@ export function ProfileConnectionsModal({
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListHeaderComponent={
               users.length > 0 ? (
-                <View style={styles.searchWrap}>
-                  <Search color={colors.textSoft} size={14} />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoCapitalize="none"
-                    autoComplete="off"
-                    autoCorrect={false}
-                    clearButtonMode="while-editing"
-                    cursorColor={colors.primary}
-                    keyboardAppearance="light"
-                    placeholder={tr.profile.connections.searchPlaceholder}
-                    placeholderTextColor={colors.textMuted}
-                    selectionColor={colors.primary}
-                    spellCheck={false}
-                    style={styles.searchInput}
-                    textContentType="none"
-                    underlineColorAndroid="transparent"
-                    accessibilityLabel={tr.profile.connections.searchPlaceholder}
-                  />
+                <View>
+                  <View style={styles.searchWrap}>
+                    <Search color={colors.textSoft} size={14} />
+                    <TextInput
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      autoCorrect={false}
+                      clearButtonMode="while-editing"
+                      cursorColor={colors.primary}
+                      keyboardAppearance="light"
+                      placeholder={tr.profile.connections.searchPlaceholder}
+                      placeholderTextColor={colors.textMuted}
+                      selectionColor={colors.primary}
+                      spellCheck={false}
+                      style={styles.searchInput}
+                      textContentType="none"
+                      returnKeyType="search"
+                      underlineColorAndroid="transparent"
+                      accessibilityLabel={tr.profile.connections.searchPlaceholder}
+                    />
+                    {searchQuery && Platform.OS !== 'ios' ? (
+                      <IconButton
+                        accessibilityLabel={tr.common.clear}
+                        onPress={() => setSearchQuery('')}
+                        size="sm"
+                      >
+                        <X color={colors.textSoft} size={14} />
+                      </IconButton>
+                    ) : null}
+                  </View>
+                  {q ? (
+                    <Text accessibilityLiveRegion="polite" style={styles.resultCount}>
+                      {tr.profile.connections.resultCount(filteredUsers.length)}
+                    </Text>
+                  ) : null}
                 </View>
               ) : null
             }
@@ -200,7 +240,7 @@ export function ProfileConnectionsModal({
             showsVerticalScrollIndicator={false}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -241,16 +281,15 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.compactSectionText,
     color: colors.text,
   },
   closeButton: {
-    width: 44,
-    height: 44,
+    width: minTouchSize,
+    height: minTouchSize,
   },
   searchWrap: {
-    minHeight: 44,
+    minHeight: minTouchSize,
     marginBottom: 10,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
@@ -264,7 +303,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 12,
+    ...typography.bodyText,
     paddingVertical: 0,
   },
   list: {
@@ -290,18 +329,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.labelText,
     color: colors.text,
   },
   userUsername: {
     marginTop: 1,
-    fontSize: 12,
+    ...typography.compactBodyText,
     color: colors.textSoft,
   },
   userBio: {
     marginTop: 3,
-    fontSize: 12,
+    ...typography.captionText,
     color: colors.textMuted,
+  },
+  resultCount: {
+    ...typography.captionText,
+    color: colors.textSoft,
+    paddingTop: spacing.md,
+    textAlign: 'center',
   },
 });

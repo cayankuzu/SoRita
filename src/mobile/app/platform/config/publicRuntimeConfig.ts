@@ -40,8 +40,48 @@ const optionalHttpsBaseUrl = trimmedString
   }, 'Edge API URL must be an HTTPS origin without credentials, path, query, or fragment.')
   .transform((value) => (value ? new URL(value).origin : value));
 
+const optionalAppLinkDomain = z.preprocess(
+  (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value),
+  z
+    .string()
+    .default('')
+    .refine((value) => {
+      if (!value) {
+        return true;
+      }
+
+      try {
+        const url = new URL(`https://${value}`);
+        return (
+          url.hostname === value &&
+          !url.port &&
+          !url.username &&
+          !url.password &&
+          url.pathname === '/' &&
+          !url.search &&
+          !url.hash &&
+          value !== 'localhost' &&
+          !value.endsWith('.localhost')
+        );
+      } catch {
+        return false;
+      }
+    }, 'App-link domain must be one HTTPS hostname without a scheme, path, port, credentials, query, or fragment.'),
+);
+
+const optionalBoolean = z.preprocess((value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+  return value;
+}, z.boolean().default(false));
+
 export const publicRuntimeConfigSchema = z
   .object({
+    appLinkDomain: optionalAppLinkDomain,
     edgeApiUrl: optionalHttpsBaseUrl.default(''),
     edgeCutoverMode: z.preprocess(
       normalizeOptionalEnumValue,
@@ -51,6 +91,8 @@ export const publicRuntimeConfigSchema = z
       normalizeOptionalEnumValue,
       z.enum(releaseEnvironments).default('development'),
     ),
+    productAnalyticsEnabled: optionalBoolean,
+    posthogHost: optionalHttpsBaseUrl.default(''),
   })
   .superRefine((value, context) => {
     if (value.edgeCutoverMode === 'gateway' && !value.edgeApiUrl) {
@@ -67,6 +109,9 @@ export function getPublicRuntimeConfigIssueEnvNames(error: z.ZodError) {
 
   error.issues.forEach((issue) => {
     switch (issue.path[0]) {
+      case 'appLinkDomain':
+        names.add('EXPO_PUBLIC_APP_LINK_DOMAIN');
+        break;
       case 'edgeApiUrl':
         names.add('EXPO_PUBLIC_EDGE_API_URL');
         break;
@@ -75,6 +120,12 @@ export function getPublicRuntimeConfigIssueEnvNames(error: z.ZodError) {
         break;
       case 'releaseEnvironment':
         names.add('EXPO_PUBLIC_RELEASE_ENVIRONMENT');
+        break;
+      case 'productAnalyticsEnabled':
+        names.add('EXPO_PUBLIC_ENABLE_PRODUCT_ANALYTICS');
+        break;
+      case 'posthogHost':
+        names.add('EXPO_PUBLIC_POSTHOG_HOST');
         break;
       default:
         names.add('EXPO_PUBLIC_RUNTIME_CONFIG');

@@ -47,6 +47,7 @@ import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLigh
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { ListDetailSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
@@ -99,6 +100,35 @@ function recoverListScroll({
       viewPosition: 0.08,
     });
   }, 80);
+}
+
+function ListDetailLoadingState() {
+  return (
+    <Screen safeTop={false} padded={false} scroll={false}>
+      <ListDetailSkeleton />
+    </Screen>
+  );
+}
+
+function ListDetailUnavailableState({
+  errorMessage,
+  onRetry,
+}: {
+  errorMessage?: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <Screen>
+      <EmptyState
+        icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={30} />}
+        title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
+        description={errorMessage || tr.listDetail.notFoundDescription}
+        actionLabel={errorMessage ? tr.common.retry : undefined}
+        onAction={errorMessage ? onRetry : undefined}
+        tone={errorMessage ? 'danger' : 'default'}
+      />
+    </Screen>
+  );
 }
 
 function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentProps) {
@@ -171,9 +201,17 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   );
 
   useEffect(() => {
-    let active = true;
+    setListEditorResumeDraft(null);
+    setEditingListVisible(false);
 
-    void getPersistedListEditorDraft(listId).then((draft) => {
+    if (!user?.id) {
+      return;
+    }
+
+    let active = true;
+    const ownerUserId = user.id;
+
+    void getPersistedListEditorDraft(ownerUserId, listId).then((draft) => {
       if (!active || !draft) {
         return;
       }
@@ -185,7 +223,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     return () => {
       active = false;
     };
-  }, [listId]);
+  }, [listId, user?.id]);
 
   const highlightedIndex = useMemo(() => {
     if (!list || !highlightedPlaceId) {
@@ -278,12 +316,12 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   };
 
   const confirmDeleteList = async () => {
-    if (!list) {
+    if (!list || !user?.id) {
       return;
     }
 
     await deleteListAsync(list.id);
-    await clearPersistedListEditorDraft(list.id);
+    await clearPersistedListEditorDraft(user.id, list.id);
     setDeleteListVisible(false);
     setListActionMenuVisible(false);
     navigation.goBack();
@@ -345,26 +383,11 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   };
 
   if (isInitialLoading) {
-    return (
-      <Screen safeTop={false} padded={false} scroll={false}>
-        <ListDetailSkeleton />
-      </Screen>
-    );
+    return <ListDetailLoadingState />;
   }
 
   if (!list) {
-    return (
-      <Screen>
-        <EmptyState
-          icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={30} />}
-          title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
-          description={errorMessage || tr.listDetail.notFoundDescription}
-          actionLabel={errorMessage ? tr.common.retry : undefined}
-          onAction={errorMessage ? retry : undefined}
-          tone={errorMessage ? 'danger' : 'default'}
-        />
-      </Screen>
-    );
+    return <ListDetailUnavailableState errorMessage={errorMessage} onRetry={retry} />;
   }
 
   const actionItems = [
@@ -409,7 +432,9 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   const handleCloseListEditor = () => {
     setEditingListVisible(false);
     setListEditorResumeDraft(null);
-    void clearPersistedListEditorDraft(list.id);
+    if (user?.id) {
+      void clearPersistedListEditorDraft(user.id, list.id);
+    }
   };
 
   return (
@@ -417,7 +442,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       <View style={styles.screenShell}>
         <StackScreenHeader
           onBack={() => navigation.goBack()}
-          title={list.emoji ? `${list.emoji} ${list.name}` : list.name}
+          title={tr.common.list}
           subtitle={tr.cards.placesCount(displayPlaces.length)}
           rightAction={actionItems.length > 0 ? (
             <IconButton
@@ -443,6 +468,8 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
 
             return (
               <View
+                accessibilityLabel={isHighlighted ? tr.listDetail.mapSelectedPlace : undefined}
+                accessibilityState={isHighlighted ? { selected: true } : undefined}
                 style={[
                   styles.placeCardShell,
                   isHighlighted ? styles.placeCardShellHighlighted : null,
@@ -502,24 +529,34 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
               <EmptyState
                 icon={<MapPin color={colors.textSoft} size={30} />}
                 title={tr.listDetail.emptyTitle}
-                description={tr.listDetail.emptyDescription}
+                description={
+                  isOwner
+                    ? tr.listDetail.emptyOwnerDescription
+                    : tr.listDetail.emptyDescription
+                }
               />
             </View>
           }
           ListFooterComponent={
             isFetchingNextPage ? (
-              <View style={styles.feedLoader}>
+              <View
+                accessible
+                accessibilityLabel={tr.common.loadingMore}
+                accessibilityLiveRegion="polite"
+                accessibilityRole="progressbar"
+                accessibilityState={{ busy: true }}
+                style={styles.feedLoader}
+              >
                 <ActivityIndicator color={colors.primary} size="small" />
               </View>
             ) : hasPartialDataError && errorMessage ? (
               <View style={styles.emptyWrap}>
-                <EmptyState
-                  icon={<MapPin color={colors.danger} size={30} />}
+                <InlineNotice
+                  tone="warning"
                   title={tr.profile.error.contentUnavailable}
                   description={errorMessage}
                   actionLabel={tr.common.retry}
                   onAction={retry}
-                  tone="danger"
                 />
               </View>
             ) : null
@@ -605,6 +642,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       {reportVisible ? (
         <ReportActionSheet
           visible
+          targetType="list"
           title={tr.listDetail.reportTitle}
           description={tr.listDetail.reportDescription}
           reportDetails={reportDetails}
@@ -620,15 +658,16 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
         />
       ) : null}
 
-      {editingListVisible ? (
+      {editingListVisible && user ? (
         <ListEditorModal
           visible
           list={list}
+          ownerUserId={user.id}
           resumeDraft={listEditorResumeDraft}
           onClose={handleCloseListEditor}
           onSave={async (nextList) => {
             await updateListAsync({ list: nextList, previousList: list });
-            await clearPersistedListEditorDraft(nextList.id);
+            await clearPersistedListEditorDraft(user.id, nextList.id);
             setEditingListVisible(false);
             setListEditorResumeDraft(null);
             showToast(tr.profile.toast.listUpdated, 'success');
