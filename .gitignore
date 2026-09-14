@@ -10,8 +10,8 @@ node_modules
 android/.gradle/
 android/build/
 android/app/build/
-  android/app/.cxx/
-  android/app/.cxx.stale-*/
+android/app/.cxx/
+android/app/.cxx.stale-*/
 android/app/debug.keystore
 android/keystore.properties
 android/keystores/*.jks
