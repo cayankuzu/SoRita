@@ -231,7 +231,7 @@ function assertWellFormedUnicode(value) {
     const code = value.charCodeAt(index);
     if (code >= 0xd800 && code <= 0xdbff) {
       const next = value.charCodeAt(index + 1);
-      if (next < 0xdc00 || next > 0xdfff) {
+      if (!Number.isInteger(next) || next < 0xdc00 || next > 0xdfff) {
         fail("Canonical JSON contains an unpaired high surrogate");
       }
       index += 1;
