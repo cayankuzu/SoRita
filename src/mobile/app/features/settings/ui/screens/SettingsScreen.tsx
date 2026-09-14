@@ -1,5 +1,14 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  Ban,
+  Lock,
+  LogOut,
+  Palette,
+  Shield,
+  Trash2,
+  User as UserIcon,
+} from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
@@ -9,9 +18,9 @@ import { useSettingsScreenState } from '@/mobile/app/features/settings/applicati
 import { SettingsBlockedUsersView } from '@/mobile/app/features/settings/ui/components/SettingsBlockedUsersView';
 import { SettingsEditProfileFlow } from '@/mobile/app/features/settings/ui/components/SettingsEditProfileFlow';
 import { SettingsMainMenuView } from '@/mobile/app/features/settings/ui/components/SettingsMainMenuView';
+import type { SettingsMenuItem } from '@/mobile/app/features/settings/ui/components/SettingsMenuSection';
 import { SettingsPasswordView } from '@/mobile/app/features/settings/ui/components/SettingsPasswordView';
 import { SettingsPrivacyView } from '@/mobile/app/features/settings/ui/components/SettingsPrivacyView';
-import { buildSettingsMenuSections } from '@/mobile/app/features/settings/ui/components/buildSettingsMenuSections';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
@@ -41,6 +50,112 @@ const editProfileSteps = [
     description: tr.settings.editProfile.photosDescription,
   },
 ] as const;
+
+type SettingsMenuActionKey =
+  | 'exportPersonalData'
+  | 'openBlocked'
+  | 'openDeveloperCatalog'
+  | 'openEditProfile'
+  | 'openPassword'
+  | 'openPrivacy'
+  | 'requestDeleteAccount'
+  | 'requestLogout';
+
+type SettingsMenuItemDescriptor = Omit<SettingsMenuItem, 'action'> & {
+  action: SettingsMenuActionKey;
+  disabledWhenExporting?: boolean;
+};
+
+type SettingsMenuSectionDescriptor = {
+  title: string;
+  items: SettingsMenuItemDescriptor[];
+};
+
+const sections: SettingsMenuSectionDescriptor[] = [
+  {
+    title: tr.settings.sections.account,
+    items: [
+      {
+        icon: <UserIcon color={colors.primary} size={18} />,
+        label: tr.settings.editProfile.title,
+        color: colors.primaryBg,
+        action: 'openEditProfile',
+      },
+      {
+        icon: <Shield color={colors.secondary} size={18} />,
+        label: tr.settings.privacy.title,
+        color: colors.successBg,
+        action: 'openPrivacy',
+      },
+      {
+        icon: <Lock color={colors.primary} size={18} />,
+        label: tr.settings.password.title,
+        color: colors.primaryBg,
+        action: 'openPassword',
+      },
+    ],
+  },
+  {
+    title: tr.settings.sections.other,
+    items: [
+      {
+        icon: <Ban color={colors.textMuted} size={18} />,
+        label: tr.settings.blocked.title,
+        color: colors.surfaceMuted,
+        action: 'openBlocked',
+      },
+      {
+        icon: <Shield color={colors.primary} size={18} />,
+        label: tr.settings.personalDataExport,
+        color: colors.primaryBg,
+        action: 'exportPersonalData',
+        disabledWhenExporting: true,
+      },
+      {
+        icon: <LogOut color={colors.textMuted} size={18} />,
+        label: tr.settings.logout,
+        color: colors.surfaceMuted,
+        action: 'requestLogout',
+      },
+      {
+        icon: <Trash2 color={colors.danger} size={18} />,
+        label: tr.settings.deleteAccount,
+        color: colors.dangerBg,
+        action: 'requestDeleteAccount',
+        danger: true,
+      },
+    ],
+  },
+];
+
+if (__DEV__) {
+  sections.push({
+    title: tr.uiCatalog.developerSection,
+    items: [
+      {
+        icon: <Palette color={colors.purple} size={18} />,
+        label: tr.uiCatalog.title,
+        color: colors.purpleBg,
+        action: 'openDeveloperCatalog',
+      },
+    ],
+  });
+}
+
+function bindSettingsMenuSections(
+  menuSections: SettingsMenuSectionDescriptor[],
+  actions: Record<SettingsMenuActionKey, () => void>,
+  isExportingPersonalData: boolean,
+): Array<{ title: string; items: SettingsMenuItem[] }> {
+  return menuSections.map((section) => ({
+    title: section.title,
+    items: section.items.map(({ action, disabledWhenExporting, ...item }) => ({
+      ...item,
+      action: actions[action],
+      ...(disabledWhenExporting ? { disabled: isExportingPersonalData } : {}),
+    })),
+  }));
+}
 
 function SettingsLoadingState() {
   return (
@@ -209,17 +324,20 @@ export function SettingsScreen() {
     return <SettingsLoadingState />;
   }
 
-  const sections = buildSettingsMenuSections({
-    exportPersonalData,
+  const menuSections = bindSettingsMenuSections(
+    sections,
+    {
+      exportPersonalData,
+      openBlocked,
+      openDeveloperCatalog: () => openStackScreen(navigation, 'UICatalog'),
+      openEditProfile,
+      openPassword,
+      openPrivacy,
+      requestDeleteAccount: () => setShowDeleteConfirm(true),
+      requestLogout: () => setShowLogoutConfirm(true),
+    },
     isExportingPersonalData,
-    openBlocked,
-    openDeveloperCatalog: () => openStackScreen(navigation, 'UICatalog'),
-    openEditProfile,
-    openPassword,
-    openPrivacy,
-    requestDeleteAccount: () => setShowDeleteConfirm(true),
-    requestLogout: () => setShowLogoutConfirm(true),
-  });
+  );
 
   if (view === 'editProfile') {
     return (
@@ -336,7 +454,7 @@ export function SettingsScreen() {
         onBack={goBack}
         onRefresh={onRefresh}
         refreshing={refreshing}
-        sections={sections}
+        sections={menuSections}
       />
 
       <ConfirmActionModal

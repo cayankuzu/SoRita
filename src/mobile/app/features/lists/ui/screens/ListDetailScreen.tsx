@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -31,10 +30,10 @@ import {
 import { useListDetailScreenState } from '@/mobile/app/features/lists/application/useListDetailScreenState';
 import { ListEditorModal } from '@/mobile/app/features/lists/ui/components/ListEditorModal';
 import { ListDetailHeader } from '@/mobile/app/features/lists/ui/components/ListDetailHeader';
+import { ListDetailPlaceItem } from '@/mobile/app/features/lists/ui/components/ListDetailPlaceItem';
 import { ListDetailPlacesSection } from '@/mobile/app/features/lists/ui/components/ListDetailPlacesSection';
 import { listDetailScreenStyles as styles } from '@/mobile/app/features/lists/ui/components/listDetailScreenStyles';
 import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
-import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import {
   clearPersistedListEditorDraft,
@@ -55,10 +54,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import {
-  buildLocationPlaceStats,
-  getMarkerAggregationKey,
-} from '@/mobile/app/shared/utils/format';
+import { buildLocationPlaceStats } from '@/mobile/app/shared/utils/format';
 
 type ListDetailScreenContentProps = {
   listId: string;
@@ -462,47 +458,27 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           contentContainerStyle={styles.content}
           data={displayPlaces}
           keyExtractor={(place) => place.id}
-          renderItem={({ item: place }) => {
-            const isHighlighted = highlightedPlaceId === place.id;
-            const locationStats = locationStatsByKey.get(getMarkerAggregationKey(place));
-
-            return (
-              <View
-                accessibilityLabel={isHighlighted ? tr.listDetail.mapSelectedPlace : undefined}
-                accessibilityState={isHighlighted ? { selected: true } : undefined}
-                style={[
-                  styles.placeCardShell,
-                  isHighlighted ? styles.placeCardShellHighlighted : null,
-                ]}
-              >
-                {isHighlighted ? (
-                  <View style={styles.highlightPill}>
-                    <Text style={styles.highlightPillText}>{tr.listDetail.mapSelectedPlace}</Text>
-                  </View>
-                ) : null}
-
-                <PlaceCard
-                  context="list-detail"
-                  place={place}
-                  owner={owner}
-                  ownerId={list.userId}
-                  listId={list.id}
-                  listName={list.name}
-                  listEmoji={list.emoji}
-                  listIsPublic={list.isPublic}
-                  listCoverImage={list.coverImage}
-                  locationPlaceCardsCount={locationStats?.count}
-                  locationOriginalPlaceName={locationStats?.originalPlaceName}
-                  markerColor={placeMarkerColorsById.get(place.id)}
-                  onEdit={isOwner ? () => setEditingPlace(place) : undefined}
-                  onOwnerPress={
-                    owner ? () => openStackScreen(navigation, 'UserProfile', { userId: owner.id }) : undefined
-                  }
-                  onDelete={isOwner ? () => requestDeletePlace(place.id) : undefined}
-                />
-              </View>
-            );
-          }}
+          renderItem={({ item: place }) => (
+            <ListDetailPlaceItem
+              highlighted={highlightedPlaceId === place.id}
+              isOwner={isOwner}
+              listCoverImage={list.coverImage}
+              listEmoji={list.emoji}
+              listId={list.id}
+              listIsPublic={list.isPublic}
+              listName={list.name}
+              locationStatsByKey={locationStatsByKey}
+              markerColor={placeMarkerColorsById.get(place.id)}
+              onDeletePlace={requestDeletePlace}
+              onEditPlace={setEditingPlace}
+              onOpenOwnerProfile={
+                owner ? () => openStackScreen(navigation, 'UserProfile', { userId: owner.id }) : undefined
+              }
+              owner={owner}
+              ownerId={list.userId}
+              place={place}
+            />
+          )}
           ListHeaderComponent={
             <View style={styles.feed}>
               <ListDetailHeader
