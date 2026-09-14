@@ -21,14 +21,14 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "1.1.2",
+    "@cloudflare/vitest-plugin": "1.1.9",
     "@cloudflare/workers-types": "^5.20260831.1",
     "@typescript-eslint/eslint-plugin": "8.64.0",
     "@typescript-eslint/parser": "8.64.0",
     "eslint": "10.7.0",
     "typescript": "5.9.2",
     "vitest": "4.1.11",
-    "wrangler": "4.127.1"
+    "wrangler": "4.131.2"
   },
   "engines": {
     "node": ">=22.0.0"
