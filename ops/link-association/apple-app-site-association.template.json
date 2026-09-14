@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "__APPLE_TEAM_ID__.__IOS_BUNDLE_ID__",
+        "components": [
+          {
+            "/": "/*",
+            "comment": "SoRita HTTPS routes"
+          }
+        ]
+      }
+    ]
+  }
+}

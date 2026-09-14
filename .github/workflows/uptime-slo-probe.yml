@@ -1,0 +1,56 @@
+name: Uptime SLO Probe
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+    inputs:
+      confirm_external_probe:
+        description: Run the approved public synthetic health probe
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sorita-uptime-slo-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Approved public health probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production-evidence
+    env:
+      SORITA_UPTIME_HEALTH_URL: ${{ vars.SORITA_UPTIME_HEALTH_URL }}
+      SORITA_UPTIME_RUN_CONFIRM: APPROVED_EXTERNAL_PROBE
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Require manual authorization for manual dispatches
+        if: github.event_name == 'workflow_dispatch' && inputs.confirm_external_probe != true
+        run: |
+          echo '::error::Explicit confirmation is required for a manual external probe.'
+          exit 1
+
+      - name: Probe the approved public health endpoint
+        run: node utils/ops/uptime-slo-probe.mjs --samples 3 --output "${RUNNER_TEMP}/uptime-slo-probe.json"
+
+      - name: Upload sanitized health evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: uptime-slo-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/uptime-slo-probe.json
+          if-no-files-found: warn
+          retention-days: 30
