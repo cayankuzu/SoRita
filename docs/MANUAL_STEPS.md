@@ -275,11 +275,12 @@ submission.
 
 ## 7. EAS Update code signing
 
-- **Current status:** **`BLOCKED / NO-GO`**. The current EAS account reports the
-  Free plan, which does not provide EAS Update code signing. No tracked public
-  certificate, secure private-key ceremony or device rejection evidence exists.
-  The production OTA workflow now fails closed when the certificate/metadata is
-  absent or invalid; this guard is not a signed update.
+- **Current status:** **`NOT USED (owner decision 2026-09-17)`**. The current EAS
+  plan does not provide EAS Update code signing, and the owner chose unsigned OTA
+  through `npm run ota:publish` over no OTA. No certificate is embedded in any
+  binary. The GitHub OTA workflows still fail closed without a certificate and
+  are not the operating path. Details:
+  [`ota-runtime-and-release.md`](./ota-runtime-and-release.md#code-signing-decision).
 - **Why:** OTA-capable binaries must authenticate update manifests/assets using
   an approved certificate/key lifecycle and reject invalid signatures.
 - **Panel/location:** Expo project settings and approved offline/managed signing
@@ -673,9 +674,10 @@ submission.
 
 ## 17. EAS Update production canary approvals
 
-- **Current status:** `UNVERIFIED / NO-GO`. The branch workflow defines an
-  initial 5% OTA and manual 20%, 50% and 100% stages, but OTA-enabled store
-  binary evidence, signing proof, same-SHA runs and hold approvals are absent.
+- **Current status:** `SUPERSEDED FOR UNSIGNED OTA`. Production updates ship
+  through `npm run ota:publish` (optional `--rollout <n>` for a canary) against
+  the binaries recorded in `quality/ota-binaries.json`. The workflow described
+  below applies only once signed OTA is adopted.
 - **Why:** An OTA must be JavaScript-only safe, runtime-compatible, signed and
   targeted only to verified installed binaries.
 - **Panel/location:** GitHub Actions → EAS Update Production; protected

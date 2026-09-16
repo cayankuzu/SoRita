@@ -17,11 +17,13 @@ const rel = (path) => relative(workspace, path).split(sep).join('/');
 const appConfigPath = join(workspace, 'app.config.ts');
 const gradlePath = join(workspace, 'android/app/build.gradle');
 const manifestPath = join(workspace, 'android/app/src/main/AndroidManifest.xml');
+const stringsPath = join(workspace, 'android/app/src/main/res/values/strings.xml');
 
-const [appConfig, gradle, manifest] = await Promise.all([
+const [appConfig, gradle, manifest, strings] = await Promise.all([
   readFile(appConfigPath, 'utf8'),
   readFile(gradlePath, 'utf8'),
   readFile(manifestPath, 'utf8'),
+  readFile(stringsPath, 'utf8'),
 ]);
 
 const violations = [];
@@ -59,6 +61,12 @@ const gradleApplicationId = pick(gradle, /applicationId '([^']+)'/, 'application
 const gradleNamespace = pick(gradle, /namespace '([^']+)'/, 'namespace', gradlePath);
 const gradleVersionName = pick(gradle, /versionName "([^"]+)"/, 'versionName', gradlePath);
 const gradleVersionCode = pick(gradle, /versionCode (\d+)/, 'versionCode', gradlePath);
+const androidRuntimeVersion = pick(
+  strings,
+  /name="expo_runtime_version"[^>]*>([^<]+)</,
+  'expo_runtime_version',
+  stringsPath,
+);
 
 const manifestSchemes = new Set(
   [...manifest.matchAll(/android:scheme="([^"]+)"/g)].map((match) => match[1]),
@@ -83,6 +91,14 @@ expect('App identity', expoPackage, gradleApplicationId, 'app.config.ts android.
 expect('Android namespace', expoPackage, gradleNamespace, 'app.config.ts android.package', 'build.gradle namespace');
 expect('Version name', expoVersion, gradleVersionName, 'app.config.ts version', 'build.gradle versionName');
 expect('Version code', expoVersionCode, gradleVersionCode, 'app.config.ts android.versionCode', 'build.gradle versionCode');
+// With the appVersion runtime policy, a lagging runtime string strands the binary from OTA.
+expect(
+  'OTA runtime version',
+  expoVersion,
+  androidRuntimeVersion,
+  'app.config.ts version',
+  'strings.xml expo_runtime_version',
+);
 expect(
   'Default notification channel',
   expoDefaultNotificationChannel,

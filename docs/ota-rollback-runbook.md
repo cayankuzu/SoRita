@@ -21,9 +21,10 @@ locked Wrangler `4.127.1` help output. No provider command in this runbook has b
 5. A rollback affects only matching runtime/channel clients that next check for an update. It does
    not replace a native binary, undo a database migration, restore a Cloudflare binding/secret, or
    guarantee that already-running clients restart.
-6. If EAS Update code signing is later enabled, every rollback publication must follow the approved
-   private-key procedure. It is currently **UNVERIFIED**, so this runbook does not claim a signed
-   rollback artifact.
+6. Updates, including rollback publications, are currently unsigned (see
+   [`ota-runtime-and-release.md`](./ota-runtime-and-release.md#code-signing-decision)). If EAS Update
+   code signing is later enabled, every rollback publication must follow the approved private-key
+   procedure.
 
 ## Capture state before containment
 
@@ -103,9 +104,9 @@ eas update:roll-back-to-embedded \
   --platform all --json --non-interactive
 ```
 
-For the currently configured binary generation, the expected runtime is `1.0.106`; never substitute
-that value blindly for older installed binaries. If Android and iOS have different verified runtime
-or embedded-state evidence, contain each platform separately with `--platform android` or
+Take the runtime of the affected binaries from `quality/ota-binaries.json`; never substitute it
+blindly for older installed binaries. If Android and iOS have different verified runtime or
+embedded-state evidence, contain each platform separately with `--platform android` or
 `--platform ios`.
 
 ## D. Wrong-runtime or native-incompatible update

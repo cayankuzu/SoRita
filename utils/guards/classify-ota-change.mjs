@@ -81,10 +81,34 @@ const runtimeExtensions = new Set([
 ]);
 
 const supportRootFiles = new Set([
+  '.dockerignore',
+  '.env.example',
+  '.gitignore',
+  '.gitleaksignore',
+  '.trivyignore',
+  'compose.quality.yml',
+  'eslint.config.js',
+  'knip.json',
   'tsconfig.tests.json',
   'vitest.config.ts',
   'vitest.setup.ts',
 ]);
+
+// Neither bundled by Metro nor compiled into a binary, so they must not block OTA.
+const supportDirectoryPrefixes = [
+  '.github/',
+  'continuity/',
+  'docs/',
+  'e2e/',
+  'guidelines/',
+  'infra/',
+  'ops/',
+  'quality/',
+  'release-evidence/',
+  'supabase/',
+  'tests/',
+  'utils/',
+];
 
 function fileExtension(file) {
   const basename = file.slice(file.lastIndexOf('/') + 1);
@@ -128,8 +152,8 @@ function isSupportOnlyChange(file) {
 
   return (
     supportRootFiles.has(lowerFile) ||
-    lowerFile.startsWith('tests/') ||
-    lowerFile.startsWith('e2e/') ||
+    supportDirectoryPrefixes.some((prefix) => lowerFile.startsWith(prefix)) ||
+    (!lowerFile.includes('/') && lowerFile.endsWith('.md')) ||
     lowerFile.includes('/__tests__/') ||
     lowerFile.includes('/__mocks__/') ||
     /\.(?:spec|test)\.[cm]?[jt]sx?$/u.test(lowerFile) ||
@@ -146,7 +170,7 @@ function isOtaRuntimeChange(file) {
   return runtimeExtensions.has(fileExtension(lowerFile));
 }
 
-export function classifyChangedFilesDetailed(files) {
+export function classifyChangedFilesDetailed(files, { scriptsOnlyPackageManifest = false } = {}) {
   if (!Array.isArray(files) || files.length === 0) {
     return {
       status: MANUAL_REVIEW_REQUIRED,
@@ -169,6 +193,8 @@ export function classifyChangedFilesDetailed(files) {
 
     if (!file) {
       buckets.unknown.push(candidate);
+    } else if (scriptsOnlyPackageManifest && file === 'package.json') {
+      buckets.support.push(file);
     } else if (isNativeChange(file)) {
       buckets.native.push(file);
     } else if (isSupportOnlyChange(file)) {
@@ -228,6 +254,48 @@ export function collectGitChangedFiles(base, head, cwd = process.cwd()) {
   return result.stdout.split('\0').filter(Boolean);
 }
 
+export function packageManifestsDifferOnlyInScripts(beforeText, afterText) {
+  try {
+    const before = JSON.parse(beforeText);
+    const after = JSON.parse(afterText);
+    if (!before || !after || typeof before !== 'object' || typeof after !== 'object') return false;
+    if (Array.isArray(before) || Array.isArray(after)) return false;
+
+    delete before.scripts;
+    delete after.scripts;
+    return JSON.stringify(before) === JSON.stringify(after);
+  } catch {
+    return false;
+  }
+}
+
+function readGitBlob(revision, file, cwd) {
+  const result = spawnSync('git', ['show', `${revision}:${file}`], {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+    windowsHide: true,
+  });
+
+  return result.error || result.status !== 0 ? undefined : result.stdout;
+}
+
+export function classifyGitRange(base, head, cwd = process.cwd()) {
+  const files = collectGitChangedFiles(base, head, cwd);
+  let scriptsOnlyPackageManifest = false;
+
+  if (files.includes('package.json')) {
+    const before = readGitBlob(base, 'package.json', cwd);
+    const after = readGitBlob(head, 'package.json', cwd);
+    scriptsOnlyPackageManifest =
+      before !== undefined &&
+      after !== undefined &&
+      packageManifestsDifferOnlyInScripts(before, after);
+  }
+
+  return classifyChangedFilesDetailed(files, { scriptsOnlyPackageManifest });
+}
+
 function parseArguments(argv) {
   const parsed = { base: undefined, head: undefined, files: [], explain: false };
 
@@ -266,10 +334,9 @@ function parseArguments(argv) {
 export function runClassifierCli(argv = process.argv.slice(2)) {
   try {
     const options = parseArguments(argv);
-    const files = options.base
-      ? collectGitChangedFiles(options.base, options.head)
-      : options.files;
-    const result = classifyChangedFilesDetailed(files);
+    const result = options.base
+      ? classifyGitRange(options.base, options.head)
+      : classifyChangedFilesDetailed(options.files);
 
     if (options.explain) process.stderr.write(`${JSON.stringify(result)}\n`);
     process.stdout.write(`${result.status}\n`);

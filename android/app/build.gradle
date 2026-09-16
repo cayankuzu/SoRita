@@ -283,7 +283,7 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 112
+        versionCode 113
         versionName "1.0.107"
         manifestPlaceholders = [
             expoUpdatesChannel: "development",
@@ -375,6 +375,28 @@ def verifyReleaseSigningKey = tasks.register("verifyReleaseSigningKey") {
     }
 }
 
+def expectedExpoRuntimeVersion = android.defaultConfig.versionName
+def expoRuntimeStringsFile = file("src/main/res/values/strings.xml")
+
+// With the appVersion runtime policy, a lagging runtime string strands the binary from OTA.
+def verifyExpoRuntimeVersion = tasks.register("verifyExpoRuntimeVersion") {
+    inputs.file(expoRuntimeStringsFile)
+
+    doLast {
+        def matcher = expoRuntimeStringsFile.text =~ /name="expo_runtime_version"[^>]*>([^<]+)</
+        def embeddedRuntimeVersion = matcher.find() ? matcher.group(1).trim() : null
+
+        if (embeddedRuntimeVersion != expectedExpoRuntimeVersion) {
+            throw new GradleException(
+                "expo_runtime_version is '${embeddedRuntimeVersion ?: 'missing'}' but versionName is " +
+                "'${expectedExpoRuntimeVersion}'. Align strings.xml with app.config.ts before building a release."
+            )
+        }
+
+        println("Expo OTA runtime version verified: ${embeddedRuntimeVersion}")
+    }
+}
+
 tasks.register("printReleaseSigningFingerprint") {
     doLast {
         println("Expected upload SHA1: ${releaseExpectedSha1 ?: 'not configured'}")
@@ -392,6 +414,7 @@ tasks.matching { task ->
     ]
 }.configureEach {
     dependsOn(verifyReleaseSigningKey)
+    dependsOn(verifyExpoRuntimeVersion)
 }
 
 tasks.matching { task -> task.name == "mergeLibDexDebug" }.configureEach { task ->
