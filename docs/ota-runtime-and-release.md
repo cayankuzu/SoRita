@@ -64,13 +64,15 @@ Anything the classifier reports as `NATIVE_BUILD_REQUIRED` (dependencies, `app.c
      on the outer process):
 
      ```bash
-     EXPO_PUBLIC_RELEASE_ENVIRONMENT=production SENTRY_DISABLE_AUTO_UPLOAD=true \
+     env -u SENTRY_AUTH_TOKEN EXPO_PUBLIC_RELEASE_ENVIRONMENT=production \
        eas env:exec production "android\\gradlew.bat -p android :app:bundleRelease" --non-interactive
      ```
 
-     The bundle is written to `C:/t/sorita-gradle-build/app/outputs/bundle/release/app-release.aab`.
-     Drop `SENTRY_DISABLE_AUTO_UPLOAD` once the EAS `SENTRY_AUTH_TOKEN` is valid again; with the
-     current token the Sentry source-map upload returns HTTP 401 and fails the build.
+     The bundle is written to `C:/t/sorita-gradle-build/app/outputs/bundle/release/app-release.aab`,
+     and the build uploads its source maps to Sentry. EAS `Secret` variables never reach
+     `eas env:exec`, so the upload authenticates with `SENTRY_AUTH_TOKEN` from the local `.env`.
+     `env -u` stops any machine-wide `SENTRY_AUTH_TOKEN` from shadowing it: sentry-cli does not let
+     `.env` override a variable that is already set, and a stale machine-wide token fails with HTTP 401.
    - iOS: `eas build --platform ios --profile production --non-interactive`.
 4. Record each binary; the recorder inspects the real artifact and refuses a wrong runtime, channel
    or EAS project:

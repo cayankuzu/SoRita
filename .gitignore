@@ -16,6 +16,7 @@ android/app/debug.keystore
 android/keystore.properties
 android/keystores/*.jks
 android/keystores/*-info.txt
+android/app/src/main/assets/modules.json
 credentials.json
 credentials/
 *.jks
