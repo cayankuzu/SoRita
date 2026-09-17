@@ -60,8 +60,17 @@ Anything the classifier reports as `NATIVE_BUILD_REQUIRED` (dependencies, `app.c
    never reach the new native code and the reverse.
 2. Run `npm run check:release`, commit and push.
 3. Build from that commit:
-   - Android: `eas env:exec production "EXPO_PUBLIC_RELEASE_ENVIRONMENT=production ./android/gradlew -p android :app:bundleRelease"`
-     (on Windows run the Gradle wrapper the same way from Git Bash).
+   - Android (Git Bash on Windows; `eas env:exec` runs its command through `cmd`, so set variables
+     on the outer process):
+
+     ```bash
+     EXPO_PUBLIC_RELEASE_ENVIRONMENT=production SENTRY_DISABLE_AUTO_UPLOAD=true \
+       eas env:exec production "android\\gradlew.bat -p android :app:bundleRelease" --non-interactive
+     ```
+
+     The bundle is written to `C:/t/sorita-gradle-build/app/outputs/bundle/release/app-release.aab`.
+     Drop `SENTRY_DISABLE_AUTO_UPLOAD` once the EAS `SENTRY_AUTH_TOKEN` is valid again; with the
+     current token the Sentry source-map upload returns HTTP 401 and fails the build.
    - iOS: `eas build --platform ios --profile production --non-interactive`.
 4. Record each binary; the recorder inspects the real artifact and refuses a wrong runtime, channel
    or EAS project:

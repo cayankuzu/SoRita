@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "channel": "production",
+  "binaries": {
+    "android": {
+      "runtimeVersion": "1.0.107",
+      "sourceSha": "8f492660ff352fcf48b2184a2a327bea4e4f1672",
+      "artifactSha256": "22816e654e3689e631bf2b2d99370e1835b26b1906abc7045bdcf9824a03fd91"
+    }
+  }
+}
