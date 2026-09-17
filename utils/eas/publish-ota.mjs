@@ -116,6 +116,14 @@ export function summarizeUpdateOutput(stdout, { platforms, runtimeVersion }) {
   };
 }
 
+// npm exports npm_config_* into its children; expo-doctor's nested `npm explain`
+// calls fail under them, so the gate runs with the lifecycle variables removed.
+export function withoutNpmLifecycleEnv(env) {
+  return Object.fromEntries(
+    Object.entries(env).filter(([key]) => !key.toLowerCase().startsWith('npm_')),
+  );
+}
+
 function runInherited(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: workspaceRoot, stdio: 'inherit', windowsHide: true, ...options });
   if (result.error) throw result.error;
@@ -169,7 +177,11 @@ function main() {
   if (runInherited(eas.command, [...eas.prefix, 'whoami']) !== 0) fail('eas is not logged in.');
 
   console.log('[ota] Running npm run check:release before publishing.');
-  if (runInherited('npm run check:release', [], { shell: true }) !== 0) fail('npm run check:release failed.');
+  const gateStatus = runInherited('npm run check:release', [], {
+    env: withoutNpmLifecycleEnv(process.env),
+    shell: true,
+  });
+  if (gateStatus !== 0) fail('npm run check:release failed.');
 
   const args = buildEasUpdateArguments({
     message: options.message,

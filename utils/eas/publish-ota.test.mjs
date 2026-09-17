@@ -5,6 +5,7 @@ import {
   buildEasUpdateArguments,
   parsePublishArguments,
   summarizeUpdateOutput,
+  withoutNpmLifecycleEnv,
 } from './publish-ota.mjs';
 
 const sha = 'a'.repeat(40);
@@ -78,6 +79,19 @@ const published = (overrides = {}) =>
     { id: 'u-android', group: 'group-1', platform: 'android', runtimeVersion: '1.0.107', ...overrides },
     { id: 'u-ios', group: 'group-1', platform: 'ios', runtimeVersion: '1.0.107' },
   ]);
+
+test('runs the gate without npm lifecycle variables that break nested npm calls', () => {
+  assert.deepEqual(
+    withoutNpmLifecycleEnv({
+      PATH: '/usr/bin',
+      npm_config_prefix: '/npm',
+      NPM_CONFIG_REGISTRY: 'https://registry.example',
+      npm_lifecycle_event: 'ota:publish',
+      EXPO_PUBLIC_RELEASE_ENVIRONMENT: 'production',
+    }),
+    { PATH: '/usr/bin', EXPO_PUBLIC_RELEASE_ENVIRONMENT: 'production' },
+  );
+});
 
 test('summarizes one update group per publish', () => {
   assert.deepEqual(
