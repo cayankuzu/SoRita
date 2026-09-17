@@ -1,4 +1,5 @@
 import type { InfiniteData, QueryClient } from '@tanstack/react-query';
+import { Dimensions } from 'react-native';
 
 import {
   EXPLORE_STALE_TIME_MS,
@@ -48,6 +49,12 @@ import {
 import { fetchOwnedMapMarkers } from '@/mobile/app/data/repositories/mapMarkersRepository';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
+import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
+import {
+  DEFAULT_MINI_MAP_PREVIEW_HEIGHT,
+  buildStaticMapUrl,
+  getStaticMapPreviewWidth,
+} from '@/mobile/app/shared/utils/staticMapPreview';
 
 export type StartupWarmupStage =
   | 'home'
@@ -56,10 +63,35 @@ export type StartupWarmupStage =
   | 'map'
   | 'notifications';
 
-export const STARTUP_MEDIA_PREFETCH_LIMIT = 8;
+export const STARTUP_MEDIA_PREFETCH_LIMIT = 16;
+
+/** The map is the largest thing on a place card, so warm the very image the card will request. */
+function getFeedItemStaticMapUri(item: PlaceFeedCardItem) {
+  const { lat, lng, name } = item.place;
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return undefined;
+  }
+
+  return (
+    buildStaticMapUrl(
+      [
+        {
+          lat,
+          lng,
+          name,
+          markerColor: getMarkerColorForMemberships(item.memberships, item.listIsPublic),
+        },
+      ],
+      DEFAULT_MINI_MAP_PREVIEW_HEIGHT,
+      getStaticMapPreviewWidth(Dimensions.get('window').width),
+    ) ?? undefined
+  );
+}
 
 function getFeedItemMediaUris(item: PlaceFeedCardItem) {
   return [
+    getFeedItemStaticMapUri(item),
     item.place.media?.[0]?.thumbnailUrl || item.place.media?.[0]?.url,
     item.listCoverImage,
     item.owner?.profilePhoto,

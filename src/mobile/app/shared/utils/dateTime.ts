@@ -35,6 +35,50 @@ export function formatAbsoluteDateTime(value?: string | null) {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+export function formatAbsoluteDate(value?: string | null) {
+  const date = toDate(value);
+
+  if (!date) {
+    return '';
+  }
+
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
+}
+
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+const RELATIVE_WINDOW_MS = 7 * DAY_MS;
+
+/** Recent activity reads as "3 saat önce"; anything older keeps its calendar date. */
+export function formatRelativeDateTime(value?: string | null, now: Date = new Date()) {
+  const date = toDate(value);
+
+  if (!date) {
+    return '';
+  }
+
+  const elapsedMs = now.getTime() - date.getTime();
+
+  if (elapsedMs >= RELATIVE_WINDOW_MS) {
+    return formatAbsoluteDate(value);
+  }
+
+  if (elapsedMs < MINUTE_MS) {
+    return tr.common.relativeTime.justNow;
+  }
+
+  if (elapsedMs < HOUR_MS) {
+    return tr.common.relativeTime.minutes(Math.floor(elapsedMs / MINUTE_MS));
+  }
+
+  if (elapsedMs < DAY_MS) {
+    return tr.common.relativeTime.hours(Math.floor(elapsedMs / HOUR_MS));
+  }
+
+  return tr.common.relativeTime.days(Math.floor(elapsedMs / DAY_MS));
+}
+
 export function hasMeaningfulUpdate(
   createdAt?: string | null,
   updatedAt?: string | null,
@@ -68,14 +112,14 @@ export function getCreatedUpdatedLabels(
   updatedAt?: string | null,
 ) {
   const labels: string[] = [];
-  const createdLabel = formatAbsoluteDateTime(createdAt);
+  const createdLabel = formatRelativeDateTime(createdAt);
 
   if (createdLabel) {
-    labels.push(tr.common.createdAt(createdLabel));
+    labels.push(createdLabel);
   }
 
   if (hasMeaningfulUpdate(createdAt, updatedAt)) {
-    const updatedLabel = formatAbsoluteDateTime(updatedAt);
+    const updatedLabel = formatRelativeDateTime(updatedAt);
 
     if (updatedLabel) {
       labels.push(tr.common.editedAt(updatedLabel));

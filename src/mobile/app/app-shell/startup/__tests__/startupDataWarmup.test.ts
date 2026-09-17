@@ -58,6 +58,10 @@ vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: { debug: vi.fn() },
 }));
 
+vi.mock('@/mobile/app/platform/config/env', () => ({
+  env: { googleMapsStaticApiKey: 'static-map-key' },
+}));
+
 describe('startupDataWarmup', () => {
   let queryClient: QueryClient;
 
@@ -122,6 +126,36 @@ describe('startupDataWarmup', () => {
     expect(mocks.fetchProfileSummary).not.toHaveBeenCalled();
     expect(mocks.fetchVisibleDataContext).not.toHaveBeenCalled();
     expect(mocks.getNotificationsCursorPage).not.toHaveBeenCalled();
+  });
+
+  it('warms the map image a place card will request, not only its photos', async () => {
+    mocks.fetchHomeFeedPage.mockResolvedValue({
+      items: [
+        {
+          key: 'list-1:place-1',
+          listId: 'list-1',
+          listIsPublic: true,
+          listName: 'List',
+          memberships: [{ listId: 'list-1', listIsPublic: true, listName: 'List' }],
+          owner: { id: 'user-1', profilePhoto: 'avatar.jpg' },
+          ownerId: 'user-1',
+          place: { id: 'place-1', lat: 39.1, lng: 30.2, media: [], name: 'Zeyn Coffee' },
+          sortTime: 1,
+        },
+      ],
+    });
+    const { startStartupDataWarmup } = await import('../startupDataWarmup');
+
+    await startStartupDataWarmup({ queryClient, userId: 'user-1' });
+
+    const warmedUris = mocks.prefetchAppImages.mock.calls.flatMap(([uris]) => uris);
+    const staticMapUri = warmedUris.find((uri?: string | null) =>
+      uri?.startsWith('https://maps.googleapis.com/maps/api/staticmap'),
+    );
+
+    expect(staticMapUri).toContain('center=39.1%2C30.2');
+    expect(staticMapUri).toContain('zoom=15');
+    expect(warmedUris).toContain('avatar.jpg');
   });
 
   it('warms a requested surface immediately after user intent', async () => {

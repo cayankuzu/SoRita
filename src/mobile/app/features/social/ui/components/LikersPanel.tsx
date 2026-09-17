@@ -23,7 +23,7 @@ import {
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
-import { formatAbsoluteDateTime } from '@/mobile/app/shared/utils/dateTime';
+import { formatRelativeDateTime } from '@/mobile/app/shared/utils/dateTime';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
@@ -97,7 +97,7 @@ export function LikersPanel({
             <Text style={styles.panelMuted}>@{item.username}</Text>
             {item.likedAt ? (
               <Text style={styles.panelMuted}>
-                {tr.cards.likedAt(formatAbsoluteDateTime(item.likedAt))}
+                {tr.cards.likedAt(formatRelativeDateTime(item.likedAt))}
               </Text>
             ) : null}
           </View>

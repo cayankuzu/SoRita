@@ -27,13 +27,46 @@ const LOADER_FAILSAFE_MS = 1800;
 const IMAGE_PREFETCH_CONCURRENCY = 2;
 const MAX_WARMED_IMAGE_KEYS = 512;
 const MAX_PREFETCH_QUEUE_JOBS = 8;
-const MAX_PREFETCH_URIS_PER_JOB = 8;
+const MAX_PREFETCH_URIS_PER_JOB = 16;
 const DEFAULT_IMAGE_BLURHASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4';
 const DEFAULT_IMAGE_PLACEHOLDER = { blurhash: DEFAULT_IMAGE_BLURHASH } as const;
 
+const MAX_RESOLVED_SOURCE_CACHE_ENTRIES = 256;
 const warmedImageKeys = new Set<string>();
 const pendingPrefetchKeys = new Set<string>();
 const sourceResolutionInFlight = new Map<string, Promise<ResolvedImageSource | null>>();
+// Only durable results live here: a local cache path, or a URL that needs no signing.
+// Re-mounting a recycled row then paints from memory instead of blanking out.
+const resolvedSourceCache = new Map<string, ResolvedImageSource>();
+
+function getStableResolvedSource(uri: string) {
+  const cached = resolvedSourceCache.get(uri);
+
+  if (!cached) {
+    return null;
+  }
+
+  resolvedSourceCache.delete(uri);
+  resolvedSourceCache.set(uri, cached);
+  return cached;
+}
+
+function forgetStableResolvedSource(uri: string) {
+  return resolvedSourceCache.delete(uri);
+}
+
+function rememberStableResolvedSource(uri: string, source: ResolvedImageSource) {
+  resolvedSourceCache.set(uri, source);
+
+  if (resolvedSourceCache.size <= MAX_RESOLVED_SOURCE_CACHE_ENTRIES) {
+    return;
+  }
+
+  const oldestKey = resolvedSourceCache.keys().next().value;
+  if (oldestKey) {
+    resolvedSourceCache.delete(oldestKey);
+  }
+}
 type PrefetchPriority = 'high' | 'low' | 'normal';
 type PrefetchJob = {
   abortListener?: () => void;
@@ -168,16 +201,32 @@ function resolveImageSource(uri: string) {
   }
 
   const resolution = (async (): Promise<ResolvedImageSource | null> => {
-    if (isStorageAssetUri(uri)) {
+    const isStorageAsset = isStorageAssetUri(uri);
+
+    if (isStorageAsset) {
       const cachePath = await ExpoImage.getCachePathAsync(uri).catch(() => null);
       if (cachePath) {
         rememberWarmedImage(uri);
-        return { uri: toFileUri(cachePath) };
+        const source = { uri: toFileUri(cachePath) };
+        rememberStableResolvedSource(uri, source);
+        return source;
       }
     }
 
     const resolvedUri = await resolveStorageAssetUrl(uri);
-    return resolvedUri ? { uri: resolvedUri } : null;
+
+    if (!resolvedUri) {
+      return null;
+    }
+
+    const source = { uri: resolvedUri };
+
+    // A signed storage URL expires; anything else is safe to reuse verbatim.
+    if (!isStorageAsset) {
+      rememberStableResolvedSource(uri, source);
+    }
+
+    return source;
   })().finally(() => {
     sourceResolutionInFlight.delete(uri);
   });
@@ -303,6 +352,7 @@ export function clearAppImagePrefetchQueue() {
   warmedImageKeys.clear();
   pendingPrefetchKeys.clear();
   sourceResolutionInFlight.clear();
+  resolvedSourceCache.clear();
 }
 
 export function AppImage({
@@ -327,9 +377,12 @@ export function AppImage({
 }: AppImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [resolvedSource, setResolvedSource] = useState<ResolvedImageSource | null>(null);
+  const [resolvedSource, setResolvedSource] = useState<ResolvedImageSource | null>(() =>
+    uri ? getStableResolvedSource(uri) : null,
+  );
   const loaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loaderFailsafeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cacheRecoveryUriRef = useRef<string | null>(null);
 
   const clearLoaderTimeout = () => {
     if (loaderTimeoutRef.current) {
@@ -349,9 +402,12 @@ export function AppImage({
     clearLoaderTimeout();
     setHasError(false);
     setIsLoading(false);
-    setResolvedSource(null);
 
-    if (uri) {
+    cacheRecoveryUriRef.current = null;
+    const stableSource = uri ? getStableResolvedSource(uri) : null;
+    setResolvedSource(stableSource);
+
+    if (uri && !stableSource) {
       void resolveImageSource(uri).then((source) => {
         if (!cancelled) {
           setResolvedSource(source);
@@ -397,8 +453,19 @@ export function AppImage({
           transition={transition}
           onError={(event) => {
             clearLoaderTimeout();
-            setHasError(true);
             setIsLoading(false);
+
+            // A remembered cache path can be evicted by the OS; re-resolve once before giving up.
+            if (uri && cacheRecoveryUriRef.current !== uri && forgetStableResolvedSource(uri)) {
+              cacheRecoveryUriRef.current = uri;
+              setResolvedSource(null);
+              void resolveImageSource(uri)
+                .then((source) => setResolvedSource(source))
+                .catch(() => setHasError(true));
+              return;
+            }
+
+            setHasError(true);
             onError?.(event);
           }}
           onLoad={(event) => {

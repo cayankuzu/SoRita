@@ -16,7 +16,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import {
-  formatAbsoluteDateTime,
+  formatRelativeDateTime,
   hasMeaningfulUpdate,
 } from '@/mobile/app/shared/utils/dateTime';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
@@ -136,7 +136,7 @@ export function CommentThread({
                   <Text numberOfLines={1} style={styles.commentMeta}>@{comment.username}</Text>
                 ) : null}
                 {comment.username ? <View style={styles.commentMetaDot} /> : null}
-                <Text style={styles.commentMeta}>{formatAbsoluteDateTime(comment.createdAt)}</Text>
+                <Text style={styles.commentMeta}>{formatRelativeDateTime(comment.createdAt)}</Text>
               </View>
             </CommentAuthorPressable>
 

@@ -145,6 +145,72 @@ describe('AppImage media cache', () => {
     expect(resolveStorageAssetUrlMock).toHaveBeenCalledTimes(1);
   });
 
+  it('paints a remembered image immediately instead of blanking on remount', async () => {
+    const storageUri = 'sorita-storage://place-media-private/user/place/photo-d.jpg';
+    getCachePathAsyncMock.mockResolvedValue('/data/user/0/app/cache/photo-d.jpg');
+    const { AppImage } = await import('@/mobile/app/shared/components/ui/AppImage');
+
+    await act(async () => {
+      TestRenderer.create(<AppImage uri={storageUri} />);
+      await Promise.resolve();
+    });
+
+    let remounted!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      remounted = TestRenderer.create(<AppImage uri={storageUri} />);
+    });
+
+    expect(
+      remounted.root.findByType('ExpoImage' as unknown as React.ElementType).props.source,
+    ).toEqual({ cacheKey: storageUri, uri: 'file:///data/user/0/app/cache/photo-d.jpg' });
+  });
+
+  it('never reuses an expired signed URL from memory', async () => {
+    const storageUri = 'sorita-storage://place-media-private/user/place/photo-e.jpg';
+    resolveStorageAssetUrlMock.mockResolvedValue('https://storage.example/photo-e.jpg?token=one');
+    const { AppImage } = await import('@/mobile/app/shared/components/ui/AppImage');
+
+    await act(async () => {
+      TestRenderer.create(<AppImage uri={storageUri} />);
+      await Promise.resolve();
+    });
+
+    resolveStorageAssetUrlMock.mockResolvedValue('https://storage.example/photo-e.jpg?token=two');
+    let remounted!: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      remounted = TestRenderer.create(<AppImage uri={storageUri} />);
+      await Promise.resolve();
+    });
+
+    expect(resolveStorageAssetUrlMock).toHaveBeenCalledTimes(2);
+    expect(
+      remounted.root.findByType('ExpoImage' as unknown as React.ElementType).props.source.uri,
+    ).toBe('https://storage.example/photo-e.jpg?token=two');
+  });
+
+  it('recovers once when a remembered cache path was evicted', async () => {
+    const uri = 'https://image.example/evicted.jpg';
+    resolveStorageAssetUrlMock.mockResolvedValue(uri);
+    const { AppImage } = await import('@/mobile/app/shared/components/ui/AppImage');
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = TestRenderer.create(<AppImage uri={uri} />);
+      await Promise.resolve();
+    });
+
+    const image = () => renderer.root.findByType('ExpoImage' as unknown as React.ElementType);
+
+    await act(async () => {
+      image().props.onError({});
+      await Promise.resolve();
+    });
+
+    expect(resolveStorageAssetUrlMock).toHaveBeenCalledTimes(2);
+    expect(image().props.source.uri).toBe(uri);
+  });
+
   it('bounds each speculative prefetch job', async () => {
     const uris = Array.from({ length: 40 }, (_, index) => `https://image.example/${index}.jpg`);
     resolveStorageAssetUrlsMock.mockImplementation(async (values: string[]) => values);

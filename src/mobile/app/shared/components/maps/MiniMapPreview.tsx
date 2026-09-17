@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
-import { env } from '@/mobile/app/platform/config/env';
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { SkeletonPlaceholder } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { t } from '@/mobile/app/shared/i18n';
 import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
+import {
+  DEFAULT_MINI_MAP_PREVIEW_HEIGHT,
+  buildStaticMapUrl,
+  getStaticMapPreviewWidth,
+} from '@/mobile/app/shared/utils/staticMapPreview';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapPreviewProps = {
@@ -33,99 +38,6 @@ function DeferredAppMapView(props: SharedMapProps) {
   const { AppMapView } = require('@/mobile/app/shared/components/maps/AppMapView') as
     typeof import('@/mobile/app/shared/components/maps/AppMapView');
   return <AppMapView {...props} />;
-}
-
-const STATIC_MAP_URL_CACHE = new Map<string, string>();
-const MAX_STATIC_MAP_URL_CACHE_ENTRIES = 128;
-
-function getCachedStaticMapUrl(cacheKey: string) {
-  if (!STATIC_MAP_URL_CACHE.has(cacheKey)) {
-    return undefined;
-  }
-
-  const cachedUrl = STATIC_MAP_URL_CACHE.get(cacheKey);
-  if (!cachedUrl) {
-    return undefined;
-  }
-  STATIC_MAP_URL_CACHE.delete(cacheKey);
-  STATIC_MAP_URL_CACHE.set(cacheKey, cachedUrl);
-  return cachedUrl;
-}
-
-function rememberStaticMapUrl(cacheKey: string, url: string) {
-  STATIC_MAP_URL_CACHE.set(cacheKey, url);
-  if (STATIC_MAP_URL_CACHE.size <= MAX_STATIC_MAP_URL_CACHE_ENTRIES) {
-    return;
-  }
-
-  const oldestKey = STATIC_MAP_URL_CACHE.keys().next().value;
-  if (oldestKey) {
-    STATIC_MAP_URL_CACHE.delete(oldestKey);
-  }
-}
-
-function toStaticMapColor(color?: string) {
-  if (!color) {
-    return '0x3b82f6';
-  }
-
-  if (color.startsWith('#')) {
-    return `0x${color.slice(1)}`;
-  }
-
-  return color;
-}
-
-function buildStaticMapUrl(places: MapMarkerItem[], height: number, width: number) {
-  // Keep the native Maps SDK keys isolated from the quota-limited Static Maps key.
-  if (!env.googleMapsStaticApiKey || places.length === 0) {
-    return null;
-  }
-
-  const normalizedPlaces = places
-    .slice()
-    .sort((left, right) =>
-      `${left.lat.toFixed(6)}:${left.lng.toFixed(6)}:${left.markerColor ?? ''}`.localeCompare(
-        `${right.lat.toFixed(6)}:${right.lng.toFixed(6)}:${right.markerColor ?? ''}`,
-      ),
-    );
-  const cacheKey = [
-    Math.round(height),
-    Math.round(width),
-    ...normalizedPlaces.map(
-      (place) =>
-        `${place.lat.toFixed(6)}:${place.lng.toFixed(6)}:${toStaticMapColor(place.markerColor)}`,
-    ),
-  ].join('|');
-
-  const cachedUrl = getCachedStaticMapUrl(cacheKey);
-  if (cachedUrl !== undefined) {
-    return cachedUrl;
-  }
-
-  const params = new URLSearchParams();
-  params.set('size', `${Math.round(width)}x${Math.round(height)}`);
-  params.set('scale', '2');
-  params.set('maptype', 'roadmap');
-  params.set('key', env.googleMapsStaticApiKey);
-
-  if (normalizedPlaces.length === 1) {
-    params.set('center', `${normalizedPlaces[0].lat},${normalizedPlaces[0].lng}`);
-    params.set('zoom', '15');
-  } else {
-    params.set('visible', normalizedPlaces.map((place) => `${place.lat},${place.lng}`).join('|'));
-  }
-
-  normalizedPlaces.slice(0, 8).forEach((place) => {
-    params.append(
-      'markers',
-      `color:${toStaticMapColor(place.markerColor)}|${place.lat},${place.lng}`,
-    );
-  });
-
-  const url = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
-  rememberStaticMapUrl(cacheKey, url);
-  return url;
 }
 
 function buildPlacesSignature(places: MapMarkerItem[]) {
@@ -158,9 +70,19 @@ function MiniMapFallback({ places }: MiniMapFallbackProps) {
   );
 }
 
+function MiniMapLoadingFallback() {
+  return (
+    <SkeletonPlaceholder
+      width="100%"
+      borderRadius={0}
+      style={StyleSheet.absoluteFillObject as ViewStyle}
+    />
+  );
+}
+
 function MiniMapPreviewComponent({
   places,
-  height = 148,
+  height = DEFAULT_MINI_MAP_PREVIEW_HEIGHT,
   interactive = false,
   instanceId = 0,
   liteMode,
@@ -175,10 +97,11 @@ function MiniMapPreviewComponent({
   const { width: viewportWidth } = useWindowDimensions();
   const [staticPreviewReady, setStaticPreviewReady] = useState(false);
   const [staticPreviewFailed, setStaticPreviewFailed] = useState(false);
+  const [staticPreviewLoaded, setStaticPreviewLoaded] = useState(false);
   const [focusRecoveryInstanceId, setFocusRecoveryInstanceId] = useState(0);
   const wasInteractiveMapVisibleRef = React.useRef(false);
   const placesSignature = buildPlacesSignature(places);
-  const previewWidth = Math.min(480, Math.max(240, viewportWidth - 24));
+  const previewWidth = getStaticMapPreviewWidth(viewportWidth);
   const staticMapUrl = useMemo(
     () => loadStaticPreview ? buildStaticMapUrl(places, height, previewWidth) : null,
     [height, loadStaticPreview, places, previewWidth],
@@ -191,6 +114,7 @@ function MiniMapPreviewComponent({
 
   useEffect(() => {
     setStaticPreviewFailed(false);
+    setStaticPreviewLoaded(false);
   }, [staticMapUrl, placesSignature]);
 
   useEffect(() => {
@@ -221,6 +145,9 @@ function MiniMapPreviewComponent({
   }, [shouldRenderInteractiveMap]);
 
   if (!shouldRenderNativePreview) {
+    // A map that is still arriving is not a map that failed: show motion, not an apology.
+    const isAwaitingPreview = Boolean(staticMapUrl) && !staticPreviewFailed && !staticPreviewLoaded;
+
     return (
       <View pointerEvents="none" style={[styles.container, { height }]}>
         <View collapsable={false} style={StyleSheet.absoluteFillObject}>
@@ -228,10 +155,13 @@ function MiniMapPreviewComponent({
             uri={staticPreviewUri}
             style={StyleSheet.absoluteFillObject}
             accessibilityLabel={t.map.previewAccessibilityLabel}
-            fallback={<MiniMapFallback places={places} />}
+            fallback={
+              isAwaitingPreview ? <MiniMapLoadingFallback /> : <MiniMapFallback places={places} />
+            }
             backgroundColor={colors.mapBackground}
-            showLoader={Boolean(staticPreviewUri)}
+            showLoader={false}
             onError={() => setStaticPreviewFailed(true)}
+            onLoad={() => setStaticPreviewLoaded(true)}
           />
         </View>
       </View>

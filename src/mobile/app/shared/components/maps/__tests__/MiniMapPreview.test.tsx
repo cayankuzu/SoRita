@@ -63,6 +63,42 @@ describe('MiniMapPreview', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the unavailable message for real failures and shows motion while loading', () => {
+    runAfterNextPaintMock.mockImplementation((callback: () => void) => {
+      callback();
+      return vi.fn();
+    });
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <MiniMapPreview places={[{ lat: 41.0082, lng: 28.9784, name: 'Galata' }]} />,
+      );
+    });
+
+    const appImage = () => renderer.root.find((node) => String(node.type) === 'AppImage');
+    const fallbackText = () => {
+      let fallbackRenderer!: TestRenderer.ReactTestRenderer;
+      act(() => {
+        fallbackRenderer = TestRenderer.create(
+          appImage().props.fallback as React.ReactElement,
+        );
+      });
+      const text = JSON.stringify(fallbackRenderer.toJSON());
+      act(() => fallbackRenderer.unmount());
+      return text;
+    };
+
+    expect(appImage().props.showLoader).toBe(false);
+    expect(fallbackText()).not.toContain('hazır değil');
+
+    act(() => {
+      appImage().props.onError?.();
+    });
+
+    expect(fallbackText()).toContain('hazır değil');
+  });
+
   it('does not schedule static-map work for a card outside the visible window', () => {
     runAfterNextPaintMock.mockClear();
     let renderer!: TestRenderer.ReactTestRenderer;
