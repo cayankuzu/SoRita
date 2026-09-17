@@ -103,13 +103,16 @@ function MiniMapPreviewComponent({
   const placesSignature = buildPlacesSignature(places);
   const previewWidth = getStaticMapPreviewWidth(viewportWidth);
   const staticMapUrl = useMemo(
-    () => loadStaticPreview ? buildStaticMapUrl(places, height, previewWidth) : null,
-    [height, loadStaticPreview, places, previewWidth],
+    () => buildStaticMapUrl(places, height, previewWidth),
+    [height, places, previewWidth],
   );
   const shouldRenderInteractiveMap = interactive && isFocused;
   const shouldRenderNativePreview = shouldRenderInteractiveMap;
+  const canLoadStaticPreview = loadStaticPreview && Boolean(staticMapUrl);
   const staticPreviewUri =
-    !shouldRenderInteractiveMap && staticPreviewReady && !staticPreviewFailed ? staticMapUrl : null;
+    !shouldRenderInteractiveMap && canLoadStaticPreview && staticPreviewReady && !staticPreviewFailed
+      ? staticMapUrl
+      : null;
   const effectiveInstanceId = instanceId * 1000 + focusRecoveryInstanceId;
 
   useEffect(() => {
@@ -118,7 +121,7 @@ function MiniMapPreviewComponent({
   }, [staticMapUrl, placesSignature]);
 
   useEffect(() => {
-    if (shouldRenderInteractiveMap || !staticMapUrl) {
+    if (shouldRenderInteractiveMap || !canLoadStaticPreview) {
       setStaticPreviewReady(false);
       return;
     }
@@ -128,7 +131,7 @@ function MiniMapPreviewComponent({
     });
 
     return cancelDeferredPreview;
-  }, [shouldRenderInteractiveMap, staticMapUrl]);
+  }, [canLoadStaticPreview, shouldRenderInteractiveMap, staticMapUrl]);
 
   useEffect(() => {
     if (!shouldRenderInteractiveMap) {

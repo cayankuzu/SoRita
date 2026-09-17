@@ -115,5 +115,30 @@ describe('MiniMapPreview', () => {
     const appImage = renderer.root.find((node) => String(node.type) === 'AppImage');
     expect(appImage.props.uri).toBeNull();
     expect(runAfterNextPaintMock).not.toHaveBeenCalled();
+
+    // A card waiting for its turn is still a card with a map, so it must not apologise.
+    let fallbackRenderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      fallbackRenderer = TestRenderer.create(appImage.props.fallback as React.ReactElement);
+    });
+    expect(JSON.stringify(fallbackRenderer.toJSON())).not.toContain('hazır değil');
+    act(() => fallbackRenderer.unmount());
+  });
+
+  it('keeps the unavailable message when no static map can exist', () => {
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(<MiniMapPreview places={[]} />);
+    });
+
+    const appImage = renderer.root.find((node) => String(node.type) === 'AppImage');
+    let fallbackRenderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      fallbackRenderer = TestRenderer.create(appImage.props.fallback as React.ReactElement);
+    });
+
+    expect(JSON.stringify(fallbackRenderer.toJSON())).toContain('hazır değil');
+    act(() => fallbackRenderer.unmount());
   });
 });

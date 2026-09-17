@@ -152,6 +152,12 @@ export function HomeScreen() {
     return () => cancelAnimationFrame(frameId);
   }, [feedItems.length, isInitialLoading, isShowingStartupCache]);
 
+  React.useEffect(() => {
+    visibilityStoreRef.current.seedInitial(
+      new Set(feedItems.slice(0, HOME_FEED_INITIAL_RENDER_COUNT).map((item) => item.key)),
+    );
+  }, [feedItems]);
+
   useScrollToTop(listRef as React.RefObject<FlatList>);
 
   const listProps = React.useMemo(

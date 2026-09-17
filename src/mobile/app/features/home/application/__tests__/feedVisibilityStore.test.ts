@@ -51,4 +51,25 @@ describe('feedVisibilityStore', () => {
 
     expect(secondListener).toHaveBeenCalledOnce();
   });
+
+  it('gives the first rows a head start before the list reports viewability', () => {
+    const store = createFeedVisibilityStore();
+    const listener = vi.fn();
+    store.subscribe('first', listener);
+
+    store.seedInitial(new Set(['first']));
+
+    expect(store.isVisible('first')).toBe(true);
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('never overrides what the list actually reported', () => {
+    const store = createFeedVisibilityStore();
+    store.replace(new Set(['second']));
+
+    store.seedInitial(new Set(['first']));
+
+    expect(store.isVisible('first')).toBe(false);
+    expect(store.isVisible('second')).toBe(true);
+  });
 });

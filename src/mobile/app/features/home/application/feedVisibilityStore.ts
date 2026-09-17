@@ -35,6 +35,18 @@ export function createFeedVisibilityStore() {
       visibleKeys = new Set(nextKeys);
       changedKeys.forEach(notify);
     },
+    /**
+     * The list reports viewability only after it has laid out and settled, which
+     * delays the first cards' media. Seeding is a head start, never an override.
+     */
+    seedInitial(nextKeys: ReadonlySet<string>) {
+      if (visibleKeys.size > 0 || nextKeys.size === 0) {
+        return;
+      }
+
+      visibleKeys = new Set(nextKeys);
+      visibleKeys.forEach(notify);
+    },
     subscribe(key: string, listener: VisibilityListener) {
       const listeners = listenersByKey.get(key) ?? new Set<VisibilityListener>();
       listeners.add(listener);
