@@ -4,8 +4,8 @@
   "binaries": {
     "android": {
       "runtimeVersion": "1.0.107",
-      "sourceSha": "8f492660ff352fcf48b2184a2a327bea4e4f1672",
-      "artifactSha256": "22816e654e3689e631bf2b2d99370e1835b26b1906abc7045bdcf9824a03fd91"
+      "sourceSha": "8add24a63d7c9e1ba3f0724071633fdda78c8dcf",
+      "artifactSha256": "8e371a486b562ea76655f9dafc4d9cca43f69a945bc4816c9669ec4c666a1dfd"
     }
   }
 }

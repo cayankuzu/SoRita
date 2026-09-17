@@ -112,6 +112,24 @@ Consequences that remain true until a plan with EAS Update code signing is adopt
   therefore cannot publish on the current plan; they are not the operating path.
 - Adopting code signing later requires new binaries that embed the public certificate.
 
+## Verification record
+
+2026-09-17, Android emulator (API 30, x86), release APK built from `8f49266` with channel `preview`
+and runtime `1.0.107`, published from `8add24a` with the publisher's own argument builder and output
+check:
+
+| Step | Observed |
+| --- | --- |
+| Before publishing | Embedded bundle launched; the update server answered 404 for the missing `preview` channel. |
+| Publish | Group `dc52e48c-1e38-4f7f-8ba9-3b0720590c40`, Android update `01a0ad06-ae69-7830-ab38-864ec52db256`, runtime `1.0.107`. |
+| Next launch | `CheckCompleteAvailable` → `Download` → `DownloadComplete` with the update pending. |
+| Following cold launch | `CheckCompleteUnavailable`, no crash, sign-in screen rendered. |
+| `update:roll-back-to-embedded` | Directive group `ffba4bee-ab98-434d-9502-dbe88e913f37` received on the next launch, no crash. |
+
+The first attempt exposed that `eas update` rejects runtime policies in this bare project, which is
+why `runtimeVersion` is now explicit. Not yet evidenced: iOS delivery, a physical device, and a
+production-channel update.
+
 ## Rollback
 
 Use [`ota-rollback-runbook.md`](./ota-rollback-runbook.md). The publisher prints the exact command for
