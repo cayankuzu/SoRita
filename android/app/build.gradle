@@ -530,18 +530,8 @@ add_library(${stub.target} SHARED stub.cpp)
         dependsOn(ensureCodegenJniStubs)
     }
 
-    [
-        "externalNativeBuildCleanDebug",
-        "externalNativeBuildCleanDebugOptimized",
-        "externalNativeBuildCleanRelease",
-        "externalNativeBuildCleanStandalone",
-    ].each { cleanTaskName ->
-        def externalNativeBuildCleanTask = tasks.findByName(cleanTaskName)
-
-        if (externalNativeBuildCleanTask == null) {
-            return
-        }
-
+    // Covers every variant, including the baseline-profile plugin's BenchmarkRelease and NonMinifiedRelease.
+    tasks.findAll { task -> task.name.startsWith("externalNativeBuildClean") }.each { externalNativeBuildCleanTask ->
         moduleCleanTaskPaths.each { taskPath ->
             def moduleCleanTask = tasks.findByPath(taskPath)
             if (moduleCleanTask != null) {
