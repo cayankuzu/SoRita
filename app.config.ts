@@ -236,7 +236,7 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-  version: '1.0.107',
+  version: '1.0.108',
   newArchEnabled: true,
   orientation: 'default',
   scheme: appScheme,
@@ -249,7 +249,7 @@ const config: SoRitaExpoConfig = {
     'assets/splash/launch-splash.png',
   ],
   // EAS Update rejects runtime policies in bare projects; native-parity:check keeps this equal to version.
-  runtimeVersion: '1.0.107',
+  runtimeVersion: '1.0.108',
   updates: {
     // With a zero launch wait, a newly downloaded update is applied on the
     // next cold start while the embedded/cached update remains the fallback.
@@ -370,7 +370,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 113,
+    versionCode: 114,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -410,7 +410,7 @@ const config: SoRitaExpoConfig = {
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '92',
+    buildNumber: '93',
     googleServicesFile: './GoogleService-Info.plist',
     ...(appLinkDomain ? { associatedDomains: [`applinks:${appLinkDomain}`] } : {}),
     infoPlist: {

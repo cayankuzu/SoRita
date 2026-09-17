@@ -283,8 +283,8 @@ android {
         applicationId 'com.cayan.sorita.socialmap'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 113
-        versionName "1.0.107"
+        versionCode 114
+        versionName "1.0.108"
         manifestPlaceholders = [
             expoUpdatesChannel: "development",
             googleMapsApiKey: resolveGoogleMapsApiKey()
