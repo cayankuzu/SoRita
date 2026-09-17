@@ -41,6 +41,12 @@ function pick(source, pattern, label, file) {
 // both sufficient and safer than evaluating the module.
 const expoScheme = pick(appConfig, /const appScheme = '([^']+)'/, 'appScheme', appConfigPath);
 const expoVersion = pick(appConfig, /\n {2}version: '([^']+)'/, 'version', appConfigPath);
+const expoRuntimeVersion = pick(
+  appConfig,
+  /\n {2}runtimeVersion: '([^']+)'/,
+  'runtimeVersion',
+  appConfigPath,
+);
 const expoPackage = pick(appConfig, /\n {4}package: '([^']+)'/, 'android.package', appConfigPath);
 const expoVersionCode = pick(appConfig, /\n {4}versionCode: (\d+)/, 'android.versionCode', appConfigPath);
 const expoDefaultNotificationChannel = pick(
@@ -91,9 +97,10 @@ expect('App identity', expoPackage, gradleApplicationId, 'app.config.ts android.
 expect('Android namespace', expoPackage, gradleNamespace, 'app.config.ts android.package', 'build.gradle namespace');
 expect('Version name', expoVersion, gradleVersionName, 'app.config.ts version', 'build.gradle versionName');
 expect('Version code', expoVersionCode, gradleVersionCode, 'app.config.ts android.versionCode', 'build.gradle versionCode');
-// With the appVersion runtime policy, a lagging runtime string strands the binary from OTA.
+// A runtime that lags the version strands every binary built from it from OTA updates.
+expect('OTA runtime version', expoVersion, expoRuntimeVersion, 'app.config.ts version', 'app.config.ts runtimeVersion');
 expect(
-  'OTA runtime version',
+  'Android OTA runtime version',
   expoVersion,
   androidRuntimeVersion,
   'app.config.ts version',

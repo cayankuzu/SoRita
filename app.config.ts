@@ -248,9 +248,8 @@ const config: SoRitaExpoConfig = {
     'assets/app-icons_background_removed/playstore.png',
     'assets/splash/launch-splash.png',
   ],
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
+  // EAS Update rejects runtime policies in bare projects; native-parity:check keeps this equal to version.
+  runtimeVersion: '1.0.107',
   updates: {
     // With a zero launch wait, a newly downloaded update is applied on the
     // next cold start while the embedded/cached update remains the fallback.

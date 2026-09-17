@@ -11,7 +11,7 @@ for which installed binaries an update can reach.
 
 | Concern | Repository contract |
 | --- | --- |
-| Runtime policy | `runtimeVersion.policy` is `appVersion`. An update reaches only binaries whose embedded runtime equals `app.config.ts` `version`. |
+| Runtime version | `app.config.ts` sets `runtimeVersion` to the literal app `version`. EAS Update refuses runtime policies (such as `appVersion`) in this bare project, so the value is explicit and `npm run native-parity:check` keeps it equal to `version`. An update reaches only binaries whose embedded runtime equals it. |
 | Update URL | `https://u.expo.dev/<EXPO_PUBLIC_EXPO_PROJECT_ID>`. Production config fails closed without a valid project ID. |
 | Launch behavior | Checked on every launch with zero wait. A downloaded update runs on the next cold start; the cached or embedded update is the fallback. |
 | Android parity | `strings.xml` `expo_runtime_version` must equal `versionName`. `npm run native-parity:check` and the Gradle `verifyExpoRuntimeVersion` task (a dependency of every release bundle/assemble task) both fail otherwise. |
@@ -54,7 +54,7 @@ deploy the backend first so the new JavaScript never calls a contract that is no
 Anything the classifier reports as `NATIVE_BUILD_REQUIRED` (dependencies, `app.config.ts`,
 `android/`, config plugins, permissions, native assets) must ship in new binaries:
 
-1. Raise `version` in `package.json` and `app.config.ts`, `versionName` and `versionCode` in
+1. Raise `version` in `package.json`, `version` and `runtimeVersion` in `app.config.ts`, `versionName` and `versionCode` in
    `android/app/build.gradle`, `expo_runtime_version` in `strings.xml`, and `ios.buildNumber`.
    Raising the version gives the new binaries a new runtime, so updates for the old JavaScript can
    never reach the new native code and the reverse.

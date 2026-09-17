@@ -89,8 +89,8 @@ const CONFIG_CONSUMED = new Map([
         },
         {
           file: 'app.config.ts',
-          pattern: /^\s*runtimeVersion:\s*\{/mu,
-          description: 'Expo config declares a runtimeVersion policy',
+          pattern: /^\s*runtimeVersion:\s*'\d+\.\d+\.\d+'/mu,
+          description: 'Expo config declares an explicit runtimeVersion',
         },
         {
           file: 'android/app/src/main/AndroidManifest.xml',

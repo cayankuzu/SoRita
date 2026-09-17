@@ -28,10 +28,10 @@ describe('app.config EAS Update safety', () => {
     process.env = { ...originalEnv };
   });
 
-  it('derives the update URL and keeps the app-version runtime policy', async () => {
+  it('derives the update URL and pins the runtime to the app version', async () => {
     const config = await loadAppConfig();
 
-    expect(config.runtimeVersion).toEqual({ policy: 'appVersion' });
+    expect(config.runtimeVersion).toBe(config.version);
     expect(config.updates).toEqual({
       enabled: true,
       checkAutomatically: 'ON_LOAD',

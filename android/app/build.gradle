@@ -378,7 +378,7 @@ def verifyReleaseSigningKey = tasks.register("verifyReleaseSigningKey") {
 def expectedExpoRuntimeVersion = android.defaultConfig.versionName
 def expoRuntimeStringsFile = file("src/main/res/values/strings.xml")
 
-// With the appVersion runtime policy, a lagging runtime string strands the binary from OTA.
+// A runtime string that lags versionName strands the binary from every OTA update.
 def verifyExpoRuntimeVersion = tasks.register("verifyExpoRuntimeVersion") {
     inputs.file(expoRuntimeStringsFile)
 
