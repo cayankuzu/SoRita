@@ -3,9 +3,9 @@
   "channel": "production",
   "binaries": {
     "android": {
-      "runtimeVersion": "1.0.108",
-      "sourceSha": "6b1c4f979814b768d1a14f7d07e4686ebcb5eebf",
-      "artifactSha256": "4825f9691d91d7d12ca5a2c4c493b8a02b80d6cb53087efe5905dd9857177420"
+      "runtimeVersion": "1.0.109",
+      "sourceSha": "e4b6372d5ee776575b158de246b78c9e0ae81c0c",
+      "artifactSha256": "18129df74346f2b956cf9e95ae821b89cc7d235862852d56270d5fb0e9b1b36d"
     }
   }
 }
