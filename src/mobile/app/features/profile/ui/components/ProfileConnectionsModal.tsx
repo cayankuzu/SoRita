@@ -23,7 +23,7 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 import {
@@ -280,10 +280,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  title: {
-    ...typography.compactSectionText,
-    color: colors.text,
-  },
+  title: textStyle('compactSectionText', colors.text),
   closeButton: {
     width: minTouchSize,
     height: minTouchSize,
@@ -328,10 +325,7 @@ const styles = StyleSheet.create({
   userBody: {
     flex: 1,
   },
-  userName: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  userName: textStyle('labelText', colors.text),
   userUsername: {
     marginTop: 1,
     ...typography.compactBodyText,

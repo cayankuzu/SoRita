@@ -4,6 +4,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -55,10 +56,7 @@ export const listEditorModalStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
+  title: textStyle('section', colors.text),
   subtitle: {
     marginTop: 4,
     ...typography.metadataText,
@@ -93,10 +91,7 @@ export const listEditorModalStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  sectionTitle: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('labelText', colors.text),
   sectionHint: {
     flexShrink: 1,
     textAlign: 'right',
@@ -180,14 +175,8 @@ export const listEditorModalStyles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
-  coverPickerText: {
-    ...typography.labelText,
-    color: colors.secondary,
-  },
-  coverPickerHint: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  coverPickerText: textStyle('labelText', colors.secondary),
+  coverPickerHint: textStyle('metadataText', colors.textMuted),
   selectionBadge: {
     minHeight: 30,
     borderRadius: radius.pill,
@@ -198,11 +187,7 @@ export const listEditorModalStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  selectionBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  selectionBadgeText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   fieldCount: {
     marginTop: -4,
     alignSelf: 'flex-end',
@@ -236,20 +221,14 @@ export const listEditorModalStyles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  privacyText: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  privacyText: textStyle('labelText', colors.text),
   privacyTextActivePublic: {
     color: colors.primary,
   },
   privacyTextActivePrivate: {
     color: colors.primary,
   },
-  privacyCaption: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  privacyCaption: textStyle('metadataText', colors.textMuted),
   privacyCaptionActivePublic: {
     color: colors.primaryDark,
   },

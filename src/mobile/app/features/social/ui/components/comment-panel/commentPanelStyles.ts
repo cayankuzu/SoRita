@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const commentPanelStyles = StyleSheet.create({
   sheetOverlay: {
@@ -52,10 +52,7 @@ export const commentPanelStyles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,
   },
-  sheetTitle: {
-    ...typography.compactSectionText,
-    color: colors.text,
-  },
+  sheetTitle: textStyle('compactSectionText', colors.text),
   sheetSubtitle: {
     marginTop: 3,
     ...typography.compactBodyText,
@@ -82,14 +79,8 @@ export const commentPanelStyles = StyleSheet.create({
     gap: 4,
     paddingVertical: 24,
   },
-  emptyCommentsTitle: {
-    ...typography.labelText,
-    color: colors.text,
-  },
-  emptyCommentsDescription: {
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-  },
+  emptyCommentsTitle: textStyle('labelText', colors.text),
+  emptyCommentsDescription: textStyle('compactBodyText', colors.textSoft),
   commentNotice: {
     paddingVertical: 4,
   },
@@ -100,19 +91,12 @@ export const commentPanelStyles = StyleSheet.create({
     gap: 8,
     paddingVertical: 24,
   },
-  commentStatusText: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  commentStatusText: textStyle('labelText', colors.textMuted),
   loadMoreButton: {
     alignItems: 'center',
     paddingVertical: 4,
   },
-  loadMoreLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  loadMoreLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   commentItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -240,19 +224,11 @@ export const commentPanelStyles = StyleSheet.create({
   commentLikeButtonActive: {
     backgroundColor: colors.dangerBg,
   },
-  commentLikeCount: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  commentLikeCount: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   commentLikeCountActive: {
     color: colors.danger,
   },
-  commentContent: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.text,
-  },
+  commentContent: textStyle('captionText', colors.text, fontWeight.regular),
   replyContent: {
     ...typography.compactBodyText,
   },
@@ -286,11 +262,7 @@ export const commentPanelStyles = StyleSheet.create({
   commentInlineMenuButtonActive: {
     backgroundColor: colors.primaryBg,
   },
-  commentInlineActionText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  commentInlineActionText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   commentInlineActionTextActive: {
     color: colors.primary,
   },
@@ -316,11 +288,7 @@ export const commentPanelStyles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 8,
   },
-  replyToggleText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  replyToggleText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   composerDock: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.cardBorder,
@@ -380,27 +348,15 @@ export const commentPanelStyles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  composerBannerText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  composerBannerSubtext: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  composerBannerText: textStyle('metadataText', colors.text, fontWeight.strong),
+  composerBannerSubtext: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   composerBannerActionButton: {
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  composerBannerAction: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  composerBannerAction: textStyle('metadataText', colors.primary, fontWeight.strong),
   composerRow: {
     flexDirection: 'row',
     alignItems: 'center',

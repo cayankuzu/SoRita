@@ -9,7 +9,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 type OwnProfileActionBarProps = {
@@ -41,9 +41,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
   },
-  actionButtonText: {
-    ...typography.labelText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
+  actionButtonText: textStyle('labelText', colors.textMuted, fontWeight.medium),
 });

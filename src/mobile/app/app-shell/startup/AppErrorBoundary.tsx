@@ -11,6 +11,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -128,10 +129,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
-  description: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  description: textStyle('bodyText', colors.textMuted),
   debugBox: {
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
@@ -143,9 +141,5 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
-  debugMessage: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.text,
-  },
+  debugMessage: textStyle('captionText', colors.text, fontWeight.regular),
 });

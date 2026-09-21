@@ -11,7 +11,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
@@ -132,10 +132,7 @@ const styles = StyleSheet.create({
   followButtonPassive: {
     backgroundColor: colors.surfaceMuted,
   },
-  followText: {
-    ...typography.labelText,
-    color: colors.onPrimary,
-  },
+  followText: textStyle('labelText', colors.onPrimary),
   followTextPassive: {
     color: colors.textMuted,
   },
@@ -143,10 +140,7 @@ const styles = StyleSheet.create({
     minHeight: minTouchSize,
     paddingHorizontal: 10,
   },
-  unblockButtonText: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  unblockButtonText: textStyle('labelText', colors.textMuted),
   moreButton: {
     width: minTouchSize,
     height: minTouchSize,

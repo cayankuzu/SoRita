@@ -12,6 +12,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -218,11 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
-  statusLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  statusLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   unreadDot: {
     width: 8,
     height: 8,
@@ -238,8 +235,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     minHeight: minTouchSize,
   },
-  pendingLabel: {
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  pendingLabel: textStyle('captionText', colors.textMuted),
 });

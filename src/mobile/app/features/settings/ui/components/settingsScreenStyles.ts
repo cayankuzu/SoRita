@@ -4,6 +4,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -25,41 +26,22 @@ export const settingsScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  stepCounter: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  stepCounter: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   stepCopy: {
     marginBottom: 14,
     gap: 4,
   },
-  stepTitle: {
-    ...typography.title,
-    color: colors.text,
-  },
-  stepDescription: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  stepTitle: textStyle('title', colors.text),
+  stepDescription: textStyle('bodyText', colors.textMuted),
   helperCard: {
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: 10,
   },
-  helperCardTitle: {
-    ...typography.labelText,
-    color: colors.text,
-  },
-  helperCardText: {
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
-  selectionMeta: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  helperCardTitle: textStyle('labelText', colors.text),
+  helperCardText: textStyle('captionText', colors.textMuted),
+  selectionMeta: textStyle('metadataText', colors.textSoft),
   photoSection: {
     alignItems: 'center',
     width: '100%',
@@ -76,14 +58,8 @@ export const settingsScreenStyles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  loadingCardTitle: {
-    ...typography.labelText,
-    color: colors.text,
-  },
-  loadingCardText: {
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  loadingCardTitle: textStyle('labelText', colors.text),
+  loadingCardText: textStyle('captionText', colors.textMuted),
   stepActions: {
     flexDirection: 'row',
     gap: 10,
@@ -117,33 +93,17 @@ export const settingsScreenStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  emailInfoLabel: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
-  emailInfoValue: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  emailInfoText: {
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  emailInfoLabel: textStyle('labelText', colors.textSoft),
+  emailInfoValue: textStyle('bodyText', colors.text, fontWeight.strong),
+  emailInfoText: textStyle('captionText', colors.textMuted),
   successCard: {
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.successBg,
     padding: 10,
   },
-  successTitle: {
-    ...typography.labelText,
-    color: colors.secondary,
-  },
-  successText: {
-    ...typography.captionText,
-    color: colors.secondary,
-  },
+  successTitle: textStyle('labelText', colors.secondary),
+  successText: textStyle('captionText', colors.secondary),
   blockedList: {
     paddingBottom: 16,
   },
@@ -166,10 +126,7 @@ export const settingsScreenStyles = StyleSheet.create({
   blockedUserBody: {
     flex: 1,
   },
-  blockedUserName: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  blockedUserName: textStyle('labelText', colors.text),
   blockedUserUsername: {
     marginTop: 2,
     ...typography.metadataText,
@@ -181,10 +138,7 @@ export const settingsScreenStyles = StyleSheet.create({
     ...typography.captionText,
     color: colors.textMuted,
   },
-  blockedUserAction: {
-    ...typography.labelText,
-    color: colors.primary,
-  },
+  blockedUserAction: textStyle('labelText', colors.primary),
   savingStatus: {
     ...typography.captionText,
     color: colors.textMuted,

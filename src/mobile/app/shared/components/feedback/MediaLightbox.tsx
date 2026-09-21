@@ -32,6 +32,7 @@ import {
   colors,
   fontWeight,
   minTouchSize,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -538,11 +539,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.controlsBorder,
   },
-  topBarTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  topBarTitle: textStyle('bodyText', colors.onPrimary, fontWeight.strong),
   topBarSubtitle: {
     marginTop: 3,
     ...typography.metadataText,

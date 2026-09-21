@@ -24,6 +24,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -241,24 +242,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
-  description: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  title: textStyle('section', colors.text),
+  description: textStyle('bodyText', colors.textMuted),
   options: {
     gap: 8,
   },
   detailsWrap: {
     gap: 6,
   },
-  detailsLabel: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  detailsLabel: textStyle('labelText', colors.text),
   detailsInput: {
     minHeight: 92,
     borderRadius: radius.lg,
@@ -283,11 +275,7 @@ const styles = StyleSheet.create({
     borderColor: colors.warning,
     backgroundColor: colors.warningBg,
   },
-  optionText: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
+  optionText: textStyle('bodyText', colors.textMuted, fontWeight.medium),
   optionTextActive: {
     color: colors.warningText,
     fontWeight: fontWeight.strong,

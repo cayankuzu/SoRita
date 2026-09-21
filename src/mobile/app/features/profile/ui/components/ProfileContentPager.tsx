@@ -30,7 +30,7 @@ import {
   layout,
   radius,
   spacing,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
@@ -592,14 +592,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 2,
   },
-  iosRefreshStatusText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-    fontWeight: fontWeight.strong,
-  },
-  loadMoreLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  iosRefreshStatusText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
+  loadMoreLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
 });

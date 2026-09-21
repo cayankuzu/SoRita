@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PlaceCardSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type SourcePlaceCardModalProps = {
   children?: React.ReactNode;
@@ -54,8 +54,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: spacing.sm,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
+  title: textStyle('section', colors.text),
 });

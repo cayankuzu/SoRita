@@ -14,7 +14,7 @@ import {
   fontWeight,
   hitSlopFor,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 type AuthImagePickerProps = {
@@ -149,15 +149,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.compactTitleText,
-    color: colors.text,
-  },
-  subtitle: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  title: textStyle('compactTitleText', colors.text),
+  subtitle: textStyle('captionText', colors.textMuted, fontWeight.regular),
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,11 +165,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  selectionBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.secondary,
-  },
+  selectionBadgeText: textStyle('metadataText', colors.secondary, fontWeight.strong),
   clearButton: {
     width: 24,
     height: 24,
@@ -185,9 +174,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
   },
-  helperText: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  helperText: textStyle('captionText', colors.textMuted, fontWeight.regular),
 });

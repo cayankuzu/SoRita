@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 export const colors = {
   background: '#f8fafc',
@@ -145,6 +145,25 @@ export const textScale = {
  */
 export const clampFontScale = (fontScale: number, limit: number) =>
   Math.min(Math.max(fontScale, 1), limit);
+
+/**
+ * Every text style in the app is the same three-part composition: a step of
+ * the type scale, a colour from the palette, sometimes a weight. Writing that
+ * out per style left 225 hand-copied bodies across 64 files, collapsing into
+ * only 23 distinct combinations - so the composition gets a name here instead
+ * of each of its combinations getting one at every call site.
+ */
+export function textStyle(
+  scale: keyof typeof typographyStyles,
+  color: string,
+  weight?: TextStyle['fontWeight'],
+): TextStyle {
+  return {
+    ...typographyStyles[scale],
+    color,
+    ...(weight ? { fontWeight: weight } : null),
+  };
+}
 
 export const letterSpacing = {
   brandTitle: -0.8,

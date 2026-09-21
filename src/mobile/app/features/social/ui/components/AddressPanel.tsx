@@ -19,6 +19,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -130,11 +131,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  panelTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  panelTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   addressCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -152,11 +149,7 @@ const styles = StyleSheet.create({
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     gap: 4,
   },
-  addressLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  addressLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   addressLinkText: {
     ...typography.bodyText,
     color: colors.primary,
@@ -193,10 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
-  secondaryPanelText: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  secondaryPanelText: textStyle('labelText', colors.textMuted),
   buttonDisabled: {
     opacity: 0.62,
   },

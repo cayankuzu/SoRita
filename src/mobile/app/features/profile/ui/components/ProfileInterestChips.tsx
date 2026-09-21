@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { PROFILE_INTEREST_META } from '@/mobile/app/catalog/profileInterests';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileInterestChipsProps = {
   interestIds?: string[];
@@ -54,10 +54,7 @@ const styles = StyleSheet.create({
   section: {
     gap: 6,
   },
-  title: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
+  title: textStyle('labelText', colors.textSoft),
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -70,10 +67,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  chipText: {
-    ...typography.labelText,
-    color: colors.primaryDark,
-  },
+  chipText: textStyle('labelText', colors.primaryDark),
   moreChip: {
     backgroundColor: colors.surfaceMuted,
   },

@@ -26,7 +26,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import {
   normalizeUserBioInput,
   normalizeUserNameInput,
@@ -489,8 +489,5 @@ const loadingStyles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 240,
   },
-  label: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  label: textStyle('bodyText', colors.textMuted),
 });

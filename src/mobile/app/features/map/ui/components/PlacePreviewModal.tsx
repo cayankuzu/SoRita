@@ -19,8 +19,8 @@ import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimati
 import {
   colors,
   radius,
+  textStyle,
   touch,
-  typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -233,14 +233,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  headerTitle: {
-    ...typography.compactSectionText,
-    color: colors.text,
-  },
-  headerSubtitle: {
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-  },
+  headerTitle: textStyle('compactSectionText', colors.text),
+  headerSubtitle: textStyle('compactBodyText', colors.textSoft),
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

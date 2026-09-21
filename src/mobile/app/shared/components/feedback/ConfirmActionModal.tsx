@@ -8,7 +8,7 @@ import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaf
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ConfirmActionModalProps = {
   visible: boolean;
@@ -148,14 +148,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  confirmTitle: {
-    ...typography.section,
-    color: colors.text,
-  },
-  confirmText: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  confirmTitle: textStyle('section', colors.text),
+  confirmText: textStyle('bodyText', colors.textMuted),
   errorText: {
     marginTop: 4,
     borderRadius: radius.md,

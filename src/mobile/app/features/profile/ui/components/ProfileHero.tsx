@@ -19,7 +19,7 @@ import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, minTouchSize, radius, spacing, typography } from "@/mobile/app/shared/theme/tokens";
+import { colors, minTouchSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
@@ -187,10 +187,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     color: colors.text,
   },
-  username: {
-    ...typography.captionText,
-    color: colors.textSoft,
-  },
+  username: textStyle('captionText', colors.textSoft),
   bio: {
     marginTop: 4,
     ...typography.bodyText,

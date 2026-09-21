@@ -29,7 +29,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -334,10 +334,7 @@ const styles = StyleSheet.create({
   markAllButtonPressed: {
     opacity: 0.82,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
+  title: textStyle('section', colors.text),
   subtitle: {
     marginTop: 2,
     ...typography.metadataText,

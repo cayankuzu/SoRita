@@ -10,7 +10,7 @@ import { Star, StarHalf } from 'lucide-react-native';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 import { compareLocalizedText } from '@/mobile/app/shared/utils/textSort';
@@ -142,11 +142,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderColor: colors.primary,
   },
-  railChipText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-    fontWeight: fontWeight.strong,
-  },
+  railChipText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   railChipTextSelected: {
     color: colors.primaryDark,
   },

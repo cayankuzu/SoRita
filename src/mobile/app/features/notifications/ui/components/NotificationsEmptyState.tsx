@@ -6,7 +6,7 @@ import { StyleSheet,
 } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationsEmptyStateProps = {
   title: string;
@@ -42,11 +42,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
-  title: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  title: textStyle('bodyText', colors.text, fontWeight.strong),
   description: {
     marginTop: 4,
     ...typography.compactBodyText,

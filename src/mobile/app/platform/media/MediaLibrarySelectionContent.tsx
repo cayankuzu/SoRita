@@ -23,6 +23,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -287,22 +288,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  counterChipText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  counterChipText: textStyle('metadataText', colors.primary, fontWeight.strong),
   counterChipStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  counterChipStrongText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  counterChipStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
   filterRow: {
     flexDirection: 'row',
     gap: 6,
@@ -325,11 +318,7 @@ const styles = StyleSheet.create({
   filterChipDisabled: {
     opacity: 0.45,
   },
-  filterChipText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  filterChipText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   filterChipTextActive: {
     color: colors.onPrimary,
   },
@@ -372,19 +361,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: colors.primaryBg,
   },
-  retryButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  retryButtonText: textStyle('metadataText', colors.primary, fontWeight.strong),
   loadMoreWrap: {
     paddingVertical: 10,
     alignItems: 'center',
     gap: 6,
   },
-  loadMoreText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  loadMoreText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
 });

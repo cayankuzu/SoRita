@@ -19,6 +19,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -231,14 +232,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.compactTitleText,
-    color: colors.text,
-  },
-  subtitle: {
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-  },
+  title: textStyle('compactTitleText', colors.text),
+  subtitle: textStyle('compactBodyText', colors.textSoft),
   options: {
     gap: 8,
   },

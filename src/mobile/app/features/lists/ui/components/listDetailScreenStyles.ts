@@ -6,6 +6,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -91,10 +92,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  heroPlaceholderLabel: {
-    ...typography.labelText,
-    color: colors.primaryDark,
-  },
+  heroPlaceholderLabel: textStyle('labelText', colors.primaryDark),
   heroPlaceholderEmojiWrap: {
     width: 48,
     height: 48,
@@ -120,20 +118,14 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
-  coverHintText: {
-    ...typography.labelText,
-    color: colors.onPrimary,
-  },
+  coverHintText: textStyle('labelText', colors.onPrimary),
   heroBody: {
     paddingHorizontal: 10,
     paddingTop: 10,
     paddingBottom: 10,
     gap: 8,
   },
-  title: {
-    ...typography.title,
-    color: colors.text,
-  },
+  title: textStyle('title', colors.text),
   heroMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -161,10 +153,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     backgroundColor: colors.dangerBg,
     borderColor: colors.dangerBorder,
   },
-  heroMetaChipText: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  heroMetaChipText: textStyle('labelText', colors.text),
   heroMetaChipTextAccent: {
     color: colors.secondary,
   },
@@ -204,10 +193,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  ownerEyebrow: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
+  ownerEyebrow: textStyle('labelText', colors.textSoft),
   ownerName: {
     marginTop: 2,
     ...typography.labelText,
@@ -224,10 +210,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  ownerBadgeText: {
-    ...typography.labelText,
-    color: colors.primaryDark,
-  },
+  ownerBadgeText: textStyle('labelText', colors.primaryDark),
   descriptionCard: {
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
@@ -237,14 +220,8 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingVertical: 10,
     gap: 6,
   },
-  descriptionCardLabel: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
-  description: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  descriptionCardLabel: textStyle('labelText', colors.textSoft),
+  description: textStyle('bodyText', colors.textMuted),
   mapSection: {
     gap: 6,
   },
@@ -254,10 +231,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  mapCardEyebrow: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
+  mapCardEyebrow: textStyle('labelText', colors.textSoft),
   mapCardTitle: {
     marginTop: 2,
     ...typography.bodyText,
@@ -286,10 +260,7 @@ export const listDetailScreenStyles = StyleSheet.create({
   sectionHeaderCopy: {
     flex: 1,
   },
-  sectionEyebrow: {
-    ...typography.labelText,
-    color: colors.textSoft,
-  },
+  sectionEyebrow: textStyle('labelText', colors.textSoft),
   sectionTitle: {
     marginTop: 2,
     ...typography.section,
@@ -330,10 +301,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  highlightPillText: {
-    ...typography.labelText,
-    color: colors.primaryDark,
-  },
+  highlightPillText: textStyle('labelText', colors.primaryDark),
   emptyWrap: {
     marginTop: 8,
     paddingHorizontal: spacing.sm,

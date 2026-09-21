@@ -24,7 +24,7 @@ import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaTh
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   formatPlaceMediaDuration,
   getPlaceMediaCounts,
@@ -392,11 +392,7 @@ const styles = StyleSheet.create({
   section: {
     gap: 8,
   },
-  sectionTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
     marginTop: -2,
     ...typography.metadataText,
@@ -405,11 +401,7 @@ const styles = StyleSheet.create({
   sectionHelperActive: {
     color: colors.primary,
   },
-  selectionMeta: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  selectionMeta: textStyle('metadataText', colors.primary, fontWeight.strong),
   mediaSectionHeader: {
     gap: 8,
   },
@@ -427,22 +419,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  counterBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  counterBadgeText: textStyle('metadataText', colors.primary, fontWeight.strong),
   counterBadgeStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  counterBadgeStrongText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  counterBadgeStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
   mediaEmptyCard: {
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -465,16 +449,8 @@ const styles = StyleSheet.create({
   mediaEmptyCopy: {
     gap: 4,
   },
-  mediaEmptyTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  mediaEmptyText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  mediaEmptyTitle: textStyle('bodyText', colors.text, fontWeight.strong),
+  mediaEmptyText: textStyle('metadataText', colors.textMuted, fontWeight.regular),
   mediaEmptyAction: {
     alignSelf: 'flex-start',
     minHeight: 40,
@@ -485,11 +461,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  mediaEmptyActionText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  mediaEmptyActionText: textStyle('metadataText', colors.primary, fontWeight.strong),
   mediaRail: {
     width: '100%',
   },
@@ -528,11 +500,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: 4,
   },
-  mediaOrderBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  mediaOrderBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   mediaAddTile: {
     width: 80,
     height: 80,
@@ -553,11 +521,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
-  addMediaText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  addMediaText: textStyle('metadataText', colors.primary, fontWeight.strong),
   addMediaSubtext: {
     ...typography.metadataText,
     fontWeight: fontWeight.strong,

@@ -28,7 +28,7 @@ import {
   colors,
   fontWeight,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -283,14 +283,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
-  description: {
-    ...typography.compactBodyText,
-    color: colors.textMuted,
-  },
+  title: textStyle('section', colors.text),
+  description: textStyle('compactBodyText', colors.textMuted),
   options: {
     gap: 8,
   },
@@ -317,14 +311,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  optionTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  optionDescription: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  optionTitle: textStyle('bodyText', colors.text, fontWeight.strong),
+  optionDescription: textStyle('metadataText', colors.textMuted, fontWeight.regular),
 });

@@ -24,7 +24,7 @@ import {
   iconSize,
   radius,
   spacing,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 function CatalogSection({ children, title }: { children: React.ReactNode; title: string }) {
@@ -143,10 +143,7 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.sm,
   },
-  sectionTitle: {
-    ...typography.section,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('section', colors.text),
   sectionBody: {
     backgroundColor: colors.surface,
     borderColor: colors.cardBorder,
@@ -155,24 +152,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
   },
-  displayText: {
-    ...typography.display,
-    color: colors.text,
-  },
-  titleText: {
-    ...typography.title,
-    color: colors.text,
-  },
-  sectionText: {
-    ...typography.section,
-    color: colors.text,
-  },
-  bodyText: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
-  metadataText: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  displayText: textStyle('display', colors.text),
+  titleText: textStyle('title', colors.text),
+  sectionText: textStyle('section', colors.text),
+  bodyText: textStyle('bodyText', colors.textMuted),
+  metadataText: textStyle('metadataText', colors.textSoft),
 });

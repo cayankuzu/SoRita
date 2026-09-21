@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileStat = {
   label: string;
@@ -46,11 +46,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  value: {
-    ...typography.compactSectionText,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
-  },
+  value: textStyle('compactSectionText', colors.text, fontWeight.medium),
   label: {
     marginTop: 2,
     ...typography.metadataText,

@@ -18,6 +18,7 @@ import {
   fontWeight,
   radius,
   semanticColors,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -291,11 +292,7 @@ const styles = StyleSheet.create({
   block: {
     gap: 4,
   },
-  label: {
-    ...typography.captionText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
+  label: textStyle('captionText', colors.textMuted, fontWeight.medium),
   inputWrap: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
@@ -347,11 +344,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-  helper: {
-    ...typography.captionText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
+  helper: textStyle('captionText', colors.textMuted, fontWeight.medium),
   helperDanger: {
     color: colors.danger,
   },

@@ -9,7 +9,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationCategoryTabsProps = {
@@ -86,10 +86,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
     borderColor: colors.text,
   },
-  tabText: {
-    ...typography.supportingLabelText,
-    color: colors.textMuted,
-  },
+  tabText: textStyle('supportingLabelText', colors.textMuted),
   tabTextActive: {
     fontWeight: fontWeight.strong,
     color: colors.onPrimary,

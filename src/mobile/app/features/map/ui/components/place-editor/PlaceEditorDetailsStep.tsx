@@ -16,6 +16,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -142,21 +143,13 @@ const styles = StyleSheet.create({
   section: {
     gap: 8,
   },
-  sectionTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
     marginTop: -2,
     ...typography.metadataText,
     color: colors.textSoft,
   },
-  selectionMeta: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  selectionMeta: textStyle('metadataText', colors.primary, fontWeight.strong),
   inlineFields: {
     flexDirection: 'row',
     gap: 10,
@@ -184,11 +177,7 @@ const styles = StyleSheet.create({
   segmentButtonDark: {
     backgroundColor: colors.text,
   },
-  segmentText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  segmentText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   segmentTextPrimaryActive: {
     color: colors.primary,
   },

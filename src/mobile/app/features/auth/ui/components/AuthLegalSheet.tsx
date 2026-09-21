@@ -20,7 +20,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalSheetProps = {
   documentId: LegalDocumentId | null;
@@ -119,14 +119,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.compactTitleText,
-    color: colors.text,
-  },
-  summary: {
-    ...typography.supportingText,
-    color: colors.textSoft,
-  },
+  title: textStyle('compactTitleText', colors.text),
+  summary: textStyle('supportingText', colors.textSoft),
   scrollContent: {
     gap: 12,
     paddingBottom: 4,
@@ -134,12 +128,6 @@ const styles = StyleSheet.create({
   section: {
     gap: 6,
   },
-  sectionTitle: {
-    ...typography.compactTitleText,
-    color: colors.text,
-  },
-  paragraph: {
-    ...typography.readingBodyText,
-    color: colors.textMuted,
-  },
+  sectionTitle: textStyle('compactTitleText', colors.text),
+  paragraph: textStyle('readingBodyText', colors.textMuted),
 });

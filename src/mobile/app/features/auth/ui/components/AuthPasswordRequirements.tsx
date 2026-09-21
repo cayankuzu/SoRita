@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { getAuthPasswordRequirementProgress } from '@/mobile/app/features/auth/application/authPasswordRequirements';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type AuthPasswordRequirementsProps = {
   password: string;
@@ -71,8 +71,5 @@ const styles = StyleSheet.create({
   meterComplete: {
     backgroundColor: colors.secondary,
   },
-  label: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  label: textStyle('metadataText', colors.textMuted),
 });

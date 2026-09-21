@@ -11,6 +11,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  textStyle,
   typography,
 } from "@/mobile/app/shared/theme/tokens";
 import { useAppLayout } from "@/mobile/app/shared/hooks/useAppLayout";
@@ -276,11 +277,7 @@ const styles = StyleSheet.create({
   countBadgeActive: {
     backgroundColor: colors.primaryBg,
   },
-  countText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  countText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   countTextActive: {
     color: colors.primary,
   },
@@ -317,10 +314,7 @@ const styles = StyleSheet.create({
   filterToggleActive: {
     backgroundColor: colors.primaryBg,
   },
-  filterToggleText: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  filterToggleText: textStyle('labelText', colors.textMuted),
   filterToggleTextActive: {
     color: colors.primary,
   },
@@ -344,10 +338,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderColor: colors.primary,
   },
-  filterChipText: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  filterChipText: textStyle('labelText', colors.textMuted),
   filterChipTextActive: {
     color: colors.primary,
   },

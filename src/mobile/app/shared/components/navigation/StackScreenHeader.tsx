@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type StackScreenHeaderProps = {
   onBack: () => void;
@@ -66,14 +66,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
-  subtitle: {
-    ...typography.captionText,
-    color: colors.textSoft,
-  },
+  title: textStyle('section', colors.text),
+  subtitle: textStyle('captionText', colors.textSoft),
   spacer: {
     width: minTouchSize,
     height: minTouchSize,

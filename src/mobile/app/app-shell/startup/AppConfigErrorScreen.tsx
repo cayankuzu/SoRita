@@ -10,6 +10,7 @@ import {
   fontWeight,
   radius,
   spacing,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -76,10 +77,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
-  body: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  body: textStyle('bodyText', colors.textMuted),
   list: {
     gap: 6,
     padding: 10,
@@ -96,9 +94,5 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.textMuted,
   },
-  hint: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.textSoft,
-  },
+  hint: textStyle('captionText', colors.textSoft, fontWeight.regular),
 });

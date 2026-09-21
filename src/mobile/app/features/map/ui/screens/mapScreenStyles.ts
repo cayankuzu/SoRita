@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const mapScreenStyles = StyleSheet.create({
   container: {
@@ -127,10 +127,7 @@ export const mapScreenStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.textSoft,
   },
-  filterOptionText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  filterOptionText: textStyle('metadataText', colors.textMuted),
   filterOptionTextActive: {
     color: colors.text,
   },
@@ -165,11 +162,7 @@ export const mapScreenStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  resultsHeaderText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textSoft,
-  },
+  resultsHeaderText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   resultRow: {
     paddingHorizontal: 10,
     paddingVertical: 10,
@@ -179,11 +172,7 @@ export const mapScreenStyles = StyleSheet.create({
   resultRowLast: {
     borderBottomWidth: 0,
   },
-  resultTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  resultTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   resultAddress: {
     marginTop: 4,
     ...typography.metadataText,
@@ -198,11 +187,7 @@ export const mapScreenStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  emptyResultsTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  emptyResultsTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   emptyResultsDescription: {
     marginTop: 4,
     ...typography.metadataText,
@@ -254,13 +239,6 @@ export const mapScreenStyles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  reopenEditorTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
-  reopenEditorSubtitle: {
-    ...typography.metadataText,
-    color: colors.onDarkSubtle,
-  },
+  reopenEditorTitle: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
+  reopenEditorSubtitle: textStyle('metadataText', colors.onDarkSubtle),
 });

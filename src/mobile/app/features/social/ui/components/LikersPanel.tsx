@@ -20,6 +20,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -201,11 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  panelTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  panelTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   searchWrap: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
@@ -230,10 +227,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.textSoft,
   },
-  panelMuted: {
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-  },
+  panelMuted: textStyle('compactBodyText', colors.textSoft),
   separator: {
     height: 8,
   },

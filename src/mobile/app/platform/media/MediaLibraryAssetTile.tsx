@@ -5,7 +5,7 @@ import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaL
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 type MediaLibraryAssetTileProps = {
@@ -111,11 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: 4,
   },
-  orderBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  orderBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -123,9 +119,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mediaPickerOverlay,
     zIndex: 2,
   },
-  disabledLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  disabledLabel: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

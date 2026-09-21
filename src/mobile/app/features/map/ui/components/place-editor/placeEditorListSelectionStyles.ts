@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const placeEditorListSelectionStyles = StyleSheet.create({
   stepContent: {
@@ -9,11 +9,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   section: {
     gap: 8,
   },
-  sectionTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
     marginTop: -2,
     ...typography.metadataText,
@@ -48,16 +44,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  listSelectionNoticeTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.warningText,
-  },
-  listSelectionNoticeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.warningText,
-  },
+  listSelectionNoticeTitle: textStyle('metadataText', colors.warningText, fontWeight.strong),
+  listSelectionNoticeText: textStyle('metadataText', colors.warningText, fontWeight.strong),
   listWrap: {
     gap: 8,
   },
@@ -144,11 +132,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  listMeta: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-    fontWeight: fontWeight.strong,
-  },
+  listMeta: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   listMetaDisabled: {
     color: colors.textMuted,
   },
@@ -163,11 +147,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  listPrivacyText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  listPrivacyText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   createListTrigger: {
     minHeight: 44,
     borderRadius: radius.lg,
@@ -180,11 +160,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  createListTriggerText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  createListTriggerText: textStyle('metadataText', colors.primary, fontWeight.strong),
   createListCard: {
     gap: 10,
     borderRadius: radius.lg,
@@ -240,20 +216,9 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  coverPickerTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.secondary,
-  },
-  coverPickerHint: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
-  coverPickerText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.secondary,
-  },
+  coverPickerTitle: textStyle('metadataText', colors.secondary, fontWeight.strong),
+  coverPickerHint: textStyle('metadataText', colors.textMuted),
+  coverPickerText: textStyle('metadataText', colors.secondary, fontWeight.strong),
   selectionBadge: {
     minHeight: 30,
     borderRadius: radius.pill,
@@ -264,11 +229,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  selectionBadgeText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  selectionBadgeText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   coverClearInline: {
     alignSelf: 'flex-end',
     borderRadius: radius.pill,
@@ -300,11 +261,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderColor: colors.primary,
   },
-  privacyText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  privacyText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   privacyTextActive: {
     color: colors.primary,
   },

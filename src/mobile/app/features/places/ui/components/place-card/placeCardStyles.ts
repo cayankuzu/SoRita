@@ -5,6 +5,7 @@ import {
   fontWeight,
   letterSpacing,
   radius,
+  textStyle,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -30,10 +31,7 @@ export const placeCardStyles = StyleSheet.create({
   userBody: {
     flex: 1,
   },
-  userName: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  userName: textStyle('labelText', colors.text),
   userUsername: {
     marginTop: 2,
     ...typography.metadataText,
@@ -93,10 +91,7 @@ export const placeCardStyles = StyleSheet.create({
     color: colors.textSoft,
     flexShrink: 1,
   },
-  sourceBarMeta: {
-    ...typography.metadataText,
-    color: colors.quote,
-  },
+  sourceBarMeta: textStyle('metadataText', colors.quote),
   linkBar: {
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     marginHorizontal: 12,
@@ -136,21 +131,14 @@ export const placeCardStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  linkBarTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  linkBarTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   linkBarMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 3,
   },
-  linkBarMetaText: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  linkBarMetaText: textStyle('metadataText', colors.textSoft),
   linkBarMetaTextPrivate: {
     color: colors.visibilityPrivate,
   },
@@ -188,11 +176,7 @@ export const placeCardStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  mediaCarouselCounterText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  mediaCarouselCounterText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   locationBar: {
     minHeight: 32,
     marginHorizontal: 12,
@@ -265,11 +249,7 @@ export const placeCardStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  eyebrow: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.secondary,
-  },
+  eyebrow: textStyle('metadataText', colors.secondary, fontWeight.strong),
   title: {
     ...typography.bodyText,
     fontWeight: fontWeight.strong,
@@ -279,17 +259,11 @@ export const placeCardStyles = StyleSheet.create({
   titleLink: {
     color: colors.text,
   },
-  titleMeta: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  titleMeta: textStyle('metadataText', colors.textSoft),
   contentTitleChevron: {
     flexShrink: 0,
   },
-  description: {
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  description: textStyle('captionText', colors.textMuted),
   menuAction: {
     alignSelf: 'flex-start',
     minHeight: 40,
@@ -320,11 +294,7 @@ export const placeCardStyles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
-  menuActionLabel: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  menuActionLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   menuUrlPreview: {
     maxWidth: 270,
     marginTop: 6,
@@ -333,26 +303,17 @@ export const placeCardStyles = StyleSheet.create({
     borderTopColor: colors.borderStrong,
     gap: 4,
   },
-  menuUrlText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  menuUrlText: textStyle('metadataText', colors.textMuted),
   menuHoldHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  menuHoldHintText: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  menuHoldHintText: textStyle('metadataText', colors.textSoft),
   timestampBlock: {
     paddingTop: 1,
   },
-  timestampText: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  timestampText: textStyle('metadataText', colors.textSoft),
   tagSection: {
     gap: 4,
     paddingHorizontal: 12,
@@ -368,11 +329,7 @@ export const placeCardStyles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: colors.primaryBg,
   },
-  moreFeaturesText: {
-    ...typography.metadataText,
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-  },
+  moreFeaturesText: textStyle('metadataText', colors.primary, fontWeight.strong),
   badgeRow: {
     gap: 6,
     alignItems: 'center',
@@ -383,10 +340,7 @@ export const placeCardStyles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: colors.surfaceMuted,
   },
-  badgeText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  badgeText: textStyle('metadataText', colors.textMuted),
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -11,7 +11,7 @@ import {
   minTouchSize,
   opacity,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 export type MultiSelectChipOption = {
@@ -81,10 +81,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryBg,
   },
-  chipText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  chipText: textStyle('metadataText', colors.textMuted),
   chipTextSelected: {
     color: colors.primaryDark,
   },

@@ -18,7 +18,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
 export type ExploreListItem = {
@@ -372,11 +372,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
   },
-  loadMoreLabel: {
-    ...typography.metadataText,
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-  },
+  loadMoreLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   loadMoreStatus: {
     alignItems: 'center',
     gap: 6,

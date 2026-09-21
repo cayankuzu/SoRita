@@ -11,6 +11,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -109,15 +110,8 @@ const styles = StyleSheet.create({
   copyBlock: {
     gap: 4,
   },
-  title: {
-    ...typography.compactTitleText,
-    color: colors.text,
-  },
-  linksText: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  title: textStyle('compactTitleText', colors.text),
+  linksText: textStyle('captionText', colors.textMuted, fontWeight.regular),
   linksRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

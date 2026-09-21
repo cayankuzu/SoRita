@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MapPriorityNoticeProps = {
   hasMapDataPartialError: boolean;
@@ -147,10 +147,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  legendText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  legendText: textStyle('metadataText', colors.textMuted),
   addHint: {
     position: 'absolute',
     left: 12,

@@ -12,6 +12,7 @@ import {
   minTouchSize,
   radius,
   semanticColors,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -142,15 +143,8 @@ const styles = StyleSheet.create({
   wrapper: {
     gap: 4,
   },
-  label: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
-  helper: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  label: textStyle('metadataText', colors.textMuted, fontWeight.medium),
+  helper: textStyle('metadataText', colors.textMuted),
   helperDanger: {
     color: colors.danger,
   },

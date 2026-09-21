@@ -43,8 +43,8 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   touch,
-  typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -464,15 +464,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.compactSectionText,
-    color: colors.text,
-  },
-  description: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  title: textStyle('compactSectionText', colors.text),
+  description: textStyle('metadataText', colors.textMuted, fontWeight.regular),
   footer: {
     flexDirection: 'row',
     gap: 8,
@@ -486,11 +479,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
-  footerSecondaryButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  footerSecondaryButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   footerPrimaryButton: {
     flex: 1.3,
     minHeight: MIN_TOUCH_SIZE,
@@ -502,9 +491,5 @@ const styles = StyleSheet.create({
   footerPrimaryButtonDisabled: {
     opacity: 0.45,
   },
-  footerPrimaryButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  footerPrimaryButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

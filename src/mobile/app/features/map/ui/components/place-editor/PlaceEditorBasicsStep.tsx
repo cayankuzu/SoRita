@@ -12,7 +12,7 @@ import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/compone
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import {
   PLACE_ADDRESS_MAX_LENGTH,
   PLACE_NAME_MAX_LENGTH,
@@ -109,11 +109,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 10,
   },
-  coordTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  coordTitle: textStyle('metadataText', colors.primary, fontWeight.strong),
   coordText: {
     marginTop: 2,
     ...typography.metadataText,
@@ -134,31 +130,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     padding: 10,
   },
-  requirementsTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  requirementsText: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
+  requirementsTitle: textStyle('metadataText', colors.text, fontWeight.strong),
+  requirementsText: textStyle('metadataText', colors.textMuted),
   section: {
     gap: 8,
   },
-  sectionTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
     marginTop: -2,
     ...typography.metadataText,
     color: colors.textSoft,
   },
-  selectionMeta: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  selectionMeta: textStyle('metadataText', colors.primary, fontWeight.strong),
 });

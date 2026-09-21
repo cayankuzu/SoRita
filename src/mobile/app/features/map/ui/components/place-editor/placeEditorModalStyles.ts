@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
@@ -64,20 +64,12 @@ export const placeEditorModalStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
-  cancelButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  cancelButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   headerText: {
     flex: 1,
     paddingRight: 10,
   },
-  headerTitle: {
-    ...typography.compactSectionText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  headerTitle: textStyle('compactSectionText', colors.text, fontWeight.strong),
   headerSubtitle: {
     marginTop: 2,
     ...typography.metadataText,
@@ -116,15 +108,8 @@ export const placeEditorModalStyles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
-  saveProgressDetail: {
-    ...typography.metadataText,
-    color: colors.textMuted,
-  },
-  saveProgressPercent: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.primary,
-  },
+  saveProgressDetail: textStyle('metadataText', colors.textMuted),
+  saveProgressPercent: textStyle('metadataText', colors.primary, fontWeight.strong),
   saveProgressPercentFailed: {
     color: colors.danger,
   },
@@ -149,10 +134,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   saveProgressFillFailed: {
     backgroundColor: colors.danger,
   },
-  saveProgressWarning: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-  },
+  saveProgressWarning: textStyle('metadataText', colors.textSoft),
   closeButton: {
     width: 30,
     height: 30,
@@ -173,11 +155,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.background,
   },
-  stepTitle: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  stepTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   stepSubtitle: {
     marginTop: 2,
     ...typography.metadataText,
@@ -252,11 +230,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  backButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  backButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   deleteButton: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
@@ -267,11 +241,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  deleteButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.danger,
-  },
+  deleteButtonText: textStyle('metadataText', colors.danger, fontWeight.strong),
   nextButton: {
     flex: 1,
     minHeight: MIN_TOUCH_SIZE,
@@ -285,9 +255,5 @@ export const placeEditorModalStyles = StyleSheet.create({
   disabledButton: {
     opacity: 0.45,
   },
-  nextButtonText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  nextButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

@@ -37,7 +37,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -398,11 +398,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  primaryCtaText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  primaryCtaText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   emptyStateWrap: {
     paddingTop: 28,
     paddingHorizontal: 12,
@@ -419,11 +415,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
   },
-  listFooterLabel: {
-    ...typography.metadataText,
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-  },
+  listFooterLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   partialDataNotice: {
     paddingHorizontal: 12,
     paddingBottom: 8,

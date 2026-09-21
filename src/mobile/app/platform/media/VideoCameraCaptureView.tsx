@@ -22,6 +22,7 @@ import {
   colors,
   fontWeight,
   radius,
+  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { getAndroidModalWindowProps } from '@/mobile/app/shared/utils/modalLayout';
@@ -294,11 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.danger,
   },
-  timerText: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.onPrimary,
-  },
+  timerText: textStyle('bodyText', colors.onPrimary, fontWeight.strong),
   timerHelper: {
     ...typography.metadataText,
     fontWeight: fontWeight.strong,

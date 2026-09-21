@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const authScreenStyles = StyleSheet.create({
   landingScreen: {
@@ -67,26 +67,14 @@ export const authScreenStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  stepCounter: {
-    ...typography.labelText,
-    color: colors.textMuted,
-  },
+  stepCounter: textStyle('labelText', colors.textMuted),
   stepCopy: {
     marginBottom: 14,
     gap: 4,
   },
-  stepTitle: {
-    ...typography.title,
-    color: colors.text,
-  },
-  stepDescription: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
-  screenTitle: {
-    ...typography.headlineText,
-    color: colors.text,
-  },
+  stepTitle: textStyle('title', colors.text),
+  stepDescription: textStyle('bodyText', colors.textMuted),
+  screenTitle: textStyle('headlineText', colors.text),
   screenSubtitle: {
     marginTop: 2,
     ...typography.bodyText,
@@ -101,15 +89,8 @@ export const authScreenStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     padding: 10,
   },
-  confirmationTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.primaryDark,
-  },
-  confirmationText: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  confirmationTitle: textStyle('bodyText', colors.primaryDark, fontWeight.strong),
+  confirmationText: textStyle('bodyText', colors.textMuted),
   footerText: {
     ...typography.bodyText,
     color: colors.textMuted,
@@ -132,11 +113,7 @@ export const authScreenStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  footerLink: {
-    ...typography.bodyText,
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-  },
+  footerLink: textStyle('bodyText', colors.primary, fontWeight.strong),
   registerTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,11 +132,7 @@ export const authScreenStyles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     marginBottom: 10,
   },
-  atIcon: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
-  },
+  atIcon: textStyle('bodyText', colors.textMuted, fontWeight.medium),
   photoSection: {
     alignItems: 'center',
     width: '100%',
@@ -170,21 +143,9 @@ export const authScreenStyles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     padding: 10,
   },
-  helperCardTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  helperCardText: {
-    ...typography.captionText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
-  selectionMeta: {
-    ...typography.captionText,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
+  helperCardTitle: textStyle('bodyText', colors.text, fontWeight.strong),
+  helperCardText: textStyle('captionText', colors.textMuted, fontWeight.regular),
+  selectionMeta: textStyle('captionText', colors.textMuted, fontWeight.medium),
   formError: {
     marginTop: 12,
     borderRadius: radius.md,

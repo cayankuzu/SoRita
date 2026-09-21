@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorTransientNoticeProps = {
   description: string;
@@ -71,14 +71,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  title: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
-  description: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.regular,
-    color: colors.textMuted,
-  },
+  title: textStyle('bodyText', colors.text, fontWeight.strong),
+  description: textStyle('metadataText', colors.textMuted, fontWeight.regular),
 });

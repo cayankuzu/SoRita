@@ -15,7 +15,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import {
@@ -155,10 +155,7 @@ const styles = StyleSheet.create({
     width: minTouchSize,
     height: minTouchSize,
   },
-  title: {
-    ...typography.section,
-    color: colors.text,
-  },
+  title: textStyle('section', colors.text),
   content: {
     paddingVertical: 10,
     gap: 12,

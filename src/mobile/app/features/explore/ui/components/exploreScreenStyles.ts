@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const exploreScreenStyles = StyleSheet.create({
   headerRail: {
@@ -11,14 +11,8 @@ export const exploreScreenStyles = StyleSheet.create({
     paddingBottom: 10,
     gap: 4,
   },
-  title: {
-    ...typography.title,
-    color: colors.text,
-  },
-  subtitle: {
-    ...typography.bodyText,
-    color: colors.textMuted,
-  },
+  title: textStyle('title', colors.text),
+  subtitle: textStyle('bodyText', colors.textMuted),
   filtersSection: {
     gap: 8,
   },
@@ -73,19 +67,11 @@ export const exploreScreenStyles = StyleSheet.create({
     backgroundColor: colors.text,
     borderColor: colors.text,
   },
-  tabText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-    color: colors.textMuted,
-  },
+  tabText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   tabTextActive: {
     color: colors.onPrimary,
   },
-  resultStatus: {
-    ...typography.metadataText,
-    color: colors.textSoft,
-    fontWeight: fontWeight.strong,
-  },
+  resultStatus: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -108,11 +94,7 @@ export const exploreScreenStyles = StyleSheet.create({
     height: 44,
     borderRadius: radius.md,
   },
-  feedTitle: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  feedTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   feedContent: {
     paddingVertical: 10,
     gap: 12,

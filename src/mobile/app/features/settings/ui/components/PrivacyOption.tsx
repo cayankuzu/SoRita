@@ -4,7 +4,7 @@ import { Check } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PrivacyOptionProps = {
   active: boolean;
@@ -75,10 +75,7 @@ const styles = StyleSheet.create({
   privacyBody: {
     flex: 1,
   },
-  privacyTitle: {
-    ...typography.labelText,
-    color: colors.text,
-  },
+  privacyTitle: textStyle('labelText', colors.text),
   privacyDescription: {
     marginTop: 3,
     ...typography.captionText,

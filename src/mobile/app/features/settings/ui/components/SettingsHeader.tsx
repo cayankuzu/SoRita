@@ -6,7 +6,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsHeaderProps = {
   title: string;
@@ -84,10 +84,7 @@ const styles = StyleSheet.create({
   headerActionGhost: {
     backgroundColor: colors.surfaceMuted,
   },
-  headerActionText: {
-    ...typography.labelText,
-    color: colors.onPrimary,
-  },
+  headerActionText: textStyle('labelText', colors.onPrimary),
   headerActionTextGhost: {
     color: colors.textMuted,
   },
