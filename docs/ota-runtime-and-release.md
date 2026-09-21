@@ -11,10 +11,10 @@ for which installed binaries an update can reach.
 
 | Concern | Repository contract |
 | --- | --- |
-| Runtime version | `app.config.ts` sets `runtimeVersion` to the literal app `version`. EAS Update refuses runtime policies (such as `appVersion`) in this bare project, so the value is explicit and `npm run native-parity:check` keeps it equal to `version`. An update reaches only binaries whose embedded runtime equals it. |
+| Runtime version | `app.config.ts` declares `const nativeRuntimeVersion` and sets `runtimeVersion` from it. EAS Update refuses runtime policies (such as `appVersion`) in this bare project, so the value is an explicit literal. It describes the native surface, **not** the release: it stays put across JavaScript-only releases, because an update reaches only binaries whose embedded runtime equals it. |
 | Update URL | `https://u.expo.dev/<EXPO_PUBLIC_EXPO_PROJECT_ID>`. Production config fails closed without a valid project ID. |
 | Launch behavior | Checked on every launch with zero wait. A downloaded update runs on the next cold start; the cached or embedded update is the fallback. |
-| Android parity | `strings.xml` `expo_runtime_version` must equal `versionName`. `npm run native-parity:check` and the Gradle `verifyExpoRuntimeVersion` task (a dependency of every release bundle/assemble task) both fail otherwise. |
+| Android parity | `strings.xml` `expo_runtime_version` must equal `app.config.ts` `nativeRuntimeVersion`. `npm run native-parity:check` and the Gradle `verifyExpoRuntimeVersion` task (a dependency of every release bundle/assemble task) both fail otherwise. |
 | iOS parity | `app.config.ts` is the source of truth for EAS iOS builds; `npm run ota:record-binary` reads the channel and runtime EAS recorded for the build. |
 | Channels | `development`, `preview` and `production` EAS profiles use matching channel and EAS environment names. A channel is fixed inside a binary. |
 | Environment | Store builds and updates both read the EAS `production` environment, so the public config inside an update matches the binary it lands on. |
@@ -54,10 +54,17 @@ deploy the backend first so the new JavaScript never calls a contract that is no
 Anything the classifier reports as `NATIVE_BUILD_REQUIRED` (dependencies, `app.config.ts`,
 `android/`, config plugins, permissions, native assets) must ship in new binaries:
 
-1. Raise `version` in `package.json`, `version` and `runtimeVersion` in `app.config.ts`, `versionName` and `versionCode` in
-   `android/app/build.gradle`, `expo_runtime_version` in `strings.xml`, and `ios.buildNumber`.
-   Raising the version gives the new binaries a new runtime, so updates for the old JavaScript can
-   never reach the new native code and the reverse.
+1. Raise `version` in `package.json` and `app.config.ts`, `versionName` and `versionCode` in
+   `android/app/build.gradle`, and `ios.buildNumber`.
+
+   **Leave `nativeRuntimeVersion` alone unless the native surface actually changed.** The runtime
+   string is the contract between a binary and an update: an update reaches only the binaries that
+   embed the same one. This step used to say to raise it with the version, and that is what stranded
+   the installed base on 2026-09-21 — Play was serving 1.0.108, which embeds runtime 1.0.108, while
+   updates went to 1.0.109, so every store user was told there was no update. Raise it only when the
+   new binaries genuinely cannot run the old JavaScript (a new or removed native module, a changed
+   native config), and when you do, raise it in `app.config.ts` and `strings.xml` together and
+   rebuild every platform before publishing again.
 2. Run `npm run check:release`, commit and push.
 3. Build from that commit:
    - Android (Git Bash on Windows; `eas env:exec` runs its command through `cmd`, so set variables
@@ -84,8 +91,11 @@ Anything the classifier reports as `NATIVE_BUILD_REQUIRED` (dependencies, `app.c
 
 5. Commit and push `quality/ota-binaries.json`, then upload/submit the binaries to the stores.
 
-Users who have not installed the new store version keep their old runtime and receive no further
-updates until they update from the store.
+This only cuts anybody off when the runtime actually moved. If the release kept
+`nativeRuntimeVersion` — which is the normal case — the old and new binaries share a runtime and
+both keep receiving updates. When the runtime does move, users who have not installed the new store
+version keep the old one and receive no further updates until they update from the store, so publish
+for the runtime that is still in the field until the new build has rolled out.
 
 ## OTA change classifier
 
@@ -129,8 +139,21 @@ check:
 | `update:roll-back-to-embedded` | Directive group `ffba4bee-ab98-434d-9502-dbe88e913f37` received on the next launch, no crash. |
 
 The first attempt exposed that `eas update` rejects runtime policies in this bare project, which is
-why `runtimeVersion` is now explicit. Not yet evidenced: iOS delivery, a physical device, and a
-production-channel update.
+why the runtime is an explicit literal.
+
+2026-09-21, physical device (Redmi Note 9 Pro, Android 10), the **Play-installed** build 1.0.108
+(versionCode 114, installer `com.android.vending`) on the production channel:
+
+| Step | Observed |
+| --- | --- |
+| Embedded runtime, read from the store APK | `aapt2 dump resources` → `string/expo_runtime_version = "1.0.108"`, channel `production`. |
+| Before the fix | `dev.expo.updates` logged `onBackgroundUpdateFinished: No update available` — the repository was publishing for runtime 1.0.109. |
+| Publish for 1.0.108 | Group `3735c414-87fd-4eb5-b088-3859720a6c01`, Android update `01a0c59d-0fd0-7d1f-8c98-e763c6de7046`, 100%. |
+| Next launch | `onBackgroundUpdateFinished: Update available` → `DownloadComplete`, `isUpdatePending=true`, manifest `runtimeVersion "1.0.108"`. |
+| Following cold launch | New bundle running: the map preview renders its Google attribution uncropped and tab labels hold the 1.3x chrome cap at 1.5x system font scale. |
+
+This is the first evidenced production-channel delivery to a physical, store-installed device. Still
+not evidenced: iOS delivery.
 
 ## Rollback
 
