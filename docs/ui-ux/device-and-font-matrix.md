@@ -2,6 +2,7 @@
 
 - Candidate commit: `b8c8dd9bc822d4d66f55befcbde88ecb38704c3c`
 - Date: 2026-09-03
+- Font scale section revised 2026-09-21, when `AppText` took over the cap
 
 ## Declared support, as it actually is
 
@@ -58,8 +59,21 @@ any breakpoint decision.
 
 ## Font scale
 
-`useAppLayout` returns the live `fontScale` from the OS. Components that must
-change shape under large type read it rather than assuming a fixed size.
+Both platforms let a person push text to 200%, and React Native has no global
+default for `maxFontSizeMultiplier` — so before `AppText` the cap was a
+per-call-site decision that 478 call sites across 109 files all declined to
+make. Every text in the app now renders through
+`shared/components/ui/AppText.tsx`, which owns that one decision, and
+`no-restricted-imports` fails the build if a screen imports `Text` straight
+from react-native to opt back out.
+
+| Cap | Value | Applies to |
+|---|---|---|
+| `textScale.content` | 1.8 | Reading copy: titles, descriptions, body text. The default. |
+| `textScale.chrome` | 1.3 | Dense rows where a label shares a fixed box with an icon: tab labels, count badges. |
+
+`useAppLayout` still returns the live `fontScale`, and components that change
+*shape* rather than size read it:
 
 | Scale | Behaviour | Where enforced |
 |---|---|---|
@@ -67,6 +81,17 @@ change shape under large type read it rather than assuming a fixed size.
 | 130% | Text reflows, no truncation of primary labels | `useAuthLayoutMode`, `profileTabsLayout` |
 | 160% | Auth form switches to its compact layout mode | `useAuthLayoutMode` |
 | 200% | Controls stack rather than clip; map controls keep their minimum touch size | `authLayout`, `GoogleMapView`, `TextField` |
+
+Three fixed boxes were cropping their own text before the cap existed and were
+sized from their content instead:
+
+- the bottom tab bar, whose 60 dp box holds 6 + 24 + 16 + 6 = 52 dp at default
+  type, so its label ran the icon off the bar just past 1.5x. The label is now
+  rendered rather than handed to react-navigation as a string, because a plain
+  `tabBarLabel` is drawn by react-navigation's own uncapped `Text`;
+- the header's unread count badge (hard 16 dp) and the media picker's order
+  badge (hard 20 dp), which both grew in width with their numeral but not in
+  height. Both now size from `minHeight`.
 
 No text token is below 12 px, and the `ui-tokens` guard fails the build if one is
 introduced. This keeps the smallest rendered text legible once scaled.
@@ -104,6 +129,7 @@ Motion durations are tokens (`motion.fast` 120 ms, `motion.standard` 180 ms,
 |---|---|---|
 | Breakpoint arithmetic across width and height classes | AUTOMATED | `layout.test.ts` |
 | Token compliance, no raw colors, no sub-12px text | AUTOMATED | `npm run ui-tokens:check` |
+| Every text carries a font-scale cap | AUTOMATED | `no-restricted-imports` in `eslint.config.js`, `AppText.test.tsx` |
 | Every pressable has role and label | AUTOMATED | `npm run accessibility:check` |
 | Component behaviour under layout modes | AUTOMATED | component tests in the 503-test suite |
 | Rendered pixels on real hardware at each width and font scale | NOT VERIFIED | requires physical devices, see MANUAL_STEPS |
