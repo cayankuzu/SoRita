@@ -4,13 +4,13 @@ import {
   KeyboardTypeOptions,
   Platform,
   StyleSheet,
-  Text,
   TextInput,
   TextInputProps,
   View,
 } from 'react-native';
 import { CircleAlert, CircleCheck, Eye, EyeOff } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -122,7 +122,7 @@ function AuthFieldHelper({ id, message, tone }: { id: string; message?: string; 
   }
 
   return (
-    <Text
+    <AppText
       accessibilityLiveRegion={tone === 'danger' ? 'assertive' : 'polite'}
       accessibilityRole={tone === 'danger' ? 'alert' : undefined}
       nativeID={id}
@@ -133,7 +133,7 @@ function AuthFieldHelper({ id, message, tone }: { id: string; message?: string; 
       ]}
     >
       {message}
-    </Text>
+    </AppText>
   );
 }
 
@@ -238,9 +238,9 @@ export const AuthField = React.forwardRef<TextInput, AuthFieldProps>(function Au
 
   return (
     <View style={styles.block}>
-      <Text nativeID={labelId} style={styles.label}>
+      <AppText nativeID={labelId} style={styles.label}>
         {label}
-      </Text>
+      </AppText>
       <View
         style={[
           styles.inputWrap,

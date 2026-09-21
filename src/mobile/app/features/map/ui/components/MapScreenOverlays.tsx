@@ -1,8 +1,9 @@
 import React from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { Globe, Layers3, Lock, X } from 'lucide-react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -98,15 +99,15 @@ export function MapVisibilityLegend({ bottom }: { bottom: number }) {
     <View accessibilityLabel={tr.map.filterTitle} style={[styles.legend, { bottom }]}>
       <View style={styles.legendItem}>
         <Globe color={colors.visibilityPublic} size={12} />
-        <Text style={styles.legendText}>{tr.map.filterPublic}</Text>
+        <AppText style={styles.legendText}>{tr.map.filterPublic}</AppText>
       </View>
       <View style={styles.legendItem}>
         <Lock color={colors.visibilityPrivate} size={12} />
-        <Text style={styles.legendText}>{tr.map.filterPrivate}</Text>
+        <AppText style={styles.legendText}>{tr.map.filterPrivate}</AppText>
       </View>
       <View style={styles.legendItem}>
         <Layers3 color={colors.visibilityMixed} size={12} />
-        <Text style={styles.legendText}>{tr.map.filterMixed}</Text>
+        <AppText style={styles.legendText}>{tr.map.filterMixed}</AppText>
       </View>
     </View>
   );
@@ -115,7 +116,7 @@ export function MapVisibilityLegend({ bottom }: { bottom: number }) {
 export function MapAddHint({ bottom, onClose }: { bottom: number; onClose: () => void }) {
   return (
     <View style={[styles.addHint, { bottom }]}>
-      <Text style={styles.addHintText}>{tr.map.addPlaceHint}</Text>
+      <AppText style={styles.addHintText}>{tr.map.addPlaceHint}</AppText>
       <IconButton
         accessibilityLabel={tr.common.close}
         onPress={onClose}

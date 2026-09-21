@@ -3,7 +3,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import {
@@ -22,6 +21,7 @@ import {
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorListSelectionSection';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
@@ -147,7 +147,7 @@ function MediaThumb({
           />
         </View>
         <View style={styles.mediaOrderBadge}>
-          <Text style={styles.mediaOrderBadgeText}>{index + 1}</Text>
+          <AppText style={styles.mediaOrderBadgeText}>{index + 1}</AppText>
         </View>
       </View>
     </Pressable>
@@ -260,44 +260,44 @@ export function PlaceEditorFinalStep({
       />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{`${tr.placeEditor.atmosphere} (${tr.common.optional})`}</Text>
-        <Text style={styles.sectionHelper}>{tr.placeEditor.atmosphereHelper}</Text>
+        <AppText style={styles.sectionTitle}>{`${tr.placeEditor.atmosphere} (${tr.common.optional})`}</AppText>
+        <AppText style={styles.sectionHelper}>{tr.placeEditor.atmosphereHelper}</AppText>
         <OptionRail options={PLACE_ATMOSPHERE_OPTIONS} selectedValues={atmosphere} onToggle={onToggleAtmosphere} />
         {atmosphere.length > 0 ? (
-          <Text style={styles.selectionMeta}>{tr.placeEditor.selectionCount(atmosphere.length, 'atmosfer')}</Text>
+          <AppText style={styles.selectionMeta}>{tr.placeEditor.selectionCount(atmosphere.length, 'atmosfer')}</AppText>
         ) : null}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{`${tr.placeEditor.features} (${tr.common.optional})`}</Text>
-        <Text style={styles.sectionHelper}>{tr.placeEditor.featuresHelper}</Text>
+        <AppText style={styles.sectionTitle}>{`${tr.placeEditor.features} (${tr.common.optional})`}</AppText>
+        <AppText style={styles.sectionHelper}>{tr.placeEditor.featuresHelper}</AppText>
         <OptionRail options={generalFeatureOptions} selectedValues={features} onToggle={onToggleFeature} />
         {features.length > 0 ? (
-          <Text style={styles.selectionMeta}>{tr.placeEditor.selectionCount(features.length, 'özellik')}</Text>
+          <AppText style={styles.selectionMeta}>{tr.placeEditor.selectionCount(features.length, 'özellik')}</AppText>
         ) : null}
       </View>
 
       <View style={styles.section}>
         <View style={styles.mediaSectionHeader}>
           <View style={styles.mediaSectionHeaderCopy}>
-            <Text style={styles.sectionTitle}>{`${tr.placeEditor.mediaTitle} (${tr.common.optional})`}</Text>
+            <AppText style={styles.sectionTitle}>{`${tr.placeEditor.mediaTitle} (${tr.common.optional})`}</AppText>
             {mediaHelperText ? (
-              <Text style={[styles.sectionHelper, styles.sectionHelperActive]}>
+              <AppText style={[styles.sectionHelper, styles.sectionHelperActive]}>
                 {mediaHelperText}
-              </Text>
+              </AppText>
             ) : null}
           </View>
         </View>
 
         <View style={styles.counterRow}>
           <View style={styles.counterBadge}>
-            <Text style={styles.counterBadgeText}>{photoCounterLabel}</Text>
+            <AppText style={styles.counterBadgeText}>{photoCounterLabel}</AppText>
           </View>
           <View style={styles.counterBadge}>
-            <Text style={styles.counterBadgeText}>{videoCounterLabel}</Text>
+            <AppText style={styles.counterBadgeText}>{videoCounterLabel}</AppText>
           </View>
           <View style={styles.counterBadgeStrong}>
-            <Text style={styles.counterBadgeStrongText}>{mediaCounterLabel}</Text>
+            <AppText style={styles.counterBadgeStrongText}>{mediaCounterLabel}</AppText>
           </View>
         </View>
 
@@ -314,16 +314,16 @@ export function PlaceEditorFinalStep({
               <Camera color={colors.primary} size={18} />
             </View>
             <View style={styles.mediaEmptyCopy}>
-              <Text style={styles.mediaEmptyTitle}>{tr.placeEditor.mediaEmptyTitle}</Text>
-              <Text style={styles.mediaEmptyText}>
+              <AppText style={styles.mediaEmptyTitle}>{tr.placeEditor.mediaEmptyTitle}</AppText>
+              <AppText style={styles.mediaEmptyText}>
                 {tr.placeEditor.mediaEmptyDescription}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.mediaEmptyAction}>
               <ImagePlus color={colors.primary} size={16} />
-              <Text style={styles.mediaEmptyActionText}>
+              <AppText style={styles.mediaEmptyActionText}>
                 {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.mediaAddAction}
-              </Text>
+              </AppText>
             </View>
           </Pressable>
         ) : (
@@ -369,10 +369,10 @@ export function PlaceEditorFinalStep({
                   <View style={styles.mediaAddIconWrap}>
                     <ImagePlus color={colors.primary} size={16} />
                   </View>
-                  <Text style={styles.addMediaText}>
+                  <AppText style={styles.addMediaText}>
                     {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.add}
-                  </Text>
-                  <Text style={styles.addMediaSubtext}>{tr.placeEditor.mediaAddTileSubtitle}</Text>
+                  </AppText>
+                  <AppText style={styles.addMediaSubtext}>{tr.placeEditor.mediaAddTileSubtitle}</AppText>
                 </Pressable>
               ) : null}
             </ScrollView>

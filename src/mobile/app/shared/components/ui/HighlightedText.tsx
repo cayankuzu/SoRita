@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
 
 type HighlightedTextProps = {
@@ -40,9 +41,9 @@ export function HighlightedText({ query, text }: HighlightedTextProps) {
   return (
     <>
       {splitHighlightedText(text, query).map((segment, index) => (
-        <Text key={`${index}:${segment.text}`} style={segment.highlighted ? styles.highlight : undefined}>
+        <AppText key={`${index}:${segment.text}`} style={segment.highlighted ? styles.highlight : undefined}>
           {segment.text}
-        </Text>
+        </AppText>
       ))}
     </>
   );

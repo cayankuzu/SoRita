@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { ChevronRight, MapPin } from 'lucide-react-native';
 
 import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
@@ -18,6 +18,7 @@ import type {
 } from '@/mobile/app/features/social/public/types';
 import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -224,9 +225,9 @@ export function PlaceCardFull({
           <View style={styles.locationIconWrap}>
             <MapPin color={colors.primary} size={13} strokeWidth={2.2} />
           </View>
-          <Text numberOfLines={1} style={styles.locationText}>
+          <AppText numberOfLines={1} style={styles.locationText}>
             {locationLabel}
-          </Text>
+          </AppText>
         </View>
       ) : null}
 
@@ -263,12 +264,12 @@ export function PlaceCardFull({
           >
             <View style={styles.contentTitleStack}>
               <View style={styles.contentTitleInline}>
-                <Text
+                <AppText
                   numberOfLines={2}
                   style={[styles.title, onPlaceNamePress ? styles.titleLink : null]}
                 >
                   {place.name}
-                </Text>
+                </AppText>
                 {onPlaceNamePress ? (
                   <ChevronRight
                     color={colors.text}
@@ -279,9 +280,9 @@ export function PlaceCardFull({
                 ) : null}
               </View>
               {locationPlaceCardsCount != null ? (
-                <Text style={styles.titleMeta}>
+                <AppText style={styles.titleMeta}>
                   {formatLocationPlaceCardsCount(locationPlaceCardsCount)}
-                </Text>
+                </AppText>
               ) : null}
             </View>
           </Pressable>
@@ -310,9 +311,9 @@ export function PlaceCardFull({
         ) : null}
         {placeTimestampLabels.length > 0 ? (
           <View style={styles.timestampBlock}>
-            <Text numberOfLines={2} style={styles.timestampText}>
+            <AppText numberOfLines={2} style={styles.timestampText}>
               {placeTimestampLabels.join('  •  ')}
-            </Text>
+            </AppText>
           </View>
         ) : null}
       </View>

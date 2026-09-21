@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import {
@@ -17,6 +16,7 @@ import {
   type LegalDocumentId,
 } from '@/mobile/app/features/auth/ui/content/legalDocuments';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -68,8 +68,8 @@ export function AuthLegalSheet({
         <View style={styles.headerTitleRow}>
           <View style={styles.iconWrap}>{renderDocumentIcon(document.id)}</View>
           <View style={styles.headerCopy}>
-            <Text accessibilityRole="header" style={styles.title}>{document.title}</Text>
-            <Text style={styles.summary}>{document.summary}</Text>
+            <AppText accessibilityRole="header" style={styles.title}>{document.title}</AppText>
+            <AppText style={styles.summary}>{document.summary}</AppText>
           </View>
         </View>
 
@@ -81,11 +81,11 @@ export function AuthLegalSheet({
       <View style={styles.scrollContent}>
         {document.sections.map((section) => (
           <View key={section.title} style={styles.section}>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>{section.title}</Text>
+            <AppText accessibilityRole="header" style={styles.sectionTitle}>{section.title}</AppText>
             {section.body.map((paragraph) => (
-              <Text key={paragraph} style={styles.paragraph}>
+              <AppText key={paragraph} style={styles.paragraph}>
                 {paragraph}
-              </Text>
+              </AppText>
             ))}
           </View>
         ))}

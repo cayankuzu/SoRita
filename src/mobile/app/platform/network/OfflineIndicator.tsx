@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNetworkStatus } from '@/mobile/app/platform/network/useNetworkStatus';
 import { useOutboxStatus } from '@/mobile/app/platform/sync/outboxStatus';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import {
   colors,
@@ -91,7 +92,7 @@ export function OfflineIndicator({
       style={[styles.container, { paddingTop: insets.top, transform: [{ translateY }] }]}
     >
       <View style={[styles.content, state.isSyncing && !state.isOffline ? styles.syncing : null]}>
-        <Text style={styles.text}>{state.message}</Text>
+        <AppText style={styles.text}>{state.message}</AppText>
       </View>
     </Animated.View>
   );

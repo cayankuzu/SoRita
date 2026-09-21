@@ -4,7 +4,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -19,6 +18,7 @@ import type {
   CameraCaptureMode,
   MediaPickerPromptSelection,
 } from '@/mobile/app/platform/media/mediaPickerTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -69,8 +69,8 @@ function MediaPickerOptionCard({
     >
       <View style={styles.optionIconWrap}>{icon}</View>
       <View style={styles.optionBody}>
-        <Text style={styles.optionTitle}>{title}</Text>
-        <Text style={styles.optionDescription}>{description}</Text>
+        <AppText style={styles.optionTitle}>{title}</AppText>
+        <AppText style={styles.optionDescription}>{description}</AppText>
       </View>
     </InstantPressable>
   );
@@ -177,8 +177,8 @@ export function MediaPickerPromptHost() {
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-              <Text style={styles.description}>{description}</Text>
+              <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+              <AppText style={styles.description}>{description}</AppText>
             </View>
 
             <IconButton

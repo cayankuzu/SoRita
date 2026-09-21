@@ -2,7 +2,6 @@ import React from 'react';
 import {
   AccessibilityInfo,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -15,6 +14,7 @@ import {
   getReportReasonsForTarget,
   type ReportTargetType,
 } from '@/mobile/app/shared/components/feedback/reportReasonOptions';
+import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -52,7 +52,7 @@ export function ReportActionSheet({
   onClose,
   onSubmit,
 }: ReportActionSheetProps) {
-  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const titleRef = React.useRef<AppTextRef | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const reportReasons = React.useMemo(
@@ -134,8 +134,8 @@ export function ReportActionSheet({
             <Flag color={colors.warning} size={14} />
           </View>
           <View style={styles.headerTextWrap}>
-            <Text ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</Text>
-            {description ? <Text style={styles.description}>{description}</Text> : null}
+            <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
+            {description ? <AppText style={styles.description}>{description}</AppText> : null}
           </View>
         </View>
         <IconButton
@@ -168,21 +168,21 @@ export function ReportActionSheet({
                 onReportReasonChange(reason);
               }}
             >
-              <Text
+              <AppText
                 style={[
                   styles.optionText,
                   selected ? styles.optionTextActive : null,
                 ]}
               >
                 {reason}
-              </Text>
+              </AppText>
             </InstantPressable>
           );
         })}
       </View>
 
       <View style={styles.detailsWrap}>
-        <Text style={styles.detailsLabel}>{tr.cards.reportDetailsLabel}</Text>
+        <AppText style={styles.detailsLabel}>{tr.cards.reportDetailsLabel}</AppText>
         <TextInput
           accessibilityLabel={tr.cards.reportDetailsPlaceholder}
           multiline
@@ -201,13 +201,13 @@ export function ReportActionSheet({
       </View>
 
       {errorMessage ? (
-        <Text
+        <AppText
           accessibilityLiveRegion="assertive"
           accessibilityRole="alert"
           style={styles.errorText}
         >
           {errorMessage}
-        </Text>
+        </AppText>
       ) : null}
     </ModalScaffold>
   );

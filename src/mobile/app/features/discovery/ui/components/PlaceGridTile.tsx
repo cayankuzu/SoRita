@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import {
   Camera,
   Crosshair,
@@ -21,6 +21,7 @@ import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPrevi
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -124,7 +125,7 @@ function PlaceTileMedia({
               {mediaCounts.photos > 0 ? (
                 <View style={styles.photoCountGroup}>
                   <Camera color={colors.onPrimary} size={9} />
-                  <Text style={styles.photoCountText}>{mediaCounts.photos}</Text>
+                  <AppText style={styles.photoCountText}>{mediaCounts.photos}</AppText>
                 </View>
               ) : null}
               {mediaCounts.photos > 0 && mediaCounts.videos > 0 ? (
@@ -133,7 +134,7 @@ function PlaceTileMedia({
               {mediaCounts.videos > 0 ? (
                 <View style={styles.photoCountGroup}>
                   <PlayCircle color={colors.onPrimary} size={9} />
-                  <Text style={styles.photoCountText}>{mediaCounts.videos}</Text>
+                  <AppText style={styles.photoCountText}>{mediaCounts.videos}</AppText>
                 </View>
               ) : null}
             </View>
@@ -312,9 +313,9 @@ function PlaceGridTileComponent({
           <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
             <View style={styles.tileTitleRow}>
               <View style={styles.tileTitleContent}>
-                <Text numberOfLines={1} style={styles.tileTitle}>
+                <AppText numberOfLines={1} style={styles.tileTitle}>
                   <HighlightedText query={searchQuery} text={place.name} />
-                </Text>
+                </AppText>
               </View>
               {hasMiniMap && !compact ? <View style={styles.titleActionPlaceholder} /> : null}
             </View>
@@ -336,9 +337,9 @@ function PlaceGridTileComponent({
                 <View style={styles.listContextBody}>
                   <View style={styles.listContextTitleRow}>
                     <ListIcon color={colors.primary} size={9} />
-                    <Text numberOfLines={1} style={styles.listContextTitle}>
+                    <AppText numberOfLines={1} style={styles.listContextTitle}>
                       {listEmoji ? `${listEmoji} ${listName}` : listName || ''}
-                    </Text>
+                    </AppText>
                   </View>
                   <View style={styles.listContextMetaRow}>
                     {listIsPublic === false ? (
@@ -346,7 +347,7 @@ function PlaceGridTileComponent({
                     ) : (
                       <Globe color={colors.secondary} size={9} />
                     )}
-                    <Text
+                    <AppText
                       numberOfLines={1}
                       style={[
                         styles.listContextMetaText,
@@ -356,7 +357,7 @@ function PlaceGridTileComponent({
                       ]}
                     >
                       {listContextLabel}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </View>
@@ -365,13 +366,13 @@ function PlaceGridTileComponent({
               {place.rating ? (
                 <View style={styles.ratingRow}>
                   <Star color={colors.rating} fill={colors.rating} size={9} />
-                  <Text style={styles.ratingText}>{place.rating}</Text>
+                  <AppText style={styles.ratingText}>{place.rating}</AppText>
                 </View>
               ) : null}
               {!compact ? (
-                <Text numberOfLines={1} style={styles.tileTimestampInline}>
+                <AppText numberOfLines={1} style={styles.tileTimestampInline}>
                   {timestampText}
-                </Text>
+                </AppText>
               ) : null}
             </View>
           </View>

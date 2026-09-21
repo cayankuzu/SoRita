@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 
 type PlaceEditorWizardHeaderProps = {
   step: number;
@@ -12,8 +13,8 @@ export function PlaceEditorWizardHeader({ step, steps }: PlaceEditorWizardHeader
   return (
     <View style={styles.stepHeader}>
       <View>
-        <Text style={styles.stepTitle}>{steps[step].title}</Text>
-        <Text style={styles.stepSubtitle}>{steps[step].subtitle}</Text>
+        <AppText style={styles.stepTitle}>{steps[step].title}</AppText>
+        <AppText style={styles.stepSubtitle}>{steps[step].subtitle}</AppText>
       </View>
       <View style={styles.stepDots}>
         {steps.map((_, index) => (

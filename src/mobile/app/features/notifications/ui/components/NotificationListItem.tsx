@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -60,18 +61,18 @@ function NotificationListItemComponent({
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.message}>
-            <Text style={styles.messageStrong}>{notification.userName} </Text>
-            <Text style={styles.messageMuted}>{notification.message}</Text>
-          </Text>
-          <Text style={styles.timestamp}>{notification.timestamp}</Text>
+          <AppText style={styles.message}>
+            <AppText style={styles.messageStrong}>{notification.userName} </AppText>
+            <AppText style={styles.messageMuted}>{notification.message}</AppText>
+          </AppText>
+          <AppText style={styles.timestamp}>{notification.timestamp}</AppText>
           {isResolvedFollowRequest ? (
             <View style={styles.statusBadge}>
-              <Text style={styles.statusLabel}>
+              <AppText style={styles.statusLabel}>
                 {notification.followRequest?.status === 'accepted'
                   ? tr.notifications.status.accepted
                   : tr.notifications.status.rejected}
-              </Text>
+              </AppText>
             </View>
           ) : null}
         </View>
@@ -90,7 +91,7 @@ function NotificationListItemComponent({
             style={styles.pendingRow}
           >
             <ActivityIndicator color={colors.primary} size="small" />
-            <Text style={styles.pendingLabel}>{tr.notifications.processingRequest}</Text>
+            <AppText style={styles.pendingLabel}>{tr.notifications.processingRequest}</AppText>
           </View>
         ) : (
           <View style={styles.actionsRow}>
@@ -106,7 +107,7 @@ function NotificationListItemComponent({
                 followRequestPending ? styles.actionButtonDisabled : null,
               ]}
             >
-              <Text style={[styles.actionLabel, styles.rejectLabel]}>{tr.notifications.reject}</Text>
+              <AppText style={[styles.actionLabel, styles.rejectLabel]}>{tr.notifications.reject}</AppText>
             </InstantPressable>
             <InstantPressable
               accessibilityLabel={tr.notifications.accept}
@@ -120,7 +121,7 @@ function NotificationListItemComponent({
                 followRequestPending ? styles.actionButtonDisabled : null,
               ]}
             >
-              <Text style={[styles.actionLabel, styles.acceptLabel]}>{tr.notifications.accept}</Text>
+              <AppText style={[styles.actionLabel, styles.acceptLabel]}>{tr.notifications.accept}</AppText>
             </InstantPressable>
           </View>
         )

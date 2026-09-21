@@ -4,7 +4,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { CameraView } from 'expo-camera';
@@ -15,6 +14,7 @@ import {
   PLACE_MEDIA_TARGET_VIDEO_BITRATE,
   PLACE_MEDIA_TARGET_VIDEO_QUALITY,
 } from '@/mobile/app/platform/media/mediaConstants';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -118,12 +118,12 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
             <View style={styles.permissionIconWrap}>
               <Camera color={colors.primary} size={20} />
             </View>
-            <Text style={styles.permissionTitle}>{tr.mediaPicker.videoRecorderPermissionTitle}</Text>
-            <Text style={styles.permissionDescription}>
+            <AppText style={styles.permissionTitle}>{tr.mediaPicker.videoRecorderPermissionTitle}</AppText>
+            <AppText style={styles.permissionDescription}>
               {permissionsBlocked
                 ? tr.mediaPicker.videoRecorderPermissionBlockedDescription
                 : tr.mediaPicker.videoRecorderPermissionDescription}
-            </Text>
+            </AppText>
             <PrimaryButton
               title={
                 permissionsBlocked
@@ -151,7 +151,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
           <View style={styles.timerStack}>
             <View style={styles.timerBadge}>
               {isRecording ? <View style={styles.liveDot} /> : null}
-              <Text
+              <AppText
                 accessibilityLabel={tr.mediaPicker.videoRecorderElapsed(
                   formatPlaceMediaDuration(elapsedMs),
                 )}
@@ -159,14 +159,14 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
                 style={styles.timerText}
               >
                 {formatPlaceMediaDuration(elapsedMs)}
-              </Text>
+              </AppText>
             </View>
-            <Text style={styles.timerHelper}>
+            <AppText style={styles.timerHelper}>
               {tr.mediaPicker.videoRecorderAutoStop(
                 formatPlaceMediaDuration(maxDurationMs),
                 formatPlaceMediaDuration(countdownMs),
               )}
-            </Text>
+            </AppText>
           </View>
 
           <IconButton
@@ -182,9 +182,9 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
 
         {permissionsGranted && cameraMountFailed ? (
           <View style={[styles.loadingOverlay, styles.cameraErrorOverlay]}>
-            <Text accessibilityLiveRegion="assertive" style={styles.loadingText}>
+            <AppText accessibilityLiveRegion="assertive" style={styles.loadingText}>
               {tr.mediaPicker.videoRecorderUnavailable}
-            </Text>
+            </AppText>
             <PrimaryButton
               title={tr.mediaPicker.videoRecorderRetryCamera}
               onPress={onRetryCamera}
@@ -200,17 +200,17 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
             style={styles.loadingOverlay}
           >
             <ActivityIndicator color={colors.onPrimary} size="large" />
-            <Text style={styles.loadingText}>{tr.mediaPicker.videoRecorderPreparing}</Text>
+            <AppText style={styles.loadingText}>{tr.mediaPicker.videoRecorderPreparing}</AppText>
           </View>
         ) : null}
 
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <Text
+          <AppText
             accessibilityLiveRegion={captureError ? 'assertive' : 'none'}
             style={[styles.bottomHint, captureError ? styles.bottomHintError : null]}
           >
             {captureError || tr.mediaPicker.videoRecorderHint}
-          </Text>
+          </AppText>
 
           <Pressable
             accessibilityLabel={

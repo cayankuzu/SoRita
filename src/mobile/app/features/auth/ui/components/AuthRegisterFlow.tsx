@@ -1,5 +1,5 @@
 import React from 'react';
-import { AccessibilityInfo, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, TextInput, View } from 'react-native';
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,6 +17,7 @@ import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/componen
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import { AuthStepDots } from '@/mobile/app/features/auth/ui/components/AuthStepDots';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { MultiSelectChipField } from '@/mobile/app/shared/components/ui/MultiSelectChipField';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -159,14 +160,14 @@ function AuthRegisterHeader({
 
         <View style={styles.stepHeader}>
           <AuthStepDots current={regStep} total={stepCount} />
-          <Text accessible={false} style={styles.stepCounter}>
+          <AppText accessible={false} style={styles.stepCounter}>
             {tr.settings.editProfile.stepCounter(regStep + 1, stepCount)}
-          </Text>
+          </AppText>
         </View>
 
         <View style={styles.stepCopy}>
-          <Text accessibilityRole="header" style={styles.stepTitle}>{currentStep.title}</Text>
-          <Text style={styles.stepDescription}>{currentStep.subtitle}</Text>
+          <AppText accessibilityRole="header" style={styles.stepTitle}>{currentStep.title}</AppText>
+          <AppText style={styles.stepDescription}>{currentStep.subtitle}</AppText>
         </View>
       </>
     );
@@ -184,9 +185,9 @@ function AuthRegisterHeader({
         </IconButton>
         <View style={styles.stepProgress}>
           <AuthStepDots current={regStep} total={stepCount} />
-          <Text accessible={false} style={styles.stepCounter}>
+          <AppText accessible={false} style={styles.stepCounter}>
             {tr.settings.editProfile.stepCounter(regStep + 1, stepCount)}
-          </Text>
+          </AppText>
         </View>
         <View style={styles.spacer} />
       </View>
@@ -197,8 +198,8 @@ function AuthRegisterHeader({
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
         <View style={styles.stepIconWrap}>{currentStep.icon}</View>
-        <Text accessibilityRole="header" style={styles.screenTitle}>{currentStep.title}</Text>
-        <Text style={styles.screenSubtitle}>{currentStep.subtitle}</Text>
+        <AppText accessibilityRole="header" style={styles.screenTitle}>{currentStep.title}</AppText>
+        <AppText style={styles.screenSubtitle}>{currentStep.subtitle}</AppText>
       </View>
     </>
   );
@@ -333,7 +334,7 @@ export function AuthRegisterFlow({
               helper: usernameHelper,
               helperTone: usernameHelperTone,
             })}
-            icon={<Text style={styles.atIcon}>@</Text>}
+            icon={<AppText style={styles.atIcon}>@</AppText>}
             maxLength={USERNAME_MAX_LENGTH}
           />
           <TextField
@@ -402,8 +403,8 @@ export function AuthRegisterFlow({
       {regStep === 2 ? (
         <View style={styles.formBlock}>
           <View style={styles.helperCard}>
-            <Text style={styles.helperCardTitle}>{tr.auth.register.interestsTitle}</Text>
-            <Text style={styles.helperCardText}>{tr.auth.register.interestsDescription}</Text>
+            <AppText style={styles.helperCardTitle}>{tr.auth.register.interestsTitle}</AppText>
+            <AppText style={styles.helperCardText}>{tr.auth.register.interestsDescription}</AppText>
           </View>
 
           <MultiSelectChipField
@@ -412,9 +413,9 @@ export function AuthRegisterFlow({
             onToggle={toggleInterest}
           />
 
-          <Text accessibilityLiveRegion="polite" style={styles.selectionMeta}>
+          <AppText accessibilityLiveRegion="polite" style={styles.selectionMeta}>
             {tr.auth.register.interestsSelectedCount(regInterests.length)}
-          </Text>
+          </AppText>
         </View>
       ) : null}
 
@@ -445,13 +446,13 @@ export function AuthRegisterFlow({
       ) : null}
 
       {registerSubmissionError ? (
-        <Text
+        <AppText
           accessibilityLiveRegion="assertive"
           accessibilityRole="alert"
           style={styles.formError}
         >
           {registerSubmissionError}
-        </Text>
+        </AppText>
       ) : null}
 
       {isLastStep ? (
@@ -479,14 +480,14 @@ export function AuthRegisterFlow({
 
           {regStep === 0 ? (
             <View style={styles.footerRow}>
-              <Text style={styles.footerText}>{tr.auth.register.hasAccount}</Text>
+              <AppText style={styles.footerText}>{tr.auth.register.hasAccount}</AppText>
               <InstantPressable
                 accessibilityLabel={tr.auth.register.login}
                 accessibilityRole="link"
                 onPress={goToLogin}
                 style={styles.footerLinkButton}
               >
-                <Text style={styles.footerLink}>{tr.auth.register.login}</Text>
+                <AppText style={styles.footerLink}>{tr.auth.register.login}</AppText>
               </InstantPressable>
             </View>
           ) : null}

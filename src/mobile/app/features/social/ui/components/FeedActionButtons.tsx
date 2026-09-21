@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import {
   Ellipsis,
   Heart,
@@ -7,6 +7,7 @@ import {
   Share2,
 } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
@@ -64,7 +65,7 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
         style={styles.likeCountButton}
         onPress={props.onLikersPress}
       >
-        <Text
+        <AppText
           accessible={false}
           style={[
             styles.actionCount,
@@ -72,7 +73,7 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
           ]}
         >
           {props.likeCount}
-        </Text>
+        </AppText>
       </InstantPressable>
     </View>
   );
@@ -92,7 +93,7 @@ function CommentAction(props: Pick<
       onPress={props.onCommentPress}
     >
       <MessageCircle size={16} color={props.showComments ? colors.primary : colors.textMuted} />
-      <Text
+      <AppText
         accessible={false}
         style={[
           styles.actionCount,
@@ -101,7 +102,7 @@ function CommentAction(props: Pick<
         ]}
       >
         {props.commentCount}
-      </Text>
+      </AppText>
     </InstantPressable>
   );
 }

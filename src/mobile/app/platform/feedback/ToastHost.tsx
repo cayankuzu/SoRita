@@ -1,8 +1,20 @@
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  X } from 'lucide-react-native';
+import React,
+  { useCallback,
+  useEffect,
+  useRef,
+  useState } from 'react';
+import { Animated,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
@@ -156,7 +168,7 @@ export function ToastHost({ suppressed = false }: { suppressed?: boolean }) {
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <ToastIcon kind={toast.kind} />
         </View>
-        <Text style={styles.message}>{toast.message}</Text>
+        <AppText style={styles.message}>{toast.message}</AppText>
         <IconButton accessibilityLabel={tr.common.close} onPress={dismiss} size="sm">
           <X color={colors.textMuted} size={iconSize.sm} />
         </IconButton>

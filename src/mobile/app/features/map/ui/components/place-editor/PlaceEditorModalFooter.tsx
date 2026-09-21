@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Check,
   ChevronLeft,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -47,7 +48,7 @@ export function PlaceEditorModalFooter({
           onPress={onPrevious}
         >
           <ChevronLeft color={colors.textMuted} size={14} />
-          <Text style={styles.backButtonText}>{tr.common.back}</Text>
+          <AppText style={styles.backButtonText}>{tr.common.back}</AppText>
         </InstantPressable>
       ) : onDelete ? (
         <InstantPressable
@@ -58,7 +59,7 @@ export function PlaceEditorModalFooter({
           onPress={onDelete}
         >
           <Trash2 color={colors.danger} size={14} />
-          <Text style={styles.deleteButtonText}>{tr.common.delete}</Text>
+          <AppText style={styles.deleteButtonText}>{tr.common.delete}</AppText>
         </InstantPressable>
       ) : null}
 
@@ -70,7 +71,7 @@ export function PlaceEditorModalFooter({
           onPress={onNext}
           hapticFeedback="light"
         >
-          <Text style={styles.nextButtonText}>{tr.placeEditor.continue}</Text>
+          <AppText style={styles.nextButtonText}>{tr.placeEditor.continue}</AppText>
           <ChevronRight color={colors.onPrimary} size={14} />
         </InstantPressable>
       ) : (
@@ -82,9 +83,9 @@ export function PlaceEditorModalFooter({
           hapticFeedback="success"
         >
           <Check color={colors.onPrimary} size={14} />
-          <Text style={styles.nextButtonText}>
+          <AppText style={styles.nextButtonText}>
             {isEditing ? tr.placeEditor.update : tr.placeEditor.complete}
-          </Text>
+          </AppText>
         </InstantPressable>
       )}
     </View>

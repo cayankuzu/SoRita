@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { X } from 'lucide-react-native';
 
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PlaceCardSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -30,7 +31,7 @@ export function SourcePlaceCardModal({
       visible={visible}
     >
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>{tr.cards.quotedPlace}</Text>
+        <AppText accessibilityRole="header" style={styles.title}>{tr.cards.quotedPlace}</AppText>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
           <X color={colors.textMuted} size={iconSize.md} />
         </IconButton>

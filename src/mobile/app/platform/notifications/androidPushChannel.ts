@@ -5,6 +5,7 @@ import {
   androidNotificationChannelId,
   androidNotificationChannelName,
 } from '@/mobile/app/platform/notifications/channels';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 
 /**
  * Creates the stable Android channel before any Android 13 notification
@@ -22,7 +23,7 @@ export async function ensureAndroidPushChannel() {
     name: androidNotificationChannelName,
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 150, 250],
-    lightColor: '#3b82f6',
+    lightColor: colors.primary,
     bypassDnd: false,
     enableLights: true,
     enableVibrate: true,

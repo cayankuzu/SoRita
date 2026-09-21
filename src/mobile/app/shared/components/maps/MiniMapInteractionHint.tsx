@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { t } from '@/mobile/app/shared/i18n';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -15,8 +16,8 @@ export function MiniMapInteractionHint({ visible }: MiniMapInteractionHintProps)
 
   return (
     <View pointerEvents="none" style={styles.container}>
-      <Text style={styles.title}>{t.map.interactiveHintTitle}</Text>
-      <Text style={styles.description}>{t.map.interactiveHintDescription}</Text>
+      <AppText style={styles.title}>{t.map.interactiveHintTitle}</AppText>
+      <AppText style={styles.description}>{t.map.interactiveHintDescription}</AppText>
     </View>
   );
 }

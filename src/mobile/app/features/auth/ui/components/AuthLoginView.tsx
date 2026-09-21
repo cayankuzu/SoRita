@@ -1,11 +1,12 @@
 import React from 'react';
-import { Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
+import { Keyboard, ScrollView, TextInput, View } from 'react-native';
 import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 
 import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -98,17 +99,17 @@ export function AuthLoginView({
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
-        <Text accessibilityRole="header" style={styles.screenTitle}>{tr.auth.login.title}</Text>
-        <Text style={styles.screenSubtitle}>{tr.auth.login.subtitle}</Text>
+        <AppText accessibilityRole="header" style={styles.screenTitle}>{tr.auth.login.title}</AppText>
+        <AppText style={styles.screenSubtitle}>{tr.auth.login.subtitle}</AppText>
       </View>
 
       <View style={styles.formBlock}>
         {confirmationEmail ? (
           <View accessibilityLiveRegion="polite" style={styles.confirmationCard}>
-            <Text style={styles.confirmationTitle}>{tr.auth.login.confirmationTitle}</Text>
-            <Text style={styles.confirmationText}>
+            <AppText style={styles.confirmationTitle}>{tr.auth.login.confirmationTitle}</AppText>
+            <AppText style={styles.confirmationText}>
               {tr.auth.login.confirmationText(confirmationEmail)}
-            </Text>
+            </AppText>
             <PrimaryButton
               title={tr.auth.login.resendConfirmation}
               variant="secondary"
@@ -153,30 +154,30 @@ export function AuthLoginView({
             onPress={onForgotPassword}
             style={styles.footerLinkButton}
           >
-            <Text style={styles.footerLink}>{tr.auth.login.forgotPassword}</Text>
+            <AppText style={styles.footerLink}>{tr.auth.login.forgotPassword}</AppText>
           </InstantPressable>
         </View>
         {error ? (
-          <Text
+          <AppText
             accessibilityLiveRegion="assertive"
             accessibilityRole="alert"
             style={styles.formError}
           >
             {error}
-          </Text>
+          </AppText>
         ) : null}
         <PrimaryButton title={tr.auth.login.submit} onPress={onLogin} />
       </View>
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>{tr.auth.login.noAccount}</Text>
+        <AppText style={styles.footerText}>{tr.auth.login.noAccount}</AppText>
         <InstantPressable
           accessibilityLabel={tr.auth.login.register}
           accessibilityRole="link"
           onPress={onOpenRegister}
           style={styles.footerLinkButton}
         >
-          <Text style={styles.footerLink}>{tr.auth.login.register}</Text>
+          <AppText style={styles.footerLink}>{tr.auth.login.register}</AppText>
         </InstantPressable>
       </View>
 

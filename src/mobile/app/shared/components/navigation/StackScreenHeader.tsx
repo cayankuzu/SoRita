@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -35,13 +36,13 @@ export function StackScreenHeader({
         <ArrowLeft color={colors.text} size={18} />
       </IconButton>
       <View style={styles.copy}>
-        <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>
+        <AppText accessibilityRole="header" numberOfLines={1} style={styles.title}>
           {title}
-        </Text>
+        </AppText>
         {subtitle ? (
-          <Text numberOfLines={1} style={styles.subtitle}>
+          <AppText numberOfLines={1} style={styles.subtitle}>
             {subtitle}
-          </Text>
+          </AppText>
         ) : null}
       </View>
       {rightAction ?? <View style={styles.spacer} />}

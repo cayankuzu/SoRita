@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 
@@ -16,7 +17,7 @@ describe('status-state accessibility', () => {
       );
     });
 
-    expect(renderer.root.findAllByType(Text)).toHaveLength(1);
+    expect(renderer.root.findAllByType(AppText)).toHaveLength(1);
   });
 
   it('keeps an empty-state action independently focusable', () => {
@@ -27,7 +28,7 @@ describe('status-state accessibility', () => {
         <EmptyState
           actionLabel="Yeniden dene"
           description="İçerik şu anda gösterilemiyor."
-          icon={<Text>!</Text>}
+          icon={<AppText>!</AppText>}
           onAction={vi.fn()}
           title="İçerik yüklenemedi"
         />,

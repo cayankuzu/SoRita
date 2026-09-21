@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import {
   colors,
@@ -48,8 +49,8 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       <View style={[styles.iconWrap, { backgroundColor: toneBackgrounds[tone] }]}>{icon}</View>
-      <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+      <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+      {description ? <AppText style={styles.description}>{description}</AppText> : null}
       {hasPrimaryAction || hasSecondaryAction ? (
         <View style={styles.actions}>
           {actionLabel && onAction ? (

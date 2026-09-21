@@ -1,11 +1,12 @@
 import React from 'react';
-import { useScrollToTop } from '@react-navigation/native';
-import { MapPin, Users } from 'lucide-react-native';
+import {
+  useScrollToTop } from '@react-navigation/native';
+import { MapPin,
+  Users } from 'lucide-react-native';
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -16,6 +17,7 @@ import { useHomeFeedScreenState } from '@/mobile/app/features/home/application/u
 import { createFeedVisibilityStore } from '@/mobile/app/features/home/application/feedVisibilityStore';
 import { HomeFeedCardRow } from '@/mobile/app/features/home/ui/components/HomeFeedCardRow';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
@@ -294,7 +296,7 @@ export function HomeScreen() {
           />
           <InstantPressable style={styles.primaryCta} onPress={() => navigation.navigate('Explore')}>
             <MapPin color={colors.onPrimary} size={14} />
-            <Text style={styles.primaryCtaText}>{tr.home.exploreCta}</Text>
+            <AppText style={styles.primaryCtaText}>{tr.home.exploreCta}</AppText>
           </InstantPressable>
         </View>
       );
@@ -365,7 +367,7 @@ export function HomeScreen() {
               style={styles.listFooter}
             >
               <ActivityIndicator color={colors.primary} size="small" />
-              <Text style={styles.listFooterLabel}>{tr.common.loadingMore}</Text>
+              <AppText style={styles.listFooterLabel}>{tr.common.loadingMore}</AppText>
             </View>
           ) : null
         }

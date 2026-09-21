@@ -1,5 +1,6 @@
 import React from 'react';
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import {
+  BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import {
   ActivityIndicator,
   Animated,
@@ -7,7 +8,6 @@ import {
   Platform,
   RefreshControl,
   StyleSheet,
-  Text,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
@@ -21,6 +21,7 @@ import {
 import {
   SwipeableTabPager,
 } from '@/mobile/app/shared/components/navigation/SwipeableTabPager';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -219,7 +220,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
         {showLoadMoreStatus ? (
           <>
             <ActivityIndicator color={colors.primary} size="small" />
-            <Text style={styles.loadMoreLabel}>{tr.common.loadingMore}</Text>
+            <AppText style={styles.loadMoreLabel}>{tr.common.loadingMore}</AppText>
           </>
         ) : null}
       </View>
@@ -311,7 +312,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
             importantForAccessibility="no"
             size="small"
           />
-          <Text style={styles.iosRefreshStatusText}>{tr.common.refreshing}</Text>
+          <AppText style={styles.iosRefreshStatusText}>{tr.common.refreshing}</AppText>
         </View>
       ) : null}
     </View>

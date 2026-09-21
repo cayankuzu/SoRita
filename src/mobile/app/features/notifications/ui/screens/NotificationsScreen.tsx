@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { ArrowLeft, CheckCheck, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
@@ -20,6 +20,7 @@ import { NotificationListItem } from '@/mobile/app/features/notifications/ui/com
 import { NotificationsEmptyState } from '@/mobile/app/features/notifications/ui/components/NotificationsEmptyState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
@@ -150,13 +151,13 @@ export function NotificationsScreen() {
           <View style={styles.headerTitleRow}>
             <SoRitaLogo size="sm" showIcon={false} showTagline={false} />
             <View style={styles.headerTitleDivider} />
-            <Text style={styles.title}>{notificationUiConfig.title}</Text>
+            <AppText style={styles.title}>{notificationUiConfig.title}</AppText>
           </View>
-          <Text accessibilityLiveRegion="polite" style={styles.subtitle}>
+          <AppText accessibilityLiveRegion="polite" style={styles.subtitle}>
             {unreadCount > 0
               ? notificationUiConfig.newCount(unreadCount)
               : tr.notifications.resultCount(filteredItems.length)}
-          </Text>
+          </AppText>
         </View>
         <InstantPressable
           accessibilityLabel={

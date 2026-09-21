@@ -1,11 +1,12 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { ArrowLeft, Mail } from 'lucide-react-native';
 
 import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { authScreenStyles as styles } from '@/mobile/app/features/auth/ui/components/authScreenStyles';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -42,8 +43,8 @@ export function AuthForgotPasswordView({
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
-        <Text accessibilityRole="header" style={styles.screenTitle}>{tr.auth.forgotPassword.title}</Text>
-        <Text style={styles.screenSubtitle}>{tr.auth.forgotPassword.subtitle}</Text>
+        <AppText accessibilityRole="header" style={styles.screenTitle}>{tr.auth.forgotPassword.title}</AppText>
+        <AppText style={styles.screenSubtitle}>{tr.auth.forgotPassword.subtitle}</AppText>
       </View>
 
       <View style={styles.formBlock}>
@@ -61,26 +62,26 @@ export function AuthForgotPasswordView({
           icon={<Mail color={colors.textMuted} size={14} />}
         />
         {error ? (
-          <Text
+          <AppText
             accessibilityLiveRegion="assertive"
             accessibilityRole="alert"
             style={styles.formError}
           >
             {error}
-          </Text>
+          </AppText>
         ) : null}
         <PrimaryButton title={tr.auth.forgotPassword.sendAction} onPress={onSubmit} />
       </View>
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>{tr.auth.forgotPassword.remembered}</Text>
+        <AppText style={styles.footerText}>{tr.auth.forgotPassword.remembered}</AppText>
         <InstantPressable
           accessibilityLabel={tr.auth.forgotPassword.loginAction}
           accessibilityRole="link"
           onPress={onBack}
           style={styles.footerLinkButton}
         >
-          <Text style={styles.footerLink}>{tr.auth.forgotPassword.loginAction}</Text>
+          <AppText style={styles.footerLink}>{tr.auth.forgotPassword.loginAction}</AppText>
         </InstantPressable>
       </View>
 

@@ -6,7 +6,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Image as ImageIcon, RefreshCcw, Settings } from 'lucide-react-native';
@@ -18,6 +17,7 @@ import type {
   MediaLibraryPickerAsset,
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -112,21 +112,21 @@ export const MediaLibrarySelectionContent = React.memo(
       <>
         <View style={styles.counterRow}>
           <View style={styles.counterChip}>
-            <Text style={styles.counterChipText}>
+            <AppText style={styles.counterChipText}>
               {tr.placeEditor.photoCounterLabel(selectedCounts.photos, remainingPhotos)}
-            </Text>
+            </AppText>
           </View>
           {allowVideos ? (
             <View style={styles.counterChip}>
-              <Text style={styles.counterChipText}>
+              <AppText style={styles.counterChipText}>
                 {tr.placeEditor.videoCounterLabel(selectedCounts.videos, remainingVideos)}
-              </Text>
+              </AppText>
             </View>
           ) : null}
           <View style={styles.counterChipStrong}>
-            <Text style={styles.counterChipStrongText}>
+            <AppText style={styles.counterChipStrongText}>
               {tr.placeEditor.mediaCounterLabel(selectedCounts.total, maxSelection)}
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -153,7 +153,7 @@ export const MediaLibrarySelectionContent = React.memo(
                   disabled ? styles.filterChipDisabled : null,
                 ]}
               >
-                <Text
+                <AppText
                   style={[
                     styles.filterChipText,
                     active ? styles.filterChipTextActive : null,
@@ -161,7 +161,7 @@ export const MediaLibrarySelectionContent = React.memo(
                   ]}
                 >
                   {label}
-                </Text>
+                </AppText>
               </Pressable>
             );
           })}
@@ -177,31 +177,31 @@ export const MediaLibrarySelectionContent = React.memo(
             style={styles.stateWrap}
           >
             <ActivityIndicator color={colors.primary} size="small" />
-            <Text style={styles.stateText}>{tr.common.loading}</Text>
+            <AppText style={styles.stateText}>{tr.common.loading}</AppText>
           </View>
         ) : loadFailed ? (
           <View style={styles.stateWrap}>
             <ImageIcon color={colors.textSoft} size={20} />
-            <Text style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</Text>
-            <Text style={styles.stateText}>{tr.system.connectionUnavailable}</Text>
+            <AppText style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</AppText>
+            <AppText style={styles.stateText}>{tr.system.connectionUnavailable}</AppText>
             <Pressable
               accessibilityRole="button"
               style={styles.retryButton}
               onPress={() => void loadAssetsPage(true)}
             >
               <RefreshCcw color={colors.primary} size={12} />
-              <Text style={styles.retryButtonText}>{tr.common.retry}</Text>
+              <AppText style={styles.retryButtonText}>{tr.common.retry}</AppText>
             </Pressable>
           </View>
         ) : permissionDenied ? (
           <View style={styles.stateWrap}>
             <ImageIcon color={colors.textSoft} size={20} />
-            <Text style={styles.stateTitle}>{tr.mediaPicker.permissionTitle}</Text>
-            <Text accessibilityLiveRegion="polite" style={styles.stateText}>
+            <AppText style={styles.stateTitle}>{tr.mediaPicker.permissionTitle}</AppText>
+            <AppText accessibilityLiveRegion="polite" style={styles.stateText}>
               {permissionCanAskAgain
                 ? tr.mediaPicker.permissionDescription
                 : tr.mediaPicker.permissionBlockedDescription}
-            </Text>
+            </AppText>
             <Pressable
               accessibilityLabel={
                 permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings
@@ -222,9 +222,9 @@ export const MediaLibrarySelectionContent = React.memo(
               ) : (
                 <Settings color={colors.primary} size={12} />
               )}
-              <Text style={styles.retryButtonText}>
+              <AppText style={styles.retryButtonText}>
                 {permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings}
-              </Text>
+              </AppText>
             </Pressable>
           </View>
         ) : (
@@ -262,7 +262,7 @@ export const MediaLibrarySelectionContent = React.memo(
                   style={styles.loadMoreWrap}
                 >
                   <ActivityIndicator color={colors.primary} size="small" />
-                  <Text style={styles.loadMoreText}>{tr.common.loading}</Text>
+                  <AppText style={styles.loadMoreText}>{tr.common.loading}</AppText>
                 </View>
               ) : null
             }

@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   Pressable,
-  Text,
   View,
 } from 'react-native';
 
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -50,28 +50,28 @@ export function ListDetailPlacesSection({
             <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
           </View>
           <View style={styles.ownerBody}>
-            <Text style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</Text>
+            <AppText style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</AppText>
             <ExpandableText
               text={owner.name}
               collapsedLines={1}
               textStyle={styles.ownerName}
               showIndicator={false}
             />
-            <Text numberOfLines={1} style={styles.ownerUsername}>
+            <AppText numberOfLines={1} style={styles.ownerUsername}>
               @{owner.username}
-            </Text>
+            </AppText>
           </View>
           <View style={styles.ownerBadge}>
-            <Text style={styles.ownerBadgeText}>
+            <AppText style={styles.ownerBadgeText}>
               {isOwner ? tr.listDetail.ownedByViewer : tr.listDetail.openOwnerProfile}
-            </Text>
+            </AppText>
           </View>
         </Pressable>
       ) : null}
 
       {list.description ? (
         <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionCardLabel}>{tr.listDetail.descriptionLabel}</Text>
+          <AppText style={styles.descriptionCardLabel}>{tr.listDetail.descriptionLabel}</AppText>
           <ExpandableText
             text={list.description}
             collapsedLines={4}
@@ -84,8 +84,8 @@ export function ListDetailPlacesSection({
         <View style={styles.mapSection}>
           <View style={styles.mapCardHeader}>
             <View>
-              <Text style={styles.mapCardEyebrow}>{tr.cards.map}</Text>
-              <Text accessibilityRole="header" style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</Text>
+              <AppText style={styles.mapCardEyebrow}>{tr.cards.map}</AppText>
+              <AppText accessibilityRole="header" style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</AppText>
             </View>
           </View>
 
@@ -103,16 +103,16 @@ export function ListDetailPlacesSection({
               }}
             />
           </View>
-          <Text style={styles.mapHelper}>{tr.listDetail.mapHelper}</Text>
+          <AppText style={styles.mapHelper}>{tr.listDetail.mapHelper}</AppText>
         </View>
       ) : null}
 
       {displayPlaces.length > 0 ? (
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
-            <Text style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</Text>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</Text>
-            <Text style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</Text>
+            <AppText style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</AppText>
+            <AppText accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</AppText>
+            <AppText style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</AppText>
           </View>
         </View>
       ) : null}

@@ -2,7 +2,6 @@ import React, { type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
-  Text,
   View,
   type LayoutChangeEvent,
   type NativeScrollEvent,
@@ -28,6 +27,7 @@ import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entiti
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -56,8 +56,8 @@ export function PlaceOwnerHeader({
     >
       <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
       <View style={styles.userBody}>
-        <Text style={styles.userName}>{owner.name}</Text>
-        <Text style={styles.userUsername}>@{owner.username}</Text>
+        <AppText style={styles.userName}>{owner.name}</AppText>
+        <AppText style={styles.userUsername}>@{owner.username}</AppText>
       </View>
     </Pressable>
   );
@@ -98,16 +98,16 @@ export function PlaceSourceBar({
       </View>
       <View style={styles.sourceBarBody}>
         <View style={styles.sourceBarTopRow}>
-          <Text numberOfLines={1} style={styles.sourceBarTitle}>{name}</Text>
+          <AppText numberOfLines={1} style={styles.sourceBarTitle}>{name}</AppText>
           {sourceUser?.username ? (
-            <Text numberOfLines={1} style={styles.sourceBarUsername}>
+            <AppText numberOfLines={1} style={styles.sourceBarUsername}>
               @{sourceUser.username}
-            </Text>
+            </AppText>
           ) : null}
         </View>
-        <Text numberOfLines={1} style={styles.sourceBarMeta}>
+        <AppText numberOfLines={1} style={styles.sourceBarMeta}>
           {tr.cards.quotedFromPlaceCard}
-        </Text>
+        </AppText>
       </View>
       <ChevronRight color={colors.quote} size={14} />
     </Pressable>
@@ -169,14 +169,14 @@ export function PlaceListBar({
           ) : (
             <Lock color={colors.visibilityPrivate} size={12} />
           )}
-          <Text
+          <AppText
             style={[
               styles.linkBarMetaText,
               !isPublic ? styles.linkBarMetaTextPrivate : null,
             ]}
           >
             {isPublic ? tr.listDetail.public : tr.listDetail.private}
-          </Text>
+          </AppText>
         </View>
       </View>
       <ChevronRight color={colors.primary} size={14} />
@@ -254,7 +254,7 @@ export function PlacePrimaryMedia({
       </ScrollView>
       {media.length > 1 ? (
         <View pointerEvents="none" style={styles.mediaCarouselCounter}>
-          <Text style={styles.mediaCarouselCounterText}>{activeIndex + 1}/{media.length}</Text>
+          <AppText style={styles.mediaCarouselCounterText}>{activeIndex + 1}/{media.length}</AppText>
         </View>
       ) : null}
     </View>
@@ -298,7 +298,7 @@ export function PlaceCardTags({
     summaryItems.push(
       <View key="rating" style={[styles.badge, styles.ratingBadge]}>
         <Star size={12} color={colors.rating} fill={colors.rating} />
-        <Text style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</Text>
+        <AppText style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</AppText>
       </View>,
     );
   }
@@ -306,15 +306,15 @@ export function PlaceCardTags({
     summaryItems.push(
       <View key="student" style={[styles.badge, styles.studentBadge]}>
         <GraduationCap size={12} color={colors.primary} />
-        <Text style={[styles.badgeText, styles.studentBadgeText]}>
+        <AppText style={[styles.badgeText, styles.studentBadgeText]}>
           {tr.cards.studentDiscount}
-        </Text>
+        </AppText>
       </View>,
     );
   }
   if (priceLabel) {
     summaryItems.push(
-      <View key="price" style={styles.badge}><Text style={styles.badgeText}>{priceLabel}</Text></View>,
+      <View key="price" style={styles.badge}><AppText style={styles.badgeText}>{priceLabel}</AppText></View>,
     );
   }
 
@@ -323,9 +323,9 @@ export function PlaceCardTags({
     const meta = categoryMeta[summaryCategory] || categoryMeta.other;
     summaryItems.push(
       <View key={`category-${summaryCategory}`} style={styles.badge}>
-        <Text style={styles.badgeText}>
+        <AppText style={styles.badgeText}>
           {meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
-        </Text>
+        </AppText>
       </View>,
     );
   }
@@ -351,9 +351,9 @@ export function PlaceCardTags({
           onPress={() => setShowDetails((current) => !current)}
           style={styles.moreFeaturesButton}
         >
-          <Text style={styles.moreFeaturesText}>
+          <AppText style={styles.moreFeaturesText}>
             {showDetails ? tr.cards.fewerFeatures : tr.cards.moreFeatures(detailCount)}
-          </Text>
+          </AppText>
           {showDetails ? (
             <ChevronUp color={colors.primary} size={13} />
           ) : (
@@ -369,9 +369,9 @@ export function PlaceCardTags({
             const meta = categoryMeta[category] || categoryMeta.other;
             return (
               <View key={category} style={styles.badge}>
-                <Text style={styles.badgeText}>
+                <AppText style={styles.badgeText}>
                   {meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
-                </Text>
+                </AppText>
               </View>
             );
           })}
@@ -383,7 +383,7 @@ export function PlaceCardTags({
           <View style={styles.inlineIcon}><Leaf size={12} color={colors.secondary} /></View>
           {dietaryOptions.map((item) => (
             <View key={item} style={[styles.badge, styles.greenBadge]}>
-              <Text style={[styles.badgeText, styles.greenBadgeText]}>{item}</Text>
+              <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>
             </View>
           ))}
         </BadgeRow>
@@ -393,7 +393,7 @@ export function PlaceCardTags({
         <BadgeRow>
           <View style={styles.inlineIcon}><Clock size={12} color={colors.textSoft} /></View>
           {bestTimes.map((item) => (
-            <View key={item} style={styles.badge}><Text style={styles.badgeText}>{item}</Text></View>
+            <View key={item} style={styles.badge}><AppText style={styles.badgeText}>{item}</AppText></View>
           ))}
         </BadgeRow>
       ) : null}
@@ -403,7 +403,7 @@ export function PlaceCardTags({
           <View style={styles.inlineIcon}><Sparkles size={12} color={colors.purple} /></View>
           {place.atmosphere.map((item) => (
             <View key={item} style={[styles.badge, styles.purpleBadge]}>
-              <Text style={[styles.badgeText, styles.purpleBadgeText]}>{item}</Text>
+              <AppText style={[styles.badgeText, styles.purpleBadgeText]}>{item}</AppText>
             </View>
           ))}
         </BadgeRow>
@@ -414,7 +414,7 @@ export function PlaceCardTags({
           <View style={styles.inlineIcon}><Star size={12} color={colors.secondary} /></View>
           {specialFeatures.map((item) => (
             <View key={item} style={[styles.badge, styles.greenBadge]}>
-              <Text style={[styles.badgeText, styles.greenBadgeText]}>{item}</Text>
+              <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>
             </View>
           ))}
         </BadgeRow>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   Ban,
   Lock,
@@ -22,6 +22,7 @@ import type { SettingsMenuItem } from '@/mobile/app/features/settings/ui/compone
 import { SettingsPasswordView } from '@/mobile/app/features/settings/ui/components/SettingsPasswordView';
 import { SettingsPrivacyView } from '@/mobile/app/features/settings/ui/components/SettingsPrivacyView';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -169,7 +170,7 @@ function SettingsLoadingState() {
         style={loadingStyles.container}
       >
         <ActivityIndicator color={colors.primary} />
-        <Text style={loadingStyles.label}>{tr.common.loading}</Text>
+        <AppText style={loadingStyles.label}>{tr.common.loading}</AppText>
       </View>
     </Screen>
   );

@@ -1,10 +1,15 @@
 import React from 'react';
-import { Ban } from 'lucide-react-native';
-import { FlatList, Text, useWindowDimensions, View } from 'react-native';
+import {
+  Ban } from 'lucide-react-native';
+import { FlatList,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
 import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/ui/components/settingsScreenStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
@@ -56,13 +61,13 @@ export function SettingsBlockedUsersView({
           >
             <AvatarView uri={item.profilePhoto} name={item.name} size={40} />
             <View style={styles.blockedUserBody}>
-              <Text style={styles.blockedUserName}>{item.name}</Text>
-              <Text style={styles.blockedUserUsername}>@{item.username}</Text>
+              <AppText style={styles.blockedUserName}>{item.name}</AppText>
+              <AppText style={styles.blockedUserUsername}>@{item.username}</AppText>
               {item.bio ? (
                 <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.blockedUserBio} />
               ) : null}
             </View>
-            <Text style={styles.blockedUserAction}>{tr.settings.blocked.viewProfile}</Text>
+            <AppText style={styles.blockedUserAction}>{tr.settings.blocked.viewProfile}</AppText>
           </InstantPressable>
         )}
         ItemSeparatorComponent={() => <View style={styles.blockedSeparator} />}

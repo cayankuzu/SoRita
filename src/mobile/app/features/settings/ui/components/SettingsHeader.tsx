@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -27,7 +28,7 @@ export function SettingsHeader({
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
         <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
-      <Text accessibilityRole="header" style={styles.headerTitle}>{title}</Text>
+      <AppText accessibilityRole="header" style={styles.headerTitle}>{title}</AppText>
       {actionLabel && onAction ? (
         <InstantPressable
           accessibilityLabel={actionLabel}
@@ -38,14 +39,14 @@ export function SettingsHeader({
           ]}
           onPress={onAction}
         >
-          <Text
+          <AppText
             style={[
               styles.headerActionText,
               actionVariant === 'ghost' ? styles.headerActionTextGhost : null,
             ]}
           >
             {actionLabel}
-          </Text>
+          </AppText>
         </InstantPressable>
       ) : (
         <View style={styles.headerSpacer} />

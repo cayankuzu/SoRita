@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { AuthBrandFooter } from '@/mobile/app/features/auth/ui/components/AuthBrandFooter';
 import { AuthLegalConsentCard } from '@/mobile/app/features/auth/ui/components/AuthLegalConsentCard';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -40,7 +41,7 @@ export function AuthLandingView({
         <View style={styles.logoWrap}>
           <SoRitaLogo size={compact ? 'lg' : 'xl'} />
         </View>
-        <Text style={styles.landingSubtitle}>{tr.auth.landing.subtitle}</Text>
+        <AppText style={styles.landingSubtitle}>{tr.auth.landing.subtitle}</AppText>
 
         <PrimaryButton
           title={tr.auth.landing.login}

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { Globe, ImagePlus, Lock, X } from 'lucide-react-native';
 
 import { listEditorModalStyles as styles } from '@/mobile/app/features/lists/ui/components/listEditorModalStyles';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { t } from '@/mobile/app/shared/i18n';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -43,8 +44,8 @@ export function ListEditorForm({
     <>
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.basicsTitle}</Text>
-          <Text style={styles.sectionHint}>{t.listEditor.basicsHint}</Text>
+          <AppText accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.basicsTitle}</AppText>
+          <AppText style={styles.sectionHint}>{t.listEditor.basicsHint}</AppText>
         </View>
         <TextField
           label={t.listEditor.titleLabel}
@@ -67,8 +68,8 @@ export function ListEditorForm({
 
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.privacyTitle}</Text>
-          <Text style={styles.sectionHint}>{t.listEditor.privacyHint}</Text>
+          <AppText accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.privacyTitle}</AppText>
+          <AppText style={styles.sectionHint}>{t.listEditor.privacyHint}</AppText>
         </View>
         <View accessibilityRole="radiogroup" style={styles.privacyRow}>
           <Pressable
@@ -82,17 +83,17 @@ export function ListEditorForm({
           >
             <Globe color={isPublic ? colors.secondary : colors.textMuted} size={14} />
             <View style={styles.privacyButtonBody}>
-              <Text style={[styles.privacyText, isPublic ? styles.privacyTextActivePublic : null]}>
+              <AppText style={[styles.privacyText, isPublic ? styles.privacyTextActivePublic : null]}>
                 {t.listEditor.privacyPublic}
-              </Text>
-              <Text
+              </AppText>
+              <AppText
                 style={[
                   styles.privacyCaption,
                   isPublic ? styles.privacyCaptionActivePublic : null,
                 ]}
               >
                 {t.listEditor.privacyPublicDescription}
-              </Text>
+              </AppText>
             </View>
           </Pressable>
 
@@ -107,17 +108,17 @@ export function ListEditorForm({
           >
             <Lock color={!isPublic ? colors.primary : colors.textMuted} size={14} />
             <View style={styles.privacyButtonBody}>
-              <Text style={[styles.privacyText, !isPublic ? styles.privacyTextActivePrivate : null]}>
+              <AppText style={[styles.privacyText, !isPublic ? styles.privacyTextActivePrivate : null]}>
                 {t.listEditor.privacyPrivate}
-              </Text>
-              <Text
+              </AppText>
+              <AppText
                 style={[
                   styles.privacyCaption,
                   !isPublic ? styles.privacyCaptionActivePrivate : null,
                 ]}
               >
                 {t.listEditor.privacyPrivateDescription}
-              </Text>
+              </AppText>
             </View>
           </Pressable>
         </View>
@@ -125,8 +126,8 @@ export function ListEditorForm({
 
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.coverTitle}</Text>
-          <Text style={styles.sectionHint}>{t.common.optional}</Text>
+          <AppText accessibilityRole="header" style={styles.sectionTitle}>{t.listEditor.coverTitle}</AppText>
+          <AppText style={styles.sectionHint}>{t.common.optional}</AppText>
         </View>
 
         <View style={styles.coverPickerRow}>
@@ -144,14 +145,14 @@ export function ListEditorForm({
                   <ImagePlus color={colors.secondary} size={16} />
                 </View>
                 <View style={styles.coverPickerBody}>
-                  <Text style={styles.coverPickerText}>
+                  <AppText style={styles.coverPickerText}>
                     {coverImage ? t.listEditor.changeCover : t.listEditor.chooseCover}
-                  </Text>
-                  <Text style={styles.coverPickerHint}>
+                  </AppText>
+                  <AppText style={styles.coverPickerHint}>
                     {coverImage
                       ? t.listEditor.coverSelectedHint
                       : t.listEditor.coverUsageHint}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
@@ -166,7 +167,7 @@ export function ListEditorForm({
                   }}
                   style={styles.selectionBadge}
                 >
-                  <Text style={styles.selectionBadgeText}>{t.common.previewTitle}</Text>
+                  <AppText style={styles.selectionBadgeText}>{t.common.previewTitle}</AppText>
                 </Pressable>
               ) : null}
             </View>

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { ExternalLink, UtensilsCrossed } from 'lucide-react-native';
 
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 import { openSafeExternalUrl } from '@/mobile/app/shared/utils/safeLinks';
@@ -57,7 +58,7 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
         <View style={styles.menuActionIcon}>
           <UtensilsCrossed color={colors.primary} size={12} />
         </View>
-        <Text style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</Text>
+        <AppText style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</AppText>
         <ExternalLink color={colors.primary} size={12} />
       </View>
     </Pressable>

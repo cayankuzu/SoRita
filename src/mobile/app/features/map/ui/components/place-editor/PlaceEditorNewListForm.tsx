@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Text,
   View,
 } from 'react-native';
 import { Globe, ImagePlus, Lock, Plus, X } from 'lucide-react-native';
@@ -8,6 +7,7 @@ import { Globe, ImagePlus, Lock, Plus, X } from 'lucide-react-native';
 import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -70,7 +70,7 @@ export function PlaceEditorNewListForm({
         onPress={() => onShowNewListFormChange(true)}
       >
         <Plus color={colors.primary} size={16} />
-        <Text style={styles.createListTriggerText}>{tr.placeEditor.createList}</Text>
+        <AppText style={styles.createListTriggerText}>{tr.placeEditor.createList}</AppText>
       </InstantPressable>
     );
   }
@@ -78,7 +78,7 @@ export function PlaceEditorNewListForm({
   return (
     <View style={styles.createListCard}>
       <View style={styles.createListHeader}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.newList}</Text>
+        <AppText style={styles.sectionTitle}>{tr.placeEditor.newList}</AppText>
         <IconButton
           accessibilityLabel={tr.common.close}
           accessibilityState={{ disabled: isCreatingList }}
@@ -109,16 +109,16 @@ export function PlaceEditorNewListForm({
                 <ImagePlus color={colors.secondary} size={16} />
               </View>
               <View style={styles.coverPickerBody}>
-                <Text style={styles.coverPickerTitle}>
+                <AppText style={styles.coverPickerTitle}>
                   {newListCoverImage
                     ? tr.placeEditor.newListCoverSelected
                     : tr.placeEditor.chooseCoverPhoto}
-                </Text>
-                <Text style={styles.coverPickerHint}>
+                </AppText>
+                <AppText style={styles.coverPickerHint}>
                   {newListCoverImage
                     ? tr.placeEditor.newListCoverChangeHint
                     : tr.placeEditor.newListCoverUsageHint}
-                </Text>
+                </AppText>
               </View>
             </InstantPressable>
 
@@ -130,7 +130,7 @@ export function PlaceEditorNewListForm({
                 onPress={() => setCoverPreviewVisible(true)}
                 style={styles.selectionBadge}
               >
-                <Text style={styles.selectionBadgeText}>{tr.common.previewTitle}</Text>
+                <AppText style={styles.selectionBadgeText}>{tr.common.previewTitle}</AppText>
               </InstantPressable>
             ) : null}
           </View>
@@ -186,9 +186,9 @@ export function PlaceEditorNewListForm({
           onPress={() => onNewListPublicChange(true)}
         >
           <Globe color={newListPublic ? colors.primary : colors.textMuted} size={12} />
-          <Text style={[styles.privacyText, newListPublic ? styles.privacyTextActive : null]}>
+          <AppText style={[styles.privacyText, newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.publicList}
-          </Text>
+          </AppText>
         </InstantPressable>
         <InstantPressable
           accessibilityRole="radio"
@@ -198,9 +198,9 @@ export function PlaceEditorNewListForm({
           onPress={() => onNewListPublicChange(false)}
         >
           <Lock color={!newListPublic ? colors.primary : colors.textMuted} size={12} />
-          <Text style={[styles.privacyText, !newListPublic ? styles.privacyTextActive : null]}>
+          <AppText style={[styles.privacyText, !newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.privateList}
-          </Text>
+          </AppText>
         </InstantPressable>
       </View>
 

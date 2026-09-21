@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   StyleProp,
   StyleSheet,
-  Text,
   TextStyle,
   View,
   ViewStyle,
@@ -22,6 +21,8 @@ import {
   radius,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
+
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 
 type PrimaryButtonProps = {
   title: string;
@@ -87,7 +88,7 @@ export function PrimaryButton({
               style={[styles.labelRow, showProgress ? styles.hiddenContent : null]}
             >
               {icon && iconPosition === 'start' ? icon : null}
-              <Text style={[styles.label, { color: palette.color }, textStyle]}>{title}</Text>
+              <AppText style={[styles.label, { color: palette.color }, textStyle]}>{title}</AppText>
               {icon && iconPosition === 'end' ? icon : null}
             </View>
             {showProgress ? (

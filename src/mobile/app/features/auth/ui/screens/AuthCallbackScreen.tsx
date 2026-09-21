@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import * as Linking from 'expo-linking';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
@@ -9,6 +9,7 @@ import {
   normalizeAuthRedirectParams,
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -107,8 +108,8 @@ export function AuthCallbackScreen() {
           style={styles.centered}
         >
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text accessibilityRole="header" style={styles.title}>{tr.auth.callback.loadingTitle}</Text>
-          <Text style={styles.description}>{tr.auth.callback.loadingDescription}</Text>
+          <AppText accessibilityRole="header" style={styles.title}>{tr.auth.callback.loadingTitle}</AppText>
+          <AppText style={styles.description}>{tr.auth.callback.loadingDescription}</AppText>
         </View>
       </Screen>
     );
@@ -121,8 +122,8 @@ export function AuthCallbackScreen() {
     >
       <View style={styles.centered}>
         <View accessibilityLiveRegion="assertive" style={styles.errorCard}>
-          <Text accessibilityRole="header" style={styles.title}>{tr.auth.callback.errorTitle}</Text>
-          <Text style={styles.description}>{screenState.message}</Text>
+          <AppText accessibilityRole="header" style={styles.title}>{tr.auth.callback.errorTitle}</AppText>
+          <AppText style={styles.description}>{screenState.message}</AppText>
           <View style={styles.actions}>
             <PrimaryButton
               title={tr.auth.callback.retry}

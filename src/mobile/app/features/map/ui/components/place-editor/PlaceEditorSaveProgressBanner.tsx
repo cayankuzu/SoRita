@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ellipsis } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 
@@ -25,17 +26,17 @@ export function PlaceEditorSaveProgressBanner({
   return (
     <View style={styles.saveProgressBanner}>
       <View style={styles.saveProgressHeader}>
-        <Text accessibilityLiveRegion="polite" style={styles.saveProgressTitle}>
+        <AppText accessibilityLiveRegion="polite" style={styles.saveProgressTitle}>
           {isFailed ? tr.placeEditor.saveFailedTitle : tr.placeEditor.saveProgressTitle}
-        </Text>
+        </AppText>
         <View style={styles.saveProgressMeta}>
-          <Text
+          <AppText
             accessibilityLabel={`${nextProgress}%`}
             accessibilityLiveRegion="polite"
             style={[styles.saveProgressPercent, isFailed ? styles.saveProgressPercentFailed : null]}
           >
             {`%${nextProgress}`}
-          </Text>
+          </AppText>
           {onMenuPress ? (
             <Pressable
               accessibilityLabel={tr.common.contentActionsTitle}
@@ -50,7 +51,7 @@ export function PlaceEditorSaveProgressBanner({
         </View>
       </View>
 
-      {detail ? <Text style={styles.saveProgressDetail}>{detail}</Text> : null}
+      {detail ? <AppText style={styles.saveProgressDetail}>{detail}</AppText> : null}
 
       <View
         accessibilityLabel={`${
@@ -69,9 +70,9 @@ export function PlaceEditorSaveProgressBanner({
         />
       </View>
 
-      <Text style={styles.saveProgressWarning}>
+      <AppText style={styles.saveProgressWarning}>
         {isFailed ? tr.placeEditor.saveFailedWarning : tr.placeEditor.saveProgressWarning}
-      </Text>
+      </AppText>
     </View>
   );
 }

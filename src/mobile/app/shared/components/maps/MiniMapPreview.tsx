@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useIsFocused } from '@react-navigation/native';
-import { StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
+import {
+  useIsFocused } from '@react-navigation/native';
+import { StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { SkeletonPlaceholder } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { t } from '@/mobile/app/shared/i18n';
 import { runAfterNextPaint } from '@/mobile/app/shared/utils/interaction';
@@ -60,12 +66,12 @@ function MiniMapFallback({ places }: MiniMapFallbackProps) {
       <View style={styles.fallbackPin}>
         <MapPin color={colors.primary} size={16} />
       </View>
-      <Text numberOfLines={1} style={styles.fallbackTitle}>
+      <AppText numberOfLines={1} style={styles.fallbackTitle}>
         {title}
-      </Text>
-      <Text numberOfLines={1} style={styles.fallbackSubtitle}>
+      </AppText>
+      <AppText numberOfLines={1} style={styles.fallbackSubtitle}>
         {t.map.previewUnavailable}
-      </Text>
+      </AppText>
     </View>
   );
 }

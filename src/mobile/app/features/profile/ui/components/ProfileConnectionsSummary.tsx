@@ -2,11 +2,11 @@ import React from 'react';
 import {
   Platform,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
 import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/components/ProfileInterestChips';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, touch, typography } from '@/mobile/app/shared/theme/tokens';
@@ -39,8 +39,8 @@ export function ProfileConnectionsSummary({
           style={styles.connectionButton}
           onPress={onOpenFollowers}
         >
-          <Text style={styles.connectionValue}>{safeFollowerCount}</Text>
-          <Text style={styles.connectionLabel}>{tr.profile.stats.follower}</Text>
+          <AppText style={styles.connectionValue}>{safeFollowerCount}</AppText>
+          <AppText style={styles.connectionLabel}>{tr.profile.stats.follower}</AppText>
         </InstantPressable>
         <InstantPressable
           accessibilityLabel={`${tr.profile.connections.following}: ${tr.profile.connections.resultCount(safeFollowingCount)}`}
@@ -48,8 +48,8 @@ export function ProfileConnectionsSummary({
           style={styles.connectionButton}
           onPress={onOpenFollowing}
         >
-          <Text style={styles.connectionValue}>{safeFollowingCount}</Text>
-          <Text style={styles.connectionLabel}>{tr.profile.stats.following}</Text>
+          <AppText style={styles.connectionValue}>{safeFollowingCount}</AppText>
+          <AppText style={styles.connectionLabel}>{tr.profile.stats.following}</AppText>
         </InstantPressable>
       </View>
     </View>

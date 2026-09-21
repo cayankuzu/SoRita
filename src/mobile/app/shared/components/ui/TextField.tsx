@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   TextInput,
   TextInputProps,
   View,
@@ -19,6 +18,8 @@ import {
   buildCharacterLimitLabel,
   normalizeLineBreaks,
 } from '@/mobile/app/shared/validation/contentLimits';
+
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -88,7 +89,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
 
   return (
     <View style={styles.wrapper}>
-      {label ? <Text nativeID={labelId} style={styles.label}>{label}</Text> : null}
+      {label ? <AppText nativeID={labelId} style={styles.label}>{label}</AppText> : null}
       <TextInput
         ref={ref}
         {...props}
@@ -120,7 +121,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
         ]}
       />
       {resolvedHelper ? (
-        <Text
+        <AppText
           accessibilityLiveRegion="polite"
           nativeID={helperId}
           style={[
@@ -131,7 +132,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
           ]}
         >
           {resolvedHelper}
-        </Text>
+        </AppText>
       ) : null}
     </View>
   );

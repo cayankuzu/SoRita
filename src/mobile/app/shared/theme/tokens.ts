@@ -123,6 +123,29 @@ export const fontWeight = {
   heavy: '800',
 } as const;
 
+/**
+ * How far user font scaling may stretch a layout. Both platforms let people
+ * push text to 2x, and React Native has no global default for
+ * `maxFontSizeMultiplier`, so without these the cap is per call site - which
+ * in practice means no cap at all.
+ *
+ * `content` stays generous because that is the text somebody enables large
+ * type to read. `chrome` is tighter for a label that shares a fixed row with
+ * an icon: the tab bar packs 52dp of content into 60dp, so an uncapped 12px
+ * label pushes the icon off the bar at 1.5x.
+ */
+export const textScale = {
+  chrome: 1.3,
+  content: 1.8,
+} as const;
+
+/**
+ * Font scale never shrinks a layout below its designed size, so callers that
+ * size a box from the scale clamp the floor at 1 as well as the ceiling.
+ */
+export const clampFontScale = (fontScale: number, limit: number) =>
+  Math.min(Math.max(fontScale, 1), limit);
+
 export const letterSpacing = {
   brandTitle: -0.8,
   brandTagline: 0.4,

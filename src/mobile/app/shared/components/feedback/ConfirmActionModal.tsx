@@ -1,10 +1,11 @@
 import React from 'react';
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
@@ -35,7 +36,7 @@ export function ConfirmActionModal({
   returnFocusRef,
 }: ConfirmActionModalProps) {
   const isDanger = confirmVariant === 'danger';
-  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const titleRef = React.useRef<AppTextRef | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -107,16 +108,16 @@ export function ConfirmActionModal({
           <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={18} />
         </View>
         <View style={styles.confirmCopy}>
-          <Text ref={titleRef} accessibilityRole="header" style={styles.confirmTitle}>{title}</Text>
-          <Text style={styles.confirmText}>{description}</Text>
+          <AppText ref={titleRef} accessibilityRole="header" style={styles.confirmTitle}>{title}</AppText>
+          <AppText style={styles.confirmText}>{description}</AppText>
           {errorMessage ? (
-            <Text
+            <AppText
               accessibilityLiveRegion="assertive"
               accessibilityRole="alert"
               style={styles.errorText}
             >
               {errorMessage}
-            </Text>
+            </AppText>
           ) : null}
         </View>
       </View>

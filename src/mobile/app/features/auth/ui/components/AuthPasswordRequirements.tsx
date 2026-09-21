@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { getAuthPasswordRequirementProgress } from '@/mobile/app/features/auth/application/authPasswordRequirements';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -45,7 +46,7 @@ export function AuthPasswordRequirements({ password }: AuthPasswordRequirementsP
           />
         ))}
       </View>
-      <Text style={styles.label}>{progressLabel}</Text>
+      <AppText style={styles.label}>{progressLabel}</AppText>
     </View>
   );
 }

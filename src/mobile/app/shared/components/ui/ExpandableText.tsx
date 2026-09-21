@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
-  Text,
   TextLayoutEventData,
   TextStyle,
   View,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, touch } from '@/mobile/app/shared/theme/tokens';
@@ -137,21 +137,21 @@ export function ExpandableText({
     <View onLayout={handleLayout} style={[styles.wrapper, containerStyle]}>
       {containerWidth > 0 ? (
         renderContent ? (
-          <Text
+          <AppText
             onTextLayout={handleMeasureLayout}
             style={[styles.text, textStyle, styles.hiddenMeasure]}
             pointerEvents="none"
           >
             {content}
-          </Text>
+          </AppText>
         ) : shouldRenderPlainText ? (
-          <Text
+          <AppText
             onTextLayout={handleMeasureLayout}
             style={[styles.text, textStyle, styles.hiddenMeasure]}
             pointerEvents="none"
           >
             {normalizedText}
-          </Text>
+          </AppText>
         ) : (
           <RichText
             text={normalizedText}
@@ -178,7 +178,7 @@ export function ExpandableText({
       >
         <View style={styles.contentWrap}>
           {renderContent ? (
-            <Text
+            <AppText
               numberOfLines={contentExpanded ? undefined : resolvedCollapsedLines}
               ellipsizeMode="tail"
               style={[
@@ -188,9 +188,9 @@ export function ExpandableText({
               ]}
             >
               {content}
-            </Text>
+            </AppText>
           ) : shouldRenderPlainText ? (
-            <Text
+            <AppText
               numberOfLines={contentExpanded ? undefined : resolvedCollapsedLines}
               ellipsizeMode="tail"
               style={[
@@ -200,7 +200,7 @@ export function ExpandableText({
               ]}
             >
               {normalizedText}
-            </Text>
+            </AppText>
           ) : (
             <RichText
               text={normalizedText}

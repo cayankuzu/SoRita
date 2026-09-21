@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -56,20 +57,20 @@ export function InlineNotice({
         },
       ]}
     >
-      <Text
+      <AppText
         accessibilityRole={tone === 'danger' ? 'alert' : undefined}
         style={[styles.title, { color: palette.titleColor }]}
       >
         {title}
-      </Text>
+      </AppText>
       {description ? (
-        <Text style={[styles.description, { color: palette.descriptionColor }]}>
+        <AppText style={[styles.description, { color: palette.descriptionColor }]}>
           {description}
-        </Text>
+        </AppText>
       ) : null}
       {actionLabel && onAction ? (
         <InstantPressable disableFeedback onPress={onAction} style={styles.actionButton}>
-          <Text style={[styles.actionLabel, { color: palette.actionColor }]}>{actionLabel}</Text>
+          <AppText style={[styles.actionLabel, { color: palette.actionColor }]}>{actionLabel}</AppText>
         </InstantPressable>
       ) : null}
     </View>

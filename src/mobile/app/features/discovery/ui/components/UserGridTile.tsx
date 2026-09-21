@@ -1,9 +1,10 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
@@ -77,16 +78,16 @@ function UserGridTileComponent({
         </View>
 
         <View style={[styles.userTileBody, styles.userTileBodyMain]}>
-          <Text numberOfLines={1} style={styles.tileTitle}>
+          <AppText numberOfLines={1} style={styles.tileTitle}>
             <HighlightedText query={searchQuery} text={user.name} />
-          </Text>
-          <Text numberOfLines={1} style={styles.ownerUsername}>
+          </AppText>
+          <AppText numberOfLines={1} style={styles.ownerUsername}>
             <HighlightedText query={searchQuery} text={`@${user.username}`} />
-          </Text>
+          </AppText>
           {user.bio && !compact ? (
-            <Text numberOfLines={1} style={styles.tileDescription}>
+            <AppText numberOfLines={1} style={styles.tileDescription}>
               <HighlightedText query={searchQuery} text={user.bio} />
-            </Text>
+            </AppText>
           ) : null}
         </View>
       </Pressable>
@@ -106,7 +107,7 @@ function UserGridTileComponent({
         {({ busy }) => (
           <View style={styles.followButtonContent}>
             {busy ? <ActivityIndicator color={colors.textMuted} size="small" /> : null}
-            <Text
+            <AppText
               accessibilityLiveRegion={busy ? 'polite' : 'none'}
               style={[
                 styles.followButtonText,
@@ -114,7 +115,7 @@ function UserGridTileComponent({
               ]}
             >
               {busy ? tr.common.loading : followStatus}
-            </Text>
+            </AppText>
           </View>
         )}
       </InstantPressable>

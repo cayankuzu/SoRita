@@ -2,13 +2,13 @@ import React from 'react';
 import {
   Pressable,
   ScrollView,
-  Text,
   TextInput,
   View,
 } from 'react-native';
 import { Send } from 'lucide-react-native';
 
 import type { ReplyTarget } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -105,8 +105,8 @@ export function CommentComposer({
       {editingCommentId ? (
         <View style={[styles.composerBanner, styles.composerBannerEdit]}>
           <View style={styles.composerBannerBody}>
-            <Text style={styles.composerBannerText}>{tr.cards.editingComment}</Text>
-            <Text style={styles.composerBannerSubtext}>{tr.cards.editComment}</Text>
+            <AppText style={styles.composerBannerText}>{tr.cards.editingComment}</AppText>
+            <AppText style={styles.composerBannerSubtext}>{tr.cards.editComment}</AppText>
           </View>
           <Pressable
             onPress={onCancelEdit}
@@ -114,7 +114,7 @@ export function CommentComposer({
             accessibilityRole="button"
             style={styles.composerBannerActionButton}
           >
-            <Text style={styles.composerBannerAction}>{tr.cards.cancelEditComment}</Text>
+            <AppText style={styles.composerBannerAction}>{tr.cards.cancelEditComment}</AppText>
           </Pressable>
         </View>
       ) : null}
@@ -122,9 +122,9 @@ export function CommentComposer({
       {replyingTo ? (
         <View style={[styles.composerBanner, styles.composerBannerReply]}>
           <View style={styles.composerBannerBody}>
-            <Text style={styles.composerBannerText}>{tr.cards.replyingTo(replyingTo.userName)}</Text>
+            <AppText style={styles.composerBannerText}>{tr.cards.replyingTo(replyingTo.userName)}</AppText>
             {replyingTo.username ? (
-              <Text style={styles.composerBannerSubtext}>@{replyingTo.username}</Text>
+              <AppText style={styles.composerBannerSubtext}>@{replyingTo.username}</AppText>
             ) : null}
           </View>
           <Pressable
@@ -133,15 +133,15 @@ export function CommentComposer({
             accessibilityRole="button"
             style={styles.composerBannerActionButton}
           >
-            <Text style={styles.composerBannerAction}>{tr.cards.cancelReply}</Text>
+            <AppText style={styles.composerBannerAction}>{tr.cards.cancelReply}</AppText>
           </Pressable>
         </View>
       ) : null}
 
       {submitting ? (
-        <Text accessibilityLiveRegion="polite" style={styles.composerPendingText}>
+        <AppText accessibilityLiveRegion="polite" style={styles.composerPendingText}>
           {editingCommentId ? tr.cards.editingComment : tr.cards.commentSyncing}
-        </Text>
+        </AppText>
       ) : null}
 
       <ScrollView
@@ -164,7 +164,7 @@ export function CommentComposer({
             ]}
             onPress={() => appendReaction(reaction)}
           >
-            <Text style={styles.reactionEmoji}>{reaction}</Text>
+            <AppText style={styles.reactionEmoji}>{reaction}</AppText>
           </Pressable>
         ))}
       </ScrollView>
@@ -191,14 +191,14 @@ export function CommentComposer({
             textAlignVertical="top"
           />
           {characterCount > 0 ? (
-            <Text
+            <AppText
               style={[
                 styles.commentInputCounter,
                 characterCount > COMMENT_MAX_LENGTH * 0.9 ? styles.commentInputCounterWarn : null,
               ]}
             >
               {characterCount}/{COMMENT_MAX_LENGTH}
-            </Text>
+            </AppText>
           ) : null}
         </View>
         <Pressable

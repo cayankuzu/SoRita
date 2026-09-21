@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
@@ -10,6 +9,7 @@ import {
   PLACE_CATEGORY_OPTIONS,
 } from '@/mobile/app/catalog/placeOptions';
 import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
@@ -46,16 +46,16 @@ export function PlaceEditorBasicsStep({
   return (
     <View style={styles.stepContent}>
       <View style={styles.coordCard}>
-        <Text style={styles.coordTitle}>{tr.placeEditor.selectedLocation}</Text>
-        <Text style={styles.coordText}>{address || placeAddress || tr.placeEditor.locationFallback()}</Text>
+        <AppText style={styles.coordTitle}>{tr.placeEditor.selectedLocation}</AppText>
+        <AppText style={styles.coordText}>{address || placeAddress || tr.placeEditor.locationFallback()}</AppText>
         {existingPlaceListName ? (
-          <Text style={styles.coordMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</Text>
+          <AppText style={styles.coordMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</AppText>
         ) : null}
       </View>
 
       <View style={styles.requirementsCard}>
-        <Text style={styles.requirementsTitle}>{tr.placeEditor.requirementsTitle}</Text>
-        <Text style={styles.requirementsText}>{tr.placeEditor.requirementsDescription}</Text>
+        <AppText style={styles.requirementsTitle}>{tr.placeEditor.requirementsTitle}</AppText>
+        <AppText style={styles.requirementsText}>{tr.placeEditor.requirementsDescription}</AppText>
       </View>
 
       <TextField
@@ -74,14 +74,14 @@ export function PlaceEditorBasicsStep({
       />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{`${tr.placeEditor.rating} (${tr.common.optional})`}</Text>
-        <Text style={styles.sectionHelper}>{tr.placeEditor.ratingHelper}</Text>
+        <AppText style={styles.sectionTitle}>{`${tr.placeEditor.rating} (${tr.common.optional})`}</AppText>
+        <AppText style={styles.sectionHelper}>{tr.placeEditor.ratingHelper}</AppText>
         <RatingSelector value={rating} onChange={onRatingChange} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{`${tr.placeEditor.category} (${tr.common.optional})`}</Text>
-        <Text style={styles.sectionHelper}>{tr.placeEditor.categoryHelper}</Text>
+        <AppText style={styles.sectionTitle}>{`${tr.placeEditor.category} (${tr.common.optional})`}</AppText>
+        <AppText style={styles.sectionHelper}>{tr.placeEditor.categoryHelper}</AppText>
         <OptionRail
           options={PLACE_CATEGORY_OPTIONS.map((item) => item.label)}
           selectedValues={selectedCategories.map(
@@ -92,9 +92,9 @@ export function PlaceEditorBasicsStep({
             onToggleCategory(selectedCategory?.value || 'other');
           }}
         />
-        <Text style={styles.selectionMeta}>
+        <AppText style={styles.selectionMeta}>
           {tr.placeEditor.categorySelectionCount(selectedCategories.length)}
-        </Text>
+        </AppText>
       </View>
     </View>
   );

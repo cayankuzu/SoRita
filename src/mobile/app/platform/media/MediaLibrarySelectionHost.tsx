@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import {
   resolveMediaLibrarySelection,
@@ -365,8 +365,8 @@ export function MediaLibrarySelectionHost() {
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-              <Text style={styles.description}>{description}</Text>
+              <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+              <AppText style={styles.description}>{description}</AppText>
             </View>
             <IconButton
               accessibilityLabel={tr.common.close}
@@ -418,7 +418,7 @@ export function MediaLibrarySelectionHost() {
               style={styles.footerSecondaryButton}
               onPress={() => resolveMediaLibrarySelection(null)}
             >
-              <Text style={styles.footerSecondaryButtonText}>{tr.common.cancel}</Text>
+              <AppText style={styles.footerSecondaryButtonText}>{tr.common.cancel}</AppText>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -430,11 +430,11 @@ export function MediaLibrarySelectionHost() {
                 selectedIds.length === 0 ? styles.footerPrimaryButtonDisabled : null,
               ]}
             >
-              <Text style={styles.footerPrimaryButtonText}>
+              <AppText style={styles.footerPrimaryButtonText}>
                 {selectedIds.length > 0
                   ? `${tr.placeEditor.add} (${selectedIds.length})`
                   : tr.placeEditor.add}
-              </Text>
+              </AppText>
             </Pressable>
           </View>
         </View>

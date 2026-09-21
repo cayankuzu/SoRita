@@ -9,7 +9,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
   type KeyboardEvent,
@@ -36,6 +35,7 @@ import {
 import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPanel';
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -188,7 +188,7 @@ function CommentListEmptyState({
         style={styles.commentStatus}
       >
         <ActivityIndicator color={colors.primary} size="small" />
-        <Text style={styles.commentStatusText}>{tr.common.loading}</Text>
+        <AppText style={styles.commentStatusText}>{tr.common.loading}</AppText>
       </View>
     );
   }
@@ -209,8 +209,8 @@ function CommentListEmptyState({
 
   return (
     <View style={styles.emptyComments}>
-      <Text style={styles.emptyCommentsTitle}>{tr.cards.emptyComments}</Text>
-      <Text style={styles.emptyCommentsDescription}>{tr.cards.firstComment}</Text>
+      <AppText style={styles.emptyCommentsTitle}>{tr.cards.emptyComments}</AppText>
+      <AppText style={styles.emptyCommentsDescription}>{tr.cards.firstComment}</AppText>
     </View>
   );
 }
@@ -470,10 +470,10 @@ export function CommentPanel({
 
               <View style={styles.sheetHeader}>
                 <View>
-                  <Text accessibilityRole="header" style={styles.sheetTitle}>
+                  <AppText accessibilityRole="header" style={styles.sheetTitle}>
                     {tr.cards.commentsTitle}
-                  </Text>
-                  <Text style={styles.sheetSubtitle}>{tr.cards.commentCount(totalComments)}</Text>
+                  </AppText>
+                  <AppText style={styles.sheetSubtitle}>{tr.cards.commentCount(totalComments)}</AppText>
                 </View>
                 <IconButton
                   accessibilityLabel={tr.common.close}
@@ -560,9 +560,9 @@ export function CommentPanel({
                           style={[styles.loadMoreButton, isFetchingNextPage ? styles.disabledAction : null]}
                           onPress={onLoadMoreComments}
                         >
-                          <Text style={styles.loadMoreLabel}>
+                          <AppText style={styles.loadMoreLabel}>
                             {isFetchingNextPage ? tr.common.loadingMore : tr.cards.loadMoreComments}
-                          </Text>
+                          </AppText>
                         </Pressable>
                       ) : null
                   }

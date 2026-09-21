@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Minus, X } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -29,12 +30,12 @@ export function PlaceEditorModalHeader({
       <View style={styles.handle} />
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text accessibilityRole="header" style={styles.headerTitle}>
+          <AppText accessibilityRole="header" style={styles.headerTitle}>
             {isEditing ? tr.placeEditor.editTitle : tr.placeEditor.createTitle}
-          </Text>
-          <Text style={styles.headerSubtitle}>{subtitle}</Text>
+          </AppText>
+          <AppText style={styles.headerSubtitle}>{subtitle}</AppText>
           {existingPlaceListName ? (
-            <Text style={styles.headerMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</Text>
+            <AppText style={styles.headerMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</AppText>
           ) : null}
         </View>
         <View style={styles.headerActions}>
@@ -45,7 +46,7 @@ export function PlaceEditorModalHeader({
             onPress={onClose}
             style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>{tr.common.cancel}</Text>
+            <AppText style={styles.cancelButtonText}>{tr.common.cancel}</AppText>
           </Pressable>
           {onMinimize ? (
             <IconButton

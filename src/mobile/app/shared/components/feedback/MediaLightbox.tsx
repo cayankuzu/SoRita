@@ -6,7 +6,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -24,6 +23,7 @@ import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/Conf
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
 import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
@@ -141,7 +141,7 @@ function useMediaLightboxLifecycle({
   setMenuVisible: React.Dispatch<React.SetStateAction<boolean>>;
   setPendingRemoveIndex: React.Dispatch<React.SetStateAction<number | null>>;
   startIndex: number;
-  titleRef: React.RefObject<React.ElementRef<typeof Text> | null>;
+  titleRef: React.RefObject<AppTextRef | null>;
   visibleItems: VisibleMediaEntry[];
 }) {
   const previousAnnouncedIndexRef = React.useRef<number | null>(null);
@@ -228,7 +228,7 @@ export function MediaLightbox({
   const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const titleRef = React.useRef<AppTextRef | null>(null);
   const flatListRef = React.useRef<FlatList<VisibleMediaEntry> | null>(null);
   const visibleItems = React.useMemo(
     () =>
@@ -383,17 +383,17 @@ export function MediaLightbox({
           </IconButton>
 
           <View style={styles.topBarCopy}>
-            <Text
+            <AppText
               ref={titleRef}
               accessibilityLabel={`${tr.common.previewTitle}. ${positionLabel}`}
               accessibilityRole="header"
               style={styles.topBarTitle}
             >
               {tr.common.previewTitle}
-            </Text>
-            <Text accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
+            </AppText>
+            <AppText accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
               {positionLabel}
-            </Text>
+            </AppText>
           </View>
 
           {menuItems.length > 0 ? (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
 import { Compass } from 'lucide-react-native';
 
@@ -14,6 +14,7 @@ import {
   UserGridTile,
 } from '@/mobile/app/features/discovery/public/components';
 import type { ExploreTabType } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -285,7 +286,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
         style={styles.loadMoreStatus}
       >
         <ActivityIndicator color={colors.primary} size="small" />
-        <Text style={styles.loadMoreLabel}>{tr.common.loadingMore}</Text>
+        <AppText style={styles.loadMoreLabel}>{tr.common.loadingMore}</AppText>
       </View>
     ) : null;
   const keyExtractor = React.useCallback(

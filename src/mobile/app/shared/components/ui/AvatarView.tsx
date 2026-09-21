@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight } from '@/mobile/app/shared/theme/tokens';
 import { getUserAvatarText } from '@/mobile/app/shared/utils/format';
@@ -17,7 +18,7 @@ export function AvatarView({ uri, name, size = 40 }: AvatarViewProps) {
   const fallbackTextStyle = [styles.fallbackText, { fontSize: size * 0.28 }];
   const fallback = (
     <View style={[styles.fallback, avatarStyle]}>
-      <Text style={fallbackTextStyle}>{getUserAvatarText(name ? { name } : null)}</Text>
+      <AppText style={fallbackTextStyle}>{getUserAvatarText(name ? { name } : null)}</AppText>
     </View>
   );
 

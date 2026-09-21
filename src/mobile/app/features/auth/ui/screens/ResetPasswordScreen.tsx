@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
 
@@ -16,6 +16,7 @@ import {
 import { validateResetPasswordInput } from '@/mobile/app/features/auth/application/resetPasswordValidation';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -113,7 +114,7 @@ export function ResetPasswordScreen() {
           style={styles.centered}
         >
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.checkingLink}</Text>
+          <AppText accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.checkingLink}</AppText>
         </View>
       </Screen>
     );
@@ -124,8 +125,8 @@ export function ResetPasswordScreen() {
       <Screen variant="form" contentContainerStyle={styles.content}>
         <View style={styles.centered}>
           <View accessibilityLiveRegion="assertive" style={styles.card}>
-            <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.errorTitle}</Text>
-            <Text style={styles.description}>{screenState.message}</Text>
+            <AppText accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.errorTitle}</AppText>
+            <AppText style={styles.description}>{screenState.message}</AppText>
             <PrimaryButton
               title={tr.auth.resetPassword.requestNewMail}
               onPress={() => navigation.navigate('Auth', { initialView: 'forgotPassword' })}
@@ -139,8 +140,8 @@ export function ResetPasswordScreen() {
   return (
     <Screen variant="form" contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.title}</Text>
-        <Text style={styles.description}>{tr.auth.resetPassword.description}</Text>
+        <AppText accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.title}</AppText>
+        <AppText style={styles.description}>{tr.auth.resetPassword.description}</AppText>
 
         <AuthField
           label={tr.auth.resetPassword.newPasswordLabel}
@@ -187,13 +188,13 @@ export function ResetPasswordScreen() {
           status={confirmError ? { kind: 'invalid', message: confirmError } : undefined}
         />
         {submissionError ? (
-          <Text
+          <AppText
             accessibilityLiveRegion="assertive"
             accessibilityRole="alert"
             style={styles.formError}
           >
             {submissionError}
-          </Text>
+          </AppText>
         ) : null}
         <PrimaryButton
           title={tr.auth.resetPassword.submit}

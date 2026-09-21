@@ -1,9 +1,10 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { captureAppException } from '@/mobile/app/platform/observability/sentry';
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -39,14 +40,14 @@ function AppCrashFallback({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text accessibilityRole="header" style={styles.title}>{tr.system.crashTitle}</Text>
-          <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.description}>
+          <AppText accessibilityRole="header" style={styles.title}>{tr.system.crashTitle}</AppText>
+          <AppText accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.description}>
             {tr.system.crashDescription}
-          </Text>
+          </AppText>
           {isDevMode && error?.message ? (
             <View style={styles.debugBox}>
-              <Text style={styles.debugLabel}>{tr.system.developmentMessage}</Text>
-              <Text style={styles.debugMessage}>{error.message}</Text>
+              <AppText style={styles.debugLabel}>{tr.system.developmentMessage}</AppText>
+              <AppText style={styles.debugMessage}>{error.message}</AppText>
             </View>
           ) : null}
           <PrimaryButton title={tr.system.crashRetry} onPress={onRetry} />

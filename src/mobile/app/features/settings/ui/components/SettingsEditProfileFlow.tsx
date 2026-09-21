@@ -1,11 +1,16 @@
 import React from 'react';
-import { Camera } from 'lucide-react-native';
-import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import {
+  Camera } from 'lucide-react-native';
+import { ActivityIndicator,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests';
 import { AuthImagePicker, AuthStepDots } from '@/mobile/app/features/auth/public/components';
 import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/ui/components/settingsScreenStyles';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { MultiSelectChipField } from '@/mobile/app/shared/components/ui/MultiSelectChipField';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -103,14 +108,14 @@ export function SettingsEditProfileFlow({
 
       <View style={styles.stepHeader}>
         <AuthStepDots current={editStep} total={steps.length} />
-        <Text accessibilityLiveRegion="polite" style={styles.stepCounter}>
+        <AppText accessibilityLiveRegion="polite" style={styles.stepCounter}>
           {tr.settings.editProfile.stepCounter(editStep + 1, steps.length)}
-        </Text>
+        </AppText>
       </View>
 
       <View style={styles.stepCopy}>
-        <Text accessibilityRole="header" style={styles.stepTitle}>{currentEditStep.title}</Text>
-        <Text style={styles.stepDescription}>{currentEditStep.description}</Text>
+        <AppText accessibilityRole="header" style={styles.stepTitle}>{currentEditStep.title}</AppText>
+        <AppText style={styles.stepDescription}>{currentEditStep.description}</AppText>
       </View>
 
       {editStep === 0 ? (
@@ -153,10 +158,10 @@ export function SettingsEditProfileFlow({
       {editStep === 1 ? (
         <View style={styles.form}>
           <View style={styles.helperCard}>
-            <Text style={styles.helperCardTitle}>{tr.settings.editProfile.interestsTitle}</Text>
-            <Text style={styles.helperCardText}>
+            <AppText style={styles.helperCardTitle}>{tr.settings.editProfile.interestsTitle}</AppText>
+            <AppText style={styles.helperCardText}>
               {tr.settings.editProfile.interestsDescription}
-            </Text>
+            </AppText>
           </View>
 
           <MultiSelectChipField
@@ -166,9 +171,9 @@ export function SettingsEditProfileFlow({
             disabled={isSavingProfile}
           />
 
-          <Text accessibilityLiveRegion="polite" style={styles.selectionMeta}>
+          <AppText accessibilityLiveRegion="polite" style={styles.selectionMeta}>
             {tr.settings.editProfile.interestsSelection(editInterests.length)}
-          </Text>
+          </AppText>
         </View>
       ) : null}
 
@@ -213,10 +218,10 @@ export function SettingsEditProfileFlow({
         >
           <ActivityIndicator color={colors.primary} />
           <View style={styles.loadingCardBody}>
-            <Text style={styles.loadingCardTitle}>{tr.settings.editProfile.saveInFlightTitle}</Text>
-            <Text style={styles.loadingCardText}>
+            <AppText style={styles.loadingCardTitle}>{tr.settings.editProfile.saveInFlightTitle}</AppText>
+            <AppText style={styles.loadingCardText}>
               {saveProfileMessage || tr.settings.editProfile.saveInFlight}
-            </Text>
+            </AppText>
           </View>
         </View>
       ) : null}

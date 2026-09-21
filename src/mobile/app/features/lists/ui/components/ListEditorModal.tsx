@@ -4,7 +4,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -23,6 +22,7 @@ import {
 } from '@/mobile/app/platform/storage/listEditorDraft';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
@@ -298,8 +298,8 @@ export function ListEditorModal({
 
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text accessibilityRole="header" style={styles.title}>{t.listEditor.title}</Text>
-              <Text style={styles.subtitle}>{t.listEditor.subtitle}</Text>
+              <AppText accessibilityRole="header" style={styles.title}>{t.listEditor.title}</AppText>
+              <AppText style={styles.subtitle}>{t.listEditor.subtitle}</AppText>
               <View style={styles.headerMetaRow}>
                 <View
                   style={[
@@ -312,14 +312,14 @@ export function ListEditorModal({
                   ) : (
                     <Lock color={colors.visibilityPrivate} size={12} />
                   )}
-                  <Text
+                  <AppText
                     style={[
                       styles.visibilityChipText,
                       isPublic ? styles.visibilityChipTextPublic : styles.visibilityChipTextPrivate,
                     ]}
                   >
                     {isPublic ? t.listEditor.privacyPublic : t.listEditor.privacyPrivate}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>

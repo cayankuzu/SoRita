@@ -3,13 +3,13 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Copy, Flag, Pencil, Trash2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -62,9 +62,9 @@ function ActionRow({
       style={[styles.actionRow, tone === 'danger' ? styles.actionRowDanger : null]}
     >
       <View style={styles.actionRowIcon}>{icon}</View>
-      <Text style={[styles.actionRowLabel, tone === 'danger' ? styles.actionRowLabelDanger : null]}>
+      <AppText style={[styles.actionRowLabel, tone === 'danger' ? styles.actionRowLabelDanger : null]}>
         {label}
-      </Text>
+      </AppText>
     </InstantPressable>
   );
 }
@@ -165,10 +165,10 @@ export function CommentActionSheet({
 
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text accessibilityRole="header" style={styles.title}>
+              <AppText accessibilityRole="header" style={styles.title}>
                 {tr.cards.commentActionsTitle}
-              </Text>
-              {comment ? <Text style={styles.subtitle}>{comment.userName}</Text> : null}
+              </AppText>
+              {comment ? <AppText style={styles.subtitle}>{comment.userName}</AppText> : null}
             </View>
             <IconButton
               accessibilityLabel={tr.common.close}

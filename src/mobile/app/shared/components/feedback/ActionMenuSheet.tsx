@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
@@ -41,7 +41,7 @@ export function ActionMenuSheet({
   onClose,
   returnFocusRef,
 }: ActionMenuSheetProps) {
-  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const titleRef = React.useRef<AppTextRef | null>(null);
 
   return (
     <ModalScaffold
@@ -56,7 +56,7 @@ export function ActionMenuSheet({
       contentContainerStyle={styles.sheetContent}
     >
       <View style={styles.header}>
-        <Text ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</Text>
+        <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
           <X color={colors.textMuted} size={14} />
         </IconButton>
@@ -77,14 +77,14 @@ export function ActionMenuSheet({
               {item.renderIcon ? (
                 <View style={styles.actionIcon}>{item.renderIcon(toneColor)}</View>
               ) : null}
-              <Text
+              <AppText
                 style={[
                   styles.actionLabel,
                   item.tone === 'danger' ? styles.actionLabelDanger : null,
                 ]}
               >
                 {item.label}
-              </Text>
+              </AppText>
             </InstantPressable>
           );
         })}

@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
@@ -117,12 +117,12 @@ export function PlacePreviewModal({
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>
+              <AppText accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>
                 {headerTitle}
-              </Text>
-              <Text numberOfLines={1} style={styles.headerSubtitle}>
+              </AppText>
+              <AppText numberOfLines={1} style={styles.headerSubtitle}>
                 {headerSubtitle}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.headerActions}>
               {onCreatePlaceCard ? (

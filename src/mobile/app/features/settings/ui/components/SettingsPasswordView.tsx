@@ -1,10 +1,11 @@
 import React from 'react';
 import { Mail } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { PasswordToggle } from '@/mobile/app/features/settings/ui/components/PasswordToggle';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
 import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/ui/components/settingsScreenStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
@@ -50,10 +51,10 @@ export function SettingsPasswordView({
         <View style={styles.emailInfoCard}>
           <View style={styles.emailInfoHeader}>
             <Mail color={colors.primary} size={14} />
-            <Text style={styles.emailInfoLabel}>{tr.settings.password.emailLabel}</Text>
+            <AppText style={styles.emailInfoLabel}>{tr.settings.password.emailLabel}</AppText>
           </View>
-          <Text style={styles.emailInfoValue}>{email}</Text>
-          <Text style={styles.emailInfoText}>{tr.settings.password.emailInfo(email)}</Text>
+          <AppText style={styles.emailInfoValue}>{email}</AppText>
+          <AppText style={styles.emailInfoText}>{tr.settings.password.emailInfo(email)}</AppText>
         </View>
 
         <View style={styles.passwordField}>
@@ -82,8 +83,8 @@ export function SettingsPasswordView({
 
         {resetMailSent ? (
           <View style={styles.successCard}>
-            <Text style={styles.successTitle}>{tr.settings.password.sentTitle}</Text>
-            <Text style={styles.successText}>{tr.settings.password.sentDescription(email)}</Text>
+            <AppText style={styles.successTitle}>{tr.settings.password.sentTitle}</AppText>
+            <AppText style={styles.successText}>{tr.settings.password.sentDescription(email)}</AppText>
           </View>
         ) : null}
       </View>

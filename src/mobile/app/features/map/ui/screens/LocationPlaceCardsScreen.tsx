@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -19,6 +18,7 @@ import {
 import { useLocationPlaceCardsQuery } from '@/mobile/app/data/hooks/useLocationPlaceCardsQuery';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
@@ -179,7 +179,7 @@ export function LocationPlaceCardsScreen() {
                     accessibilityState={{ selected: true }}
                     style={styles.highlightPill}
                   >
-                    <Text style={styles.highlightPillText}>{tr.map.selectedPlaceCard}</Text>
+                    <AppText style={styles.highlightPillText}>{tr.map.selectedPlaceCard}</AppText>
                   </View>
                 ) : null}
 

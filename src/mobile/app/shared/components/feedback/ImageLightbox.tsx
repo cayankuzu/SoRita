@@ -6,7 +6,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -19,6 +18,7 @@ import {
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -57,7 +57,7 @@ export function ImageLightbox({
   const animationType = useModalAnimationType('fade');
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const titleRef = React.useRef<React.ElementRef<typeof Text> | null>(null);
+  const titleRef = React.useRef<AppTextRef | null>(null);
   const previousAnnouncedIndexRef = React.useRef<number | null>(null);
   const suppressNextAnnouncementRef = React.useRef(true);
   const imageUris = React.useMemo(() => {
@@ -211,17 +211,17 @@ export function ImageLightbox({
           </IconButton>
 
           <View style={styles.topBarCopy}>
-            <Text
+            <AppText
               ref={titleRef}
               accessibilityLabel={`${tr.common.previewTitle}. ${positionLabel}`}
               accessibilityRole="header"
               style={styles.topBarTitle}
             >
               {tr.common.previewTitle}
-            </Text>
-            <Text accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
+            </AppText>
+            <AppText accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
               {positionLabel}
-            </Text>
+            </AppText>
           </View>
 
           {menuItems.length > 0 ? (

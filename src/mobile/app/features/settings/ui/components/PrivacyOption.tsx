@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -28,8 +29,8 @@ export function PrivacyOption({ active, icon, title, description, disabled = fal
     >
       <View style={[styles.privacyIcon, active ? styles.privacyIconActive : null]}>{icon}</View>
       <View style={styles.privacyBody}>
-        <Text style={styles.privacyTitle}>{title}</Text>
-        <Text style={styles.privacyDescription}>{description}</Text>
+        <AppText style={styles.privacyTitle}>{title}</AppText>
+        <AppText style={styles.privacyDescription}>{description}</AppText>
       </View>
       {active ? (
         <View style={styles.activeCheck}>

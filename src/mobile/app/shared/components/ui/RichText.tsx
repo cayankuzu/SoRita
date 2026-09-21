@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleProp,
   StyleSheet,
-  Text,
   TextProps,
   TextStyle,
 } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { openSafeExternalUrl } from '@/mobile/app/shared/utils/safeLinks';
 import {
   formatCollapsedRichLinkText,
@@ -51,7 +51,7 @@ export function RichText({
   }, []);
 
   return (
-    <Text {...textProps} style={style}>
+    <AppText {...textProps} style={style}>
       {segments.map((segment, index) => {
         const isExpanded = expandedLinks[index] ?? false;
 
@@ -61,7 +61,7 @@ export function RichText({
 
         if (segment.type === 'mention') {
           return (
-            <Text
+            <AppText
               accessibilityRole={onMentionPress ? 'button' : undefined}
               key={`mention-${index}`}
               onPress={
@@ -76,17 +76,17 @@ export function RichText({
               suppressHighlighting
             >
               {segment.text}
-            </Text>
+            </AppText>
           );
         }
 
         if (!segment.safe) {
           return (
-            <Text key={`unsafe-link-${index}`}>
-              <Text style={styles.unsafeLink}>
+            <AppText key={`unsafe-link-${index}`}>
+              <AppText style={styles.unsafeLink}>
                 {isExpanded ? segment.url : formatCollapsedRichLinkText(segment.url)}
-              </Text>
-              <Text
+              </AppText>
+              <AppText
                 accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: isExpanded }}
@@ -98,14 +98,14 @@ export function RichText({
                 suppressHighlighting
               >
                 {isExpanded ? ' ⌄' : ' ›'}
-              </Text>
-            </Text>
+              </AppText>
+            </AppText>
           );
         }
 
         return (
-          <Text key={`safe-link-${index}`}>
-            <Text
+          <AppText key={`safe-link-${index}`}>
+            <AppText
               accessibilityRole="link"
               style={styles.safeLink}
               onPress={(event) => {
@@ -115,8 +115,8 @@ export function RichText({
               suppressHighlighting
             >
               {isExpanded ? segment.url : formatCollapsedRichLinkText(segment.url)}
-            </Text>
-            <Text
+            </AppText>
+            <AppText
               accessibilityLabel={isExpanded ? tr.common.collapseLink : tr.common.expandLink}
               accessibilityRole="button"
               accessibilityState={{ expanded: isExpanded }}
@@ -128,11 +128,11 @@ export function RichText({
               suppressHighlighting
             >
               {isExpanded ? ' ⌄' : ' ›'}
-            </Text>
-          </Text>
+            </AppText>
+          </AppText>
         );
       })}
-    </Text>
+    </AppText>
   );
 }
 

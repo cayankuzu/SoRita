@@ -5,7 +5,6 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   useWindowDimensions,
   View,
@@ -13,6 +12,7 @@ import {
 import { Search, Users, X } from 'lucide-react-native';
 
 import type { FeedActionLiker } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -93,12 +93,12 @@ export function LikersPanel({
         >
           <AvatarView uri={item.profilePhoto} name={item.name} size={28} />
           <View style={styles.likerBody}>
-            <Text style={styles.panelTitle}>{item.name}</Text>
-            <Text style={styles.panelMuted}>@{item.username}</Text>
+            <AppText style={styles.panelTitle}>{item.name}</AppText>
+            <AppText style={styles.panelMuted}>@{item.username}</AppText>
             {item.likedAt ? (
-              <Text style={styles.panelMuted}>
+              <AppText style={styles.panelMuted}>
                 {tr.cards.likedAt(formatRelativeDateTime(item.likedAt))}
-              </Text>
+              </AppText>
             ) : null}
           </View>
         </Pressable>
@@ -109,10 +109,10 @@ export function LikersPanel({
           <View style={styles.panelHeader}>
             <View style={styles.panelTitleRow}>
               <Users color={colors.danger} size={14} />
-              <Text accessibilityRole="header" style={styles.panelTitle}>
+              <AppText accessibilityRole="header" style={styles.panelTitle}>
                 {tr.cards.likedBy}
                 {likeCount > 0 ? ` (${likeCount})` : ''}
-              </Text>
+              </AppText>
             </View>
             <IconButton
               accessibilityLabel={tr.common.close}
@@ -151,16 +151,16 @@ export function LikersPanel({
           ) : null}
 
           {q ? (
-            <Text accessibilityLiveRegion="polite" style={styles.searchResultCount}>
+            <AppText accessibilityLiveRegion="polite" style={styles.searchResultCount}>
               {tr.profile.connections.resultCount(filteredLikers.length)}
-            </Text>
+            </AppText>
           ) : null}
         </View>
       }
       ListEmptyComponent={
-        <Text accessibilityLiveRegion={q ? 'polite' : 'none'} style={styles.panelMuted}>
+        <AppText accessibilityLiveRegion={q ? 'polite' : 'none'} style={styles.panelMuted}>
           {q ? tr.cards.likersSearchNoResult : tr.cards.noLikes}
-        </Text>
+        </AppText>
       }
       refreshControl={
         onRefresh ? (

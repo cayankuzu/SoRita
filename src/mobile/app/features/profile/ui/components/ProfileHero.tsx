@@ -2,7 +2,6 @@ import React from "react";
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -15,6 +14,7 @@ import {
   PROFILE_HERO_COVER_HEIGHT,
 } from "@/mobile/app/features/profile/ui/components/profileMediaLayout";
 import { AppImage } from "@/mobile/app/shared/components/ui/AppImage";
+import { AppText } from "@/mobile/app/shared/components/ui/AppText";
 import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
@@ -123,8 +123,8 @@ export function ProfileHero({
           {action ? <View style={styles.actionSlot}>{action}</View> : null}
         </View>
 
-        <Text accessibilityRole="header" style={styles.name}>{name}</Text>
-        <Text style={styles.username}>@{username}</Text>
+        <AppText accessibilityRole="header" style={styles.name}>{name}</AppText>
+        <AppText style={styles.username}>@{username}</AppText>
         {bio ? (
           <ExpandableText
             text={bio}

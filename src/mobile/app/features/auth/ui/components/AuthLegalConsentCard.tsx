@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 
 import type { LegalDocumentId } from '@/mobile/app/features/auth/ui/content/legalDocuments';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -27,8 +28,8 @@ export function AuthLegalConsentCard({
   return (
     <View style={styles.card}>
       <View style={styles.copyBlock}>
-        <Text accessibilityRole="header" style={styles.title}>{tr.auth.legalConsent.title}</Text>
-        <Text style={styles.linksText}>{tr.auth.legalConsent.descriptionPrefix}</Text>
+        <AppText accessibilityRole="header" style={styles.title}>{tr.auth.legalConsent.title}</AppText>
+        <AppText style={styles.linksText}>{tr.auth.legalConsent.descriptionPrefix}</AppText>
         <View style={styles.linksRow}>
           <InstantPressable
             accessibilityLabel={tr.auth.legalConsent.terms}
@@ -37,9 +38,9 @@ export function AuthLegalConsentCard({
             onPress={() => onOpenDocument('terms')}
             style={styles.linkButton}
           >
-            <Text style={styles.inlineLink}>
+            <AppText style={styles.inlineLink}>
             {tr.auth.legalConsent.terms}
-            </Text>
+            </AppText>
           </InstantPressable>
           <InstantPressable
             accessibilityLabel={tr.auth.legalConsent.community}
@@ -48,12 +49,12 @@ export function AuthLegalConsentCard({
             onPress={() => onOpenDocument('community')}
             style={styles.linkButton}
           >
-            <Text style={styles.inlineLink}>
+            <AppText style={styles.inlineLink}>
             {tr.auth.legalConsent.community}
-            </Text>
+            </AppText>
           </InstantPressable>
         </View>
-        <Text style={styles.linksText}>{tr.auth.legalConsent.noticePrefix}</Text>
+        <AppText style={styles.linksText}>{tr.auth.legalConsent.noticePrefix}</AppText>
         <View style={styles.linksRow}>
           <InstantPressable
             accessibilityLabel={tr.auth.legalConsent.privacy}
@@ -62,9 +63,9 @@ export function AuthLegalConsentCard({
             onPress={() => onOpenDocument('privacy')}
             style={styles.linkButton}
           >
-            <Text style={styles.inlineLink}>
+            <AppText style={styles.inlineLink}>
             {tr.auth.legalConsent.privacy}
-            </Text>
+            </AppText>
           </InstantPressable>
           <InstantPressable
             accessibilityLabel={tr.auth.legalConsent.kvkk}
@@ -73,9 +74,9 @@ export function AuthLegalConsentCard({
             onPress={() => onOpenDocument('kvkk')}
             style={styles.linkButton}
           >
-            <Text style={styles.inlineLink}>
+            <AppText style={styles.inlineLink}>
             {tr.auth.legalConsent.kvkk}
-            </Text>
+            </AppText>
           </InstantPressable>
         </View>
       </View>
@@ -90,9 +91,9 @@ export function AuthLegalConsentCard({
         <View style={[styles.checkbox, accepted ? styles.checkboxChecked : null]}>
           {accepted ? <Check color={colors.onPrimary} size={12} /> : null}
         </View>
-        <Text style={styles.checkboxLabel}>
+        <AppText style={styles.checkboxLabel}>
           {tr.auth.legalConsent.consentLabel}
-        </Text>
+        </AppText>
       </InstantPressable>
     </View>
   );

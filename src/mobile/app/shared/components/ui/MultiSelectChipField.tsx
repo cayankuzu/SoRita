@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
   colors,
@@ -52,9 +52,9 @@ export function MultiSelectChipField({
               disabled ? styles.chipDisabled : null,
             ]}
           >
-            <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>
+            <AppText style={[styles.chipText, selected ? styles.chipTextSelected : null]}>
               {option.label}
-            </Text>
+            </AppText>
           </InstantPressable>
         );
       })}

@@ -1,8 +1,9 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -27,21 +28,21 @@ export function AppConfigErrorScreen({ missingEnvVars }: AppConfigErrorScreenPro
       >
         <View style={styles.card}>
           <SoRitaLogo size="lg" showIcon />
-          <Text accessibilityRole="header" style={styles.title}>{tr.system.configErrorTitle}</Text>
-          <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.body}>
+          <AppText accessibilityRole="header" style={styles.title}>{tr.system.configErrorTitle}</AppText>
+          <AppText accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.body}>
             {tr.system.configErrorDescription}
-          </Text>
+          </AppText>
           {isDevMode && missingEnvVars.length > 0 ? (
             <View style={styles.list}>
-              <Text style={styles.developerLabel}>{tr.system.configErrorDeveloperDetails}</Text>
+              <AppText style={styles.developerLabel}>{tr.system.configErrorDeveloperDetails}</AppText>
               {missingEnvVars.map((item) => (
-                <Text key={item} style={styles.listItem}>
+                <AppText key={item} style={styles.listItem}>
                   {item}
-                </Text>
+                </AppText>
               ))}
             </View>
           ) : null}
-          <Text style={styles.hint}>{tr.system.configErrorHint}</Text>
+          <AppText style={styles.hint}>{tr.system.configErrorHint}</AppText>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
@@ -9,10 +10,10 @@ const CURRENT_YEAR = new Date().getFullYear();
 export function AuthBrandFooter() {
   return (
     <View style={styles.footer}>
-      <Text style={styles.metaText}>{tr.brand.copyright(CURRENT_YEAR)}</Text>
+      <AppText style={styles.metaText}>{tr.brand.copyright(CURRENT_YEAR)}</AppText>
       <View style={styles.poweredRow}>
-        <Text style={styles.brandText}>{tr.brand.developer}</Text>
-        <Text style={styles.metaText}> {tr.brand.poweredBy}</Text>
+        <AppText style={styles.brandText}>{tr.brand.developer}</AppText>
+        <AppText style={styles.metaText}> {tr.brand.poweredBy}</AppText>
       </View>
     </View>
   );

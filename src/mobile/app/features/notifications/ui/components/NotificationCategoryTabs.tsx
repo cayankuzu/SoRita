@@ -1,6 +1,7 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -48,7 +49,7 @@ export function NotificationCategoryTabs({
             hapticFeedback="selection"
             style={[styles.tab, active ? styles.tabActive : null]}
           >
-            <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{tab.label}</Text>
+            <AppText style={[styles.tabText, active ? styles.tabTextActive : null]}>{tab.label}</AppText>
           </InstantPressable>
         );
       })}

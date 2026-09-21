@@ -1,7 +1,8 @@
 import React from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react-native";
 
+import { AppText } from "@/mobile/app/shared/components/ui/AppText";
 import { InstantPressable } from "@/mobile/app/shared/components/ui/InstantPressable";
 import { shouldUseCompactProfileTabs } from "@/mobile/app/features/profile/ui/components/profileTabsLayout";
 import { tr } from "@/mobile/app/shared/i18n/tr";
@@ -101,12 +102,12 @@ export function ProfileTabs({
               >
                 {tab.renderIcon(active)}
                 <View style={styles.labelWrap}>
-                  <Text
+                  <AppText
                     numberOfLines={compact ? 2 : 1}
                     style={[styles.text, active ? styles.textActive : null]}
                   >
                     {tab.label}
-                  </Text>
+                  </AppText>
                 </View>
                 {typeof tab.count === "number" ? (
                   <View
@@ -115,14 +116,14 @@ export function ProfileTabs({
                       active ? styles.countBadgeActive : null,
                     ]}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.countText,
                         active ? styles.countTextActive : null,
                       ]}
                     >
                       {tab.count}
-                    </Text>
+                    </AppText>
                   </View>
                 ) : null}
               </InstantPressable>
@@ -161,14 +162,14 @@ export function ProfileTabs({
             />
             {!compact ? (
               <>
-                <Text
+                <AppText
                   style={[
                     styles.filterToggleText,
                     filterOpen ? styles.filterToggleTextActive : null,
                   ]}
                 >
                   {activeFilterLabel}
-                </Text>
+                </AppText>
                 {filterOpen ? (
                   <ChevronUp color={colors.primary} size={12} />
                 ) : (
@@ -199,14 +200,14 @@ export function ProfileTabs({
                     active ? styles.filterChipActive : null,
                   ]}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.filterChipText,
                       active ? styles.filterChipTextActive : null,
                     ]}
                   >
                     {option.label}
-                  </Text>
+                  </AppText>
                 </InstantPressable>
               );
             })}

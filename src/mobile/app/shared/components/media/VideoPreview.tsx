@@ -3,7 +3,6 @@ import {
   AppState,
   Platform,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
@@ -23,6 +22,7 @@ import {
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
@@ -200,7 +200,7 @@ export function VideoPreview({
       ) : null}
       {durationLabel ? (
         <View pointerEvents="none" style={styles.durationBadge}>
-          <Text style={styles.durationText}>{durationLabel}</Text>
+          <AppText style={styles.durationText}>{durationLabel}</AppText>
         </View>
       ) : null}
     </View>

@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Check, X } from 'lucide-react-native';
 
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -59,12 +59,12 @@ export function AuthImagePicker({
               {placeholderIcon}
             </View>
             <View style={styles.textWrap}>
-              <Text style={styles.title}>{placeholderText}</Text>
-              <Text style={styles.subtitle}>
+              <AppText style={styles.title}>{placeholderText}</AppText>
+              <AppText style={styles.subtitle}>
                 {hasSelection
                   ? tr.mediaPicker.selectedHint
                   : tr.mediaPicker.cropHint}
-              </Text>
+              </AppText>
             </View>
           </View>
 
@@ -72,7 +72,7 @@ export function AuthImagePicker({
             <View style={styles.headerActions}>
               <View style={styles.selectionBadge}>
                 <Check color={colors.secondary} size={12} />
-                <Text style={styles.selectionBadgeText}>{tr.common.ready}</Text>
+                <AppText style={styles.selectionBadgeText}>{tr.common.ready}</AppText>
               </View>
 
               <InstantPressable
@@ -98,7 +98,7 @@ export function AuthImagePicker({
         />
       </InstantPressable>
 
-      {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
+      {helperText ? <AppText style={styles.helperText}>{helperText}</AppText> : null}
     </View>
   );
 }

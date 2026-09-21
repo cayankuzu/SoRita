@@ -2,11 +2,11 @@ import React from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Ellipsis, UserMinus, UserPlus } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
@@ -91,14 +91,14 @@ export function PublicProfileActionBar({
               size={12}
             />
           )}
-          <Text
+          <AppText
             style={[
               styles.followText,
               isFollowing || hasPendingFollowRequest ? styles.followTextPassive : null,
             ]}
           >
             {actionLabel}
-          </Text>
+          </AppText>
         </InstantPressable>
       )}
 

@@ -11,6 +11,10 @@ const rawPressableNames = new Set([
   'TouchableWithoutFeedback',
 ]);
 const labelledPressableNames = new Set([...rawPressableNames, 'InstantPressable']);
+// A control is named by the text inside it. `AppText` is how the app renders
+// text now - it carries the shared font-scale cap - so it names a control
+// exactly as the host component it wraps does.
+const textElementNames = new Set(['AppText', 'Text']);
 const violations = [];
 
 async function collectTsxFiles(directory) {
@@ -57,9 +61,11 @@ function inspectPressables(filePath, sourceText) {
 
       if (
         (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) &&
-        (ts.isJsxElement(child)
-          ? child.openingElement.tagName.getText(source)
-          : child.tagName.getText(source)) === 'Text'
+        textElementNames.has(
+          ts.isJsxElement(child)
+            ? child.openingElement.tagName.getText(source)
+            : child.tagName.getText(source),
+        )
       ) {
         readable = true;
         return;

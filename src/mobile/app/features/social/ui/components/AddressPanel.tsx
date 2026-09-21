@@ -3,7 +3,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -14,6 +13,7 @@ import {
 
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -69,7 +69,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
 
   return (
     <View style={styles.panel}>
-      <Text accessibilityRole="header" style={styles.panelTitle}>{location.name}</Text>
+      <AppText accessibilityRole="header" style={styles.panelTitle}>{location.name}</AppText>
       <View style={styles.addressCard}>
         <Pressable
           accessibilityLabel={`${location.name}, ${addressText}`}
@@ -78,10 +78,10 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           onPress={openInMaps}
           style={styles.addressLinkButton}
         >
-          <Text style={styles.addressLabel}>{tr.placeEditor.addressLabel}</Text>
-          <Text numberOfLines={isAddressExpanded ? undefined : 1} style={styles.addressLinkText}>
+          <AppText style={styles.addressLabel}>{tr.placeEditor.addressLabel}</AppText>
+          <AppText numberOfLines={isAddressExpanded ? undefined : 1} style={styles.addressLinkText}>
             {addressText}
-          </Text>
+          </AppText>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -116,7 +116,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           onPress={() => void copyAddress()}
         >
           <Copy color={colors.textMuted} size={12} />
-          <Text style={styles.secondaryPanelText}>{tr.cards.copy}</Text>
+          <AppText style={styles.secondaryPanelText}>{tr.cards.copy}</AppText>
         </Pressable>
       </View>
     </View>

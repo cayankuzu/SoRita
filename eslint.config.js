@@ -94,6 +94,33 @@ export default [
     },
   },
   {
+    // React Native has no global default for `maxFontSizeMultiplier`, so a
+    // screen that reaches for the raw `Text` opts itself out of the app's
+    // dynamic-type cap without anyone noticing. `AppText` owns that decision;
+    // tests stay free to assert against the host component.
+    files: ['src/mobile/app/**/*.tsx'],
+    ignores: [
+      '**/__tests__/**',
+      '**/*.test.tsx',
+      'src/mobile/app/shared/components/ui/AppText.tsx',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['Text'],
+              message:
+                'Import AppText from @/mobile/app/shared/components/ui/AppText so the text keeps the app-wide font-scale cap.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       'src/mobile/app/app-shell/startup/*.ts',
       'src/mobile/app/data/hooks/useMapMarkersQuery.ts',

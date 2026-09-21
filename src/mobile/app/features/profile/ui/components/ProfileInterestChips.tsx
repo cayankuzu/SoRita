@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { PROFILE_INTEREST_META } from '@/mobile/app/catalog/profileInterests';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { t } from '@/mobile/app/shared/i18n';
 import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
@@ -31,17 +32,17 @@ export function ProfileInterestChips({
 
   return (
     <View style={styles.section}>
-      {title ? <Text accessibilityRole="header" style={styles.title}>{title}</Text> : null}
+      {title ? <AppText accessibilityRole="header" style={styles.title}>{title}</AppText> : null}
 
       <View style={styles.row}>
         {visibleLabels.map((label) => (
           <View key={label} style={styles.chip}>
-            <Text style={styles.chipText}>{label}</Text>
+            <AppText style={styles.chipText}>{label}</AppText>
           </View>
         ))}
         {remainingCount > 0 ? (
           <View style={[styles.chip, styles.moreChip]}>
-            <Text style={[styles.chipText, styles.moreChipText]}>+{remainingCount}</Text>
+            <AppText style={[styles.chipText, styles.moreChipText]}>+{remainingCount}</AppText>
           </View>
         ) : null}
       </View>

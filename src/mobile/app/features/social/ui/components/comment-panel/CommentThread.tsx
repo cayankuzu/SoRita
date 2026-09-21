@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import {
   ChevronDown,
   ChevronUp,
@@ -10,6 +10,7 @@ import {
 
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -121,22 +122,22 @@ export function CommentThread({
               style={styles.commentIdentity}
             >
               <View style={styles.commentAuthorRow}>
-                <Text numberOfLines={1} style={styles.commentAuthor}>{comment.userName}</Text>
+                <AppText numberOfLines={1} style={styles.commentAuthor}>{comment.userName}</AppText>
                 {comment.pendingSync ? (
-                  <Text accessibilityLiveRegion="polite" style={styles.commentPending}>
+                  <AppText accessibilityLiveRegion="polite" style={styles.commentPending}>
                     {tr.cards.commentSyncing}
-                  </Text>
+                  </AppText>
                 ) : null}
                 {isEdited ? (
-                  <Text style={styles.commentEdited}>{tr.cards.editedLabel}</Text>
+                  <AppText style={styles.commentEdited}>{tr.cards.editedLabel}</AppText>
                 ) : null}
               </View>
               <View style={styles.commentMetaRow}>
                 {comment.username ? (
-                  <Text numberOfLines={1} style={styles.commentMeta}>@{comment.username}</Text>
+                  <AppText numberOfLines={1} style={styles.commentMeta}>@{comment.username}</AppText>
                 ) : null}
                 {comment.username ? <View style={styles.commentMetaDot} /> : null}
-                <Text style={styles.commentMeta}>{formatRelativeDateTime(comment.createdAt)}</Text>
+                <AppText style={styles.commentMeta}>{formatRelativeDateTime(comment.createdAt)}</AppText>
               </View>
             </CommentAuthorPressable>
 
@@ -164,14 +165,14 @@ export function CommentThread({
                   style={styles.commentLikersAction}
                   onPress={() => onShowCommentLikers(comment)}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.commentLikeCount,
                       comment.liked ? styles.commentLikeCountActive : null,
                     ]}
                   >
                     {likeCount}
-                  </Text>
+                  </AppText>
                 </InstantPressable>
               ) : null}
             </View>
@@ -194,7 +195,7 @@ export function CommentThread({
               hitSlop={8}
             >
               <Reply color={colors.textSoft} size={12} />
-              <Text style={styles.commentInlineActionText}>{tr.cards.reply}</Text>
+              <AppText style={styles.commentInlineActionText}>{tr.cards.reply}</AppText>
             </InstantPressable>
 
             {comment.canEdit || comment.canDelete || comment.canReport || comment.content.trim() ? (
@@ -231,9 +232,9 @@ export function CommentThread({
               ) : (
                 <ChevronDown color={colors.textSoft} size={12} />
               )}
-              <Text style={styles.replyToggleText}>
+              <AppText style={styles.replyToggleText}>
                 {repliesExpanded ? tr.cards.hideReplies : tr.cards.viewReplies(replyCount)}
-              </Text>
+              </AppText>
             </InstantPressable>
 
             {repliesExpanded && hiddenReplyCount > 0 ? (
@@ -245,9 +246,9 @@ export function CommentThread({
                 hitSlop={8}
               >
                 <ChevronDown color={colors.textSoft} size={12} />
-                <Text style={styles.replyToggleText}>
+                <AppText style={styles.replyToggleText}>
                   {tr.cards.viewReplies(hiddenReplyCount)}
-                </Text>
+                </AppText>
               </InstantPressable>
             ) : null}
           </View>

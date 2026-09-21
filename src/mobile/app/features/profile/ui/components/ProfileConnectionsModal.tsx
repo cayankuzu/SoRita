@@ -8,7 +8,6 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   useWindowDimensions,
   View,
@@ -17,6 +16,7 @@ import { Search, Users, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
@@ -138,7 +138,7 @@ export function ProfileConnectionsModal({
         <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
           <View accessibilityElementsHidden style={styles.handle} />
           <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+            <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
             <IconButton
               accessibilityLabel={tr.common.close}
               onPress={onClose}
@@ -165,8 +165,8 @@ export function ProfileConnectionsModal({
               >
                 <AvatarView uri={item.profilePhoto} name={item.name} size={36} />
                 <View style={styles.userBody}>
-                  <Text style={styles.userName}>{item.name}</Text>
-                  <Text style={styles.userUsername}>@{item.username}</Text>
+                  <AppText style={styles.userName}>{item.name}</AppText>
+                  <AppText style={styles.userUsername}>@{item.username}</AppText>
                   {item.bio ? (
                     <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.userBio} />
                   ) : null}
@@ -209,9 +209,9 @@ export function ProfileConnectionsModal({
                     ) : null}
                   </View>
                   {q ? (
-                    <Text accessibilityLiveRegion="polite" style={styles.resultCount}>
+                    <AppText accessibilityLiveRegion="polite" style={styles.resultCount}>
                       {tr.profile.connections.resultCount(filteredUsers.length)}
-                    </Text>
+                    </AppText>
                   ) : null}
                 </View>
               ) : null

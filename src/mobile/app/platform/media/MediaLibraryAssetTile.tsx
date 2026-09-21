@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
@@ -65,13 +66,13 @@ export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
 
       {isSelected ? (
         <View style={styles.orderBadge}>
-          <Text style={styles.orderBadgeText}>{orderIndex + 1}</Text>
+          <AppText style={styles.orderBadgeText}>{orderIndex + 1}</AppText>
         </View>
       ) : null}
 
       {disabled ? (
         <View style={styles.disabledOverlay}>
-          <Text style={styles.disabledLabel}>{tr.mediaPicker.videoTooLongBadge}</Text>
+          <AppText style={styles.disabledLabel}>{tr.mediaPicker.videoTooLongBadge}</AppText>
         </View>
       ) : null}
     </Pressable>

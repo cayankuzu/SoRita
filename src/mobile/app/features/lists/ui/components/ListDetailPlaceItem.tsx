@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getMarkerAggregationKey, type LocationPlaceStat } from '@/mobile/app/shared/utils/format';
 
@@ -56,7 +57,7 @@ export function ListDetailPlaceItem({
     >
       {highlighted ? (
         <View style={styles.highlightPill}>
-          <Text style={styles.highlightPillText}>{tr.listDetail.mapSelectedPlace}</Text>
+          <AppText style={styles.highlightPillText}>{tr.listDetail.mapSelectedPlace}</AppText>
         </View>
       ) : null}
 

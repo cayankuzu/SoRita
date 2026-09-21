@@ -1,10 +1,11 @@
 import React from 'react';
 import { BarChart3, Globe, LockKeyhole } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { PrivacyOption } from '@/mobile/app/features/settings/ui/components/PrivacyOption';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
 import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/ui/components/settingsScreenStyles';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -46,9 +47,9 @@ export function SettingsPrivacyView({
             onSavePrivacy(true);
           }}
         />
-        <Text accessibilityRole="header" style={styles.sectionTitle}>
+        <AppText accessibilityRole="header" style={styles.sectionTitle}>
           {tr.settings.privacy.analyticsTitle}
-        </Text>
+        </AppText>
         <PrivacyOption
           active={analyticsConsentGranted}
           disabled={isSavingAnalyticsConsent}
@@ -80,13 +81,13 @@ export function SettingsPrivacyView({
           }}
         />
         {isSavingPrivacy || isSavingAnalyticsConsent ? (
-          <Text
+          <AppText
             accessibilityLiveRegion="polite"
             accessibilityRole="alert"
             style={styles.savingStatus}
           >
             {isSavingPrivacy ? tr.settings.privacy.saving : tr.settings.privacy.analyticsSaving}
-          </Text>
+          </AppText>
         ) : null}
       </View>
     </Screen>

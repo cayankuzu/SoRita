@@ -26,6 +26,7 @@ import {
 } from '@/mobile/app/app-shell/startup/startupDataWarmup';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -73,6 +74,21 @@ function getTabIcon(routeName: keyof MainTabParamList, color: string, focused: b
     <View style={[styles.tabIcon, focused ? styles.tabIconActive : null]}>
       {getTabIconGlyph(routeName, color)}
     </View>
+  );
+}
+
+/**
+ * The bar paints a fixed 60dp box that holds 6 + 24 + 16 + 6 = 52dp at default
+ * type, so the label has 8dp to grow before it pushes the icon off the bar -
+ * which happens just past 1.5x, and both platforms offer 1.8x and 2x. Rendering
+ * the label ourselves is what puts it under the app's chrome cap; a plain
+ * `tabBarLabel` string is drawn by react-navigation's own uncapped Text.
+ */
+function getTabLabelNode(routeName: keyof MainTabParamList, color: string) {
+  return (
+    <AppText numberOfLines={1} scaleLimit="chrome" style={[styles.tabLabel, { color }]}>
+      {getTabLabel(routeName)}
+    </AppText>
   );
 }
 
@@ -180,8 +196,7 @@ export function MainTabs() {
         tabBarIcon: ({ color, focused }) => getTabIcon(route.name, color, focused),
         tabBarInactiveTintColor: colors.textMuted,
         tabBarItemStyle: styles.tabItem,
-        tabBarLabel: getTabLabel(route.name),
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarLabel: ({ color }) => getTabLabelNode(route.name, color),
         tabBarStyle: [
           styles.tabBar,
           {

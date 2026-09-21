@@ -1,8 +1,13 @@
 import React, { useEffect } from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider,
+  useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as NativeSplashScreen from 'expo-splash-screen';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { AuthProvider, useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
@@ -27,6 +32,7 @@ import {
   getAppLaunchElapsedMs,
 } from '@/mobile/app/shared/performance/appLaunch';
 import { REMOTE_KILL_SWITCH_TTL_MS } from '@/mobile/app/platform/analytics/remoteKillSwitches';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -192,12 +198,12 @@ function StartupSplashGate({ children }: AppProvidersProps) {
                 { paddingBottom: Math.max(insets.bottom + 18, 28) },
               ]}
             >
-              <Text style={styles.startupMetaText}>
+              <AppText style={styles.startupMetaText}>
                 {tr.brand.copyright(CURRENT_YEAR)}
-              </Text>
+              </AppText>
               <View style={styles.startupPoweredRow}>
-                <Text style={styles.startupDeveloperText}>{tr.brand.developer}</Text>
-                <Text style={styles.startupMetaText}> {tr.brand.poweredBy}</Text>
+                <AppText style={styles.startupDeveloperText}>{tr.brand.developer}</AppText>
+                <AppText style={styles.startupMetaText}> {tr.brand.poweredBy}</AppText>
               </View>
             </View>
           </View>

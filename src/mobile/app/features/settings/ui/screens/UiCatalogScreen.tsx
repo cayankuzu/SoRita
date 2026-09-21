@@ -1,12 +1,17 @@
-import { CircleSlash2 } from 'lucide-react-native';
+import {
+  CircleSlash2 } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PlaceCardSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
@@ -25,7 +30,7 @@ import {
 function CatalogSection({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
+      <AppText accessibilityRole="header" style={styles.sectionTitle}>{title}</AppText>
       <View style={styles.sectionBody}>{children}</View>
     </View>
   );
@@ -45,11 +50,11 @@ export function UiCatalogScreen() {
         showsVerticalScrollIndicator={false}
       >
         <CatalogSection title={tr.uiCatalog.typography}>
-          <Text style={styles.displayText}>{tr.brand.first}{tr.brand.second}</Text>
-          <Text style={styles.titleText}>{tr.uiCatalog.screenTitleSample}</Text>
-          <Text style={styles.sectionText}>{tr.uiCatalog.sectionTitleSample}</Text>
-          <Text style={styles.bodyText}>{tr.uiCatalog.bodySample}</Text>
-          <Text style={styles.metadataText}>{tr.uiCatalog.metadataSample}</Text>
+          <AppText style={styles.displayText}>{tr.brand.first}{tr.brand.second}</AppText>
+          <AppText style={styles.titleText}>{tr.uiCatalog.screenTitleSample}</AppText>
+          <AppText style={styles.sectionText}>{tr.uiCatalog.sectionTitleSample}</AppText>
+          <AppText style={styles.bodyText}>{tr.uiCatalog.bodySample}</AppText>
+          <AppText style={styles.metadataText}>{tr.uiCatalog.metadataSample}</AppText>
         </CatalogSection>
 
         <CatalogSection title={tr.uiCatalog.buttons}>

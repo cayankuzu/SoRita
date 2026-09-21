@@ -2,13 +2,13 @@ import React from 'react';
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
 import { PLACE_BEST_TIME_OPTIONS, PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import { PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor';
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -49,7 +49,7 @@ export function PlaceEditorDetailsStep({
   return (
     <View style={styles.stepContent}>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{`${tr.placeEditor.studentDiscount} (${tr.common.optional})`}</Text>
+        <AppText style={styles.sectionTitle}>{`${tr.placeEditor.studentDiscount} (${tr.common.optional})`}</AppText>
         <View
           accessibilityLabel={tr.placeEditor.studentDiscount}
           accessibilityRole="radiogroup"
@@ -61,9 +61,9 @@ export function PlaceEditorDetailsStep({
             style={[styles.segmentButton, studentFriendly ? styles.segmentButtonActive : null]}
             onPress={() => onSetStudentFriendly(true)}
           >
-            <Text style={[styles.segmentText, studentFriendly ? styles.segmentTextPrimaryActive : null]}>
+            <AppText style={[styles.segmentText, studentFriendly ? styles.segmentTextPrimaryActive : null]}>
               {tr.common.yes}
-            </Text>
+            </AppText>
           </Pressable>
           <Pressable
             accessibilityRole="radio"
@@ -71,25 +71,25 @@ export function PlaceEditorDetailsStep({
             style={[styles.segmentButton, !studentFriendly ? styles.segmentButtonDark : null]}
             onPress={() => onSetStudentFriendly(false)}
           >
-            <Text style={[styles.segmentText, !studentFriendly ? styles.segmentTextDarkActive : null]}>
+            <AppText style={[styles.segmentText, !studentFriendly ? styles.segmentTextDarkActive : null]}>
               {tr.common.no}
-            </Text>
+            </AppText>
           </Pressable>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{PLACE_EDITOR_COPY.quickFeaturesTitle}</Text>
-        <Text style={styles.sectionHelper}>{PLACE_EDITOR_COPY.quickFeaturesHelper}</Text>
+        <AppText style={styles.sectionTitle}>{PLACE_EDITOR_COPY.quickFeaturesTitle}</AppText>
+        <AppText style={styles.sectionHelper}>{PLACE_EDITOR_COPY.quickFeaturesHelper}</AppText>
         <OptionRail
           options={PLACE_DIETARY_OPTIONS}
           selectedValues={dietarySelections}
           onToggle={onToggleFeature}
         />
         {dietarySelections.length > 0 ? (
-          <Text style={styles.selectionMeta}>
+          <AppText style={styles.selectionMeta}>
             {tr.placeEditor.optionSelectionCount(dietarySelections.length)}
-          </Text>
+          </AppText>
         ) : null}
       </View>
 
@@ -122,13 +122,13 @@ export function PlaceEditorDetailsStep({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{tr.placeEditor.bestTimes}</Text>
-        <Text style={styles.sectionHelper}>{tr.placeEditor.bestTimesHelper}</Text>
+        <AppText style={styles.sectionTitle}>{tr.placeEditor.bestTimes}</AppText>
+        <AppText style={styles.sectionHelper}>{tr.placeEditor.bestTimesHelper}</AppText>
         <OptionRail options={PLACE_BEST_TIME_OPTIONS} selectedValues={bestTimes} onToggle={onToggleBestTime} />
         {bestTimes.length > 0 ? (
-          <Text style={styles.selectionMeta}>
+          <AppText style={styles.selectionMeta}>
             {tr.placeEditor.timeSelectionCount(bestTimes.length)}
-          </Text>
+          </AppText>
         ) : null}
       </View>
     </View>

@@ -1,9 +1,9 @@
 import React from 'react';
-import { ArrowLeft } from 'lucide-react-native';
+import {
+  ArrowLeft } from 'lucide-react-native';
 import {
   FlatList,
   RefreshControl,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -13,6 +13,7 @@ import {
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
@@ -85,7 +86,7 @@ export function ExploreFeedView({
       >
         <ArrowLeft color={colors.textMuted} size={18} />
       </IconButton>
-      <Text style={styles.feedTitle}>{tr.explore.title}</Text>
+      <AppText style={styles.feedTitle}>{tr.explore.title}</AppText>
     </View>
   );
 

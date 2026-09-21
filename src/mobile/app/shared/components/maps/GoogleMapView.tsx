@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MapView, {
   Marker,
   PROVIDER_GOOGLE,
@@ -12,6 +12,7 @@ import {
   clusterMapMarkers,
   type MapMarkerCluster,
 } from '@/mobile/app/shared/components/maps/mapMarkerClustering';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
@@ -128,9 +129,9 @@ function MapMarkerGlyph({
           highlighted ? styles.markerShellHighlighted : null,
         ]}
       >
-        <Text allowFontScaling={false} style={styles.clusterMarkerText}>
+        <AppText allowFontScaling={false} style={styles.clusterMarkerText}>
           {clusterCount > 999 ? '999+' : clusterCount}
-        </Text>
+        </AppText>
       </View>
     );
   }
@@ -191,7 +192,7 @@ function MapLoadingOverlay({ isReady }: { isReady: boolean }) {
       pointerEvents="none"
       style={styles.loadingOverlay}
     >
-      <Text style={styles.loadingText}>{tr.map.mapLoading}</Text>
+      <AppText style={styles.loadingText}>{tr.map.mapLoading}</AppText>
     </View>
   );
 }

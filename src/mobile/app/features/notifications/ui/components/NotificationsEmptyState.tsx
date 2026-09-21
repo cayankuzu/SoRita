@@ -1,7 +1,11 @@
 import React from 'react';
-import { Heart } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  Heart } from 'lucide-react-native';
+import { StyleSheet,
+  View,
+} from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type NotificationsEmptyStateProps = {
@@ -15,8 +19,8 @@ export function NotificationsEmptyState({ title, description }: NotificationsEmp
       <View style={styles.iconWrap}>
         <Heart color={colors.textSoft} size={24} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <AppText style={styles.title}>{title}</AppText>
+      <AppText style={styles.description}>{description}</AppText>
     </View>
   );
 }

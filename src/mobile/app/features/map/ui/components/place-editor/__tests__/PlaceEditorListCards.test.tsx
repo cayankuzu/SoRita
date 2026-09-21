@@ -1,6 +1,5 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('lucide-react-native', () => ({
@@ -15,10 +14,11 @@ vi.mock('@/mobile/app/shared/components/maps/MiniMapPreview', () => ({
 }));
 
 vi.mock('@/mobile/app/shared/components/ui/ExpandableText', () => ({
-  ExpandableText: ({ text }: { text: string }) => <Text>{text}</Text>,
+  ExpandableText: ({ text }: { text: string }) => <AppText>{text}</AppText>,
 }));
 
-import { PlaceEditorListCards } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorListCards';
+import { PlaceEditorListCards } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorListCards';import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+
 
 describe('PlaceEditorListCards', () => {
   it('announces and blocks a list that already contains the place', () => {

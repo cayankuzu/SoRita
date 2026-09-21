@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import {
   Globe,
   Heart,
@@ -10,6 +10,7 @@ import {
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
@@ -44,7 +45,7 @@ function MetaChip({ icon, label, tone = 'neutral' }: MetaChipProps) {
   return (
     <View style={toneStyle}>
       {icon}
-      <Text style={[styles.heroMetaChipText, textToneStyle]}>{label}</Text>
+      <AppText style={[styles.heroMetaChipText, textToneStyle]}>{label}</AppText>
     </View>
   );
 }
@@ -76,10 +77,10 @@ export function ListDetailHeader({
             ) : (
               <View style={styles.heroPlaceholder}>
                 <View style={styles.heroPlaceholderBadge}>
-                  <Text style={styles.heroPlaceholderLabel}>{tr.common.list}</Text>
+                  <AppText style={styles.heroPlaceholderLabel}>{tr.common.list}</AppText>
                 </View>
                 <View style={styles.heroPlaceholderEmojiWrap}>
-                  <Text style={styles.heroPlaceholderEmoji}>{list.emoji || '📍'}</Text>
+                  <AppText style={styles.heroPlaceholderEmoji}>{list.emoji || '📍'}</AppText>
                 </View>
               </View>
             )}
@@ -88,15 +89,15 @@ export function ListDetailHeader({
           {list.coverImage ? (
             <View style={styles.coverHintChip}>
               <ImageIcon color={colors.onPrimary} size={12} />
-              <Text style={styles.coverHintText}>{tr.listDetail.openCover}</Text>
+              <AppText style={styles.coverHintText}>{tr.listDetail.openCover}</AppText>
             </View>
           ) : null}
         </View>
 
         <View style={styles.heroBody}>
-          <Text accessibilityRole="header" numberOfLines={2} style={styles.title}>
+          <AppText accessibilityRole="header" numberOfLines={2} style={styles.title}>
             {`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
-          </Text>
+          </AppText>
 
           <View style={styles.heroMetaRow}>
             <MetaChip
@@ -122,7 +123,7 @@ export function ListDetailHeader({
             ) : null}
           </View>
 
-          {timestampText ? <Text style={styles.heroTimestamp}>{timestampText}</Text> : null}
+          {timestampText ? <AppText style={styles.heroTimestamp}>{timestampText}</AppText> : null}
         </View>
       </View>
     </View>

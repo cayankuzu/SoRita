@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Crosshair, Ellipsis, Globe, Heart, Lock } from 'lucide-react-native';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
@@ -11,6 +11,7 @@ import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/Mini
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -91,9 +92,9 @@ function ListTileMedia({
         />
       ) : (
         <View style={styles.placeholderSquare}>
-          <Text style={styles.placeholderEmoji}>
+          <AppText style={styles.placeholderEmoji}>
             {list.emoji || tr.placeEditor.defaultEmoji}
-          </Text>
+          </AppText>
         </View>
       )}
 
@@ -107,9 +108,9 @@ function ListTileMedia({
             <Lock color={colors.onPrimary} size={10} />
           )}
           {!compact ? (
-            <Text style={styles.visibilityBadgeText}>
+            <AppText style={styles.visibilityBadgeText}>
               {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
-            </Text>
+            </AppText>
           ) : null}
         </View>
       ) : null}
@@ -118,7 +119,7 @@ function ListTileMedia({
         <View style={styles.mediaFooterRow}>
           <View style={styles.mediaFooterBadge}>
             <Heart color={colors.onPrimary} size={10} fill={colors.onPrimary} />
-            <Text style={styles.mediaFooterBadgeText}>{list.likes}</Text>
+            <AppText style={styles.mediaFooterBadgeText}>{list.likes}</AppText>
           </View>
         </View>
       ) : null}
@@ -282,19 +283,19 @@ function ListGridTileComponent({
           <View style={[styles.tileBody, compact ? styles.tileBodyCompact : null]}>
             <View style={styles.tileTitleRow}>
               <View style={styles.tileTitleContent}>
-                <Text numberOfLines={1} style={styles.tileTitle}>
+                <AppText numberOfLines={1} style={styles.tileTitle}>
                   <HighlightedText
                     query={searchQuery}
                     text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
                   />
-                </Text>
+                </AppText>
               </View>
               {hasMiniMap && !compact ? <View style={styles.titleActionPlaceholder} /> : null}
             </View>
-            <Text numberOfLines={2} style={styles.tileMetaSummary}>
+            <AppText numberOfLines={2} style={styles.tileMetaSummary}>
               {tr.cards.placesCount(placeCount)}
               {!compact && timestampText ? ` · ${timestampText}` : ''}
-            </Text>
+            </AppText>
           </View>
         </Pressable>
 

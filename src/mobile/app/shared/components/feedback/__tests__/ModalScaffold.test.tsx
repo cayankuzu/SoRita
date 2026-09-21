@@ -1,5 +1,5 @@
 import React from 'react';
-import { AccessibilityInfo, Text } from 'react-native';
+import { AccessibilityInfo } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +11,8 @@ vi.mock('@/mobile/app/shared/hooks/useModalAnimationType', () => ({
   useModalAnimationType: () => 'none',
 }));
 
-import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+
 
 describe('ModalScaffold accessibility', () => {
   beforeEach(() => {
@@ -34,7 +35,7 @@ describe('ModalScaffold accessibility', () => {
           onClose={onClose}
           visible
         >
-          <Text accessibilityRole="button">Seçenek</Text>
+          <AppText accessibilityRole="button">Seçenek</AppText>
         </ModalScaffold>,
       );
     });

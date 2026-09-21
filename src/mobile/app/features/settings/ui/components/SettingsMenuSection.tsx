@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
   colors,
@@ -29,7 +30,7 @@ type SettingsMenuSectionProps = {
 export function SettingsMenuSection({ title, items }: SettingsMenuSectionProps) {
   return (
     <View>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
+      <AppText accessibilityRole="header" style={styles.sectionTitle}>{title}</AppText>
       <View style={styles.menuGroup}>
         {items.map((item, index) => (
           <InstantPressable
@@ -42,7 +43,7 @@ export function SettingsMenuSection({ title, items }: SettingsMenuSectionProps) 
             style={[styles.menuRow, index < items.length - 1 ? styles.menuRowBorder : null]}
           >
             <View style={[styles.menuIcon, { backgroundColor: item.color }]}>{item.icon}</View>
-            <Text style={[styles.menuLabel, item.danger ? styles.menuLabelDanger : null]}>{item.label}</Text>
+            <AppText style={[styles.menuLabel, item.danger ? styles.menuLabelDanger : null]}>{item.label}</AppText>
             <ChevronRight color={colors.textSoft} size={iconSize.md} />
           </InstantPressable>
         ))}

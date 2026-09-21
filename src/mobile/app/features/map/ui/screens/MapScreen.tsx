@@ -1,10 +1,10 @@
 import React from 'react';
-import { useIsFocused } from '@react-navigation/native';
+import {
+  useIsFocused } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  Text,
   TextInput,
   View,
   type LayoutChangeEvent,
@@ -25,6 +25,7 @@ import {
 import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
 import { env } from '@/mobile/app/platform/config/env';
 import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -74,7 +75,7 @@ function MapFilterMenu({
       accessibilityRole="radiogroup"
       style={styles.filterMenu}
     >
-      <Text style={styles.filterMenuTitle}>{tr.map.filterTitle}</Text>
+      <AppText style={styles.filterMenuTitle}>{tr.map.filterTitle}</AppText>
       {MARKER_FILTER_OPTIONS.map((option) => {
         const isActive = markerFilter === option.value;
 
@@ -97,9 +98,9 @@ function MapFilterMenu({
                   : { backgroundColor: option.color },
               ]}
             />
-            <Text style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
+            <AppText style={[styles.filterOptionText, isActive ? styles.filterOptionTextActive : null]}>
               {option.label}
-            </Text>
+            </AppText>
           </InstantPressable>
         );
       })}
@@ -417,9 +418,9 @@ export function MapScreen() {
               {searchResults.length > 0 ? (
                 <View style={[styles.resultsCard, { maxHeight: mapOverlayLayout.resultsMaxHeight }]}>
                   <View style={styles.resultsHeader}>
-                    <Text style={styles.resultsHeaderText}>
+                    <AppText style={styles.resultsHeaderText}>
                       {tr.map.searchResultCount(searchResults.length)}
-                    </Text>
+                    </AppText>
                   </View>
                   <ScrollView
                     nestedScrollEnabled
@@ -457,8 +458,8 @@ export function MapScreen() {
                 </View>
               ) : (
                 <View style={styles.emptyResultsCard}>
-                  <Text style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</Text>
-                  <Text style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</Text>
+                  <AppText style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</AppText>
+                  <AppText style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</AppText>
                 </View>
               )}
             </View>
@@ -528,9 +529,9 @@ export function MapScreen() {
                   textStyle={styles.reopenEditorTitle}
                   showIndicator={false}
                 />
-                <Text style={styles.reopenEditorSubtitle}>
+                <AppText style={styles.reopenEditorSubtitle}>
                   {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
-                </Text>
+                </AppText>
               </View>
               <ChevronUp color={colors.onPrimary} size={16} />
             </InstantPressable>
@@ -550,7 +551,7 @@ export function MapScreen() {
                   textStyle={styles.reopenEditorTitle}
                   showIndicator={false}
                 />
-                <Text style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</Text>
+                <AppText style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</AppText>
               </View>
               <ChevronUp color={colors.onPrimary} size={16} />
             </InstantPressable>

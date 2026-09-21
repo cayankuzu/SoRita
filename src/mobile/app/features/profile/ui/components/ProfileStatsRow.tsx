@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileStat = {
@@ -26,8 +26,8 @@ export function ProfileStatsRow({ stats }: ProfileStatsRowProps) {
     >
       {stats.map((stat) => (
         <View key={stat.label} style={styles.item}>
-          <Text style={styles.value}>{stat.value}</Text>
-          <Text style={styles.label}>{stat.label}</Text>
+          <AppText style={styles.value}>{stat.value}</AppText>
+          <AppText style={styles.label}>{stat.label}</AppText>
         </View>
       ))}
     </View>

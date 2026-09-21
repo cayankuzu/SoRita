@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { brandIconAsset } from '@/mobile/app/shared/components/brand/brandAssets';
 import {
@@ -69,15 +70,15 @@ export function SoRitaLogo({
       ) : null}
 
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Text style={[styles.title, { fontSize: textSizes[size], lineHeight: textSizes[size] + 2 }]}>
-          <Text style={styles.brandPrimary}>{tr.brand.first}</Text>
-          <Text style={styles.brandSecondary}>{tr.brand.second}</Text>
-        </Text>
+        <AppText style={[styles.title, { fontSize: textSizes[size], lineHeight: textSizes[size] + 2 }]}>
+          <AppText style={styles.brandPrimary}>{tr.brand.first}</AppText>
+          <AppText style={styles.brandSecondary}>{tr.brand.second}</AppText>
+        </AppText>
         {showTagline ? (
-          <Text style={[styles.subtitle, subtitleTypography[size]]}>
-            <Text style={styles.brandPrimary}>{tr.brand.taglineFirst}</Text>
-            <Text style={styles.brandSecondary}>{tr.brand.taglineSecond}</Text>
-          </Text>
+          <AppText style={[styles.subtitle, subtitleTypography[size]]}>
+            <AppText style={styles.brandPrimary}>{tr.brand.taglineFirst}</AppText>
+            <AppText style={styles.brandSecondary}>{tr.brand.taglineSecond}</AppText>
+          </AppText>
         ) : null}
       </View>
     </View>

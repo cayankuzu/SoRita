@@ -1,7 +1,18 @@
 import React from 'react';
-import { Camera, List, MapPin, Search, Users, X } from 'lucide-react-native';
-import { ScrollView, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Camera,
+  List,
+  MapPin,
+  Search,
+  Users,
+  X } from 'lucide-react-native';
+import { ScrollView,
+  TextInput,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -101,8 +112,8 @@ export function ExploreHeaderControls({
   return (
     <View style={[styles.headerRail, { paddingHorizontal: screenPadding }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{tr.explore.title}</Text>
-        <Text style={styles.subtitle}>{tr.explore.subtitle}</Text>
+        <AppText style={styles.title}>{tr.explore.title}</AppText>
+        <AppText style={styles.subtitle}>{tr.explore.subtitle}</AppText>
       </View>
 
       <View style={styles.filtersSection}>
@@ -161,9 +172,9 @@ export function ExploreHeaderControls({
                   style={[styles.tabButton, active ? styles.tabButtonActive : null]}
                 >
                   {tab.renderIcon(active)}
-                  <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>
+                  <AppText style={[styles.tabText, active ? styles.tabTextActive : null]}>
                     {tab.label}
-                  </Text>
+                  </AppText>
                 </InstantPressable>
               );
             })}
@@ -171,13 +182,13 @@ export function ExploreHeaderControls({
         </View>
 
         {typeof resultCount === 'number' ? (
-          <Text
+          <AppText
             accessibilityLiveRegion="polite"
             accessibilityState={{ busy: resultsPending }}
             style={styles.resultStatus}
           >
             {resultsPending ? tr.common.loading : tr.map.searchResultCount(resultCount)}
-          </Text>
+          </AppText>
         ) : null}
       </View>
     </View>

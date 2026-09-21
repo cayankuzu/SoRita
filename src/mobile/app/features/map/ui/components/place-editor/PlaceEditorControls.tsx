@@ -3,11 +3,11 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Star, StarHalf } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, touch, typography } from '@/mobile/app/shared/theme/tokens';
@@ -55,9 +55,9 @@ export function OptionRail({ options, selectedValues, onToggle }: OptionRailProp
                 onPress={() => onToggle(item)}
                 style={[styles.railChip, selected ? styles.railChipSelected : null]}
               >
-                <Text style={[styles.railChipText, selected ? styles.railChipTextSelected : null]}>
+                <AppText style={[styles.railChipText, selected ? styles.railChipTextSelected : null]}>
                   {item}
-                </Text>
+                </AppText>
               </InstantPressable>
             );
           })}
@@ -113,7 +113,7 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
           );
         })}
       </View>
-      {value > 0 ? <Text style={styles.ratingValue}>{value.toFixed(1)}/5</Text> : null}
+      {value > 0 ? <AppText style={styles.ratingValue}>{value.toFixed(1)}/5</AppText> : null}
     </View>
   );
 }

@@ -2,7 +2,6 @@ import React from 'react';
 import {
   FlatList,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -10,6 +9,7 @@ import { ArrowLeft } from 'lucide-react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
@@ -91,7 +91,7 @@ export function ProfileFeedScreen({
         >
           <ArrowLeft color={colors.textMuted} size={18} />
         </IconButton>
-        <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+        <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
       </View>
 
       <FlatList

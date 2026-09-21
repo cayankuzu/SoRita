@@ -30,6 +30,18 @@ for (const path of await collectFiles(sourceRoot)) {
   }
 
   const source = await readFile(path, 'utf8');
+  const relativePath = relative(workspace, path);
+
+  // Colour is checked everywhere, not just in files that look like UI. The
+  // Android notification channel painted its LED with a raw blue that was not
+  // even the brand primary, and it sat in `platform/notifications` where none
+  // of the heuristics below reach.
+  source.split(/\r?\n/).forEach((line, index) => {
+    if (/(?:#[0-9a-fA-F]{3,8}|rgba?\s*\()/.test(line)) {
+      violations.push(`${relativePath}:${index + 1} raw color`);
+    }
+  });
+
   const isUiSource =
     sourceExtension === '.tsx' ||
     source.includes('StyleSheet.create') ||
@@ -41,15 +53,6 @@ for (const path of await collectFiles(sourceRoot)) {
   if (!isUiSource) {
     continue;
   }
-
-  const relativePath = relative(workspace, path);
-  const lines = source.split(/\r?\n/);
-
-  lines.forEach((line, index) => {
-    if (/(?:#[0-9a-fA-F]{3,8}|rgba?\s*\()/.test(line)) {
-      violations.push(`${relativePath}:${index + 1} raw color`);
-    }
-  });
 
   violations.push(...findTypographyViolations({
     minFontSize: MIN_FONT_SIZE,

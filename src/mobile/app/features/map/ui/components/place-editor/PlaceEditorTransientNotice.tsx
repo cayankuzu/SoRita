@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorTransientNoticeProps = {
@@ -30,8 +31,8 @@ export function PlaceEditorTransientNotice({
           <AlertTriangle color={colors.danger} size={18} />
         </View>
         <View style={styles.copy}>
-          <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+          <AppText style={styles.description}>{description}</AppText>
         </View>
       </View>
     </Pressable>

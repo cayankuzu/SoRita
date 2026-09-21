@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Bell } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/naviga
 import { prioritizeStartupWarmupStage } from '@/mobile/app/app-shell/startup/startupDataWarmup';
 import { useNotificationUnreadCountQuery } from '@/mobile/app/data/hooks/useNotificationsQuery';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -123,7 +124,7 @@ export function AppHeader() {
               importantForAccessibility="no-hide-descendants"
               style={styles.notificationBadge}
             >
-              <Text style={styles.notificationBadgeText}>{badgeLabel}</Text>
+              <AppText style={styles.notificationBadgeText}>{badgeLabel}</AppText>
             </View>
           ) : null}
         </IconButton>

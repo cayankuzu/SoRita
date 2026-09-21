@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -34,6 +33,7 @@ import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/c
 import { PlaceEditorWizardHeader } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorWizardHeader';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { MediaLightbox } from '@/mobile/app/shared/components/feedback/MediaLightbox';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
@@ -541,8 +541,8 @@ export function PlaceEditorModal({
 
             {isInteractionLocked ? (
               <View pointerEvents="auto" style={styles.lockOverlay}>
-                <Text style={styles.lockOverlayTitle}>{tr.placeEditor.saveProgressTitle}</Text>
-                <Text style={styles.lockOverlayDescription}>{tr.placeEditor.saveLockedDescription}</Text>
+                <AppText style={styles.lockOverlayTitle}>{tr.placeEditor.saveProgressTitle}</AppText>
+                <AppText style={styles.lockOverlayDescription}>{tr.placeEditor.saveLockedDescription}</AppText>
               </View>
             ) : null}
           </View>
