@@ -97,6 +97,51 @@ both keep receiving updates. When the runtime does move, users who have not inst
 version keep the old one and receive no further updates until they update from the store, so publish
 for the runtime that is still in the field until the new build has rolled out.
 
+## Turning OTA on for iOS
+
+Android receives updates today; iOS does not, and the reason is not
+configuration. The App Store build is 1.0.102 (build 87, EAS build
+`012be71b-b694-4e9b-98ca-42995aa0b575`) and it embeds runtime **1.0.102**. Since
+the commit it was built from (`b347f7f`) the JavaScript has come to depend on
+native modules that binary does not contain:
+
+| Package | Then | Now |
+| --- | --- | --- |
+| `expo-application` | absent | `~55.0.19` |
+| `expo-localization` | absent | `~55.0.19` |
+| `posthog-react-native` | absent | `^4.71.0` |
+| `@react-native-firebase/app` / `messaging` | `^25.1.0` | `26.4.0` |
+
+`npm run ota:classify -- --base b347f7f2ff91becec0db97f83088c017d6e7d1ed --head HEAD`
+returns `NATIVE_BUILD_REQUIRED`, and that verdict is correct: an update published
+for runtime 1.0.102 would launch JavaScript that calls into modules the binary
+never linked. **Do not publish for 1.0.102.** iOS needs one store build to catch
+up, after which both platforms sit on the same runtime and a single publish
+serves them together.
+
+1. Build and submit from a commit whose `nativeRuntimeVersion` is the shared
+   runtime (currently `1.0.108`). Everything else is already in place: the
+   production profile carries `channel: production`, and `ios.privacyManifests`,
+   the Info.plist strings and the associated domain are declared in
+   `app.config.ts`.
+
+   ```bash
+   eas build --platform ios --profile production --non-interactive
+   eas submit --platform ios --profile production --latest
+   ```
+
+2. Record the finished build. The recorder reads the channel and runtime EAS
+   itself stored for it and refuses a build that is not a production store build
+   on the expected runtime:
+
+   ```bash
+   npm run ota:record-binary -- --platform ios --eas-build-id <BUILD_ID>
+   ```
+
+3. Commit `quality/ota-binaries.json`. From then on `npm run ota:publish`
+   publishes to both platforms in one group; until then iOS must be left out
+   with `--platform android`.
+
 ## OTA change classifier
 
 ```bash
