@@ -1,10 +1,6 @@
 import React from 'react';
-import {
-  Ban } from 'lucide-react-native';
-import { FlatList,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Ban } from 'lucide-react-native';
+import { FlatList, useWindowDimensions, View } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { SettingsHeader } from '@/mobile/app/features/settings/ui/components/SettingsHeader';

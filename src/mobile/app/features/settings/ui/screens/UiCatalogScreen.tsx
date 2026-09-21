@@ -1,10 +1,6 @@
-import {
-  CircleSlash2 } from 'lucide-react-native';
+import { CircleSlash2 } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';

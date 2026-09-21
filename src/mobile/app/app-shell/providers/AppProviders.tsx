@@ -1,13 +1,8 @@
 import React, { useEffect } from 'react';
-import {
-  QueryClientProvider } from '@tanstack/react-query';
-import { SafeAreaProvider,
-  useSafeAreaInsets } from 'react-native-safe-area-context';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as NativeSplashScreen from 'expo-splash-screen';
-import { AppState,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { queryClient } from '@/mobile/app/data/query/queryClient';

@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
-  useIsFocused } from '@react-navigation/native';
-import { StyleSheet,
+  StyleSheet,
   useWindowDimensions,
   View,
+  type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
 import { MapPin } from 'lucide-react-native';
@@ -107,7 +108,18 @@ function MiniMapPreviewComponent({
   const [focusRecoveryInstanceId, setFocusRecoveryInstanceId] = useState(0);
   const wasInteractiveMapVisibleRef = React.useRef(false);
   const placesSignature = buildPlacesSignature(places);
-  const previewWidth = getStaticMapPreviewWidth(viewportWidth);
+  // The card asks Google for a picture and then paints it with `cover`, so any
+  // gap between the requested size and the painted box is cropped off the
+  // edges - which is where Google puts its attribution. The same component is
+  // also used inside discovery tiles that are less than half this wide, so no
+  // viewport formula can be right everywhere. Ask for the box that was
+  // actually laid out; the formula is only the guess made before that is known.
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = Math.round(event.nativeEvent.layout.width);
+    setMeasuredWidth((current) => (current === nextWidth ? current : nextWidth));
+  }, []);
+  const previewWidth = measuredWidth || getStaticMapPreviewWidth(viewportWidth);
   const staticMapUrl = useMemo(
     () => buildStaticMapUrl(places, height, previewWidth),
     [height, places, previewWidth],
@@ -158,7 +170,11 @@ function MiniMapPreviewComponent({
     const isAwaitingPreview = Boolean(staticMapUrl) && !staticPreviewFailed && !staticPreviewLoaded;
 
     return (
-      <View pointerEvents="none" style={[styles.container, { height }]}>
+      <View
+        onLayout={handleContainerLayout}
+        pointerEvents="none"
+        style={[styles.container, { height }]}
+      >
         <View collapsable={false} style={StyleSheet.absoluteFillObject}>
           <AppImage
             uri={staticPreviewUri}
@@ -178,7 +194,11 @@ function MiniMapPreviewComponent({
   }
 
   return (
-    <View pointerEvents={interactive ? 'auto' : 'none'} style={[styles.container, { height }]}>
+    <View
+      onLayout={handleContainerLayout}
+      pointerEvents={interactive ? 'auto' : 'none'}
+      style={[styles.container, { height }]}
+    >
       <View collapsable={false} style={StyleSheet.absoluteFillObject}>
         <DeferredAppMapView
           instanceId={effectiveInstanceId}

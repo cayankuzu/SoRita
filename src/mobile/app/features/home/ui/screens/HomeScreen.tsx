@@ -1,8 +1,6 @@
 import React from 'react';
-import {
-  useScrollToTop } from '@react-navigation/native';
-import { MapPin,
-  Users } from 'lucide-react-native';
+import { useScrollToTop } from '@react-navigation/native';
+import { MapPin, Users } from 'lucide-react-native';
 import {
   ActivityIndicator,
   FlatList,

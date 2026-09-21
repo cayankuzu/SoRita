@@ -1,10 +1,6 @@
 import React from 'react';
-import {
-  Camera } from 'lucide-react-native';
-import { ActivityIndicator,
-  TextInput,
-  View,
-} from 'react-native';
+import { Camera } from 'lucide-react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 
 import { PROFILE_INTEREST_OPTIONS } from '@/mobile/app/catalog/profileInterests';
 import { AuthImagePicker, AuthStepDots } from '@/mobile/app/features/auth/public/components';

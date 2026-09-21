@@ -1,6 +1,5 @@
 import React from 'react';
-import {
-  ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import {
   FlatList,
   RefreshControl,

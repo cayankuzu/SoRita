@@ -1,6 +1,5 @@
 import React from 'react';
-import {
-  BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import {
   ActivityIndicator,
   Animated,

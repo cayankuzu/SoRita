@@ -1,16 +1,6 @@
 import React from 'react';
-import {
-  Camera,
-  List,
-  MapPin,
-  Search,
-  Users,
-  X } from 'lucide-react-native';
-import { ScrollView,
-  TextInput,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Camera, List, MapPin, Search, Users, X } from 'lucide-react-native';
+import { ScrollView, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';

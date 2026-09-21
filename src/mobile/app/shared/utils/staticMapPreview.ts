@@ -44,9 +44,15 @@ export function toStaticMapColor(color?: string) {
   return color;
 }
 
-/** Matches the width MiniMapPreview renders, so a warmed URL is the one the card requests. */
+/**
+ * The feed card's map box: the card is inset by 12 and `mapWrap` pads another
+ * 12, so 24 a side. This is the estimate used to warm the cache before the box
+ * has been laid out - MiniMapPreview asks for its measured width once it has
+ * one, because the same component also renders inside discovery tiles less
+ * than half this wide.
+ */
 export function getStaticMapPreviewWidth(viewportWidth: number) {
-  return Math.min(480, Math.max(240, viewportWidth - 24));
+  return Math.min(480, Math.max(240, viewportWidth - 48));
 }
 
 export function buildStaticMapUrl(places: MapMarkerItem[], height: number, width: number) {

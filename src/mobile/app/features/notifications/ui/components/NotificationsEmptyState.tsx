@@ -1,9 +1,6 @@
 import React from 'react';
-import {
-  Heart } from 'lucide-react-native';
-import { StyleSheet,
-  View,
-} from 'react-native';
+import { Heart } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';

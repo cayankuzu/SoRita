@@ -1,17 +1,10 @@
-import {
-  AlertCircle,
-  CheckCircle2,
-  Info,
-  X } from 'lucide-react-native';
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react-native';
 import React,
   { useCallback,
   useEffect,
   useRef,
   useState } from 'react';
-import { Animated,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
