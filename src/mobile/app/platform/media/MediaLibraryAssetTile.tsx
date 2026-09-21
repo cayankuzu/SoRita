@@ -66,7 +66,9 @@ export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
 
       {isSelected ? (
         <View style={styles.orderBadge}>
-          <AppText style={styles.orderBadgeText}>{orderIndex + 1}</AppText>
+          <AppText scaleLimit="chrome" style={styles.orderBadgeText}>
+            {orderIndex + 1}
+          </AppText>
         </View>
       ) : null}
 
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
     top: 6,
     left: 6,
     minWidth: 20,
-    height: 20,
+    minHeight: 20,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

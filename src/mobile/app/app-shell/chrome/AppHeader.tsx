@@ -124,7 +124,9 @@ export function AppHeader() {
               importantForAccessibility="no-hide-descendants"
               style={styles.notificationBadge}
             >
-              <AppText style={styles.notificationBadgeText}>{badgeLabel}</AppText>
+              <AppText scaleLimit="chrome" style={styles.notificationBadgeText}>
+                {badgeLabel}
+              </AppText>
             </View>
           ) : null}
         </IconButton>
@@ -154,7 +156,9 @@ const styles = StyleSheet.create({
     top: 6,
     right: 4,
     minWidth: 16,
-    height: 16,
+    // The count sets the badge's size in both directions: a hard height turned
+    // a scaled-up numeral into a clipped one.
+    minHeight: 16,
     paddingHorizontal: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.danger,
