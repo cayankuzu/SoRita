@@ -79,6 +79,34 @@ describe('UI typography token guard', () => {
     `), []);
   });
 
+  it('sends a scale-plus-colour body to textStyle instead of copying it again', () => {
+    const violations = inspect(`
+      const styles = StyleSheet.create({
+        label: {
+          ...typography.metadataText,
+          color: colors.textMuted,
+        },
+        strongLabel: {
+          ...typography.metadataText,
+          color: colors.primary,
+          fontWeight: fontWeight.strong,
+        },
+      });
+    `);
+
+    assert.equal(violations.filter((item) => item.includes('should use textStyle()')).length, 2);
+  });
+
+  it('leaves a body that carries more than the composition alone', () => {
+    assert.deepEqual(inspect(`
+      const styles = StyleSheet.create({
+        spread: { ...typography.bodyText, color: colors.text, marginTop: spacing.sm },
+        weightOnly: { ...typography.bodyText, fontWeight: fontWeight.strong },
+        composed: textStyle('bodyText', colors.text),
+      });
+    `), []);
+  });
+
   it('keeps only the exact approved responsive metrics allowlisted', () => {
     const logoPath = 'src/mobile/app/shared/components/brand/SoRitaLogo.tsx';
     const avatarPath = 'src/mobile/app/shared/components/ui/AvatarView.tsx';

@@ -135,6 +135,36 @@ function getLineNumber(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
+/**
+ * A type scale, a colour and an optional weight is the one composition every
+ * text style in the app makes. Hand-writing it produced 23 combinations copied
+ * into 225 style bodies before `textStyle` gave the composition a name, so the
+ * shape is rejected here rather than allowed to grow back.
+ */
+function isHandWrittenTextComposition(node) {
+  if (!ts.isObjectLiteralExpression(node) || node.properties.length < 2) {
+    return false;
+  }
+
+  const [first, ...rest] = node.properties;
+
+  if (
+    !ts.isSpreadAssignment(first) ||
+    getRootIdentifier(first.expression) !== 'typography'
+  ) {
+    return false;
+  }
+
+  const names = rest.map((property) =>
+    ts.isPropertyAssignment(property) ? getPropertyName(property) : null,
+  );
+
+  return (
+    names.includes('color') &&
+    names.every((name) => name === 'color' || name === 'fontWeight')
+  );
+}
+
 export function findTypographyViolations({
   allowRawDeclarations = false,
   minFontSize,
@@ -164,6 +194,12 @@ export function findTypographyViolations({
   }
 
   function inspectNode(node) {
+    if (!allowRawDeclarations && isHandWrittenTextComposition(node)) {
+      violations.push(
+        `${relativePath}:${getLineNumber(sourceFile, node)} text style should use textStyle()`,
+      );
+    }
+
     const isAssignment = ts.isPropertyAssignment(node);
     const isShorthand = ts.isShorthandPropertyAssignment(node);
 
