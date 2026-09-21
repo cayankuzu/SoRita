@@ -43,9 +43,19 @@ export function isAncestor(ancestor, descendant, cwd = workspaceRoot) {
   return result.status === 0;
 }
 
-export function readAppVersion(appConfigSource) {
-  const version = appConfigSource.match(/\n {2}version: '([^']+)'/u)?.[1];
-  if (!version || !VERSION_PATTERN.test(version)) fail('Could not read version from app.config.ts.');
+// The runtime the repository publishes for, which is what decides whether an
+// update can reach a binary. It is deliberately not `version`: those were tied
+// together once, and the shipped 1.0.108 stopped receiving updates the moment
+// the repository moved to 1.0.109.
+export function readRuntimeVersion(appConfigSource) {
+  // Binaries already in the field were built when the runtime was still an
+  // inline literal, so a commit from before the split still has to be readable.
+  const version =
+    appConfigSource.match(/const nativeRuntimeVersion = '([^']+)'/u)?.[1] ??
+    appConfigSource.match(/\n {2}runtimeVersion: '([^']+)'/u)?.[1];
+  if (!version || !VERSION_PATTERN.test(version)) {
+    fail('Could not read the published runtime version from app.config.ts.');
+  }
   return version;
 }
 
@@ -163,20 +173,20 @@ export function inspectIosBuild(build) {
   };
 }
 
-export function verifyInspectedBinary(inspected, { appVersion, platform, projectId }) {
+export function verifyInspectedBinary(inspected, { runtimeVersion, platform, projectId }) {
   if (inspected.channel !== OTA_CHANNEL) {
     fail(`The ${platform} binary listens to channel '${inspected.channel}', not '${OTA_CHANNEL}'.`);
   }
   if (inspected.projectId !== projectId) fail(`The ${platform} binary belongs to another EAS project.`);
-  if (inspected.runtimeVersion !== appVersion) {
+  if (inspected.runtimeVersion !== runtimeVersion) {
     fail(
-      `The ${platform} binary embeds runtime ${inspected.runtimeVersion}, but its source app version is ${appVersion}. ` +
-        'No update published from this repository would reach it.',
+      `The ${platform} binary embeds runtime ${inspected.runtimeVersion}, but its source commit publishes for ` +
+        `${runtimeVersion}. No update published from this repository would reach it.`,
     );
   }
 }
 
-export function selectBinaryRecords(document, { appVersion, platforms }) {
+export function selectBinaryRecords(document, { runtimeVersion, platforms }) {
   if (!document || document.schemaVersion !== 1 || document.channel !== OTA_CHANNEL) {
     fail(`quality/ota-binaries.json must be schema 1 for channel '${OTA_CHANNEL}'.`);
   }
@@ -189,11 +199,12 @@ export function selectBinaryRecords(document, { appVersion, platforms }) {
     if (!VERSION_PATTERN.test(record.runtimeVersion ?? '') || !SHA_PATTERN.test(record.sourceSha ?? '')) {
       fail(`The ${platform} binary record is malformed.`);
     }
-    if (record.runtimeVersion !== appVersion) {
+    if (record.runtimeVersion !== runtimeVersion) {
       fail(
-        `The recorded ${platform} binary runs runtime ${record.runtimeVersion}, but app.config.ts is ${appVersion}. ` +
-          `An update published now would reach no ${platform} user. Ship and record a ${platform} binary for ` +
-          `${appVersion}, or publish only to the other platform with --platform.`,
+        `The recorded ${platform} binary runs runtime ${record.runtimeVersion}, but app.config.ts publishes for ` +
+          `${runtimeVersion}. An update published now would reach no ${platform} user. Point ` +
+          `nativeRuntimeVersion at the runtime the store binary embeds, or publish only to the other ` +
+          'platform with --platform.',
       );
     }
     return { platform, ...record };
@@ -261,7 +272,9 @@ function main() {
   const projectId = readUpdateProjectId(
     readFileSync(join(workspaceRoot, 'android/app/src/main/res/values/strings.xml'), 'utf8'),
   );
-  const currentAppVersion = readAppVersion(readFileSync(join(workspaceRoot, 'app.config.ts'), 'utf8'));
+  const publishedRuntimeVersion = readRuntimeVersion(
+    readFileSync(join(workspaceRoot, 'app.config.ts'), 'utf8'),
+  );
 
   let record;
   if (options.platform === 'android') {
@@ -275,7 +288,7 @@ function main() {
       artifactSha256: createHash('sha256').update(archive).digest('hex'),
     };
     verifyInspectedBinary(inspected, {
-      appVersion: readAppVersion(git(['show', `${sourceSha}:app.config.ts`])),
+      runtimeVersion: readRuntimeVersion(git(['show', `${sourceSha}:app.config.ts`])),
       platform: 'android',
       projectId,
     });
@@ -283,7 +296,7 @@ function main() {
     const inspected = inspectIosBuild(easJson(['build:view', options['eas-build-id'], '--json']));
     git(['rev-parse', '--verify', `${inspected.sourceSha}^{commit}`]);
     verifyInspectedBinary(inspected, {
-      appVersion: readAppVersion(git(['show', `${inspected.sourceSha}:app.config.ts`])),
+      runtimeVersion: readRuntimeVersion(git(['show', `${inspected.sourceSha}:app.config.ts`])),
       platform: 'ios',
       projectId,
     });
@@ -296,8 +309,11 @@ function main() {
   }
 
   if (!isAncestor(record.sourceSha, head)) fail('The binary source commit is not an ancestor of HEAD.');
-  if (record.runtimeVersion !== currentAppVersion) {
-    fail(`The binary runtime ${record.runtimeVersion} differs from the current app version ${currentAppVersion}.`);
+  if (record.runtimeVersion !== publishedRuntimeVersion) {
+    fail(
+      `The binary embeds runtime ${record.runtimeVersion} but app.config.ts publishes for ` +
+        `${publishedRuntimeVersion}, so no update would reach it.`,
+    );
   }
 
   const existing = existsSync(binaryRecordsPath) ? JSON.parse(readFileSync(binaryRecordsPath, 'utf8')) : undefined;

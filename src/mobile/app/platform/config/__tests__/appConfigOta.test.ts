@@ -28,10 +28,19 @@ describe('app.config EAS Update safety', () => {
     process.env = { ...originalEnv };
   });
 
-  it('derives the update URL and pins the runtime to the app version', async () => {
+  it('derives the update URL and publishes for the runtime the binaries embed', async () => {
     const config = await loadAppConfig();
+    const androidStrings = readFileSync(
+      resolve(process.cwd(), 'android/app/src/main/res/values/strings.xml'),
+      'utf8',
+    );
 
-    expect(config.runtimeVersion).toBe(config.version);
+    // Not `config.version`: an update reaches only the binaries embedding the
+    // same runtime, so tying the two cut the shipped build off from every
+    // update published after the next version bump.
+    expect(androidStrings).toContain(
+      `>${config.runtimeVersion}</string>`,
+    );
     expect(config.updates).toEqual({
       enabled: true,
       checkAutomatically: 'ON_LOAD',
@@ -95,7 +104,7 @@ describe('app.config EAS Update safety', () => {
       'manifestPlaceholders.expoUpdatesChannel = resolveReleaseExpoUpdatesChannel()',
     );
     expect(androidGradle).toContain('dependsOn(verifyExpoRuntimeVersion)');
-    expect(androidStrings).toContain('>1.0.109</string>');
+    expect(androidStrings).toContain('>1.0.108</string>');
     expect(androidStrings).toContain(`>https://u.expo.dev/${projectId}</string>`);
     expect(easConfig.build).toMatchObject({
       development: { channel: 'development', environment: 'development' },

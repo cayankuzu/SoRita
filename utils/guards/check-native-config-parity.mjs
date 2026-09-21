@@ -43,8 +43,8 @@ const expoScheme = pick(appConfig, /const appScheme = '([^']+)'/, 'appScheme', a
 const expoVersion = pick(appConfig, /\n {2}version: '([^']+)'/, 'version', appConfigPath);
 const expoRuntimeVersion = pick(
   appConfig,
-  /\n {2}runtimeVersion: '([^']+)'/,
-  'runtimeVersion',
+  /const nativeRuntimeVersion = '([^']+)'/,
+  'nativeRuntimeVersion',
   appConfigPath,
 );
 const expoPackage = pick(appConfig, /\n {4}package: '([^']+)'/, 'android.package', appConfigPath);
@@ -97,13 +97,15 @@ expect('App identity', expoPackage, gradleApplicationId, 'app.config.ts android.
 expect('Android namespace', expoPackage, gradleNamespace, 'app.config.ts android.package', 'build.gradle namespace');
 expect('Version name', expoVersion, gradleVersionName, 'app.config.ts version', 'build.gradle versionName');
 expect('Version code', expoVersionCode, gradleVersionCode, 'app.config.ts android.versionCode', 'build.gradle versionCode');
-// A runtime that lags the version strands every binary built from it from OTA updates.
-expect('OTA runtime version', expoVersion, expoRuntimeVersion, 'app.config.ts version', 'app.config.ts runtimeVersion');
+// An update reaches only the binaries that embed the same runtime string, so
+// what `eas update` publishes for and what the APK ships must be one value.
+// This deliberately does NOT tie the runtime to `version`: doing that cut the
+// installed 1.0.108 base off from every update published for 1.0.109.
 expect(
   'Android OTA runtime version',
-  expoVersion,
+  expoRuntimeVersion,
   androidRuntimeVersion,
-  'app.config.ts version',
+  'app.config.ts nativeRuntimeVersion',
   'strings.xml expo_runtime_version',
 );
 expect(

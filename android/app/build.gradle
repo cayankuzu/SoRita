@@ -375,21 +375,35 @@ def verifyReleaseSigningKey = tasks.register("verifyReleaseSigningKey") {
     }
 }
 
-def expectedExpoRuntimeVersion = android.defaultConfig.versionName
 def expoRuntimeStringsFile = file("src/main/res/values/strings.xml")
+def expoAppConfigFile = rootProject.file("../app.config.ts")
 
-// A runtime string that lags versionName strands the binary from every OTA update.
+// The runtime string is the native contract: an update reaches only the
+// binaries that embed the same one. It deliberately does not track versionName
+// - tying it there stranded the shipped 1.0.108 from every update published
+// for 1.0.109 - so this verifies the APK against app.config.ts, which is what
+// `eas update` publishes for.
 def verifyExpoRuntimeVersion = tasks.register("verifyExpoRuntimeVersion") {
     inputs.file(expoRuntimeStringsFile)
+    inputs.file(expoAppConfigFile)
 
     doLast {
-        def matcher = expoRuntimeStringsFile.text =~ /name="expo_runtime_version"[^>]*>([^<]+)</
-        def embeddedRuntimeVersion = matcher.find() ? matcher.group(1).trim() : null
+        def stringsMatcher = expoRuntimeStringsFile.text =~ /name="expo_runtime_version"[^>]*>([^<]+)</
+        def embeddedRuntimeVersion = stringsMatcher.find() ? stringsMatcher.group(1).trim() : null
 
-        if (embeddedRuntimeVersion != expectedExpoRuntimeVersion) {
+        def configMatcher = expoAppConfigFile.text =~ /const nativeRuntimeVersion = '([^']+)'/
+        def publishedRuntimeVersion = configMatcher.find() ? configMatcher.group(1).trim() : null
+
+        if (publishedRuntimeVersion == null) {
             throw new GradleException(
-                "expo_runtime_version is '${embeddedRuntimeVersion ?: 'missing'}' but versionName is " +
-                "'${expectedExpoRuntimeVersion}'. Align strings.xml with app.config.ts before building a release."
+                "app.config.ts declares no nativeRuntimeVersion, so the runtime this build embeds cannot be verified."
+            )
+        }
+
+        if (embeddedRuntimeVersion != publishedRuntimeVersion) {
+            throw new GradleException(
+                "expo_runtime_version is '${embeddedRuntimeVersion ?: 'missing'}' but app.config.ts publishes for " +
+                "'${publishedRuntimeVersion}'. Align strings.xml with app.config.ts before building a release."
             )
         }
 

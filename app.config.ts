@@ -228,6 +228,12 @@ const publicRuntimeConfig = {
   productAnalyticsEnabled,
 };
 
+// Every shipped binary embeds this string, and an update reaches only the
+// binaries that embed the same one. It therefore tracks the native surface,
+// not the release number: it stays put across JavaScript-only releases and
+// moves only when a build changes what the native side can do.
+const nativeRuntimeVersion = '1.0.108';
+
 type SoRitaExpoConfig = ExpoConfig & {
   newArchEnabled?: boolean;
 };
@@ -248,8 +254,15 @@ const config: SoRitaExpoConfig = {
     'assets/app-icons_background_removed/playstore.png',
     'assets/splash/launch-splash.png',
   ],
-  // EAS Update rejects runtime policies in bare projects; native-parity:check keeps this equal to version.
-  runtimeVersion: '1.0.109',
+  // The runtime version is the native contract, not the marketing version: an
+  // update only reaches a binary that embeds the same string. Tying it to
+  // `version` meant every release cut the installed base off from every update
+  // published afterwards - Play was serving 1.0.108 while updates went to
+  // 1.0.109, so the store build asked for an update and was told there was
+  // none. Bump this only when the native surface changes, and rebuild the
+  // binaries when you do. EAS Update rejects runtime policies in bare
+  // projects, so it is a literal that native-parity:check pins to strings.xml.
+  runtimeVersion: nativeRuntimeVersion,
   updates: {
     // With a zero launch wait, a newly downloaded update is applied on the
     // next cold start while the embedded/cached update remains the fallback.

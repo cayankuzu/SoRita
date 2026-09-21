@@ -12,7 +12,7 @@ import {
   binaryRecordsPath,
   git,
   isAncestor,
-  readAppVersion,
+  readRuntimeVersion,
   resolveEasInvocation,
   selectBinaryRecords,
   workspaceRoot,
@@ -144,9 +144,9 @@ function verifyPublishableCommit() {
 
 function main() {
   const options = parsePublishArguments(process.argv.slice(2));
-  const appVersion = readAppVersion(readFileSync(join(workspaceRoot, 'app.config.ts'), 'utf8'));
+  const runtimeVersion = readRuntimeVersion(readFileSync(join(workspaceRoot, 'app.config.ts'), 'utf8'));
   const records = selectBinaryRecords(JSON.parse(readFileSync(binaryRecordsPath, 'utf8')), {
-    appVersion,
+    runtimeVersion,
     platforms: options.platforms,
   });
   const head = verifyPublishableCommit();
@@ -205,9 +205,9 @@ function main() {
   if (publish.error) throw publish.error;
   if (publish.status !== 0) fail('eas update failed; nothing was confirmed as published.');
 
-  const summary = summarizeUpdateOutput(publish.stdout, { platforms: options.platforms, runtimeVersion: appVersion });
+  const summary = summarizeUpdateOutput(publish.stdout, { platforms: options.platforms, runtimeVersion: runtimeVersion });
   const lines = [
-    `[ota] Published group ${summary.group} to ${OTA_CHANNEL} runtime ${appVersion} for ${options.platforms.join(' + ')} at ${options.rolloutPercentage}%.`,
+    `[ota] Published group ${summary.group} to ${OTA_CHANNEL} runtime ${runtimeVersion} for ${options.platforms.join(' + ')} at ${options.rolloutPercentage}%.`,
     ...summary.updates.map((update) => `[ota]   ${update.platform}: ${update.id}`),
     '[ota] Users receive it on their next app start and run it on the start after that.',
   ];

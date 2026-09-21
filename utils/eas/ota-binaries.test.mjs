@@ -6,7 +6,7 @@ import {
   inspectAndroidBundle,
   inspectIosBuild,
   mergeBinaryRecord,
-  readAppVersion,
+  readRuntimeVersion,
   readUpdateProjectId,
   readZipEntries,
   selectBinaryRecords,
@@ -69,9 +69,16 @@ function bundle({ channel = 'production', runtime = '1.0.107', extraResources = 
   ]);
 }
 
-test('reads the static app version and update project', () => {
-  assert.equal(readAppVersion("const config = {\n  name: 'SoRita',\n  version: '1.0.107',\n};"), '1.0.107');
-  assert.throws(() => readAppVersion("\n  version: 'next',"));
+test('reads the published runtime and update project', () => {
+  assert.equal(
+    readRuntimeVersion("const nativeRuntimeVersion = '1.0.108';\n  version: '1.0.109',"),
+    '1.0.108',
+  );
+  // A commit from before the runtime was split out of the version still reads.
+  assert.equal(readRuntimeVersion("\n  runtimeVersion: '1.0.107',"), '1.0.107');
+  // The marketing version alone is not a runtime.
+  assert.throws(() => readRuntimeVersion("\n  version: '1.0.109',"));
+  assert.throws(() => readRuntimeVersion("const nativeRuntimeVersion = 'next';"));
   assert.equal(
     readUpdateProjectId(`<string name="expo_update_url" translatable="false">https://u.expo.dev/${projectId}</string>`),
     projectId,
@@ -104,7 +111,7 @@ test('rejects a bundle whose runtime cannot be read unambiguously', () => {
 });
 
 test('an Android binary whose runtime lags its version is refused', () => {
-  const expected = { appVersion: '1.0.107', platform: 'android', projectId };
+  const expected = { runtimeVersion: '1.0.107', platform: 'android', projectId };
 
   assert.doesNotThrow(() => verifyInspectedBinary(inspectAndroidBundle(bundle()), expected));
   assert.throws(
@@ -162,7 +169,7 @@ test('an iOS build that never enabled updates is refused', () => {
   const inspected = inspectIosBuild({ ...iosBuild, updateChannel: null, runtime: null });
 
   assert.throws(
-    () => verifyInspectedBinary(inspected, { appVersion: '1.0.107', platform: 'ios', projectId }),
+    () => verifyInspectedBinary(inspected, { runtimeVersion: '1.0.107', platform: 'ios', projectId }),
     /channel 'null'/u,
   );
 });
@@ -182,19 +189,19 @@ test('merging a record keeps the other platform', () => {
 
 test('selects only binaries that run the current app version', () => {
   assert.deepEqual(
-    selectBinaryRecords(records, { appVersion: '1.0.107', platforms: ['android'] }).map((record) => record.platform),
+    selectBinaryRecords(records, { runtimeVersion: '1.0.107', platforms: ['android'] }).map((record) => record.platform),
     ['android'],
   );
   assert.throws(
-    () => selectBinaryRecords(records, { appVersion: '1.0.107', platforms: ['android', 'ios'] }),
+    () => selectBinaryRecords(records, { runtimeVersion: '1.0.107', platforms: ['android', 'ios'] }),
     /ios binary runs runtime 1\.0\.106/u,
   );
   assert.throws(
-    () => selectBinaryRecords({ ...records, channel: 'preview' }, { appVersion: '1.0.107', platforms: ['android'] }),
+    () => selectBinaryRecords({ ...records, channel: 'preview' }, { runtimeVersion: '1.0.107', platforms: ['android'] }),
     /schema 1/u,
   );
   assert.throws(
-    () => selectBinaryRecords({ schemaVersion: 1, channel: 'production', binaries: {} }, { appVersion: '1.0.107', platforms: ['ios'] }),
+    () => selectBinaryRecords({ schemaVersion: 1, channel: 'production', binaries: {} }, { runtimeVersion: '1.0.107', platforms: ['ios'] }),
     /No ios store binary is recorded/u,
   );
 });
