@@ -133,5 +133,7 @@ export function formatCreatedUpdatedInline(
   createdAt?: string | null,
   updatedAt?: string | null,
 ) {
-  return getCreatedUpdatedLabels(createdAt, updatedAt).join(' | ');
+  // The same separator the surrounding metadata uses. A pipe here put two
+  // different separators on one line and implied a grouping that is not there.
+  return getCreatedUpdatedLabels(createdAt, updatedAt).join(' · ');
 }
