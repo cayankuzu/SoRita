@@ -39,6 +39,7 @@ import {
   MAX_PLACE_VIDEOS,
 } from '@/mobile/app/features/map/catalog/placeEditor';
 import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
+import { useAutoDismissingNotice } from '@/mobile/app/shared/hooks/useAutoDismissingNotice';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import {
@@ -73,6 +74,10 @@ import { isAbortError } from '@/mobile/app/shared/utils/abort';
 
 const PLACE_EDITOR_STEP_COUNT = 3;
 const LAST_PLACE_EDITOR_STEP_INDEX = PLACE_EDITOR_STEP_COUNT - 1;
+// A blocking notice interrupts a step, so it leaves sooner than the list-
+// selection hint, which the reader may still be acting on.
+const BLOCKING_NOTICE_DURATION_MS = 2_800;
+const LIST_SELECTION_NOTICE_DURATION_MS = 3_400;
 
 type UsePlaceEditorStateParams = {
   visible: boolean;
@@ -144,8 +149,6 @@ export function usePlaceEditorState({
   const [newListCoverImage, setNewListCoverImage] = useState('');
   const [newListPublic, setNewListPublic] = useState(false);
   const [showNewListForm, setShowNewListForm] = useState(false);
-  const [blockingNotice, setBlockingNotice] = useState<EditorBlockingNotice | null>(null);
-  const [listSelectionNotice, setListSelectionNotice] = useState<string | null>(null);
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [isPickingListCover, setIsPickingListCover] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -156,64 +159,23 @@ export function usePlaceEditorState({
   const lastIncomingNameRef = useRef(placeName || existingPlace?.name || '');
   const lastIncomingAddressRef = useRef(placeAddress || existingPlace?.address || '');
   const hasShownMultiListGuidanceRef = useRef(false);
-  const blockingNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listSelectionNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const listsRef = useRef(lists);
   listsRef.current = lists;
-  const clearBlockingNotice = useCallback(() => {
-    if (blockingNoticeTimeoutRef.current) {
-      clearTimeout(blockingNoticeTimeoutRef.current);
-      blockingNoticeTimeoutRef.current = null;
-    }
-
-    setBlockingNotice(null);
-  }, []);
-
-  const showBlockingNotice = useCallback((notice: EditorBlockingNotice) => {
-    if (blockingNoticeTimeoutRef.current) {
-      clearTimeout(blockingNoticeTimeoutRef.current);
-    }
-
-    setBlockingNotice(notice);
-    blockingNoticeTimeoutRef.current = setTimeout(() => {
-      blockingNoticeTimeoutRef.current = null;
-      setBlockingNotice(null);
-    }, 2800);
-  }, []);
-
-  const clearListSelectionNotice = useCallback(() => {
-    if (listSelectionNoticeTimeoutRef.current) {
-      clearTimeout(listSelectionNoticeTimeoutRef.current);
-      listSelectionNoticeTimeoutRef.current = null;
-    }
-
-    setListSelectionNotice(null);
-  }, []);
-
-  const showListSelectionNotice = useCallback((message: string) => {
-    if (listSelectionNoticeTimeoutRef.current) {
-      clearTimeout(listSelectionNoticeTimeoutRef.current);
-    }
-
-    setListSelectionNotice(message);
-    listSelectionNoticeTimeoutRef.current = setTimeout(() => {
-      listSelectionNoticeTimeoutRef.current = null;
-      setListSelectionNotice(null);
-    }, 3400);
-  }, []);
+  const {
+    notice: blockingNotice,
+    show: showBlockingNotice,
+    clear: clearBlockingNotice,
+  } = useAutoDismissingNotice<EditorBlockingNotice>(BLOCKING_NOTICE_DURATION_MS);
+  const {
+    notice: listSelectionNotice,
+    show: showListSelectionNotice,
+    clear: clearListSelectionNotice,
+  } = useAutoDismissingNotice<string>(LIST_SELECTION_NOTICE_DURATION_MS);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-
-      if (blockingNoticeTimeoutRef.current) {
-        clearTimeout(blockingNoticeTimeoutRef.current);
-      }
-
-      if (listSelectionNoticeTimeoutRef.current) {
-        clearTimeout(listSelectionNoticeTimeoutRef.current);
-      }
     };
   }, []);
 

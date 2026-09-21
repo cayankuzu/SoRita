@@ -9,7 +9,7 @@ const DEFAULT_MAX_FUNCTION_LINES = 300;
 const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/shared/i18n/tr.ts': 1_100,
   'src/mobile/app/data/repositories/listsRepository.ts': 980,
-  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 970,
+  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 930,
   'src/mobile/app/platform/supabase/media.ts': 950,
   'src/mobile/app/features/map/application/useMapScreenState.ts': 900,
   'src/mobile/app/data/query/optimisticSocialCache.ts': 900,
@@ -22,7 +22,7 @@ const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/features/auth/application/useAuthScreenState.ts': 730,
 }));
 const FUNCTION_HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 860,
+  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 815,
   'src/mobile/app/features/map/application/useMapScreenState.ts': 800,
   'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 700,
   'src/mobile/app/features/auth/application/useAuthScreenState.ts': 620,
