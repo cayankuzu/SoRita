@@ -15,7 +15,7 @@
     "accessibility:check": "node utils/guards/check-pressable-accessibility.mjs",
     "marketing:check": "node utils/guards/check-marketing-claims.mjs",
     "native-parity:check": "node utils/guards/check-native-config-parity.mjs",
-    "touch-targets:check": "node utils/guards/check-touch-targets.mjs",
+    "touch-targets:check": "node utils/guards/check-touch-targets.mjs && node --test utils/guards/__tests__/touch-targets.test.mjs",
     "architecture:check": "node utils/guards/check-architecture-boundaries.cjs",
     "rpc-contract:check": "node utils/guards/check-rpc-contract.mjs && node --test utils/guards/__tests__/rpc-contract.test.mjs",
     "bundle:android:check": "npm run security:assets && npx expo export --platform android --output-dir .expo/bundle-budget --clear && node utils/guards/check-bundle-size.mjs .expo/bundle-budget",

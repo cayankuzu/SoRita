@@ -12,7 +12,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type AuthLoginViewProps = {
@@ -150,6 +150,7 @@ export function AuthLoginView({
         <View style={styles.forgotPasswordRow}>
           <InstantPressable
             accessibilityLabel={tr.auth.login.forgotPassword}
+            hitSlop={hitSlopFor(44)}
             accessibilityRole="link"
             onPress={onForgotPassword}
             style={styles.footerLinkButton}
@@ -173,6 +174,7 @@ export function AuthLoginView({
         <AppText style={styles.footerText}>{tr.auth.login.noAccount}</AppText>
         <InstantPressable
           accessibilityLabel={tr.auth.login.register}
+          hitSlop={hitSlopFor(44)}
           accessibilityRole="link"
           onPress={onOpenRegister}
           style={styles.footerLinkButton}

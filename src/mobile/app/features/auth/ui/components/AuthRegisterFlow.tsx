@@ -25,7 +25,7 @@ import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   EMAIL_MAX_LENGTH,
   USER_BIO_MAX_LENGTH,
@@ -483,6 +483,7 @@ export function AuthRegisterFlow({
               <AppText style={styles.footerText}>{tr.auth.register.hasAccount}</AppText>
               <InstantPressable
                 accessibilityLabel={tr.auth.register.login}
+                hitSlop={hitSlopFor(44)}
                 accessibilityRole="link"
                 onPress={goToLogin}
                 style={styles.footerLinkButton}

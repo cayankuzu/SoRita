@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -106,6 +107,47 @@ export function collectStyleSizes(source) {
   return sizes;
 }
 
+/**
+ * Modules a file pulls its `styles` binding from.
+ *
+ * Screens here routinely keep their sheet in a sibling `*Styles.ts`. The guard
+ * used to parse only the file in front of it, so every control styled that way
+ * resolved to no declared size and was skipped as unmeasurable — a silent pass.
+ * That is how three 44dp map controls reached a device unflagged.
+ */
+export function readStyleModuleSpecifiers(source) {
+  const specifiers = [];
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) continue;
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+
+    const { name, namedBindings } = statement.importClause;
+    const bindsStyles =
+      name?.getText() === 'styles' ||
+      (namedBindings &&
+        ts.isNamedImports(namedBindings) &&
+        namedBindings.elements.some((element) => element.name.getText() === 'styles'));
+
+    if (bindsStyles) specifiers.push(statement.moduleSpecifier.text);
+  }
+  return specifiers;
+}
+
+/** Resolve a style-module specifier to a file on disk, or null when it is not one. */
+export function resolveStyleModule(specifier, fromFile) {
+  const base = specifier.startsWith('@/')
+    ? path.join(workspace, 'src', specifier.slice(2))
+    : specifier.startsWith('.')
+      ? path.resolve(path.dirname(fromFile), specifier)
+      : null;
+  if (base === null) return null;
+
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')]) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
 /** The slop an attribute adds per edge; the object form is limited by its smallest edge. */
 export function readHitSlop(attribute) {
   if (!attribute?.initializer || !ts.isJsxExpression(attribute.initializer)) return null;
@@ -161,7 +203,12 @@ export function readStyleNames(attribute) {
   return names;
 }
 
-export function findTouchTargetViolations(filePath, sourceText, relativePath) {
+export function findTouchTargetViolations(
+  filePath,
+  sourceText,
+  relativePath,
+  importedSizes = new Map(),
+) {
   const source = ts.createSourceFile(
     filePath,
     sourceText,
@@ -169,7 +216,9 @@ export function findTouchTargetViolations(filePath, sourceText, relativePath) {
     true,
     ts.ScriptKind.TSX,
   );
-  const sizes = collectStyleSizes(source);
+  // A sheet in this file wins over an imported one, matching how the binding
+  // would shadow at runtime.
+  const sizes = new Map([...importedSizes, ...collectStyleSizes(source)]);
   const violations = [];
 
   function inspect(node) {
@@ -229,13 +278,46 @@ export function findTouchTargetViolations(filePath, sourceText, relativePath) {
 
 async function main() {
   const files = await collectTsxFiles(sourceRoot);
+  const moduleSizes = new Map();
+
+  async function sizesOf(file) {
+    if (!moduleSizes.has(file)) {
+      const text = await readFile(file, 'utf8');
+      const parsed = ts.createSourceFile(
+        file,
+        text,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TSX,
+      );
+      moduleSizes.set(file, collectStyleSizes(parsed));
+    }
+    return moduleSizes.get(file);
+  }
+
   const violations = [];
   for (const file of files) {
+    const sourceText = await readFile(file, 'utf8');
+    const parsed = ts.createSourceFile(
+      file,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+
+    const imported = new Map();
+    for (const specifier of readStyleModuleSpecifiers(parsed)) {
+      const resolved = resolveStyleModule(specifier, file);
+      if (resolved) for (const entry of await sizesOf(resolved)) imported.set(...entry);
+    }
+
     violations.push(
       ...findTouchTargetViolations(
         file,
-        await readFile(file, 'utf8'),
+        sourceText,
         path.relative(workspace, file).replaceAll('\\', '/'),
+        imported,
       ),
     );
   }

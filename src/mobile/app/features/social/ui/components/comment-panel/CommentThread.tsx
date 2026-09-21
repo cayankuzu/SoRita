@@ -15,7 +15,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   formatRelativeDateTime,
   hasMeaningfulUpdate,
@@ -192,7 +192,7 @@ export function CommentThread({
               accessibilityRole="button"
               onPress={() => onStartReply(comment)}
               style={styles.commentInlineAction}
-              hitSlop={8}
+              hitSlop={hitSlopFor(30)}
             >
               <Reply color={colors.textSoft} size={12} />
               <AppText style={styles.commentInlineActionText}>{tr.cards.reply}</AppText>
@@ -207,7 +207,7 @@ export function CommentThread({
                   styles.commentInlineMenuButton,
                   isEditing ? styles.commentInlineMenuButtonActive : null,
                 ]}
-                hitSlop={8}
+                hitSlop={hitSlopFor(26)}
               >
                 <MoreHorizontal
                   color={isEditing ? colors.primary : colors.textSoft}
@@ -225,7 +225,7 @@ export function CommentThread({
               accessibilityRole="button"
               style={styles.replyToggleButton}
               onPress={() => onToggleReplies(comment.id)}
-              hitSlop={8}
+              hitSlop={hitSlopFor(30)}
             >
               {repliesExpanded ? (
                 <ChevronUp color={colors.textSoft} size={12} />
@@ -243,7 +243,7 @@ export function CommentThread({
                 accessibilityRole="button"
                 style={styles.replyToggleButton}
                 onPress={() => onLoadMoreReplies(comment.id)}
-                hitSlop={8}
+                hitSlop={hitSlopFor(30)}
               >
                 <ChevronDown color={colors.textSoft} size={12} />
                 <AppText style={styles.replyToggleText}>

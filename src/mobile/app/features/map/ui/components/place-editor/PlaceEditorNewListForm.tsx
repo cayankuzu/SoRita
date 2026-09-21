@@ -13,7 +13,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -66,6 +66,7 @@ export function PlaceEditorNewListForm({
         accessibilityLabel={tr.placeEditor.createList}
         accessibilityRole="button"
         accessibilityState={{ expanded: false }}
+        hitSlop={hitSlopFor(44)}
         style={styles.createListTrigger}
         onPress={() => onShowNewListFormChange(true)}
       >
@@ -125,6 +126,7 @@ export function PlaceEditorNewListForm({
             {newListCoverImage ? (
               <InstantPressable
                 accessibilityLabel={tr.listEditor.coverPreviewExpand}
+                hitSlop={hitSlopFor(30)}
                 accessibilityRole="imagebutton"
                 disabled={isCreatingList || isPickingListCover}
                 onPress={() => setCoverPreviewVisible(true)}
@@ -181,6 +183,7 @@ export function PlaceEditorNewListForm({
         <InstantPressable
           accessibilityRole="radio"
           accessibilityState={{ checked: newListPublic, disabled: isCreatingList }}
+          hitSlop={hitSlopFor(42)}
           disabled={isCreatingList}
           style={[styles.privacyButton, newListPublic ? styles.privacyButtonActive : null]}
           onPress={() => onNewListPublicChange(true)}
@@ -193,6 +196,7 @@ export function PlaceEditorNewListForm({
         <InstantPressable
           accessibilityRole="radio"
           accessibilityState={{ checked: !newListPublic, disabled: isCreatingList }}
+          hitSlop={hitSlopFor(42)}
           disabled={isCreatingList}
           style={[styles.privacyButton, !newListPublic ? styles.privateButtonActive : null]}
           onPress={() => onNewListPublicChange(false)}

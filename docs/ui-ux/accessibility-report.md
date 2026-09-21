@@ -83,13 +83,93 @@ label cannot be hard-coded at a call site and drift from the catalogue. Backend
 error text is never surfaced directly; failures are mapped to typed classes and
 then to catalogue keys.
 
+## Android device measurement — 2026-09-22
+
+The first on-hardware accessibility evidence for this app. It closes finding A3
+in [the design-system audit](../audit/ui-ux-design-system-audit.md) for Android
+and, more usefully, it found a defect class the static gate could not see.
+
+| Fact | Value |
+|---|---|
+| Device | Redmi Note 9 Pro (`joyeuse`), Android 10, API 29 |
+| Display | 1080×2400, density 440 (≈393dp wide) |
+| Build under test | Play-installed 1.0.108, versionCode 114, installer `com.android.vending`, runtime 1.0.108 |
+
+**Method.** `uiautomator dump` returns the accessibility node tree — the exact
+structure TalkBack traverses, with each node's announced name, click actions and
+painted bounds. Reading it is stricter than reading the screen: a node that
+announces nothing shows up as empty, not as an icon a reviewer can interpret. The
+probe refuses to run unless `mCurrentFocus` is SoRita, because the handset is a
+personal device.
+
+**A measurement trap, recorded so the next run does not fall into it.** On MIUI,
+`uiautomator`'s `Display.getSize()` throws (`theme_compatibility.xml` is absent),
+and the dump is then clipped to a 2168px-tall window instead of 2400. Every node
+below that line is truncated to the boundary, which reported the bottom tab bar
+as 16.4dp tall and produced four convincing false defects. Landmarks in the upper
+screen matched the screenshot to the pixel, which is what exposed the clip.
+Re-measuring with the display temporarily shortened returned the tab targets at
+their true **48dp**, and the display was restored afterwards. Treat any node that
+ends exactly at the root boundary as unmeasured, not as small.
+
+### Results
+
+| Screen | Interactive nodes | Unnamed | Undersized after correction |
+|---|---:|---:|---|
+| Ana Sayfa (feed) | 16 | 0 | none |
+| Harita | 40 | 0 | 3 app controls (below) |
+| Keşfet | 0 | 0 | none reachable in the captured state |
+| Profil | 15 | 0 | none |
+
+**Every interactive node announced itself.** Across all four tabs there was not
+one unnamed control, which is the property a screen reader depends on most, and
+it is the strongest result in this report. Names are also informative rather than
+generic: `"Liste: Deneme. 6 mekân. Açık"`, `"Pin filtresi: Tümü"`,
+`"Takipçiler: 5 sonuç"`.
+
+Two feed nodes measure under 48dp and are **not** defects: the place-title button
+is 42.2dp painted but carries `hitSlop={6}`, giving 54.2dp effective, and the
+expandable review text is a block of text, which WCAG 2.5.5 exempts and which
+also has a separate ≥48dp control. Map markers (22.2×30.2dp) are drawn by the
+Google Maps SDK, not by this app.
+
+### The defect this found
+
+Three map controls — refresh, pin filter and locate-me — were painted 44×44dp
+with no `hitSlop`: 44dp effective against Android's 48dp floor. They had passed
+every build, and the reason matters more than the controls:
+
+> `check-touch-targets` parsed only the file in front of it. `MapScreen.tsx`
+> imports its sheet from `mapScreenStyles.ts`, so the guard resolved **no**
+> declared size, counted the controls as unmeasurable, and skipped them. The
+> comment at the top of that guard promises unmeasured controls are "counted as
+> unmeasured rather than quietly passing" — for cross-file sheets it was the
+> quiet pass.
+
+The guard now follows any import that binds `styles` and merges that module's
+sheet, with a local sheet shadowing an imported one. Re-run across the app it
+found **25 undersized controls in 9 files**, none of which any previous gate had
+reported:
+
+| Area | Controls |
+|---|---|
+| Auth (login, register, forgot password) | 4 footer links at 44dp |
+| Map screen and place editor | 11 controls at 30–46dp |
+| Comment panel | 5 controls at 26–44dp |
+| Explore header, list editor | 5 controls at 26–44dp |
+
+All 25 are closed with `hitSlop={hitSlopFor(paintedSize)}`, the repository's
+sanctioned helper, so **no visual design changed** — only the invisible touch
+area grew to 48dp. Six tests cover the new resolution, including the shadowing
+rule and the regression itself. The guard now measures 156 files, up from 150.
+
 ## What is not verified on this commit
 
 | Item | Why it is open |
 |---|---|
 | VoiceOver traversal order and rotor behaviour | Requires a physical iOS device |
-| TalkBack traversal order and gesture navigation | Requires a physical Android device |
-| Focus movement into and out of modals and sheets | Requires a physical device with a screen reader |
+| TalkBack gesture navigation and announcement order | The node tree is measured above; gesture-driven traversal order is not |
+| Focus movement into and out of modals and sheets | Not captured; the probe reads one screen at a time |
 | Measured contrast ratios against rendered pixels | Requires device capture; tokens are fixed but not measured on-device |
 | Behaviour at 200% scale on the smallest supported hardware | Requires a physical small-screen device |
 

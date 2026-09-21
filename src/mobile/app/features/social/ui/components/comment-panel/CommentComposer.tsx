@@ -208,6 +208,7 @@ export function CommentComposer({
             pressed && canSubmit ? styles.sendButtonPressed : null,
           ]}
           onPress={onSubmit}
+          hitSlop={hitSlopFor(44)}
           disabled={!canSubmit}
           accessibilityLabel={tr.common.send}
           accessibilityRole="button"

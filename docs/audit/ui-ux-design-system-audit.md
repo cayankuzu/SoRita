@@ -101,12 +101,23 @@ kılıyor.
 Bilerek dokunulmadı: ölçeği düzeltmek her ekranın boşluğunu kaydırır ve bu,
 istenmediği açıkça belirtilen köklü değişimdir.
 
-### A3 — Cihaz kanıtı yok (P0, yayın engeli)
+### A3 — Cihaz kanıtı yok (P0) — Android'de kapatıldı, iOS'ta açık
 
-Kontrast ve dokunma hedefi statik olarak kanıtlandı; **gerçek cihazda ekran
-okuyucu, font ölçeği ve dokunma doğrulaması yapılmadı**. VoiceOver/TalkBack
-kanıtı olmadan erişilebilirlik "tamam" sayılamaz.
-`quality/release-scorecard.json` verdict'i bu yüzden `NO-GO`.
+**2026-09-22 güncellemesi.** Android tarafı gerçek donanımda ölçüldü: Redmi
+Note 9 Pro (Android 10, API 29, 1080×2400, yoğunluk 440), Play'den kurulu
+1.0.108 sürümü. `uiautomator dump` ile ekran okuyucunun gezindiği düğüm ağacı
+okundu. Dört sekmenin tamamında **isimsiz tek bir etkileşimli düğüm yok**.
+
+Ölçüm ayrıca statik guard'ın göremediği bir kusur sınıfı buldu: guard yalnız
+önündeki dosyayı ayrıştırdığı için, stil sayfasını komşu modülden alan ekranlar
+"ölçülemez" sayılıp sessizce geçiyordu. Guard `styles` bağlayan import'ları
+takip edecek şekilde genişletildi ve **9 dosyada 48dp altındaki 25 kontrol**
+ortaya çıktı; hepsi `hitSlopFor` ile kapatıldı, görünen tasarım değişmedi.
+Ayrıntı ve MIUI'ye özgü ölçüm tuzağı:
+[accessibility-report.md](../ui-ux/accessibility-report.md).
+
+Açık kalan: **iOS'ta VoiceOver**, ekran okuyucu jest sırası, ve modal'lara
+odak giriş/çıkışı. `quality/release-scorecard.json` verdict'i hâlâ `NO-GO`.
 
 ## Değişmeyenler
 

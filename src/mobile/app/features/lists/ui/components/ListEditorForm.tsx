@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Globe, ImagePlus, Lock, X } from 'lucide-react-native';
 
 import { listEditorModalStyles as styles } from '@/mobile/app/features/lists/ui/components/listEditorModalStyles';
@@ -7,7 +7,7 @@ import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/Medi
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -159,6 +159,7 @@ export function ListEditorForm({
               {coverImage ? (
                 <Pressable
                   accessibilityLabel={t.listEditor.coverPreviewExpand}
+                  hitSlop={hitSlopFor(30)}
                   accessibilityRole="imagebutton"
                   disabled={loading}
                   onPress={(event) => {
@@ -185,7 +186,7 @@ export function ListEditorForm({
               accessibilityRole="button"
               accessibilityState={{ disabled: loading }}
               disabled={loading}
-              hitSlop={Platform.OS === 'ios' ? 9 : 11}
+              hitSlop={hitSlopFor(26)}
               onPress={onRemoveCover}
               style={styles.coverClearButton}
             >

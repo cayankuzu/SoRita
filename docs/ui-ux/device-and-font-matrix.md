@@ -108,10 +108,37 @@ Minimum sizes are tokens, not per-call-site literals:
 | `controlSize.large` | 48 | Primary actions |
 | `controlSize.compact` | 32 | Only where an explicit `hitSlop` widens the target |
 
-Thirteen components apply an explicit `hitSlop`, which is the mechanism used
-wherever the visual control is smaller than the required touch target. The
-`accessibility` guard requires a role and a label on every pressable, so an
-icon-only control cannot ship unlabelled.
+Components apply an explicit `hitSlop` wherever the visual control is smaller
+than the required touch target; `hitSlopFor(paintedSize)` derives the padding
+from the painted box so the visible design never changes. The `accessibility`
+guard requires a role and a label on every pressable, so an icon-only control
+cannot ship unlabelled.
+
+On 2026-09-22 the touch-target guard was extended to follow `styles` imported
+from a sibling module. It had been parsing only the file in front of it, so every
+screen that keeps its sheet in a separate `*Styles.ts` — which is most of them —
+resolved to no declared size and was skipped as unmeasurable. That single blind
+spot was hiding **25 undersized controls across 9 files**, including three 44dp
+map controls confirmed on hardware. All are now closed with `hitSlopFor`, and the
+guard measures 156 files. See
+[accessibility-report.md](./accessibility-report.md).
+
+### Measured on hardware, 2026-09-22
+
+Redmi Note 9 Pro, Android 10, 1080×2400 at density 440 (393dp wide), Play-
+installed 1.0.108. Accessibility node trees were read with `uiautomator dump` at
+both font scales:
+
+| Font scale | Result |
+|---|---|
+| 1.0 | Four tabs traversed; 71 interactive nodes; **zero unnamed**; every app control ≥48dp effective |
+| 1.5 | Layout adapts rather than clips: profile tabs grow 48dp → 82.2dp, `Ayarlar` 96dp → 102.2dp, tab labels stay on one line under the 1.3 chrome cap. No control shrank, moved off-screen or lost its name |
+
+MIUI's `uiautomator` reports a clipped 2168px window because `Display.getSize()`
+throws on this ROM, which truncates any node crossing that line and fabricates
+undersized bottom-bar targets. Re-measuring with a temporarily shortened display
+returned the tab targets at their true 48dp. Treat a node ending exactly at the
+root boundary as unmeasured.
 
 ## Reduce Motion
 
@@ -132,8 +159,10 @@ Motion durations are tokens (`motion.fast` 120 ms, `motion.standard` 180 ms,
 | Every text carries a font-scale cap | AUTOMATED | `no-restricted-imports` in `eslint.config.js`, `AppText.test.tsx` |
 | Every pressable has role and label | AUTOMATED | `npm run accessibility:check` |
 | Component behaviour under layout modes | AUTOMATED | component tests in the 503-test suite |
-| Rendered pixels on real hardware at each width and font scale | NOT VERIFIED | requires physical devices, see MANUAL_STEPS |
-| VoiceOver and TalkBack traversal order | NOT VERIFIED | requires physical devices |
+| Android node tree and effective touch area at 1.0x and 1.5x | MEASURED ON DEVICE | Redmi Note 9 Pro, 2026-09-22, section above |
+| Rendered pixels at every other width class | NOT VERIFIED | one device covers one width; the 320/360/412dp classes are still unrendered |
+| VoiceOver traversal order | NOT VERIFIED | requires a physical iOS device |
+| TalkBack gesture order and modal focus entry/exit | NOT VERIFIED | the node tree is measured; gesture-driven traversal is not |
 
 The unverified rows are the honest reason the multi-device and accessibility
 categories cannot be scored at the top of the range on this commit.

@@ -82,6 +82,7 @@ function MapFilterMenu({
           <InstantPressable
             accessibilityRole="radio"
             accessibilityState={{ checked: isActive }}
+            hitSlop={hitSlopFor(44)}
             key={option.value}
             style={[styles.filterOption, isActive ? styles.filterOptionActive : null]}
             onPress={() => {
@@ -361,6 +362,7 @@ export function MapScreen() {
                   accessibilityLabel={tr.map.refreshButton}
                   accessibilityRole="button"
                   accessibilityState={{ busy: refreshing, disabled: refreshing }}
+                  hitSlop={hitSlopFor(44)}
                   disabled={refreshing}
                   style={[styles.floatingSearchAction, refreshing ? styles.refreshButtonActive : null]}
                   onPress={handleRefreshPress}
@@ -378,6 +380,7 @@ export function MapScreen() {
                     expanded: isFilterMenuOpen,
                     selected: markerFilter !== 'all',
                   }}
+                  hitSlop={hitSlopFor(44)}
                   style={[
                     styles.floatingSearchAction,
                     markerFilter !== 'all' ? styles.filterButtonActive : null,
@@ -499,6 +502,7 @@ export function MapScreen() {
             accessibilityLabel={tr.map.locateMe}
             accessibilityRole="button"
             accessibilityState={{ busy: isLocating, disabled: isLocating }}
+            hitSlop={hitSlopFor(44)}
             disabled={isLocating}
             style={[
               styles.locateButton,
@@ -518,6 +522,7 @@ export function MapScreen() {
             <InstantPressable
               accessibilityLabel={tr.map.reopenPanel}
               accessibilityRole="button"
+              hitSlop={hitSlopFor(46)}
               style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
               onPress={reopenMinimizedEditor}
             >
@@ -540,6 +545,7 @@ export function MapScreen() {
             <InstantPressable
               accessibilityLabel={tr.map.reopenPreview}
               accessibilityRole="button"
+              hitSlop={hitSlopFor(46)}
               style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
               onPress={reopenMinimizedExistingPlace}
             >

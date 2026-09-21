@@ -6,7 +6,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 import type { ExploreTabType } from './exploreScreenTypes';
@@ -155,6 +155,7 @@ export function ExploreHeaderControls({
                   accessibilityLabel={tab.label}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
+                  hitSlop={hitSlopFor(44)}
                   key={tab.key}
                   onLayout={(event) => handleTabLayout(tab.key, event)}
                   onPress={() => onTabChange(tab.key)}
