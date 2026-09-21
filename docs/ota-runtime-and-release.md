@@ -200,6 +200,17 @@ why the runtime is an explicit literal.
 This is the first evidenced production-channel delivery to a physical, store-installed device. Still
 not evidenced: iOS delivery.
 
+2026-09-22, same device and build, second production delivery (the touch-target fix):
+
+| Step | Observed |
+| --- | --- |
+| Classify | `OTA_SAFE` for `53d8d90...HEAD`; the `package.json` change is `scripts` only. |
+| Publish | Group `cb294ec6-3a66-4259-9417-d7a540469db7`, Android update `01a0c5ee-c179-762d-b143-caf1ce1297b9`, runtime `1.0.108`, 100%. |
+| Next launch | `onBackgroundUpdateFinished: Update available` → `DownloadComplete`, `downloadProgress=1.0`, `isUpdatePending=true`, manifest runtime `1.0.108`. |
+
+Two consecutive deliveries on the corrected runtime confirm the 1.0.108 contract holds rather than
+having worked once.
+
 ## Rollback
 
 Use [`ota-rollback-runbook.md`](./ota-rollback-runbook.md). The publisher prints the exact command for
