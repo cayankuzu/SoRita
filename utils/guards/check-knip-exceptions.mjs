@@ -89,7 +89,11 @@ const CONFIG_CONSUMED = new Map([
         },
         {
           file: 'app.config.ts',
-          pattern: /^\s*runtimeVersion:\s*'\d+\.\d+\.\d+'/mu,
+          // The runtime is a named literal rather than an inline one, because
+          // it tracks the native surface instead of the release version. What
+          // matters here is unchanged: it is an explicit string, not a policy,
+          // which is the form `eas update` accepts in a bare project.
+          pattern: /^const nativeRuntimeVersion = '\d+\.\d+\.\d+';$/mu,
           description: 'Expo config declares an explicit runtimeVersion',
         },
         {
