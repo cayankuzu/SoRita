@@ -399,7 +399,7 @@ export function useAuthScreenState({
         return;
       }
 
-      const message = getSafeAuthFailureMessage(result.code, tr.auth.toast.loginInvalid);
+      const message = getSafeAuthFailureMessage(result.code, tr.auth.toast.loginInvalid, result.retryAfterMs);
       setLoginError(message);
       showToast(message, 'error');
     } catch {
@@ -465,6 +465,7 @@ export function useAuthScreenState({
         const message = getSafeAuthFailureMessage(
           result.code,
           tr.auth.register.registrationFailed,
+          result.retryAfterMs,
         );
         setRegisterSubmissionError(message);
         showToast(message, 'error');
@@ -541,6 +542,7 @@ export function useAuthScreenState({
         const message = getSafeAuthFailureMessage(
           result.code,
           tr.settings.password.resetHint,
+          result.retryAfterMs,
         );
         setForgotPasswordError(message);
         showToast(message, 'error');

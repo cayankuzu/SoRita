@@ -32,6 +32,8 @@ export type AuthActionResult = {
   success: boolean;
   code?: AuthActionCode;
   message?: string;
+  /** How long the caller must wait, when the server said so. */
+  retryAfterMs?: number;
 };
 
 export type AuthContextType = {

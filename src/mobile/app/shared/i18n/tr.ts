@@ -127,8 +127,7 @@ export const tr = {
     videoRecorderPermissionBlockedDescription:
       'Kamera veya mikrofon izni cihaz ayarlarından kapatılmış. Video çekebilmek için Ayarlar’dan erişimi aç.',
     videoRecorderHint: '720p video kaydını başlat. Kayıt 3:00 olduğunda otomatik durur.',
-    videoRecorderPermissionDescription:
-      'Video çekebilmek için kamera ve mikrofon izni gerekiyor.',
+    videoRecorderPermissionDescription: 'Video çekebilmek için kamera ve mikrofon izni gerekiyor.',
     videoRecorderPermissionTitle: 'Video kaydı için izin gerekli',
     videoRecorderPreparing: 'Kamera hazırlanıyor',
     videoRecorderRetryCamera: 'Kamerayı yeniden başlat',
@@ -146,8 +145,7 @@ export const tr = {
     configErrorDescription:
       'Bu sürüm güvenli biçimde başlatılamıyor. Uygulamanın güncel sürümünü kullanıp yeniden dene.',
     configErrorDeveloperDetails: 'Geliştirme yapılandırmasında eksik değerler:',
-    configErrorHint:
-      'Sorun devam ederse uygulama desteğiyle iletişime geç.',
+    configErrorHint: 'Sorun devam ederse uygulama desteğiyle iletişime geç.',
     configErrorTitle: 'Uygulama başlatılamadı',
     connectionSlow: 'Bağlantı geç yanıt veriyor. Lütfen tekrar dene.',
     connectionUnavailable:
@@ -293,8 +291,7 @@ export const tr = {
       privateAccountDescription:
         'Bu profilin içeriklerini görmek için kullanıcıyı takip etmelisin.',
       publicNoList: 'Henüz liste yok',
-      publicNoListDescription:
-        'Bu kullanıcı henüz herkese açık liste paylaşmamış.',
+      publicNoListDescription: 'Bu kullanıcı henüz herkese açık liste paylaşmamış.',
       publicNoPhoto: 'Henüz fotoğraf yok',
       publicNoPhotoDescription: 'Paylaşılan fotoğraf bulunmuyor.',
       publicNoPlace: 'Henüz mekân yok',
@@ -447,16 +444,14 @@ export const tr = {
     deleteDescription: 'Bu işlem geri alınamaz',
     ...settingsDataRightsTr,
     editProfile: {
-      basicsDescription:
-        'Ad soyad, kullanıcı adı ve biyografi bilgilerini düzenle.',
+      basicsDescription: 'Ad soyad, kullanıcı adı ve biyografi bilgilerini düzenle.',
       bioLabel: 'Biyografi',
       bioPlaceholder: 'Kendinden kısaca bahset...',
       coverPhoto: 'Kapak fotoğrafı seç',
       description: 'Fotoğraflarını, ismini ve biyografini güncelle.',
       discardDescription: 'Kaydedilmemiş profil değişiklikleri silinecek.',
       discardTitle: 'Düzenleme iptal edilsin mi?',
-      interestsDescription:
-        'Burada seçtiğin ilgi alanları profil ekranında rozet olarak görünür.',
+      interestsDescription: 'Burada seçtiğin ilgi alanları profil ekranında rozet olarak görünür.',
       interestsSelection: (count: number) => `${count} ilgi alanı seçildi`,
       interestsTitle: 'İlgi alanlarını düzenle',
       helperSameUsername: 'Mevcut kullanıcı adın korunacak',
@@ -468,20 +463,16 @@ export const tr = {
       helperUsernameUsable: 'Bu kullanıcı adı kullanılabilir',
       nameLabel: 'Ad soyad',
       photosDescription: 'Profil ve kapak görsellerini seç.',
-      previewDescription:
-        'Profilinin değişikliklerden sonra nasıl görüneceğini kontrol et.',
+      previewDescription: 'Profilinin değişikliklerden sonra nasıl görüneceğini kontrol et.',
       profilePhoto: 'Profil fotoğrafı seç',
       profilePhotoHelper: 'Profil fotoğrafını seç',
-      profilePreviewNote:
-        'Kaydetmeden önce profilinin yeni görünümünü burada inceleyebilirsin.',
+      profilePreviewNote: 'Kaydetmeden önce profilinin yeni görünümünü burada inceleyebilirsin.',
       profilePreviewTitle: 'Profil ön izlemesi',
       required: 'İsim ve kullanıcı adı boş olamaz',
       saved: 'Profil güncellendi',
-      saveInFlight:
-        'Profil bilgilerin kaydediliyor. Lütfen kısa bir süre bekle.',
+      saveInFlight: 'Profil bilgilerin kaydediliyor. Lütfen kısa bir süre bekle.',
       saveInFlightTitle: 'Profil güncelleniyor',
-      saveWithUploads:
-        'Fotoğrafların yükleniyor. Bu işlem genelde kısa sürer.',
+      saveWithUploads: 'Fotoğrafların yükleniyor. Bu işlem genelde kısa sürer.',
       stepCounter: (current: number, total: number) => `Adım ${current}/${total}`,
       stepNext: 'Sonraki adım',
       steps: {
@@ -494,8 +485,7 @@ export const tr = {
       coverPhotoHelper: 'Kapak görselini seç',
     },
     logout: 'Çıkış yap',
-    logoutConfirm:
-      'Oturumun kapatılacak. Daha sonra tekrar giriş yapabilirsin.',
+    logoutConfirm: 'Oturumun kapatılacak. Daha sonra tekrar giriş yapabilirsin.',
     logoutTitle: 'Çıkış yapılsın mı?',
     otherSection: 'Diğer',
     password: {
@@ -508,8 +498,7 @@ export const tr = {
       newLabel: 'Yeni şifre',
       newPlaceholder: 'En az 8 karakter',
       resetAction: 'Sıfırlama maili gönder',
-      resetHint:
-        'Güvenlik için mevcut şifreni gir. Ardından sıfırlama mailini gönderelim.',
+      resetHint: 'Güvenlik için mevcut şifreni gir. Ardından sıfırlama mailini gönderelim.',
       resetSent: 'Şifre sıfırlama maili gönderildi',
       save: 'Şifreyi güncelle',
       saved: 'Şifre güncellendi',
@@ -704,8 +693,7 @@ export const tr = {
       ],
       usernameChecking: 'Kullanıcı adı kontrol ediliyor...',
       usernameError: 'Kullanıcı adı şu an kontrol edilemiyor',
-      usernameHelper:
-        'En az 3 karakter. Harf, rakam ve alt çizgi kullanılabilir.',
+      usernameHelper: 'En az 3 karakter. Harf, rakam ve alt çizgi kullanılabilir.',
       usernameLabel: 'Kullanıcı adı',
       usernamePlaceholder: 'kullanıcıadı',
       usernameTaken: 'Bu kullanıcı adı zaten kullanılıyor',
@@ -723,8 +711,7 @@ export const tr = {
       passwordResetLinkInvalid:
         'Bu sıfırlama bağlantısı kullanılmış veya süresi dolmuş. Yeni bir sıfırlama e-postası iste.',
       sessionValidationFailed: 'Oturum doğrulanamadı.',
-      signupLinkInvalid:
-        'Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.',
+      signupLinkInvalid: 'Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.',
     },
     resetPassword: {
       checkingLink: 'Sıfırlama bağlantısı kontrol ediliyor',
@@ -745,16 +732,15 @@ export const tr = {
       weak: 'Daha zor tahmin edilebilen farklı bir şifre seç.',
     },
     toast: {
-      accountLocked:
-        'Çok sayıda başarısız deneme nedeniyle giriş geçici olarak durduruldu. Bir süre sonra tekrar dene.',
+      accountLocked: 'Çok sayıda başarısız deneme oldu. Bir süre sonra tekrar dene.',
+      accountLockedFor: (wait: string) => `Çok sayıda başarısız deneme oldu. ${wait} sonra tekrar dene.`,
+      retryWaitMinutes: (minutes: number) => `${minutes} dakika`,
+      retryWaitSeconds: (seconds: number) => `${seconds} saniye`,
       confirmationResendError: 'Onay maili tekrar gönderilemedi',
       confirmationResent: 'Onay maili tekrar gönderildi',
-      confirmationSent:
-        'Onay maili gönderildi. Mailini doğrulayıp sonra giriş yapabilirsin.',
-      duplicateAccount:
-        'Bu e-posta veya kullanıcı adı zaten kullanılıyor.',
-      emailNotConfirmed:
-        'Mail adresini doğrulamadan giriş yapamazsın.',
+      confirmationSent: 'Onay maili gönderildi. Mailini doğrulayıp sonra giriş yapabilirsin.',
+      duplicateAccount: 'Bu e-posta veya kullanıcı adı zaten kullanılıyor.',
+      emailNotConfirmed: 'Mail adresini doğrulamadan giriş yapamazsın.',
       loginInvalid: 'Geçersiz e-posta veya şifre',
       loginSuccess: 'Giriş başarılı',
       passwordMismatch: 'Şifreler eşleşmiyor',
@@ -788,8 +774,7 @@ export const tr = {
     locationPermissionRequired: 'Konum izni gerekli',
     locationCardsTitle: 'Bu konumdaki kartlar',
     locationCardsEmptyTitle: 'Bu konumda kart bulunamadı',
-    locationCardsEmptyDescription:
-      'Bu koordinata bağlı görünür bir mekân kartı şu an yok.',
+    locationCardsEmptyDescription: 'Bu koordinata bağlı görünür bir mekân kartı şu an yok.',
     locationRetryDescription: 'Konum alınamadı. Lütfen tekrar dene.',
     locationUnavailableTitle: 'Konum şu an alınamıyor',
     noResultsDescription: 'Farklı bir arama terimi deneyin.',
@@ -820,8 +805,7 @@ export const tr = {
       count === 0 ? 'Haritada görünür pin yok' : `Haritada ${count} pin var`,
   },
   placeEditor: {
-    discardDescription:
-      'Kaydedilmemiş mekân kartı değişiklikleri silinecek. Editör kapatılacak.',
+    discardDescription: 'Kaydedilmemiş mekân kartı değişiklikleri silinecek. Editör kapatılacak.',
     discardTitle: 'Değişiklikler iptal edilsin mi?',
     add: 'Ekle',
     addList: 'Listeyi ekle',
@@ -899,14 +883,11 @@ export const tr = {
     notesLabel: 'Notlar',
     notesPlaceholder: 'Mekânla ilgili deneyimini yaz',
     notices: {
-      createListFirst:
-        'Devam etmek için önce bir liste oluştur ve seç.',
-      createOrSelectList:
-        'Devam etmek için en az bir hedef liste seç.',
+      createListFirst: 'Devam etmek için önce bir liste oluştur ve seç.',
+      createOrSelectList: 'Devam etmek için en az bir hedef liste seç.',
       listCreatedButNotSelected: (max: number) =>
         `Liste oluşturuldu. Aynı anda en fazla ${max} yeni liste seçilebildiği için otomatik seçilmedi.`,
-      listSelectionRequired:
-        'Devam etmek için en az bir hedef liste seç.',
+      listSelectionRequired: 'Devam etmek için en az bir hedef liste seç.',
       multiListHint:
         'Aynı mekânı birden fazla listeye ekleyebilirsin. Daha özgün kartlar için listelerine ayrı ayrı ekleyip bilgileri özelleştirmeni öneririz.',
       selectionLimit: (max: number) =>
@@ -968,8 +949,7 @@ export const tr = {
     ],
     studentDiscount: 'Öğrenci dostu mu?',
     targetLists: 'Hedef listeler (zorunlu)',
-    targetListsHelper:
-      'Aynı mekânı zaten içeren listeler seçilemez.',
+    targetListsHelper: 'Aynı mekânı zaten içeren listeler seçilemez.',
     timeSelectionCount: (count: number) => `${count} zaman seçildi`,
     update: 'Güncelle',
     videoCounterLabel: (count: number, max: number) => `${count}/${max} video`,

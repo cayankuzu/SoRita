@@ -21,12 +21,33 @@ export function getPasswordRequirementLabel(requirementId: AuthPasswordRequireme
   return tr.auth.passwordHint.requirementLabels[requirementId];
 }
 
+/**
+ * Turns a wait in milliseconds into the shortest honest Turkish phrase.
+ *
+ * Rounding up matters: telling someone "1 dakika" when 90 seconds remain
+ * sends them back to a still-locked screen.
+ */
+export function formatAuthRetryWait(retryAfterMs: number) {
+  const seconds = Math.ceil(retryAfterMs / 1000);
+
+  if (seconds < 60) {
+    return tr.auth.toast.retryWaitSeconds(seconds);
+  }
+
+  return tr.auth.toast.retryWaitMinutes(Math.ceil(seconds / 60));
+}
+
 export function getSafeAuthFailureMessage(
   code: AuthActionCode | undefined,
   fallback: string,
+  retryAfterMs?: number,
 ) {
   if (code === 'account_locked') {
-    return tr.auth.toast.accountLocked;
+    // The gateway tells us exactly how long the lock lasts, so say it rather
+    // than leaving the user to guess what "a while" means.
+    return retryAfterMs && retryAfterMs > 0
+      ? tr.auth.toast.accountLockedFor(formatAuthRetryWait(retryAfterMs))
+      : tr.auth.toast.accountLocked;
   }
 
   if (code === 'rate_limited') {

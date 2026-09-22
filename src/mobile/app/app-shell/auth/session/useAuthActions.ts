@@ -52,6 +52,10 @@ function toAuthActionResult(error: unknown): AuthActionResult {
       success: false,
       code: edgeCode ?? 'unexpected',
       message: error.message,
+      // The gateway sends Retry-After on a lockout and the transport already
+      // parses it; dropping it here is what left the user reading "after a
+      // while" when the exact wait was known.
+      retryAfterMs: error.retryAfterMs,
     };
   }
 
