@@ -59,7 +59,74 @@ genişletiyoruz.
 Puan verilmez. Envanter yukarıda; eksik materyal listesi ve ilk 3 tehlike
 çıkarılır, sonra durulur.
 
-### ⬜ Faz 1 — PASS 1 · Grup G + I · **12 kategori** · yayın engelleri
+### 🔶 Faz 1 — PASS 1 · Grup G + I · **12 kategori** · yayın engelleri — TARANDI
+
+**Sonuç: P0 yayın engeli 0 adet.** Tavan kuralı uygulanmadı.
+
+| # | Kategori | Puan | Not |
+|---|---|---|---|
+| G41 | Kimlik doğrulama & oturum | 9.5 | canlı API testi eksik |
+| G42 | Sır & veri saklama | 9.5 | örnek seviyede, aşağıya bkz. |
+| G43 | Taşıma güvenliği | 8.5 | IDOR test edilmedi |
+| G44 | İstemci sertleştirme | 9.5 | minify+shrink+proguard açık |
+| G45 | Gizlilik & KVKK | ⬜ | konsol gerekli |
+| G46 | Kötüye kullanım | 9.0 | bildir+engelle+rate limit var |
+| I55 | App Store | ⬜ | konsol gerekli |
+| I56 | Play Store | 7.5 | 2 somut eksik |
+| I57 | Push & deeplink | 8.5 | cihaz matrisi eksik |
+| I58 | Yasal | ⬜ | canlı URL/metin gerekli |
+| I59 | Genel olgunluk | 9.5 | TODO/FIXME/"yakında" sayısı **0** |
+| I60 | Due diligence | 9.0 | ekip bilgisi eksik |
+
+Kanıtlanan güçlü yanlar: `secureKeyValueStore.ts` sırrı **yalnız** Keychain/
+Keystore'a yazıyor, güvensiz fallback sadece `removeItem` yolunda geçiyor ve
+SecureStore patlarsa fail-closed davranıyor. 72.762 satırda tek bir
+`console.*` var, token/secret içeren sıfır log. `navigationStateValidation.ts`
+kök rotaları `isAuthenticated`'a göre ayırdığı için deeplink ile oturumsuz
+korumalı ekrana girilemiyor. Hiç sosyal giriş sağlayıcısı olmadığı için
+**"Apple ile Giriş" zorunluluğu uygulanmıyor**; hesap silme ve veri dışa
+aktarma uygulama içinde mevcut.
+
+Açık bulgular: `I56-01` monochrome (temalı) ikon yok — görsel varlık gerekiyor;
+`I56-02` predictive back opt-in yok — geri davranışını etkilediği için cihazda
+doğrulama şart; `G43-01` IDOR testi iki test hesabı bekliyor.
+
+### 🔶 Faz 2 — PASS 2 · Grup A + B · **16 kategori** — DEVAM EDİYOR
+
+Kapatılanlar:
+
+- **B9/E28** — Keşfet karoları sistemin token'larını yeniden icat etmiş:
+  `compactCardTitleText` ≡ `labelText` (13/18/700) ve
+  `compactCardMetaText` ≡ `metadataText` (12/16/600), birebir aynı. Tek
+  dosyada 17 referans orijinallere bağlandı, iki token silindi, sıfır görsel
+  değişim. `spacing.none` de kaldırıldı: tanımlı, sıfır okuyucu.
+- **Guard** — `check-ui-tokens` artık kullanılmayan spacing/radius token'ında
+  ve iki isim bir tipografi değeri taşıdığında kırılıyor. Her iki kontrol
+  kusur geri konarak doğrulandı.
+- **A1 (tasarım denetimi)** — 21 ham `padding: 10`, kapsayan stil adına göre
+  ölçülerek ayrıldı: 13 kart → `spacing.card`, 8 kart değil → `spacing.md`.
+  `spacing.card` 3→16 okuyucu, ham `padding: 10` sıfır. Cihazda **piksel
+  piksel aynı** doğrulandı.
+- **A6** — üç son-çare hata mesajına kurtarma yönlendirmesi eklendi; ne
+  olduğunu söylüyorlardı ama ne yapılacağını söylemiyorlardı ve toast olarak
+  çıktıkları için tekrar deneme yolu yoktu.
+
+Ölçülüp **bilerek yapılmayan** (riskli):
+
+- **B10 tip ölçeği 9 kademe** (12,13,14,15,16,17,18,20,24 + 26) — rubrik 6-8
+  istiyor ve 13/15/17'yi adıyla anti-desen sayıyor. Kademe silmek, 80+ çağrı
+  yerinde görünür punto kayması demek. Ayrı pas hak ediyor.
+- **Ham boşluk literalleri: 540** (`10px`:195, `4px`:143, `6px`:108,
+  `12px`:67, `18px`:14, `16px`:8, `24px`:5). Guard'a "token değerine eşit ham
+  literal" kuralı eklenmesi build'i anında kırar ve 540 noktalık codemod ister.
+
+Ölçülüp **kusur çıkmayan**: A4 ekran durum matrisi (offline merkezi
+`OfflineIndicator` + `OutboxSyncController` ile çözülmüş — ekran başına daldan
+daha iyi mimari), A5 form/klavye (şifre yöneticisi autofill'i doğru kurulu),
+B14 motion (süre sistemi token'lı), B15 haptik (`InstantPressable` üzerinden
+merkezi, 10 dosya).
+
+### ⬜ Faz 1 eski planı (referans)
 `G41` kimlik/oturum, `G42` sır saklama, `G43` taşıma güvenliği, `G44` istemci
 sertleştirme, `G45` gizlilik/KVKK, `G46` kötüye kullanım,
 `I55` App Store, `I56` Play Store, `I57` push/deeplink, `I58` yasal,

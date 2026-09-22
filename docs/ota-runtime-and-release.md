@@ -211,6 +211,14 @@ not evidenced: iOS delivery.
 Two consecutive deliveries on the corrected runtime confirm the 1.0.108 contract holds rather than
 having worked once.
 
+2026-09-22, third delivery, the design-system consolidation:
+
+| Step | Observed |
+| --- | --- |
+| Publish | Group `cf19978d-f42e-49aa-88d7-27b811b918b4`, Android update `01a0c6c6-5df2-790c-98cd-87e2f9d96372`, runtime `1.0.108`, 100%. `check:release` passed inside the publisher. |
+| Next launch | `CheckCompleteAvailable` → `Download` → `DownloadComplete`. |
+| Following cold launch | New bundle running, and the feed renders **pixel-identical** to the pre-refactor capture — which is the point: `spacing.card` and `spacing.md` are both 10, so replacing 21 raw paddings had to change nothing on screen, and on hardware it did not. |
+
 ## Rollback
 
 Use [`ota-rollback-runbook.md`](./ota-rollback-runbook.md). The publisher prints the exact command for
