@@ -222,7 +222,56 @@ ikinci kez yapar ve kanıt izini böler.
 kararı değil, tesadüfi düzen ilkelidir ve token'a çevirmek dolaylılık ekler,
 sadeleştirmez. Birleştirme yalnız tekrar eden **kararlar** için yapıldı.
 
-### ⬜ Faz 4 — PASS 4 · Grup E · **9 kategori** · mimari ve kod kalitesi
+### 🔶 Faz 4 — PASS 4 · Grup E — DEVAM EDİYOR
+
+Ekran ekran cihaz taraması bu fazda üç gerçek kusur buldu; ikisi kapatıldı.
+
+**Kapatılan — modal odak kaybı (C19).** `ModalScaffold` modal açılınca ekran
+okuyucu odağını içeri taşıyor ve duyuruyor. Üç sheet onu kullanmıyordu ve kendi
+overlay'ini elle yazmıştı: yorum işlem sheet'i ve iki medya host'u.
+`accessibilityViewIsModal` veriyorlardı ama imleci kimse taşımıyordu, yani
+TalkBack açıkken sessizce açılıyorlardı. Davranış `useModalAccessibilityFocus`
+oldu; `ModalScaffold` 34 satır küçüldü, üç sheet üçer satır kazandı, yerleşim
+değişmedi. 5 test.
+
+**Kapatılan — tam ekran medyada sistem çubukları (B16).** Lightbox açıkken saat
+ve pil ikonları koyu zeminde koyu çiziliyordu. `AppSystemBars` içinde tam bunun
+için yazılmış `'media'` modu ve `useSystemBarMode` varmış, **hiç çağrılmamış**;
+push/pop yığını her ekranda varsayılana çözülüyormuş. Silmek yerine bağlandı:
+kullanılmayan soyutlama değil, son kablosu takılmamış makine. Öncesi/sonrası
+cihaz görüntüsüyle doğrulandı. Test mock'u `StatusBar`'ı yalnız imperatif
+namespace olarak veriyordu, artık hem bileşen hem namespace.
+
+**Kapatılan — haritada geçersiz koordinat.** `getMapMarkers` koordinatları hiç
+doğrulamadan Static Maps URL'ine geçiriyordu. `lat: 0, lng: 0` olan bir satır
+Gine Körfezi'nde açık deniz istiyor ve kart düz mavi bir dikdörtgen olarak
+render oluyor — Keşfet ekranında görülen tam buydu. Sonlu, aralıkta ve 0,0
+olmayan çiftler artık süzülüyor; kalan durumda kart dürüstçe "önizleme yok"
+gösteriyor. Dosyanın hiç testi yoktu, 11 test eklendi.
+
+**Kapatılan — tarih hiyerarşisi (A6).** `editedAt` etiketi kendi içinde `· `
+taşıyordu ve çağıran zaten `' · '` ile birleştiriyordu, sonuç
+"13.04.2026 · düzenlendi · 08.09.2026" — "düzenlendi" bağımsız bir metadata
+öğesi gibi okunuyordu. Artık "13.04.2026 · düzenlendi 08.09.2026".
+
+**Açık — bildirim metinleri bu repoda üretilmiyor (P2).** Bildirimler ekranı
+`"Bottega" mekanini begendi` gösteriyor: Türkçe karakterler eksik ("beğendi",
+"mekânını") ve ekranda 7 kez tekrarlıyor. `NotificationListItem` sunucudan gelen
+hazır `notification.message` alanını doğrudan basıyor, ve **bu metin kod
+tabanının hiçbir yerinde yok** — ne i18n'de, ne migration'larda, ne edge
+function'larda. Yani mesajı, tracked migration'larda tanımlı olmayan bir
+veritabanı trigger'ı yazıyor. Bu hem kopya kusuru hem veritabanı sapması
+işareti; düzeltmesi veritabanı erişimi ister ve mevcut satırları geriye dönük
+düzeltmez.
+
+**Açık — ölçülüp bilerek dokunulmayan.** `PlaceCard.tsx` 724 satır ama state'i
+`usePlaceCardState`'e çıkarılmış ve bütçeler resmi olarak sağlanıyor; çalışan
+bir bileşeni yalnız satır saymak için bölmek, promptun kendi kuralının yasakladığı
+şey. Beş `Deferred*` sarmalayıcı aynı 5 satırlık deseni tekrar ediyor ama
+jenerik bir yardımcıya indirmek 724 satırlık dosyada ~10 satır kazandırır;
+asıl sorun orası değil.
+
+### ⬜ Faz 4 kalanı — PASS 4 · Grup E
 `E26` katman disiplini, `E27` god class, `E28` DRY, `E29` KISS, `E30` hardcode,
 `E31` isimlendirme, `E32` ölü kod, `E33` test edilebilirlik, `E34` genişleyebilirlik.
 

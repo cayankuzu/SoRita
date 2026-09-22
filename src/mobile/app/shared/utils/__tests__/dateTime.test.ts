@@ -40,7 +40,10 @@ describe('getCreatedUpdatedLabels', () => {
 
     expect(labels).toHaveLength(2);
     expect(labels[0]).not.toMatch(/^Oluşturma:/);
-    expect(labels[1]).toMatch(/^düzenlendi · /);
+    // The label must not carry its own separator: the caller joins with " · ",
+    // and two of them made the word read as a standalone metadata item.
+    expect(labels[1]).toMatch(/^düzenlendi \d/u);
+    expect(labels[1]).not.toContain('·');
   });
 
   it('shows only creation when there is no meaningful edit', () => {

@@ -18,7 +18,7 @@ export const tr = {
     delete: 'Sil',
     download: 'İndir',
     edit: 'Düzenle',
-    editedAt: (value: string) => `düzenlendi · ${value}`,
+    editedAt: (value: string) => `düzenlendi ${value}`,
     relativeTime: {
       days: (count: number) => `${count} gün önce`,
       hours: (count: number) => `${count} saat önce`,

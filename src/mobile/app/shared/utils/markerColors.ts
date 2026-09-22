@@ -121,6 +121,26 @@ export function getMarkerColorForPlaceAcrossLists(
   );
 }
 
+/**
+ * A pair that cannot be a real pin on this map.
+ *
+ * Nothing validated coordinates before they reached the Static Maps URL, so a
+ * row with a missing or zeroed position asked Google for 0,0 - open water in
+ * the Gulf of Guinea - and the card rendered a featureless blue rectangle with
+ * a marker in it. Rejecting the pair here lets the caller fall back to the
+ * "preview unavailable" state, which is at least honest about having nothing
+ * to show.
+ */
+function isPlottableCoordinate(lat: unknown, lng: unknown): lat is number {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
+
+  // Exactly 0,0 is the default an unset column leaves behind far more often
+  // than it is a place someone saved in the Atlantic.
+  return lat !== 0 || lng !== 0;
+}
+
 export function getMapMarkers<TPlace extends MarkerPlaceLike>(
   places: TPlace[],
   isPublic?: boolean,
@@ -128,10 +148,12 @@ export function getMapMarkers<TPlace extends MarkerPlaceLike>(
 ) {
   const markerColor = getListMarkerColor(isPublic);
 
-  return places.map((place, index) => ({
-    lat: place.lat,
-    lng: place.lng,
-    name: place.name,
-    markerColor: resolveMarkerColor?.(place, index) ?? markerColor,
-  }));
+  return places
+    .map((place, index) => ({
+      lat: place.lat,
+      lng: place.lng,
+      name: place.name,
+      markerColor: resolveMarkerColor?.(place, index) ?? markerColor,
+    }))
+    .filter((marker) => isPlottableCoordinate(marker.lat, marker.lng));
 }
