@@ -22,10 +22,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
-import {
-  formatLocationPlaceCardsCount,
-  formatPlaceCardLocation,
-} from '@/mobile/app/shared/utils/format';
+import { formatPlaceCardLocation } from '@/mobile/app/shared/utils/format';
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 
 type MapMarker = {
@@ -217,20 +214,6 @@ export function PlaceCardFull({
 
       <PlacePrimaryMedia media={media} onPress={onMediaPress} placeName={place.name} />
 
-      {locationLabel ? (
-        <View
-          accessibilityLabel={tr.cards.locationAccessibilityLabel(locationLabel)}
-          style={styles.locationBar}
-        >
-          <View style={styles.locationIconWrap}>
-            <MapPin color={colors.primary} size={iconSize.xs} strokeWidth={2.2} />
-          </View>
-          <AppText numberOfLines={1} style={styles.locationText}>
-            {locationLabel}
-          </AppText>
-        </View>
-      ) : null}
-
       {isMapVisible ? (
         <View style={styles.mapWrap}>
           <MiniMapPreview
@@ -279,14 +262,29 @@ export function PlaceCardFull({
                   />
                 ) : null}
               </View>
-              {locationPlaceCardsCount != null ? (
+              {/* One card at a location is this card; the count only says
+                  something once others saved the same place. */}
+              {locationPlaceCardsCount != null && locationPlaceCardsCount > 1 ? (
                 <AppText style={styles.titleMeta}>
-                  {formatLocationPlaceCardsCount(locationPlaceCardsCount)}
+                  {tr.cards.locationCardsCount(locationPlaceCardsCount)}
                 </AppText>
               ) : null}
             </View>
           </Pressable>
         </View>
+        {/* The address is the place name's own metadata, so it reads as a
+            line under the name rather than a boxed bar above the map. */}
+        {locationLabel ? (
+          <View
+            accessibilityLabel={tr.cards.locationAccessibilityLabel(locationLabel)}
+            style={styles.locationRow}
+          >
+            <MapPin color={colors.textSoft} size={iconSize.xs} />
+            <AppText numberOfLines={1} style={styles.locationText}>
+              {locationLabel}
+            </AppText>
+          </View>
+        ) : null}
         {place.title ? (
           <ExpandableText
             text={place.title}

@@ -1024,6 +1024,7 @@ export const tr = {
     loadMoreComments: 'Daha fazla yorum göster',
     listCoverImageLabel: (name: string) => `${name} kapak görseli`,
     locationAccessibilityLabel: (location: string) => `Konum: ${location}`,
+    locationCardsCount: (count: number) => `Bu konumda ${count} kart`,
     loginRequiredForComment: 'Yorum için giriş yapmalısın',
     loginRequiredForLike: 'Beğeni için giriş yapmalısın',
     loginRequiredForReport: 'Mekânı bildirmek için giriş yapmalısın',

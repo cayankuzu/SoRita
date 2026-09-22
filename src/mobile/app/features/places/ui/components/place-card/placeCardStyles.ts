@@ -3,7 +3,6 @@ import { Platform, StyleSheet } from 'react-native';
 import {
   colors,
   fontWeight,
-  letterSpacing,
   radius,
   spacing,
   textStyle,
@@ -98,17 +97,11 @@ export const placeCardStyles = StyleSheet.create({
     flexShrink: 1,
   },
   sourceBarMeta: textStyle('metadataText', colors.quote),
+  // The list is the post's context line, not a card inside the card: no fill,
+  // no border, aligned to the content edge.
   linkBar: {
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -137,7 +130,7 @@ export const placeCardStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  linkBarTitle: textStyle('metadataText', colors.text, fontWeight.strong),
+  linkBarTitle: textStyle('supportingLabelText', colors.text),
   linkBarMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,34 +181,16 @@ export const placeCardStyles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   mediaCarouselCounterText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
-  locationBar: {
-    minHeight: 32,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-  },
-  locationIconWrap: {
-    width: 20,
-    height: 20,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
+    gap: spacing.xs,
   },
   locationText: {
     ...typography.metadataText,
     flex: 1,
     color: colors.textMuted,
-    fontWeight: fontWeight.strong,
-    letterSpacing: letterSpacing.emphasizedMetadata,
+    fontWeight: fontWeight.regular,
   },
   content: {
     paddingHorizontal: spacing.md,
@@ -262,8 +237,7 @@ export const placeCardStyles = StyleSheet.create({
   },
   eyebrow: textStyle('metadataText', colors.secondary, fontWeight.strong),
   title: {
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
+    ...typography.compactTitleText,
     color: colors.text,
     flexShrink: 1,
   },
@@ -274,7 +248,9 @@ export const placeCardStyles = StyleSheet.create({
   contentTitleChevron: {
     flexShrink: 0,
   },
-  description: textStyle('captionText', colors.textMuted),
+  // The note is the author's own words and the reason the card exists: full
+  // contrast at reading size, not helper grey.
+  description: textStyle('readingBodyText', colors.text),
   menuAction: {
     alignSelf: 'flex-start',
     minHeight: 40,
