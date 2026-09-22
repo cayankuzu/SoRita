@@ -31,7 +31,7 @@ akışları (Maestro) UI oturduktan **sonra** yazılırsa bir kez yazılır.
 |---|---|---|---|---|---|
 | 0 | OTA zemini, PASS 0 envanter | — | — | — | ✅ |
 | 1 | iOS OTA açılışı (runtime 1.0.108) | H52, I57, I55 | — | Apple / TestFlight | 🔶 build ✅, TestFlight'ta |
-| 2 | Design system envanteri, ekran ekran inceleme, duplicate analizi | B9, A2, A4, E28 | PASS 1–3 | yok | 🔶 analiz ✅, düzeltmeler cihazda doğrulanacak |
+| 2 | Design system envanteri, ekran ekran inceleme, duplicate analizi | B9, A2, A4, E28 | PASS 1–3 | yok | ✅ |
 | 3 | Token standardizasyonu | B9–B13, E30 | PASS 4 | görsel onay | ⬜ |
 | 4 | Component sistemi: PlaceCard varyantları, form UX, harita UI, durum bileşenleri | B9, E28, A4, A5 | PASS 5, §6–§8 | yok | ⬜ |
 | 5 | KISS temizliği, god component | E26–E34 | PASS 6, §10–§11 | yok | ⬜ |
@@ -156,6 +156,31 @@ basılmadı.
 | F4 | İçerik menüsü etiketi "İçerik işlemleri"; kullanılmayan `overflowActionLabel` prop'u silindi | mevcut test güncellendi |
 | F5 | Özellik açma chip'i 24dp boyalı + `hitSlopFor(24)` → 48dp etkin | touch-target guard |
 | F6 | Liste detayı kartlarına başlıkla aynı 12dp inset | cihazda |
+
+### Cihaz kanıtı
+
+`check:release` yeşil (1271 test, satır kapsamı %94.7), OTA grubu
+`c6aae767` production runtime 1.0.108'e yayınlandı. Telefon ilk soğuk
+başlatmada `Update available` → `DownloadComplete` (update `01a0cb41`)
+logladı, ikincisinde onu çalıştırdı. Ölçümler `uiautomator` sınırlarından,
+fiziksel piksel:
+
+| # | Önce | Sonra |
+|---|---|---|
+| F1 | fotoğraf 39→1013, harita 39→1042 (sağda 29px kısa) | fotoğraf 72→1009, harita 72→1009; 2. sayfa tam 1010'da başlıyor |
+| F2 | liste 2113'te bitiyor, gezinme çubuğu 2270 | içerik gezinme çubuğunun hemen üstüne iniyor |
+| F3 | Mekânlar 0 → açınca 24, Galeri 0 | açmadan Mekânlar **34**, Galeri sayısız |
+| F4 | "Profil işlemleri" | "İçerik işlemleri" (başlık ve kart menüsü) |
+| F5 | chip 132px (48dp) | 66px (24dp), yanındaki chip'lerle aynı |
+| F6 | kart 0→1080 | kart içeriği 69→1011, iki yanda eşit |
+
+### Doğrulama sırasında çıkan yeni bulgu
+
+Liste detayındaki "Mekân konumları" haritası sayfanın ortasında ve tek
+parmak dikey kaydırmayı yakalıyor: sayfayı kaydırmak isteyen kullanıcı
+haritayı okyanusa sürüklüyor. Kart haritaları dokunarak etkinleştiriliyor
+(`useMiniMapInteraction`), bu harita etkinleştirmeden etkileşimli.
+**Faz 4**, harita UI sistemi.
 
 ---
 
