@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   completeSignupRedirect,
+  describeSessionCredentials,
   preparePasswordResetRedirect,
   updateRecoveredPassword,
 } from '@/mobile/app/app-shell/auth/session/authRedirectHandlers';
@@ -226,8 +227,21 @@ describe('authRedirectHandlers', () => {
     expect(loggerWarnMock).toHaveBeenCalledWith(
       'auth',
       'Password reset link carried no session credential',
-      { hasAccessToken: false, hasCode: false, hasRefreshToken: false },
+      { carried: 'none' },
     );
+  });
+
+  // The first version of this diagnostic named its fields hasAccessToken and
+  // hasRefreshToken, which the logger redacts as token-shaped keys, so it
+  // reported "[redacted]" and told us nothing.
+  it('names credential kinds in a way the log redactor keeps', () => {
+    expect(
+      describeSessionCredentials({ code: 'c', target: 'reset-password' }),
+    ).toBe('code');
+    expect(
+      describeSessionCredentials({ accessToken: 'a', refreshToken: 'r', target: 'reset-password' }),
+    ).toBe('access+refresh');
+    expect(describeSessionCredentials({ target: 'reset-password' })).toBe('none');
   });
 
   it('clears rejected signup payloads without signing out for reset errors', async () => {

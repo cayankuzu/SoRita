@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import * as Linking from 'expo-linking';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { useAppNavigation, useRootStackRoute } from '@/mobile/app/app-shell/navigation/navigation';
@@ -14,6 +13,7 @@ import {
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
 import { resolvePasswordResetLinkAction } from '@/mobile/app/features/auth/application/passwordResetLinkState';
+import { useIncomingAuthUrl } from '@/mobile/app/features/auth/application/useIncomingAuthUrl';
 import { validateResetPasswordInput } from '@/mobile/app/features/auth/application/resetPasswordValidation';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
@@ -33,13 +33,13 @@ export function ResetPasswordScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'ResetPassword'>();
   const { refreshUser, user } = useAuth();
-  const incomingUrl = Linking.useURL();
+  const incoming = useIncomingAuthUrl();
   const payload = useMemo(() => {
-    const parsedPayload = incomingUrl ? parseAuthDeepLinkUrl(incomingUrl) : null;
+    const parsedPayload = incoming.url ? parseAuthDeepLinkUrl(incoming.url) : null;
     return parsedPayload?.target === 'reset-password'
       ? parsedPayload
       : normalizeAuthRedirectParams(route.params, 'reset-password');
-  }, [incomingUrl, route.params]);
+  }, [incoming.url, route.params]);
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -65,7 +65,7 @@ export function ResetPasswordScreen() {
     };
 
     const action = resolvePasswordResetLinkAction({
-      linkingResolved: incomingUrl !== null,
+      linkingResolved: incoming.resolved,
       preparedState: preparedStateRef.current,
       state: payload.state,
     });
@@ -96,7 +96,7 @@ export function ResetPasswordScreen() {
     return () => {
       active = false;
     };
-  }, [incomingUrl, payload]);
+  }, [incoming.resolved, payload]);
 
   const submitPassword = useCallback(async () => {
     const validation = validateResetPasswordInput(password, passwordConfirm);

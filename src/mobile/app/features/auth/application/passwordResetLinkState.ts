@@ -18,13 +18,22 @@ export function resolvePasswordResetLinkAction(params: {
   state?: string;
   /** The token this screen has already spent, if any. */
   preparedState: string | null;
-  /** Whether `Linking.useURL()` has produced a result yet, null included. */
+  /** Whether the launch URL has been looked up yet, "no URL" included. */
   linkingResolved: boolean;
 }): PasswordResetLinkAction {
   const { linkingResolved, preparedState, state } = params;
 
+  // Nothing may be spent before the whole link is known. React Navigation puts
+  // a deep link's query into route params but never its fragment, and Supabase
+  // returns the recovery session in the fragment. Acting on the params alone
+  // burned the single-use token on a payload that could not carry a session,
+  // and the real link arrived to find its own token already gone.
+  if (!linkingResolved) {
+    return 'wait';
+  }
+
   if (!state) {
-    return linkingResolved ? 'fail' : 'wait';
+    return 'fail';
   }
 
   return preparedState === state ? 'wait' : 'prepare';

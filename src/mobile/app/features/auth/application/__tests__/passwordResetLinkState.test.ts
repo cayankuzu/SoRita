@@ -49,6 +49,21 @@ describe('resolvePasswordResetLinkAction', () => {
     ).toBe('wait');
   });
 
+  // The defect that survived every earlier fix: React Navigation puts a deep
+  // link's query into route params but never its fragment, and Supabase
+  // returns the recovery session in the fragment. Acting on a state that came
+  // from the params alone spent the single-use token on a payload that could
+  // not carry a session, and the real link then found its own token gone.
+  it('never spends a token before the whole link is known', () => {
+    expect(
+      resolvePasswordResetLinkAction({
+        linkingResolved: false,
+        preparedState: null,
+        state: 'from-route-params',
+      }),
+    ).toBe('wait');
+  });
+
   it('fails once Linking has resolved and still carries no token', () => {
     expect(
       resolvePasswordResetLinkAction({
@@ -84,5 +99,16 @@ describe('resolvePasswordResetLinkAction', () => {
         state: 'abc',
       }),
     ).toBe('wait');
+  });
+
+  it('only ever prepares once the link is fully known', () => {
+    const prepared = (['abc', undefined, ''] as const).flatMap((state) =>
+      [true, false].map((linkingResolved) => ({
+        action: resolvePasswordResetLinkAction({ linkingResolved, preparedState: null, state }),
+        linkingResolved,
+      })),
+    );
+
+    expect(prepared.filter((entry) => entry.action === 'prepare').every((entry) => entry.linkingResolved)).toBe(true);
   });
 });

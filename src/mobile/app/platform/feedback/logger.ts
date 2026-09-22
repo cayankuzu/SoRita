@@ -83,7 +83,13 @@ function write(level: LogLevel, scope: string, message: string, meta?: unknown) 
     return;
   }
 
+  // Release builds used to send warnings and errors to Sentry alone, so a
+  // device under a cable told us nothing and a whole class of bug could only
+  // be guessed at. `line` is already redacted, and Android keeps an app's log
+  // to itself, so mirroring it to the console costs nothing and makes a
+  // release build diagnosable from logcat or the Xcode console.
   if (level === 'warn') {
+    console.warn(line);
     captureAppMessage(`[${scope}] ${message}`, {
       extras: sanitizedMeta && typeof sanitizedMeta === 'object'
         ? (sanitizedMeta as Record<string, unknown>)
@@ -96,6 +102,7 @@ function write(level: LogLevel, scope: string, message: string, meta?: unknown) 
   }
 
   if (level === 'error') {
+    console.error(line);
     captureAppMessage(`[${scope}] ${message}`, {
       extras: sanitizedMeta && typeof sanitizedMeta === 'object'
         ? (sanitizedMeta as Record<string, unknown>)

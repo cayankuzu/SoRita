@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import * as Linking from 'expo-linking';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { useAppNavigation, useRootStackRoute } from '@/mobile/app/app-shell/navigation/navigation';
@@ -9,6 +8,7 @@ import {
   normalizeAuthRedirectParams,
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
+import { useIncomingAuthUrl } from '@/mobile/app/features/auth/application/useIncomingAuthUrl';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -39,20 +39,28 @@ export function AuthCallbackScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'AuthCallback'>();
   const { refreshUser, user } = useAuth();
-  const incomingUrl = Linking.useURL();
+  const incoming = useIncomingAuthUrl();
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const payload = useMemo(() => {
-    const parsedPayload = incomingUrl ? parseAuthDeepLinkUrl(incomingUrl) : null;
+    const parsedPayload = incoming.url ? parseAuthDeepLinkUrl(incoming.url) : null;
     return parsedPayload?.target === 'auth/callback'
       ? parsedPayload
       : normalizeAuthRedirectParams(route.params, 'auth/callback');
-  }, [incomingUrl, route.params]);
+  }, [incoming.url, route.params]);
 
   useEffect(() => {
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     setScreenState({ status: 'loading' });
+
+    // The state token is single use, so nothing may run before the whole link
+    // is known: route params carry the query alone, never the fragment.
+    if (!incoming.resolved) {
+      return () => {
+        active = false;
+      };
+    }
 
     const fail = (message: string) => {
       if (active) {
@@ -88,7 +96,7 @@ export function AuthCallbackScreen() {
         clearTimeout(timeoutId);
       }
     };
-  }, [attempt, payload, refreshUser]);
+  }, [attempt, incoming.resolved, payload, refreshUser]);
 
   useEffect(() => {
     if (screenState.status === 'success' && user) {

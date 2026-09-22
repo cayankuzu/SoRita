@@ -39,6 +39,25 @@ function hasSessionCredentials(payload: AuthRedirectParams) {
   return Boolean(payload.code || (payload.accessToken && payload.refreshToken));
 }
 
+/** Which credential kinds a link carried, for a log that names no secret. */
+export function describeSessionCredentials(payload: AuthRedirectParams) {
+  const kinds: string[] = [];
+
+  if (payload.code) {
+    kinds.push('code');
+  }
+
+  if (payload.accessToken) {
+    kinds.push('access');
+  }
+
+  if (payload.refreshToken) {
+    kinds.push('refresh');
+  }
+
+  return kinds.length > 0 ? kinds.join('+') : 'none';
+}
+
 async function resolveSessionFromPayload(
   payload: AuthRedirectParams,
   fail: (message: string) => Promise<never> = failAuthRedirect,
@@ -120,11 +139,12 @@ export async function preparePasswordResetRedirect(payload: AuthRedirectParams) 
 
   if (!hasSessionCredentials(payload)) {
     // "No code found" is true but useless here: the link is simply not usable,
-    // and the user needs to be told to request a new one.
+    // and the user needs to be told to request a new one. The field is named
+    // for the kind and not for the token, because the logger redacts any key
+    // that looks like an access or refresh token - which silently blanked the
+    // first version of this diagnostic.
     logger.warn('auth', 'Password reset link carried no session credential', {
-      hasAccessToken: Boolean(payload.accessToken),
-      hasCode: Boolean(payload.code),
-      hasRefreshToken: Boolean(payload.refreshToken),
+      carried: describeSessionCredentials(payload),
     });
     await failPasswordResetRedirect(tr.auth.callback.passwordResetLinkInvalid);
   }
