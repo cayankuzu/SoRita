@@ -780,7 +780,7 @@ describe('useAuthScreenState', () => {
     await act(async () => {
       await hook.result.current.handleForgotPassword();
     });
-    expect(showToastMock).toHaveBeenCalledWith(tr.settings.password.resetHint, 'error');
+    expect(showToastMock).toHaveBeenCalledWith(tr.auth.forgotPassword.sendFailed, 'error');
   });
 
   it('covers forgot-password result variants and thrown weak-password registration', async () => {
@@ -805,7 +805,7 @@ describe('useAuthScreenState', () => {
     await act(async () => {
       await hook.result.current.handleForgotPassword();
     });
-    expect(showToastMock).toHaveBeenCalledWith(tr.settings.password.resetHint, 'error');
+    expect(showToastMock).toHaveBeenCalledWith(tr.auth.forgotPassword.sendFailed, 'error');
 
     act(() => {
       hook.result.current.openRegister();

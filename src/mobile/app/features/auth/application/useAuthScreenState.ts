@@ -541,7 +541,7 @@ export function useAuthScreenState({
       if (!result.success) {
         const message = getSafeAuthFailureMessage(
           result.code,
-          tr.settings.password.resetHint,
+          tr.auth.forgotPassword.sendFailed,
           result.retryAfterMs,
         );
         setForgotPasswordError(message);
@@ -551,10 +551,10 @@ export function useAuthScreenState({
 
       setLoginEmailState(normalizedForgotPasswordEmail);
       setView('login');
-      showToast(tr.settings.password.resetSent, 'success');
+      showToast(tr.auth.forgotPassword.sent, 'success');
     } catch {
-      setForgotPasswordError(tr.settings.password.resetHint);
-      showToast(tr.settings.password.resetHint, 'error');
+      setForgotPasswordError(tr.auth.forgotPassword.sendFailed);
+      showToast(tr.auth.forgotPassword.sendFailed, 'error');
     }
   }, [forgotPasswordEmail, requestPasswordResetEmail]);
 

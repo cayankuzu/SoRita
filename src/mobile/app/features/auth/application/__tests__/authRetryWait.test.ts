@@ -62,3 +62,27 @@ describe('getSafeAuthFailureMessage', () => {
     expect(getSafeAuthFailureMessage('invalid_credentials', 'yedek', 300_000)).toBe('yedek');
   });
 });
+
+describe('forgot-password copy', () => {
+  // The defect this closes: the signed-out reset flow used
+  // tr.settings.password.resetHint as its failure message. That string belongs
+  // to Settings, where a signed-in user changes a password they still know, so
+  // a failed send told someone who had forgotten their password to type it in.
+  it('never asks a signed-out user for the password they have forgotten', () => {
+    for (const message of Object.values(tr.auth.forgotPassword)) {
+      if (typeof message !== 'string') continue;
+      expect(message.toLocaleLowerCase('tr')).not.toContain('mevcut şifre');
+    }
+  });
+
+  it('owns the messages the reset flow shows, rather than borrowing Settings copy', () => {
+    expect(tr.auth.forgotPassword.sendFailed).toBeTruthy();
+    expect(tr.auth.forgotPassword.sent).toBeTruthy();
+    expect(tr.auth.forgotPassword.sendFailed).not.toBe(tr.settings.password.resetHint);
+    expect(tr.auth.forgotPassword.sent).not.toBe(tr.settings.password.resetSent);
+  });
+
+  it('keeps the Settings hint asking for the current password, because there it is right', () => {
+    expect(tr.settings.password.resetHint.toLocaleLowerCase('tr')).toContain('mevcut şifre');
+  });
+});

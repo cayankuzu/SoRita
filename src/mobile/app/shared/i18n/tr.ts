@@ -566,6 +566,8 @@ export const tr = {
       loginAction: 'Giriş yap',
       remembered: 'Hatırladın mı?',
       sendAction: 'Sıfırlama maili gönder',
+      sendFailed: 'Sıfırlama maili şu an gönderilemedi. Biraz sonra tekrar dene.',
+      sent: 'Sıfırlama maili gönderildi. Gelen kutunu kontrol et.',
       subtitle: 'E-posta adresine güvenli bir sıfırlama bağlantısı gönderelim.',
       title: 'Şifreni sıfırla',
     },
