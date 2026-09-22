@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { Crosshair, Ellipsis, Globe, Heart, Lock } from 'lucide-react-native';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
+import { ListCoverFallback } from '@/mobile/app/features/discovery/ui/components/ListCoverFallback';
 import { OwnerHeader } from '@/mobile/app/features/discovery/ui/components/OwnerHeader';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
 import type { ActionMenuSheetItem } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
@@ -91,11 +92,7 @@ function ListTileMedia({
           onMapGesture={onMapGesture}
         />
       ) : (
-        <View style={styles.placeholderSquare}>
-          <AppText style={styles.placeholderEmoji}>
-            {list.emoji || tr.placeEditor.defaultEmoji}
-          </AppText>
-        </View>
+        <ListCoverFallback emoji={list.emoji || tr.placeEditor.defaultEmoji} seed={list.id} />
       )}
 
       {hasMiniMap ? <MiniMapInteractionHint visible={showInteractionHint} /> : null}

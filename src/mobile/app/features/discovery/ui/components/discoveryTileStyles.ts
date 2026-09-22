@@ -63,15 +63,6 @@ export const discoveryTileStyles = StyleSheet.create({
     width: '100%',
     backgroundColor: colors.surfaceMuted,
   },
-  placeholderSquare: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  placeholderEmoji: {
-    fontSize: typography.section.fontSize,
-  },
   visibilityBadge: {
     position: 'absolute',
     top: 4,
