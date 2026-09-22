@@ -13,6 +13,7 @@ import {
 } from '@/mobile/app/data/selectors/placeAggregation';
 import type { FeedVisibilityStore } from '@/mobile/app/features/home/application/feedVisibilityStore';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import { ContentErrorBoundary } from '@/mobile/app/shared/components/ui/ContentErrorBoundary';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
 type HomeFeedCardRowProps = {
@@ -69,23 +70,25 @@ export const HomeFeedCardRow = React.memo(function HomeFeedCardRow({
 
   return (
     <View style={styles.cardRow}>
-      <PlaceCard
-        place={item.place}
-        owner={item.owner}
-        ownerId={item.ownerId}
-        listId={item.listId}
-        listName={item.listName}
-        listEmoji={item.listEmoji}
-        listIsPublic={item.listIsPublic}
-        listCoverImage={item.listCoverImage}
-        locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
-        locationOriginalPlaceName={item.place.name}
-        markerColor={getMarkerColorForMemberships(item.memberships, item.listIsPublic)}
-        isVisible={isVisible}
-        onPressIn={handleListIntent}
-        onPress={handleListPress}
-        onOwnerPress={handleOwnerPress}
-      />
+      <ContentErrorBoundary source="HomeFeedCardRow">
+        <PlaceCard
+          place={item.place}
+          owner={item.owner}
+          ownerId={item.ownerId}
+          listId={item.listId}
+          listName={item.listName}
+          listEmoji={item.listEmoji}
+          listIsPublic={item.listIsPublic}
+          listCoverImage={item.listCoverImage}
+          locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
+          locationOriginalPlaceName={item.place.name}
+          markerColor={getMarkerColorForMemberships(item.memberships, item.listIsPublic)}
+          isVisible={isVisible}
+          onPressIn={handleListIntent}
+          onPress={handleListPress}
+          onOwnerPress={handleOwnerPress}
+        />
+      </ContentErrorBoundary>
     </View>
   );
 });

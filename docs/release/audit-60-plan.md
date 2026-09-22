@@ -120,11 +120,40 @@ Kapatılanlar:
   `12px`:67, `18px`:14, `16px`:8, `24px`:5). Guard'a "token değerine eşit ham
   literal" kuralı eklenmesi build'i anında kırar ve 540 noktalık codemod ister.
 
-Ölçülüp **kusur çıkmayan**: A4 ekran durum matrisi (offline merkezi
-`OfflineIndicator` + `OutboxSyncController` ile çözülmüş — ekran başına daldan
-daha iyi mimari), A5 form/klavye (şifre yöneticisi autofill'i doğru kurulu),
-B14 motion (süre sistemi token'lı), B15 haptik (`InstantPressable` üzerinden
-merkezi, 10 dosya).
+- **A4 / H48 kısmi hata toleransı** — tek error boundary vardı ve o da
+  uygulamanın kökündeydi: tek bir akış kartının patlaması **tüm uygulamayı**
+  hata ekranına götürüyordu. Sunucudan gelen serbest içeriği render eden bir
+  kart için bu, alan değişiminin uygulamayı düşürmesi demek.
+  `ContentErrorBoundary` eklendi ve akış kartına uygulandı: hata kart boyutunda
+  kalıyor, yüzey adıyla Sentry'ye ve log'a raporlanıyor, yeniden deneme alt
+  ağacı remount ediyor. 5 test, biri doğrudan "köke sızmıyor" iddiasını
+  kanıtlıyor.
+
+Ölçülüp **kusur çıkmayan** (kanıtla):
+
+| Kategori | Neden temiz |
+|---|---|
+| A2 | `freezeOnBlur: true` + `lazy: true` sekme durumunu koruyor; `refetchOnMount: false` sekme değişiminde yeniden yükleme yapmıyor; iki `<Modal>` **kardeş, iç içe değil** — kapatma cehennemi yok; kök rotalar `{user ? …}` ile yetki kapılı |
+| A3 | `useAndroidBackHandler` yalnız react-navigation'ın bilemeyeceği iç görünüm durumlarında (AuthScreen, SettingsScreen) — doğru kullanım; `exitPrompt` ile çift-basınca-çık mevcut |
+| A4 | Offline merkezi `OfflineIndicator` + `feedbackPriority` + `OutboxSyncController` ile çözülmüş — ekran başına daldan daha iyi mimari |
+| A5 | `autoComplete="email"`, `textContentType="username"`/`"password"`, `keyboardType="email-address"` — şifre yöneticisi autofill'i doğru kurulu |
+| A6 | Kullanıcıya görünen metinde `null`/`undefined`/`Exception`/HTTP kodu sızıntısı **yok**; yıkıcı işlemler açık onay diyaloglu ("Bu işlem geri alınamaz…") |
+| A7 | `canAskAgain` + `openSettings` üç izin yüzeyinin hepsinde (push, konum, medya) ele alınmış |
+| A8 | `purgeAuthenticatedUserState` kullanıcı başına tek-uçuş dedup ile çıkışta yerel durumu temizliyor, imzalı medya URL durumu dahil |
+| B11 | `tokens.test.ts` her okunabilir rol × her opak yüzey için **gerçek WCAG oranı** hesaplıyor; `disabled` muafiyeti WCAG 1.4.3 gerekçeli |
+| B13 | İkon seti **tekil**: 81 import, hepsi `lucide-react-native` |
+| B14 | Süre sistemi token'lı (fast 120 / standard 180 / slow 260) |
+| B15 | Haptik `InstantPressable` üzerinden merkezi, 11 dosya |
+| B16 | Taranan 14 maddenin 12'si mevcut; **undo toast N/A** — swipe-ile-silme yok (swipe yalnız sekme geçişi), yıkıcı işlemler onay diyaloguyla korunuyor |
+
+**B13 açık bulgu:** ikon boyutları token'lı değil. `iconSize` (sm 14 / md 18 /
+lg 20) yalnız **5 yerde** okunuyor, karşısında **12 farklı ham boyut** var
+(9, 10, 12, 13, 14, 16, 18, 20, 24, 28, 30, 36). Rubrik standart ölçek
+(16/20/24/32) istiyor. ~270 çağrı yerini değiştirmek görünür ikon boyutu
+kayması demek; B10 ve boşluk ölçeğiyle aynı pasta ele alınmalı.
+
+**B16 açık bulgu (P3):** sayaç değişimleri animasyonlu değil. Saf cila, her
+sayaca animasyon eklemek jank riski taşıyor.
 
 ### ⬜ Faz 1 eski planı (referans)
 `G41` kimlik/oturum, `G42` sır saklama, `G43` taşıma güvenliği, `G44` istemci

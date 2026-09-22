@@ -152,6 +152,8 @@ export const tr = {
     connectionSlow: 'Bağlantı geç yanıt veriyor. Lütfen tekrar dene.',
     connectionUnavailable:
       'İnternet bağlantısı şu an kullanılamıyor. Bağlantını kontrol edip tekrar dene.',
+    contentFailedDescription: 'Bu içerik görüntülenemedi.',
+    contentFailedRetry: 'Yenile',
     crashDescription:
       'Uygulama beklenmeyen bir hatayla karşılaştı. Yeniden deneyerek akışa geri dönebilirsin.',
     crashRetry: 'Yeniden dene',
