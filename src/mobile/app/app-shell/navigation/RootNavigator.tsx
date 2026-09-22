@@ -49,6 +49,10 @@ import { markScreenVisible } from '@/mobile/app/shared/performance/navigationPer
 import { useMarkStartupShellReady } from '@/mobile/app/app-shell/startup/StartupShellReadyContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+// Phones only, upright only. The lock rides on the native stack rather than
+// on the manifest and Info.plist so it reaches installed binaries over the
+// air; react-native-screens applies it as each screen becomes active.
+const ROOT_SCREEN_OPTIONS = { headerShown: false, orientation: 'portrait_up' } as const;
 const APP_EXIT_DOUBLE_PRESS_WINDOW_MS = 1800;
 const NAVIGATION_STATE_PERSIST_DEBOUNCE_MS = 700;
 const linking: LinkingOptions<RootStackParamList> = {
@@ -371,7 +375,7 @@ export function RootNavigator() {
           <View style={styles.navigationShell}>
             <AppFeedbackStack />
             <View style={styles.stackShell}>
-              <Stack.Navigator id="root-stack" screenOptions={{ headerShown: false }}>
+              <Stack.Navigator id="root-stack" screenOptions={ROOT_SCREEN_OPTIONS}>
                 {user ? (
                   <Stack.Screen name="MainTabs" component={MainTabs} />
                 ) : (
