@@ -14,7 +14,17 @@ export type PendingAuthRedirectState = {
 };
 
 export type AuthRedirectParams = {
+  /** Supabase's PKCE credential, when the sender started a PKCE flow. */
   code?: string;
+  /**
+   * Supabase's implicit-flow credentials. The reset mail is requested by the
+   * auth gateway, whose server client runs the default implicit flow, so the
+   * recovery link comes back carrying a session in the URL fragment rather
+   * than a code. Dropping these was why the reset screen reported that it
+   * could not start.
+   */
+  accessToken?: string;
+  refreshToken?: string;
   error?: string;
   errorCode?: string;
   flow?: string;
@@ -218,10 +228,12 @@ export function parseAuthDeepLinkUrl(url: string): AuthRedirectParams | null {
 
 export function normalizeAuthRedirectParams(params: RouteParams, target: AuthRedirectTarget): AuthRedirectParams {
   return {
+    accessToken: getStringParam(params?.access_token),
     code: getStringParam(params?.code),
     error: getStringParam(params?.error),
     errorCode: getStringParam(params?.error_code),
     flow: getStringParam(params?.flow),
+    refreshToken: getStringParam(params?.refresh_token),
     state: getStringParam(params?.state),
     target,
   };

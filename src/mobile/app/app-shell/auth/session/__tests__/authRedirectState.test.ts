@@ -189,12 +189,31 @@ describe('authRedirectState', () => {
         'sorita://auth/callback?code=abc&flow=signup&state=hello+world#access_token=token%201&refresh_token=refresh&type=signup',
       ),
     ).toEqual({
+      accessToken: 'token 1',
       code: 'abc',
       error: undefined,
       errorCode: undefined,
       flow: 'signup',
+      refreshToken: 'refresh',
       state: 'hello world',
       target: 'auth/callback',
+    });
+
+    // The reported defect: the reset mail is requested by the auth gateway,
+    // whose server client runs the implicit flow, so Supabase returns the
+    // session in the fragment and never sends a code. These were parsed and
+    // then thrown away, so the screen said it could not start the reset.
+    expect(
+      parseAuthDeepLinkUrl(
+        'sorita://reset-password?flow=password-reset&state=s1#access_token=at&refresh_token=rt&type=recovery',
+      ),
+    ).toMatchObject({
+      accessToken: 'at',
+      code: undefined,
+      flow: 'password-reset',
+      refreshToken: 'rt',
+      state: 's1',
+      target: 'reset-password',
     });
 
     expect(

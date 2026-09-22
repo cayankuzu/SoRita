@@ -35,12 +35,32 @@ async function failPasswordResetRedirect(message: string): Promise<never> {
   throw new Error(message);
 }
 
+function hasSessionCredentials(payload: AuthRedirectParams) {
+  return Boolean(payload.code || (payload.accessToken && payload.refreshToken));
+}
+
 async function resolveSessionFromPayload(
   payload: AuthRedirectParams,
   fail: (message: string) => Promise<never> = failAuthRedirect,
 ): Promise<Session> {
   if (payload.code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(payload.code);
+
+    if (error || !data.session) {
+      return fail(error?.message || tr.auth.callback.sessionValidationFailed);
+    }
+
+    return data.session;
+  }
+
+  // Implicit flow. Only the client that started a PKCE flow can redeem a code,
+  // and the reset mail is requested by the auth gateway, not by this device.
+  // Supabase therefore hands the session back in the link's fragment.
+  if (payload.accessToken && payload.refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: payload.accessToken,
+      refresh_token: payload.refreshToken,
+    });
 
     if (error || !data.session) {
       return fail(error?.message || tr.auth.callback.sessionValidationFailed);
@@ -94,6 +114,17 @@ export async function preparePasswordResetRedirect(payload: AuthRedirectParams) 
       flow: payload.flow,
       hasState: Boolean(payload.state),
       reason: validation.success ? 'flow_mismatch' : validation.reason,
+    });
+    await failPasswordResetRedirect(tr.auth.callback.passwordResetLinkInvalid);
+  }
+
+  if (!hasSessionCredentials(payload)) {
+    // "No code found" is true but useless here: the link is simply not usable,
+    // and the user needs to be told to request a new one.
+    logger.warn('auth', 'Password reset link carried no session credential', {
+      hasAccessToken: Boolean(payload.accessToken),
+      hasCode: Boolean(payload.code),
+      hasRefreshToken: Boolean(payload.refreshToken),
     });
     await failPasswordResetRedirect(tr.auth.callback.passwordResetLinkInvalid);
   }

@@ -15,7 +15,9 @@ const {
   exchangeCodeForSessionMock,
   getSessionMock,
   loggerDebugMock,
+  loggerWarnMock,
   persistAuthSessionMock,
+  setSessionMock,
   signOutMock,
   updateUserMock,
 } = vi.hoisted(() => ({
@@ -26,7 +28,9 @@ const {
   exchangeCodeForSessionMock: vi.fn(),
   getSessionMock: vi.fn(),
   loggerDebugMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   persistAuthSessionMock: vi.fn(),
+  setSessionMock: vi.fn(),
   signOutMock: vi.fn(),
   updateUserMock: vi.fn(),
 }));
@@ -47,6 +51,7 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
     auth: {
       exchangeCodeForSession: exchangeCodeForSessionMock,
       getSession: getSessionMock,
+      setSession: setSessionMock,
       signOut: signOutMock,
       updateUser: updateUserMock,
     },
@@ -56,6 +61,7 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
 vi.mock('@/mobile/app/platform/feedback/logger', () => ({
   logger: {
     debug: loggerDebugMock,
+    warn: loggerWarnMock,
   },
 }));
 
@@ -73,9 +79,11 @@ describe('authRedirectHandlers', () => {
     discardPendingAuthRedirectStateMock.mockReset();
     exchangeCodeForSessionMock.mockReset();
     getSessionMock.mockReset();
+    setSessionMock.mockReset();
     signOutMock.mockReset();
     updateUserMock.mockReset();
     loggerDebugMock.mockReset();
+    loggerWarnMock.mockReset();
 
     clearPendingAuthRedirectStatesMock.mockResolvedValue(undefined);
     discardPendingAuthRedirectStateMock.mockResolvedValue(undefined);
@@ -138,6 +146,88 @@ describe('authRedirectHandlers', () => {
     expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('reset-code');
     expect(persistAuthSessionMock).not.toHaveBeenCalled();
     expect(isPasswordRecoverySessionExchangeActive()).toBe(false);
+  });
+
+  // The reported defect: "Şifre sıfırlama başlatılamadı". The reset mail is
+  // requested by the auth gateway, whose server client runs the default
+  // implicit flow, so Supabase returns the session in the link's fragment and
+  // never sends a code. Only a code was honoured, so every real reset link
+  // failed. (Android's logcat hides the fragment, which is why the link looked
+  // like it arrived empty.)
+  it('prepares password reset redirects from implicit-flow fragment tokens', async () => {
+    consumePendingAuthRedirectStateMock.mockResolvedValue({
+      success: true,
+      entry: {
+        flow: 'password-reset',
+        state: 'state-1',
+        target: 'reset-password',
+      },
+    });
+    setSessionMock.mockImplementation(async () => {
+      expect(isPasswordRecoverySessionExchangeActive()).toBe(true);
+      return { data: { session }, error: null };
+    });
+
+    await preparePasswordResetRedirect({
+      accessToken: 'at',
+      flow: 'password-reset',
+      refreshToken: 'rt',
+      state: 'state-1',
+      target: 'reset-password',
+    });
+
+    expect(setSessionMock).toHaveBeenCalledWith({
+      access_token: 'at',
+      refresh_token: 'rt',
+    });
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(persistAuthSessionMock).not.toHaveBeenCalled();
+    expect(isPasswordRecoverySessionExchangeActive()).toBe(false);
+  });
+
+  it('prefers a code over fragment tokens when the link carries both', async () => {
+    consumePendingAuthRedirectStateMock.mockResolvedValue({
+      success: true,
+      entry: { flow: 'password-reset', state: 'state-1', target: 'reset-password' },
+    });
+    exchangeCodeForSessionMock.mockResolvedValue({ data: { session }, error: null });
+
+    await preparePasswordResetRedirect({
+      accessToken: 'at',
+      code: 'reset-code',
+      flow: 'password-reset',
+      refreshToken: 'rt',
+      state: 'state-1',
+      target: 'reset-password',
+    });
+
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('reset-code');
+    expect(setSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('tells the user to request a new mail when the link carries no credential', async () => {
+    consumePendingAuthRedirectStateMock.mockResolvedValue({
+      success: true,
+      entry: { flow: 'password-reset', state: 'state-1', target: 'reset-password' },
+    });
+
+    await expect(
+      preparePasswordResetRedirect({
+        flow: 'password-reset',
+        state: 'state-1',
+        target: 'reset-password',
+      }),
+    ).rejects.toThrow(
+      'Bu sıfırlama bağlantısı kullanılmış veya süresi dolmuş. Yeni bir sıfırlama e-postası iste.',
+    );
+
+    expect(setSessionMock).not.toHaveBeenCalled();
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      'auth',
+      'Password reset link carried no session credential',
+      { hasAccessToken: false, hasCode: false, hasRefreshToken: false },
+    );
   });
 
   it('clears rejected signup payloads without signing out for reset errors', async () => {
