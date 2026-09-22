@@ -716,6 +716,7 @@ export const tr = {
       signupLinkInvalid: 'Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.',
     },
     resetPassword: {
+      backToApp: 'Uygulamaya dön',
       checkingLink: 'Sıfırlama bağlantısı kontrol ediliyor',
       confirmRequired: 'Yeni şifreni tekrar gir.',
       description: 'Hesabına tekrar girebilmek için güçlü bir şifre seç.',

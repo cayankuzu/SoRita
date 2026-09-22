@@ -32,7 +32,7 @@ type ScreenState =
 export function ResetPasswordScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'ResetPassword'>();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const incomingUrl = Linking.useURL();
   const payload = useMemo(() => {
     const parsedPayload = incomingUrl ? parseAuthDeepLinkUrl(incomingUrl) : null;
@@ -149,8 +149,17 @@ export function ResetPasswordScreen() {
             <AppText accessibilityRole="header" style={styles.title}>{tr.auth.resetPassword.errorTitle}</AppText>
             <AppText style={styles.description}>{screenState.message}</AppText>
             <PrimaryButton
-              title={tr.auth.resetPassword.requestNewMail}
-              onPress={() => navigation.navigate('Auth', { initialView: 'forgotPassword' })}
+              title={user ? tr.auth.resetPassword.backToApp : tr.auth.resetPassword.requestNewMail}
+              onPress={() => {
+                // Auth is only a registered route while signed out, so a signed
+                // in user pressing this was left stuck on the error card.
+                if (user) {
+                  navigation.navigate('MainTabs');
+                  return;
+                }
+
+                navigation.navigate('Auth', { initialView: 'forgotPassword' });
+              }}
             />
           </View>
         </View>
