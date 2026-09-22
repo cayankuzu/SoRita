@@ -2,7 +2,7 @@ import React, { startTransition, useCallback, useMemo, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
 import { Animated, StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
-import { Image as ImageIcon, List, MapPin } from 'lucide-react-native';
+import { Image as ImageIcon, MapPin } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -38,6 +38,10 @@ import {
   type ProfileTabOption,
   type ProfileVisibilityFilter,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
+import {
+  buildProfileTabOptions,
+  resolveProfileTabCount,
+} from '@/mobile/app/features/profile/ui/components/profileTabOptions';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type ProfileTab = ProfileContentTab;
@@ -99,12 +103,14 @@ export function ProfileScreen() {
     freshUser,
     hasNextPage,
     hasPartialDataError,
+    isContentComplete,
     isFetchingNextPage,
     isInitialLoading,
     lists,
     onRefresh,
     refreshing,
     retry,
+    tabTotals,
     updateLists,
   } = useOwnProfileScreenState({ activeTab, user });
   const filteredLists = useMemo(
@@ -151,36 +157,33 @@ export function ProfileScreen() {
   } satisfies Record<ProfileTab, ProfileGridItem[]>;
 
   const tabs = useMemo<ProfileTabOption[]>(
-    () => [
-      {
-        key: 'lists',
-        label: tr.profile.tabs.lists,
-        count: filteredLists.length,
-        renderIcon: (active) => (
-          <List color={active ? colors.primary : colors.textSoft} size={13} />
-        ),
-      },
-      {
-        key: 'places',
-        label: tr.profile.tabs.places,
-        count: filteredPlaces.length,
-        renderIcon: (active) => (
-          <MapPin color={active ? colors.primary : colors.textSoft} size={13} />
-        ),
-      },
-      {
-        key: 'gallery',
-        label: tr.profile.tabs.gallery,
-        count: filteredPhotos.length,
-        renderIcon: (active) => (
-          <ImageIcon
-            color={active ? colors.primary : colors.textSoft}
-            size={13}
-          />
-        ),
-      },
+    () =>
+      buildProfileTabOptions({
+        gallery: resolveProfileTabCount({
+          complete: isContentComplete.places,
+          loaded: filteredPhotos.length,
+        }),
+        lists: resolveProfileTabCount({
+          complete: isContentComplete.lists,
+          loaded: filteredLists.length,
+          total: visibilityFilter !== 'all' ? undefined : tabTotals.lists,
+        }),
+        places: resolveProfileTabCount({
+          complete: isContentComplete.places,
+          loaded: filteredPlaces.length,
+          total: visibilityFilter !== 'all' ? undefined : tabTotals.places,
+        }),
+      }),
+    [
+      filteredLists.length,
+      filteredPhotos.length,
+      filteredPlaces.length,
+      isContentComplete.lists,
+      isContentComplete.places,
+      tabTotals.lists,
+      tabTotals.places,
+      visibilityFilter,
     ],
-    [filteredLists.length, filteredPhotos.length, filteredPlaces.length],
   );
   const pagerTabs = useMemo(
     () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),

@@ -296,6 +296,7 @@ export function useUserProfileScreenState({
     isBlockedByCurrent: viewState.isBlockedByCurrent,
     isBlockedByTarget: viewState.isBlockedByTarget,
     isFetchingNextPage: profileQuery.isFetchingNextPage,
+    isContentComplete: profileQuery.isContentComplete,
     isFollowing: viewState.isFollowing,
     isInitialLoading: resultStatus.isInitialLoading,
     isOwnProfile: resultStatus.isOwnProfile,
@@ -305,6 +306,10 @@ export function useUserProfileScreenState({
     refreshing,
     reportUser,
     retry: loadData,
+    tabTotals: {
+      lists: profileQuery.summary?.listCount,
+      places: profileQuery.summary?.placeCount,
+    },
     unblockUser,
   };
 }

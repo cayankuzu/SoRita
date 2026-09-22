@@ -5,7 +5,6 @@ import type { FlatList } from 'react-native';
 import {
   Image as ImageIcon,
   Ban,
-  List,
   MapPin,
   UserPlus,
 } from 'lucide-react-native';
@@ -34,6 +33,10 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import {
+  buildProfileTabOptions,
+  resolveProfileTabCount,
+} from '@/mobile/app/features/profile/ui/components/profileTabOptions';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import {
@@ -199,6 +202,7 @@ export function UserProfileScreen() {
     hasPendingFollowRequest,
     hasNextPage,
     hasPartialDataError,
+    isContentComplete,
     isFetchingNextPage,
     isBlockedByCurrent,
     isFollowing,
@@ -210,6 +214,7 @@ export function UserProfileScreen() {
     refreshing,
     reportUser,
     retry,
+    tabTotals,
     unblockUser,
   } = useUserProfileScreenState({
     activeTab,
@@ -247,36 +252,32 @@ export function UserProfileScreen() {
   } satisfies Record<ProfileTab, ProfileGridItem[]>;
 
   const tabs = useMemo<ProfileTabOption[]>(
-    () => [
-      {
-        key: 'lists',
-        label: tr.profile.tabs.lists,
-        count: filteredLists.length,
-        renderIcon: (active) => (
-          <List color={active ? colors.primary : colors.textSoft} size={13} />
-        ),
-      },
-      {
-        key: 'places',
-        label: tr.profile.tabs.places,
-        count: filteredPlaces.length,
-        renderIcon: (active) => (
-          <MapPin color={active ? colors.primary : colors.textSoft} size={13} />
-        ),
-      },
-      {
-        key: 'gallery',
-        label: tr.profile.tabs.gallery,
-        count: filteredPhotos.length,
-        renderIcon: (active) => (
-          <ImageIcon
-            color={active ? colors.primary : colors.textSoft}
-            size={13}
-          />
-        ),
-      },
+    () =>
+      buildProfileTabOptions({
+        gallery: resolveProfileTabCount({
+          complete: isContentComplete.places,
+          loaded: filteredPhotos.length,
+        }),
+        lists: resolveProfileTabCount({
+          complete: isContentComplete.lists,
+          loaded: filteredLists.length,
+          total: tabTotals.lists,
+        }),
+        places: resolveProfileTabCount({
+          complete: isContentComplete.places,
+          loaded: filteredPlaces.length,
+          total: tabTotals.places,
+        }),
+      }),
+    [
+      filteredLists.length,
+      filteredPhotos.length,
+      filteredPlaces.length,
+      isContentComplete.lists,
+      isContentComplete.places,
+      tabTotals.lists,
+      tabTotals.places,
     ],
-    [filteredLists.length, filteredPhotos.length, filteredPlaces.length],
   );
   const pagerTabs = useMemo(
     () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),

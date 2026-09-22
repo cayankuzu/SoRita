@@ -232,6 +232,12 @@ export function useProfileReadModelQuery(
 
   return {
     ...status,
+    // A loaded page is not a total: anything counted from it is exact only
+    // once every page of that tab has arrived.
+    isContentComplete: {
+      lists: listsQuery.data !== undefined && !listsQuery.hasNextPage,
+      places: placesQuery.data !== undefined && !placesQuery.hasNextPage,
+    },
     fetchNextPage: async () => {
       await Promise.allSettled([
         loadLists && listsQuery.hasNextPage ? listsQuery.fetchNextPage() : Promise.resolve(),

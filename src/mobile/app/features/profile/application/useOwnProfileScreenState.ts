@@ -181,12 +181,17 @@ export function useOwnProfileScreenState({ activeTab = 'lists', user }: UseOwnPr
     freshUser,
     hasNextPage,
     hasPartialDataError: profileQuery.hasPartialDataError,
+    isContentComplete: profileQuery.isContentComplete,
     isFetchingNextPage,
     isInitialLoading: profileQuery.isLoading && !profileQuery.summary,
     lists,
     onRefresh,
     refreshing,
     retry: loadLists,
+    tabTotals: {
+      lists: profileQuery.summary?.listCount,
+      places: profileQuery.summary?.placeCount,
+    },
     updateList,
     updateLists,
   };
