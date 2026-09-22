@@ -242,12 +242,24 @@ kullanılmayan soyutlama değil, son kablosu takılmamış makine. Öncesi/sonra
 cihaz görüntüsüyle doğrulandı. Test mock'u `StatusBar`'ı yalnız imperatif
 namespace olarak veriyordu, artık hem bileşen hem namespace.
 
-**Kapatılan — haritada geçersiz koordinat.** `getMapMarkers` koordinatları hiç
-doğrulamadan Static Maps URL'ine geçiriyordu. `lat: 0, lng: 0` olan bir satır
-Gine Körfezi'nde açık deniz istiyor ve kart düz mavi bir dikdörtgen olarak
-render oluyor — Keşfet ekranında görülen tam buydu. Sonlu, aralıkta ve 0,0
-olmayan çiftler artık süzülüyor; kalan durumda kart dürüstçe "önizleme yok"
-gösteriyor. Dosyanın hiç testi yoktu, 11 test eklendi.
+**Sağlamlaştırma — koordinat doğrulaması.** `getMapMarkers` koordinatları hiç
+doğrulamadan Static Maps URL'ine geçiriyordu; `lat: 0, lng: 0` olan bir satır
+Gine Körfezi'nde açık deniz ister. Sonlu, aralıkta ve 0,0 olmayan çiftler artık
+süzülüyor. Dosyanın hiç testi yoktu, 11 test eklendi.
+
+⚠️ **Bu, Keşfet'te görülen boş haritaları çözmedi.** Yayınlanıp cihazda
+doğrulandı: kartlar hâlâ düz mavi zemin + tek pin gösteriyor. Teşhis yanlıştı,
+düzeltme yine de doğru bir sağlamlaştırma ama semptomu açıklamıyordu.
+
+**Açık — Keşfet kartlarında harita döşemeleri yüklenmiyor (P2).** Gördüğüm şey
+`MiniMapFallback` değil: o pin + başlık + "önizleme yok" metni çizer, ekranda
+hiç metin yok. Kalan açıklama, döşemeleri gelmemiş **native Google harita
+görünümü**. Dikkat çeken ayrım: ana akış kartı **statik** harita kullanıyor ve
+sorunsuz render ediyor (logcat'te `staticmap?size=335x148` başarıyla yükleniyor),
+Keşfet karoları ise **native** harita kullanıyor. Uygulama iki ayrı anahtar
+taşıyor — statik ve native Maps SDK — ve statik olanın çalıştığı kanıtlı.
+Native anahtarın kısıtlaması Google Cloud Console'dan kontrol edilmeli; bu,
+PASS 0'daki erken uyarı #3 ile aynı yere çıkıyor.
 
 **Kapatılan — tarih hiyerarşisi (A6).** `editedAt` etiketi kendi içinde `· `
 taşıyordu ve çağıran zaten `' · '` ile birleştiriyordu, sonuç
