@@ -219,6 +219,16 @@ having worked once.
 | Next launch | `CheckCompleteAvailable` → `Download` → `DownloadComplete`. |
 | Following cold launch | New bundle running, and the feed renders **pixel-identical** to the pre-refactor capture — which is the point: `spacing.card` and `spacing.md` are both 10, so replacing 21 raw paddings had to change nothing on screen, and on hardware it did not. |
 
+2026-09-22, fourth delivery, the content error boundary:
+
+| Step | Observed |
+| --- | --- |
+| Publish | Group `7c991ea1-2117-4dbc-b66e-0b8c7cf45b55`, Android update `01a0c6de-a2e5-7753-bf5a-a0488a488f84`, runtime `1.0.108`, 100%. |
+| Next launch | `Download` → `DownloadComplete`. |
+| Following cold launch | New bundle running, feed unchanged — correct, because a boundary is invisible until something throws. |
+
+Four consecutive production deliveries on runtime 1.0.108, all verified on the store-installed handset.
+
 ## Rollback
 
 Use [`ota-rollback-runbook.md`](./ota-rollback-runbook.md). The publisher prints the exact command for
