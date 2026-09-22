@@ -10,6 +10,11 @@ import {
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
+// Painted height of a tag chip: one metadata line plus 4dp above and below.
+// The expand toggle sits among the chips, so it is painted at the same height
+// and takes the rest of its touch target from hitSlop.
+export const TAG_CHIP_HEIGHT = 24;
+
 export const placeCardStyles = StyleSheet.create({
   feedCard: {
     backgroundColor: colors.surface,
@@ -146,9 +151,14 @@ export const placeCardStyles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 8,
   },
+  // The inset lives on a wrapper, as in mapWrap: Yoga subtracts a horizontal
+  // margin twice from a stretched child that also has an aspectRatio, which
+  // left every photo 12dp short on its right edge.
   mediaCarouselWrap: {
-    marginHorizontal: 12,
+    paddingHorizontal: 12,
     marginTop: 8,
+  },
+  mediaCarouselFrame: {
     aspectRatio: 1.28,
     borderRadius: 16,
     overflow: 'hidden',
@@ -320,7 +330,7 @@ export const placeCardStyles = StyleSheet.create({
     paddingTop: 8,
   },
   moreFeaturesButton: {
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: TAG_CHIP_HEIGHT,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',

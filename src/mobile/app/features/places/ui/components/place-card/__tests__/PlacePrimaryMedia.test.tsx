@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -81,5 +82,41 @@ describe('PlacePrimaryMedia', () => {
     );
     act(() => secondMediaButton.props.onPress());
     expect(onPress).toHaveBeenCalledWith(1);
+  });
+
+  it('sizes pages from the pager and keeps the inset off the aspect-ratio frame', () => {
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <PlacePrimaryMedia
+          media={[{ id: 'photo-1', type: 'photo', url: 'https://example.com/1.jpg' }]}
+          onPress={vi.fn()}
+          placeName="Test mekânı"
+        />,
+      );
+    });
+
+    const pager = renderer.root.find((node) => node.props.pagingEnabled === true);
+    act(() => {
+      pager.props.onLayout({ nativeEvent: { layout: { width: 318 } } });
+    });
+
+    const page = renderer.root.find(
+      (node) => node.props.accessibilityLabel?.endsWith('fotoğraf 1')
+        && typeof node.props.onPress === 'function',
+    );
+    expect(StyleSheet.flatten(page.props.style).width).toBe(318);
+
+    // Yoga drops a horizontal margin twice on a stretched child that also has
+    // an aspectRatio, so the frame must take its inset from its parent.
+    const frame = renderer.root.find(
+      (node) => typeof node.type === 'string'
+        && StyleSheet.flatten(node.props.style)?.aspectRatio !== undefined,
+    );
+    const frameStyle = StyleSheet.flatten(frame.props.style);
+    for (const key of ['margin', 'marginHorizontal', 'marginLeft', 'marginRight'] as const) {
+      expect(frameStyle[key]).toBeUndefined();
+    }
   });
 });

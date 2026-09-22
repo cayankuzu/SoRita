@@ -24,7 +24,10 @@ import {
 } from 'lucide-react-native';
 
 import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
-import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
+import {
+  TAG_CHIP_HEIGHT,
+  placeCardStyles as styles,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
@@ -32,7 +35,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 import { categoryMeta } from '@/mobile/app/shared/utils/format';
 
 export function PlaceOwnerHeader({
@@ -216,47 +219,49 @@ export function PlacePrimaryMedia({
     setActiveIndex(nextIndex);
   };
 
+  // Pages are sized from the scroll view itself, inside the frame's border,
+  // so paging stops exactly on a page instead of drifting 2px per photo.
   return (
-    <View
-      onLayout={handleLayout}
-      style={styles.mediaCarouselWrap}
-    >
-      <ScrollView
-        horizontal
-        decelerationRate="fast"
-        directionalLockEnabled
-        disableIntervalMomentum
-        nestedScrollEnabled
-        onMomentumScrollEnd={handleScrollEnd}
-        overScrollMode="never"
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        style={styles.mediaCarousel}
-      >
-        {media.map((item, index) => (
-          <Pressable
-            accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
-            accessibilityRole="button"
-            key={item.id ?? `${item.url}:${index}`}
-            onPress={() => onPress(index)}
-            style={[styles.mediaCarouselPage, { width: carouselWidth }]}
-          >
-            <MediaThumbnailView
-              item={item}
-              priority={index === 0 ? 'high' : 'normal'}
-              style={styles.mediaCarouselMedia}
+    <View style={styles.mediaCarouselWrap}>
+      <View style={styles.mediaCarouselFrame}>
+        <ScrollView
+          horizontal
+          decelerationRate="fast"
+          directionalLockEnabled
+          disableIntervalMomentum
+          nestedScrollEnabled
+          onLayout={handleLayout}
+          onMomentumScrollEnd={handleScrollEnd}
+          overScrollMode="never"
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.mediaCarousel}
+        >
+          {media.map((item, index) => (
+            <Pressable
               accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
-              fallbackToVideoPreview={false}
-              showDuration
-            />
-          </Pressable>
-        ))}
-      </ScrollView>
-      {media.length > 1 ? (
-        <View pointerEvents="none" style={styles.mediaCarouselCounter}>
-          <AppText style={styles.mediaCarouselCounterText}>{activeIndex + 1}/{media.length}</AppText>
-        </View>
-      ) : null}
+              accessibilityRole="button"
+              key={item.id ?? `${item.url}:${index}`}
+              onPress={() => onPress(index)}
+              style={[styles.mediaCarouselPage, { width: carouselWidth }]}
+            >
+              <MediaThumbnailView
+                item={item}
+                priority={index === 0 ? 'high' : 'normal'}
+                style={styles.mediaCarouselMedia}
+                accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
+                fallbackToVideoPreview={false}
+                showDuration
+              />
+            </Pressable>
+          ))}
+        </ScrollView>
+        {media.length > 1 ? (
+          <View pointerEvents="none" style={styles.mediaCarouselCounter}>
+            <AppText style={styles.mediaCarouselCounterText}>{activeIndex + 1}/{media.length}</AppText>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -348,6 +353,7 @@ export function PlaceCardTags({
         <InstantPressable
           accessibilityRole="button"
           accessibilityState={{ expanded: showDetails }}
+          hitSlop={hitSlopFor(TAG_CHIP_HEIGHT)}
           onPress={() => setShowDetails((current) => !current)}
           style={styles.moreFeaturesButton}
         >
