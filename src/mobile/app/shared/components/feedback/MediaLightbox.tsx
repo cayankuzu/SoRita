@@ -435,8 +435,10 @@ export function MediaLightbox({
                 length: pageWidth,
                 offset: pageWidth * index,
               })}
-              keyExtractor={(entry, index) =>
-                `${entry.item.url}-${entry.item.type}-${entry.sourceIndex}-${index}`
+              // `sourceIndex` already identifies the entry, so the render index
+              // added nothing but instability to the key.
+              keyExtractor={(entry) =>
+                `${entry.item.url}-${entry.item.type}-${entry.sourceIndex}`
               }
               onMomentumScrollEnd={(event) => {
                 const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
