@@ -5,13 +5,42 @@ vi.mock('@react-navigation/bottom-tabs', () => ({
   BottomTabBarHeightContext: React.createContext<number | null>(null),
 }));
 
+const insets = { bottom: 0, left: 0, right: 0, top: 0 };
+
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
-  useSafeAreaInsets: () => ({ bottom: 0, left: 0, right: 0, top: 0 }),
+  useSafeAreaInsets: () => insets,
 }));
 
-import { getScreenBottomPadding } from '@/mobile/app/shared/components/ui/Screen';
+import { StyleSheet } from 'react-native';
+import TestRenderer, { act } from 'react-test-renderer';
+
+import { Screen, getScreenBottomPadding } from '@/mobile/app/shared/components/ui/Screen';
 import { spacing } from '@/mobile/app/shared/theme/tokens';
+
+describe('Screen', () => {
+  it('reserves the bottom inset exactly once outside the tab navigator', () => {
+    insets.bottom = 47;
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(Screen, { children: React.createElement('Content'), scroll: false }),
+      );
+    });
+
+    const safeArea = renderer.root.findByType('SafeAreaView' as never);
+    const fromEdges = (safeArea.props.edges as string[]).includes('bottom') ? insets.bottom : 0;
+    const content = renderer.root.find(
+      (node) => typeof node.type === 'string'
+        && StyleSheet.flatten(node.props.style)?.paddingBottom !== undefined,
+    );
+    const fromPadding = StyleSheet.flatten(content.props.style).paddingBottom;
+
+    expect(fromEdges + fromPadding).toBe(insets.bottom + spacing.card);
+    insets.bottom = 0;
+  });
+});
 
 describe('getScreenBottomPadding', () => {
   it('does not reserve the bottom tab bar twice inside tab screens', () => {

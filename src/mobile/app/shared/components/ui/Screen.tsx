@@ -44,22 +44,12 @@ function getVariantMaxWidth(variant: ScreenProps['variant']) {
   }
 }
 
-function getSafeAreaEdges(
-  safeTop: boolean,
-  safeBottom: boolean,
-  bottomTabBarHeight: number | null | undefined,
-) {
-  const edges: Edge[] = [];
-
-  if (safeTop) {
-    edges.push('top');
-  }
-
-  if (safeBottom && typeof bottomTabBarHeight !== 'number') {
-    edges.push('bottom');
-  }
-
-  return edges;
+// The bottom inset belongs to the content padding alone (see
+// getScreenBottomPadding). Also letting the safe area pad the bottom edge
+// reserved the navigation bar twice on every screen outside the tabs: 57dp of
+// dead band on a three-button Android phone, cutting lists off mid-row.
+function getSafeAreaEdges(safeTop: boolean): Edge[] {
+  return safeTop ? ['top'] : [];
 }
 
 export function getScreenBottomPadding(
@@ -184,7 +174,7 @@ export function Screen(props: ScreenProps) {
     bottomTabBarHeight,
     insets.bottom,
   );
-  const edges = getSafeAreaEdges(safeTop, safeBottom, bottomTabBarHeight);
+  const edges = getSafeAreaEdges(safeTop);
 
   return (
     <SafeAreaView style={[styles.safeArea, props.style]} edges={edges}>
