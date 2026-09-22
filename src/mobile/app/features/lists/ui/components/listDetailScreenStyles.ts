@@ -279,7 +279,10 @@ export const listDetailScreenStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
+  // Same inset as the list header above it; without it the cards ran to the
+  // screen edge and clipped their own rounded corners there.
   placeCardShell: {
+    marginHorizontal: spacing.screen,
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.surface,
