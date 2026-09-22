@@ -6,6 +6,10 @@ vi.mock('@/mobile/app/platform/supabase/client', () => ({
   },
 }));
 
+vi.mock('expo-crypto', () => ({
+  getRandomBytes: (count: number) => Uint8Array.from({ length: count }, (_, index) => index % 256),
+}));
+
 import {
   PushTokenCleanupPreparationError,
   clearPushTokenCleanupTombstone,
@@ -145,5 +149,28 @@ describe('pushTokenCleanup', () => {
         expect.objectContaining(secondCapability),
       ]),
     );
+  });
+});
+
+// The reported defect: "Secure random generation is unavailable." blocked
+// logout on a real device. The secret was drawn from the global `crypto`,
+// which Hermes does not provide and this app does not polyfill, so it could
+// only ever throw there. Every test passed regardless, because Node has one -
+// so this test removes the global to prove the code never reads it.
+describe('createCleanupSecret', () => {
+  it('draws randomness without a global crypto', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    Reflect.deleteProperty(globalThis as Record<string, unknown>, 'crypto');
+
+    try {
+      const secret = pushTokenCleanupInternals.createCleanupSecret();
+
+      expect(secret).toHaveLength(64);
+      expect(secret).toMatch(/^[0-9a-f]{64}$/u);
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(globalThis, 'crypto', originalDescriptor);
+      }
+    }
   });
 });

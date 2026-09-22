@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import {
   deleteSecureStorageItem,
   getSecureStorageItem,
@@ -103,18 +105,19 @@ function parseTombstones(value: string | null): PushTokenCleanupTombstone[] {
 }
 
 function createCleanupSecret() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `${crypto.randomUUID().replace(/-/gu, '')}${crypto.randomUUID().replace(/-/gu, '')}`;
+  // expo-crypto, not the global `crypto`. Hermes ships no web crypto and this
+  // app installs no polyfill, so reading the global could only ever throw on a
+  // device - which blocked logout, because push cleanup is fail-closed. Every
+  // test passed because Node does have a global `crypto`.
+  const bytes = Crypto.getRandomBytes(32);
+
+  if (bytes.length !== 32) {
+    throw new PushTokenCleanupPreparationError('Secure random generation is unavailable.');
   }
 
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    return Array.from(bytes)
-      .map((byte) => byte.toString(16).padStart(2, '0'))
-      .join('');
-  }
-
-  throw new PushTokenCleanupPreparationError('Secure random generation is unavailable.');
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 async function defaultRevokeToken(params: PushTokenCleanupCapability) {
@@ -335,6 +338,7 @@ export function flushPendingPushTokenCleanupTombstones(
 export const pushTokenCleanupInternals = {
   ACTIVE_PUSH_TOKEN_CAPABILITY_STORAGE_KEY,
   PUSH_TOKEN_CLEANUP_TOMBSTONES_STORAGE_KEY,
+  createCleanupSecret,
   parseCapability,
   parseTombstones,
   resetMutationQueueForTests() {
