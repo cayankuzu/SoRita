@@ -13,6 +13,40 @@ repository alone. It does not grant provider access or authorize deployment,
 traffic changes, credential rotation, database mutation, restore or store
 submission.
 
+## 0. Supabase Auth redirect allowlist (blocks password reset today)
+
+Do this first if password reset opens a web page instead of the app.
+
+Supabase only honours a `redirect_to` that appears in the project's allowlist.
+When it does not match, it silently falls back to **Site URL**, so the recovery
+mail lands on the website, the app never receives the deep link, and the reset
+screen reports the link as unusable because it never saw one.
+
+The app asks for exactly two targets, built in `buildTrackedAppUrl`
+(`src/mobile/app/app-shell/auth/session/authRedirectState.ts`) from the
+`sorita` scheme declared in `app.config.ts`:
+
+| Flow | Redirect URL the app sends |
+| --- | --- |
+| Password reset | `sorita://reset-password` |
+| Signup confirmation | `sorita://auth/callback` |
+
+Both carry `?flow=…&state=…` query parameters, so the allowlist entries need a
+wildcard to match:
+
+```text
+sorita://reset-password*
+sorita://auth/callback*
+```
+
+- **Panel/location:** Supabase Dashboard → Authentication → URL Configuration →
+  Redirect URLs.
+- **Note:** "Send password recovery" from the dashboard user page sends no
+  `redirect_to` at all, so it always opens Site URL. That is expected and is
+  not a test of this setting — trigger the reset from inside the app instead.
+- **Verification:** request a reset from the app, open the mail on the device,
+  and confirm the app opens on "Şifreni sıfırla" rather than a browser.
+
 ## Handling rules
 
 - Record variable/configuration **names only** in committed evidence. Never

@@ -519,7 +519,11 @@ describe('authSessionSupport', () => {
     const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
     const { AuthApiError, AuthSessionMissingError } = await import('@supabase/supabase-js');
     expect(support.isMissingAuthenticatedAccountError(new AuthSessionMissingError())).toBe(true);
-    expect(support.isMissingAuthenticatedAccountError(new AuthApiError('missing', 404, 'not_found'))).toBe(true);
+    // A paused project answers 404 too, so the bare status is not enough:
+    // only the explicit user_not_found code means the account is gone.
+    expect(support.isMissingAuthenticatedAccountError(new AuthApiError('missing', 404, 'user_not_found'))).toBe(true);
+    expect(support.isMissingAuthenticatedAccountError(new AuthApiError('missing', 404, 'not_found'))).toBe(false);
+    expect(support.isMissingAuthenticatedAccountError(new AuthApiError('paused', 404, undefined))).toBe(false);
     expect(support.isMissingAuthenticatedAccountError(new AuthApiError('bad', 400, 'bad_request'))).toBe(false);
     expect(support.isMissingAuthenticatedAccountError(new Error('other'))).toBe(false);
 

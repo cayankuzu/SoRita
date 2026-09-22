@@ -192,6 +192,9 @@ function isEmailConfirmed(authUser: SupabaseAuthUser) {
   );
 }
 
+/** What Supabase returns when the user itself is gone, rather than the project. */
+const MISSING_USER_ERROR_CODE = 'user_not_found';
+
 export function isMissingAuthenticatedAccountError(error: unknown) {
   if (error instanceof MissingAuthenticatedAccountError) {
     return true;
@@ -201,7 +204,16 @@ export function isMissingAuthenticatedAccountError(error: unknown) {
     return true;
   }
 
-  return isAuthApiError(error) && error.status === 404;
+  // A bare 404 from /auth/v1/* is ambiguous: a paused or deleted Supabase
+  // project answers the same way a deleted user does. Treating it as a deleted
+  // account signed people out of a perfectly good app and told them their
+  // account was gone - which is what happened when the project was paused for
+  // billing and brought back. Only the explicit signal counts now; a project
+  // that is merely unreachable leaves the session alone, and the session is
+  // useless without the server anyway.
+  return (
+    isAuthApiError(error) && error.status === 404 && error.code === MISSING_USER_ERROR_CODE
+  );
 }
 
 export async function ensureProfileExists(
