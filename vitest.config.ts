@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(configDirectory, 'src'),
+      'expo-crypto': path.resolve(
+        configDirectory,
+        'src/mobile/app/test/mocks/expo-crypto.ts',
+      ),
       'react-native': path.resolve(
         configDirectory,
         'src/mobile/app/test/mocks/react-native.ts',

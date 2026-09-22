@@ -1,5 +1,3 @@
-import * as Crypto from 'expo-crypto';
-
 import {
   deleteSecureStorageItem,
   getSecureStorageItem,
@@ -104,12 +102,17 @@ function parseTombstones(value: string | null): PushTokenCleanupTombstone[] {
   }
 }
 
-function createCleanupSecret() {
+async function createCleanupSecret() {
   // expo-crypto, not the global `crypto`. Hermes ships no web crypto and this
   // app installs no polyfill, so reading the global could only ever throw on a
   // device - which blocked logout, because push cleanup is fail-closed. Every
   // test passed because Node does have a global `crypto`.
-  const bytes = Crypto.getRandomBytes(32);
+  //
+  // Imported lazily, the way this repository already loads auth redirect state:
+  // at module scope it drags expo-modules-core, and with it a native runtime,
+  // into every test that merely imports this file.
+  const { getRandomBytes } = await import('expo-crypto');
+  const bytes = getRandomBytes(32);
 
   if (bytes.length !== 32) {
     throw new PushTokenCleanupPreparationError('Secure random generation is unavailable.');
@@ -168,7 +171,7 @@ async function rememberActivePushTokenCleanupCapabilityUnlocked(
 
   const activeSecret = cleanupSecret && isCleanupSecret(cleanupSecret)
     ? cleanupSecret
-    : createCleanupSecret();
+    : await createCleanupSecret();
 
   const capability = {
     cleanupSecret: activeSecret.toLowerCase(),

@@ -158,12 +158,12 @@ describe('pushTokenCleanup', () => {
 // only ever throw there. Every test passed regardless, because Node has one -
 // so this test removes the global to prove the code never reads it.
 describe('createCleanupSecret', () => {
-  it('draws randomness without a global crypto', () => {
+  it('draws randomness without a global crypto', async () => {
     const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
     Reflect.deleteProperty(globalThis as Record<string, unknown>, 'crypto');
 
     try {
-      const secret = pushTokenCleanupInternals.createCleanupSecret();
+      const secret = await pushTokenCleanupInternals.createCleanupSecret();
 
       expect(secret).toHaveLength(64);
       expect(secret).toMatch(/^[0-9a-f]{64}$/u);
