@@ -1,8 +1,6 @@
 import React from 'react';
 import {
-  AccessibilityInfo,
   FlatList,
-  findNodeHandle,
   Modal,
   Platform,
   StyleSheet,
@@ -17,6 +15,7 @@ import {
   type ActionMenuSheetItem,
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
+import { useLightboxAnnouncements } from '@/mobile/app/shared/components/feedback/useLightboxAnnouncements';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
@@ -59,8 +58,6 @@ export function ImageLightbox({
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const titleRef = React.useRef<AppTextRef | null>(null);
-  const previousAnnouncedIndexRef = React.useRef<number | null>(null);
-  const suppressNextAnnouncementRef = React.useRef(true);
   const imageUris = React.useMemo(() => {
     const nextUris = (uris || []).filter(Boolean);
 
@@ -132,55 +129,16 @@ export function ImageLightbox({
     [allowDownload, currentUri, handleDownloadCurrent],
   );
 
-  React.useEffect(() => {
-    suppressNextAnnouncementRef.current = true;
-    setCurrentIndex(startIndex);
-    previousAnnouncedIndexRef.current = startIndex;
-    const resetAnnouncementTimer = setTimeout(() => {
-      suppressNextAnnouncementRef.current = false;
-    }, 0);
-
-    return () => clearTimeout(resetAnnouncementTimer);
-  }, [flatListKey, startIndex]);
-
-  React.useEffect(() => {
-    if (imageUris.length === 0) {
-      previousAnnouncedIndexRef.current = null;
-      return undefined;
-    }
-
-    if (menuVisible) {
-      return undefined;
-    }
-
-    const focusTimer = setTimeout(() => {
-      const titleHandle = titleRef.current ? findNodeHandle(titleRef.current) : null;
-      if (titleHandle) {
-        AccessibilityInfo.setAccessibilityFocus(titleHandle);
-      }
-    }, 120);
-
-    return () => clearTimeout(focusTimer);
-  }, [flatListKey, imageUris.length, menuVisible]);
-
-  React.useEffect(() => {
-    if (suppressNextAnnouncementRef.current) {
-      suppressNextAnnouncementRef.current = false;
-      return;
-    }
-
-    if (
-      imageUris.length === 0 ||
-      previousAnnouncedIndexRef.current == null ||
-      previousAnnouncedIndexRef.current === currentIndex
-    ) {
-      previousAnnouncedIndexRef.current = currentIndex;
-      return;
-    }
-
-    previousAnnouncedIndexRef.current = currentIndex;
-    AccessibilityInfo.announceForAccessibility(positionLabel);
-  }, [currentIndex, imageUris.length, positionLabel]);
+  useLightboxAnnouncements({
+    currentIndex,
+    flatListKey,
+    itemCount: imageUris.length,
+    positionLabel,
+    setCurrentIndex,
+    startIndex,
+    suppressFocus: menuVisible,
+    titleRef,
+  });
 
   React.useEffect(() => {
     if (menuItems.length === 0) {

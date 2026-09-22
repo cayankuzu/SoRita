@@ -1,8 +1,6 @@
 import React from 'react';
 import {
-  AccessibilityInfo,
   FlatList,
-  findNodeHandle,
   Modal,
   Platform,
   StyleSheet,
@@ -21,6 +19,7 @@ import {
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
+import { useLightboxAnnouncements } from '@/mobile/app/shared/components/feedback/useLightboxAnnouncements';
 import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
 import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
@@ -146,58 +145,16 @@ function useMediaLightboxLifecycle({
   titleRef: React.RefObject<AppTextRef | null>;
   visibleItems: VisibleMediaEntry[];
 }) {
-  const previousAnnouncedIndexRef = React.useRef<number | null>(null);
-  const suppressNextAnnouncementRef = React.useRef(true);
-
-  React.useEffect(() => {
-    suppressNextAnnouncementRef.current = true;
-    setCurrentIndex(startIndex);
-    previousAnnouncedIndexRef.current = startIndex;
-    const resetAnnouncementTimer = setTimeout(() => {
-      suppressNextAnnouncementRef.current = false;
-    }, 0);
-
-    return () => clearTimeout(resetAnnouncementTimer);
-  }, [flatListKey, setCurrentIndex, startIndex]);
-
-  React.useEffect(() => {
-    if (visibleItems.length === 0) {
-      previousAnnouncedIndexRef.current = null;
-      return undefined;
-    }
-
-    if (menuVisible || pendingRemoveIndex != null) {
-      return undefined;
-    }
-
-    const focusTimer = setTimeout(() => {
-      const titleHandle = titleRef.current ? findNodeHandle(titleRef.current) : null;
-      if (titleHandle) {
-        AccessibilityInfo.setAccessibilityFocus(titleHandle);
-      }
-    }, 120);
-
-    return () => clearTimeout(focusTimer);
-  }, [flatListKey, menuVisible, pendingRemoveIndex, titleRef, visibleItems.length]);
-
-  React.useEffect(() => {
-    if (suppressNextAnnouncementRef.current) {
-      suppressNextAnnouncementRef.current = false;
-      return;
-    }
-
-    if (
-      visibleItems.length === 0 ||
-      previousAnnouncedIndexRef.current == null ||
-      previousAnnouncedIndexRef.current === currentIndex
-    ) {
-      previousAnnouncedIndexRef.current = currentIndex;
-      return;
-    }
-
-    previousAnnouncedIndexRef.current = currentIndex;
-    AccessibilityInfo.announceForAccessibility(positionLabel);
-  }, [currentIndex, positionLabel, visibleItems.length]);
+  useLightboxAnnouncements({
+    currentIndex,
+    flatListKey,
+    itemCount: visibleItems.length,
+    positionLabel,
+    setCurrentIndex,
+    startIndex,
+    suppressFocus: menuVisible || pendingRemoveIndex != null,
+    titleRef,
+  });
 
   React.useEffect(() => {
     const nearbyMediaUris = visibleItems
