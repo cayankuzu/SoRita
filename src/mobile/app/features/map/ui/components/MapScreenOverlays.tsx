@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MapPriorityNoticeProps = {
   hasMapDataPartialError: boolean;
@@ -98,15 +98,15 @@ export function MapVisibilityLegend({ bottom }: { bottom: number }) {
   return (
     <View accessibilityLabel={tr.map.filterTitle} style={[styles.legend, { bottom }]}>
       <View style={styles.legendItem}>
-        <Globe color={colors.visibilityPublic} size={12} />
+        <Globe color={colors.visibilityPublic} size={iconSize.xs} />
         <AppText style={styles.legendText}>{tr.map.filterPublic}</AppText>
       </View>
       <View style={styles.legendItem}>
-        <Lock color={colors.visibilityPrivate} size={12} />
+        <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
         <AppText style={styles.legendText}>{tr.map.filterPrivate}</AppText>
       </View>
       <View style={styles.legendItem}>
-        <Layers3 color={colors.visibilityMixed} size={12} />
+        <Layers3 color={colors.visibilityMixed} size={iconSize.xs} />
         <AppText style={styles.legendText}>{tr.map.filterMixed}</AppText>
       </View>
     </View>
@@ -124,7 +124,7 @@ export function MapAddHint({ bottom, onClose }: { bottom: number; onClose: () =>
         style={styles.addHintClose}
         variant="inverse"
       >
-        <X color={colors.onPrimary} size={14} />
+        <X color={colors.onPrimary} size={iconSize.sm} />
       </IconButton>
     </View>
   );
@@ -134,18 +134,18 @@ const styles = StyleSheet.create({
   legend: {
     position: 'absolute',
     right: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.glassSurface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    gap: 4,
+    gap: spacing.xs,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   legendText: textStyle('metadataText', colors.textMuted),
   addHint: {
@@ -154,11 +154,11 @@ const styles = StyleSheet.create({
     right: 60,
     minHeight: 44,
     borderRadius: radius.lg,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     backgroundColor: colors.text,
   },
   addHintText: {

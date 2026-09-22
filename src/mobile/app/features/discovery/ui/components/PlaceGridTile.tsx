@@ -25,7 +25,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, layout } from '@/mobile/app/shared/theme/tokens';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
@@ -124,7 +124,7 @@ function PlaceTileMedia({
             <View style={styles.photoCountBadge}>
               {mediaCounts.photos > 0 ? (
                 <View style={styles.photoCountGroup}>
-                  <Camera color={colors.onPrimary} size={9} />
+                  <Camera color={colors.onPrimary} size={iconSize.xs} />
                   <AppText style={styles.photoCountText}>{mediaCounts.photos}</AppText>
                 </View>
               ) : null}
@@ -133,7 +133,7 @@ function PlaceTileMedia({
               ) : null}
               {mediaCounts.videos > 0 ? (
                 <View style={styles.photoCountGroup}>
-                  <PlayCircle color={colors.onPrimary} size={9} />
+                  <PlayCircle color={colors.onPrimary} size={iconSize.xs} />
                   <AppText style={styles.photoCountText}>{mediaCounts.videos}</AppText>
                 </View>
               ) : null}
@@ -193,7 +193,7 @@ function PlaceMiniMapToggle({
           isMapInteractive ? styles.titleActionButtonActive : null,
         ]}
       >
-        <Crosshair color={colors.primary} size={10} />
+        <Crosshair color={colors.primary} size={iconSize.xs} />
       </View>
     </Pressable>
   );
@@ -331,21 +331,21 @@ function PlaceGridTileComponent({
                   />
                 ) : (
                   <View style={styles.listContextCoverFallback}>
-                    <ListIcon color={colors.primary} size={10} />
+                    <ListIcon color={colors.primary} size={iconSize.xs} />
                   </View>
                 )}
                 <View style={styles.listContextBody}>
                   <View style={styles.listContextTitleRow}>
-                    <ListIcon color={colors.primary} size={9} />
+                    <ListIcon color={colors.primary} size={iconSize.xs} />
                     <AppText numberOfLines={1} style={styles.listContextTitle}>
                       {listEmoji ? `${listEmoji} ${listName}` : listName || ''}
                     </AppText>
                   </View>
                   <View style={styles.listContextMetaRow}>
                     {listIsPublic === false ? (
-                      <Lock color={colors.visibilityPrivate} size={9} />
+                      <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
                     ) : (
-                      <Globe color={colors.secondary} size={9} />
+                      <Globe color={colors.secondary} size={iconSize.xs} />
                     )}
                     <AppText
                       numberOfLines={1}
@@ -365,7 +365,7 @@ function PlaceGridTileComponent({
             <View style={styles.tileSecondaryRow}>
               {place.rating ? (
                 <View style={styles.ratingRow}>
-                  <Star color={colors.rating} fill={colors.rating} size={9} />
+                  <Star color={colors.rating} fill={colors.rating} size={iconSize.xs} />
                   <AppText style={styles.ratingText}>{place.rating}</AppText>
                 </View>
               ) : null}
@@ -386,7 +386,7 @@ function PlaceGridTileComponent({
             style={styles.singleActionBadge}
           >
             <View style={styles.singleActionBadgeVisual}>
-              <Ellipsis color={colors.onPrimary} size={10} />
+              <Ellipsis color={colors.onPrimary} size={iconSize.xs} />
             </View>
           </Pressable>
         ) : null}

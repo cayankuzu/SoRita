@@ -14,7 +14,9 @@ import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -50,7 +52,7 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
         }}
       >
         <Heart
-          size={16}
+          size={iconSize.sm}
           color={props.liked ? colors.danger : colors.textMuted}
           fill={props.liked ? colors.danger : 'transparent'}
         />
@@ -92,7 +94,7 @@ function CommentAction(props: Pick<
       onPressIn={props.onCommentsIntent}
       onPress={props.onCommentPress}
     >
-      <MessageCircle size={16} color={props.showComments ? colors.primary : colors.textMuted} />
+      <MessageCircle size={iconSize.sm} color={props.showComments ? colors.primary : colors.textMuted} />
       <AppText
         accessible={false}
         style={[
@@ -123,7 +125,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={styles.actionButton}
           onPress={props.onSharePress}
         >
-          <Share2 size={16} color={colors.textMuted} />
+          <Share2 size={iconSize.sm} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -134,7 +136,7 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
           style={styles.actionButton}
           onPress={props.onOverflowPress}
         >
-          <Ellipsis size={16} color={colors.textMuted} />
+          <Ellipsis size={iconSize.sm} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
 
@@ -146,22 +148,22 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginTop: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
   },
   actionButton: {
     minWidth: Platform.OS === 'ios' ? touch.ios : touch.android,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.md,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   likeActionGroup: {
     flexDirection: 'row',

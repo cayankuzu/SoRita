@@ -6,7 +6,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 import type { ExploreTabType } from './exploreScreenTypes';
@@ -30,22 +30,22 @@ const tabs: Array<{
   {
     key: 'lists',
     label: tr.explore.tabs.lists,
-    renderIcon: (active) => <List color={active ? colors.onPrimary : colors.textMuted} size={13} />,
+    renderIcon: (active) => <List color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
   },
   {
     key: 'places',
     label: tr.explore.tabs.places,
-    renderIcon: (active) => <MapPin color={active ? colors.onPrimary : colors.textMuted} size={13} />,
+    renderIcon: (active) => <MapPin color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
   },
   {
     key: 'photos',
     label: tr.explore.tabs.photos,
-    renderIcon: (active) => <Camera color={active ? colors.onPrimary : colors.textMuted} size={13} />,
+    renderIcon: (active) => <Camera color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
   },
   {
     key: 'people',
     label: tr.explore.tabs.people,
-    renderIcon: (active) => <Users color={active ? colors.onPrimary : colors.textMuted} size={13} />,
+    renderIcon: (active) => <Users color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
   },
 ];
 
@@ -108,7 +108,7 @@ export function ExploreHeaderControls({
 
       <View style={styles.filtersSection}>
         <View style={styles.searchWrap}>
-          <Search color={colors.textMuted} size={14} />
+          <Search color={colors.textMuted} size={iconSize.sm} />
           <TextInput
             value={searchQuery}
             onChangeText={onSearchQueryChange}
@@ -131,7 +131,7 @@ export function ExploreHeaderControls({
               onPress={() => onSearchQueryChange('')}
               style={styles.searchClearButton}
             >
-              <X color={colors.textMuted} size={14} />
+              <X color={colors.textMuted} size={iconSize.sm} />
             </InstantPressable>
           ) : null}
         </View>

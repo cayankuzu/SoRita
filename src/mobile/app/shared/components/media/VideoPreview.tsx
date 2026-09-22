@@ -23,7 +23,7 @@ import {
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
   autoPlay?: boolean;
@@ -194,7 +194,7 @@ export function VideoPreview({
       {showPlayOverlay && !nativeControls ? (
         <View pointerEvents="none" style={styles.playOverlay}>
           <View style={styles.playBadge}>
-            <Play color={colors.onPrimary} fill={colors.onPrimary} size={10} />
+            <Play color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.xs} />
           </View>
         </View>
       ) : null}
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   playBadge: {
     width: 18,
     height: 18,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
     bottom: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   durationText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

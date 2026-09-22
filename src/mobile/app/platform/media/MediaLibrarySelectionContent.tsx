@@ -22,7 +22,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   touch,
   typography,
@@ -182,7 +184,7 @@ export const MediaLibrarySelectionContent = React.memo(
           </View>
         ) : loadFailed ? (
           <View style={styles.stateWrap}>
-            <ImageIcon color={colors.textSoft} size={20} />
+            <ImageIcon color={colors.textSoft} size={iconSize.md} />
             <AppText style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</AppText>
             <AppText style={styles.stateText}>{tr.system.connectionUnavailable}</AppText>
             <Pressable
@@ -190,13 +192,13 @@ export const MediaLibrarySelectionContent = React.memo(
               style={styles.retryButton}
               onPress={() => void loadAssetsPage(true)}
             >
-              <RefreshCcw color={colors.primary} size={12} />
+              <RefreshCcw color={colors.primary} size={iconSize.xs} />
               <AppText style={styles.retryButtonText}>{tr.common.retry}</AppText>
             </Pressable>
           </View>
         ) : permissionDenied ? (
           <View style={styles.stateWrap}>
-            <ImageIcon color={colors.textSoft} size={20} />
+            <ImageIcon color={colors.textSoft} size={iconSize.md} />
             <AppText style={styles.stateTitle}>{tr.mediaPicker.permissionTitle}</AppText>
             <AppText accessibilityLiveRegion="polite" style={styles.stateText}>
               {permissionCanAskAgain
@@ -219,9 +221,9 @@ export const MediaLibrarySelectionContent = React.memo(
               }}
             >
               {permissionCanAskAgain ? (
-                <RefreshCcw color={colors.primary} size={12} />
+                <RefreshCcw color={colors.primary} size={iconSize.xs} />
               ) : (
-                <Settings color={colors.primary} size={12} />
+                <Settings color={colors.primary} size={iconSize.xs} />
               )}
               <AppText style={styles.retryButtonText}>
                 {permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings}
@@ -278,33 +280,33 @@ const styles = StyleSheet.create({
   counterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
-    marginBottom: 10,
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
   },
   counterChip: {
     borderRadius: radius.pill,
     backgroundColor: colors.primaryBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   counterChipText: textStyle('metadataText', colors.primary, fontWeight.strong),
   counterChipStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   counterChipStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
   filterRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 10,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   filterChip: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -326,7 +328,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   gridContent: {
-    paddingBottom: 18,
+    paddingBottom: spacing.xl,
   },
   gridRow: {
     justifyContent: 'flex-start',
@@ -337,8 +339,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   stateTitle: {
     ...typography.metadataText,
@@ -355,17 +357,17 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg,
   },
   retryButtonText: textStyle('metadataText', colors.primary, fontWeight.strong),
   loadMoreWrap: {
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   loadMoreText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
 });

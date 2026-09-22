@@ -52,7 +52,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { ListDetailSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { buildLocationPlaceStats } from '@/mobile/app/shared/utils/format';
 
@@ -116,7 +116,7 @@ function ListDetailUnavailableState({
   return (
     <Screen>
       <EmptyState
-        icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={30} />}
+        icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={iconSize.xl} />}
         title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
         description={errorMessage || tr.listDetail.notFoundDescription}
         actionLabel={errorMessage ? tr.common.retry : undefined}
@@ -391,7 +391,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'edit',
           label: tr.common.edit,
-          renderIcon: (color: string) => <Pencil color={color} size={14} />,
+          renderIcon: (color: string) => <Pencil color={color} size={iconSize.sm} />,
           onPress: () => {
             setListActionMenuVisible(false);
             setListEditorResumeDraft(null);
@@ -403,7 +403,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'delete',
           label: tr.common.delete,
-          renderIcon: (color: string) => <Trash2 color={color} size={14} />,
+          renderIcon: (color: string) => <Trash2 color={color} size={iconSize.sm} />,
           tone: 'danger' as const,
           onPress: () => {
             setListActionMenuVisible(false);
@@ -415,7 +415,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
       ? {
           key: 'report',
           label: tr.profile.actions.report,
-          renderIcon: (color: string) => <Flag color={color} size={14} />,
+          renderIcon: (color: string) => <Flag color={color} size={iconSize.sm} />,
           tone: 'danger' as const,
           onPress: () => {
             setListActionMenuVisible(false);
@@ -446,7 +446,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
               onPress={() => setListActionMenuVisible(true)}
               variant="surface"
             >
-              <Ellipsis color={colors.text} size={16} />
+              <Ellipsis color={colors.text} size={iconSize.sm} />
             </IconButton>
           ) : undefined}
         />
@@ -503,7 +503,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon={<MapPin color={colors.textSoft} size={30} />}
+                icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
                 title={tr.listDetail.emptyTitle}
                 description={
                   isOwner
@@ -570,7 +570,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
             style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom, 18) + 16 }]}
           >
-            <ChevronUp color={colors.onPrimary} size={18} />
+            <ChevronUp color={colors.onPrimary} size={iconSize.md} />
           </Pressable>
         ) : null}
       </View>

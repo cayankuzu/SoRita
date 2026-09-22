@@ -13,7 +13,9 @@ import {
   colors,
   fontWeight,
   hitSlopFor,
+  iconSize,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -71,7 +73,7 @@ export function AuthImagePicker({
           {hasSelection ? (
             <View style={styles.headerActions}>
               <View style={styles.selectionBadge}>
-                <Check color={colors.secondary} size={12} />
+                <Check color={colors.secondary} size={iconSize.xs} />
                 <AppText style={styles.selectionBadgeText}>{tr.common.ready}</AppText>
               </View>
 
@@ -85,7 +87,7 @@ export function AuthImagePicker({
                 }}
                 style={styles.clearButton}
               >
-                <X color={colors.onPrimary} size={12} />
+                <X color={colors.onPrimary} size={iconSize.xs} />
               </InstantPressable>
             </View>
           ) : null}
@@ -106,15 +108,15 @@ export function AuthImagePicker({
 const styles = StyleSheet.create({
   block: {
     width: '100%',
-    gap: 8,
+    gap: spacing.sm,
   },
   picker: {
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
-    padding: 12,
-    gap: 12,
+    padding: spacing.md,
+    gap: spacing.md,
     position: 'relative',
   },
   pickerSelected: {
@@ -126,18 +128,18 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.md,
   },
   copy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     flex: 1,
   },
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
@@ -147,23 +149,23 @@ const styles = StyleSheet.create({
   },
   textWrap: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('compactTitleText', colors.text),
   subtitle: textStyle('captionText', colors.textMuted, fontWeight.regular),
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   selectionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   selectionBadgeText: textStyle('metadataText', colors.secondary, fontWeight.strong),
   clearButton: {

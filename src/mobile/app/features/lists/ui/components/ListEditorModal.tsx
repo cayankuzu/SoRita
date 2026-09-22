@@ -29,7 +29,7 @@ import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorM
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { t } from '@/mobile/app/shared/i18n';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
   getModalContentMaxHeight,
@@ -308,9 +308,9 @@ export function ListEditorModal({
                   ]}
                 >
                   {isPublic ? (
-                    <Globe color={colors.secondary} size={12} />
+                    <Globe color={colors.secondary} size={iconSize.xs} />
                   ) : (
-                    <Lock color={colors.visibilityPrivate} size={12} />
+                    <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
                   )}
                   <AppText
                     style={[
@@ -333,7 +333,7 @@ export function ListEditorModal({
               hitSlop={hitSlopFor(30)}
               style={styles.closeButton}
             >
-              <X color={colors.textMuted} size={16} />
+              <X color={colors.textMuted} size={iconSize.sm} />
             </Pressable>
           </View>
 

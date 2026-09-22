@@ -32,6 +32,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   layout,
   minTouchSize,
   radius,
@@ -59,13 +60,13 @@ function getTabLabel(routeName: keyof MainTabParamList) {
 function getTabIconGlyph(routeName: keyof MainTabParamList, color: string) {
   switch (routeName) {
     case 'Home':
-      return <Home color={color} size={18} />;
+      return <Home color={color} size={iconSize.md} />;
     case 'Map':
-      return <MapPinned color={color} size={18} />;
+      return <MapPinned color={color} size={iconSize.md} />;
     case 'Explore':
-      return <Compass color={color} size={18} />;
+      return <Compass color={color} size={iconSize.md} />;
     case 'Profile':
-      return <User2 color={color} size={18} />;
+      return <User2 color={color} size={iconSize.md} />;
   }
 }
 

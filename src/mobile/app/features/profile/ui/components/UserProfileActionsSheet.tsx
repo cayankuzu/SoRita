@@ -6,7 +6,7 @@ import {
   type ActionMenuSheetItem,
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type UserProfileActionsSheetProps = {
   visible: boolean;
@@ -32,7 +32,7 @@ export function UserProfileActionsSheet({
             {
               key: 'unblock',
               label: tr.profile.actions.unblock,
-              renderIcon: () => <Ban color={colors.secondary} size={14} />,
+              renderIcon: () => <Ban color={colors.secondary} size={iconSize.sm} />,
               onPress: onUnblock,
             },
           ]
@@ -40,14 +40,14 @@ export function UserProfileActionsSheet({
             {
               key: 'report',
               label: tr.profile.actions.report,
-              renderIcon: () => <Flag color={colors.warning} size={14} />,
+              renderIcon: () => <Flag color={colors.warning} size={iconSize.sm} />,
               onPress: onOpenReport,
             },
             {
               key: 'block',
               label: tr.profile.userActions.blockConfirmLabel,
               tone: 'danger',
-              renderIcon: () => <Ban color={colors.danger} size={14} />,
+              renderIcon: () => <Ban color={colors.danger} size={iconSize.sm} />,
               onPress: onOpenBlockConfirm,
             },
           ],

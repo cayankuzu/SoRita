@@ -21,7 +21,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ScreenState =
   | { status: 'loading' }
@@ -189,7 +189,7 @@ export function ResetPasswordScreen() {
           textContentType="newPassword"
           returnKeyType="next"
           onSubmitEditing={() => passwordConfirmRef.current?.focus()}
-          icon={<Lock color={colors.textMuted} size={14} />}
+          icon={<Lock color={colors.textMuted} size={iconSize.sm} />}
           status={passwordError
             ? { kind: 'invalid', message: passwordError }
             : { kind: 'idle', message: tr.auth.passwordHint.requirements }}
@@ -214,7 +214,7 @@ export function ResetPasswordScreen() {
           onSubmitEditing={() => {
             void submitPassword();
           }}
-          icon={<Lock color={colors.textMuted} size={14} />}
+          icon={<Lock color={colors.textMuted} size={iconSize.sm} />}
           status={confirmError ? { kind: 'invalid', message: confirmError } : undefined}
         />
         {submissionError ? (
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: spacing.md,
   },
   content: {
     flexGrow: 1,
@@ -249,14 +249,14 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    padding: 14,
+    padding: spacing.lg,
   },
   title: {
     color: colors.text,
-    ...typography.dialogTitleText,
+    ...typography.section,
     textAlign: 'center',
   },
   description: {

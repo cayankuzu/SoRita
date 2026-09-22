@@ -7,6 +7,7 @@ import {
   colors,
   contentWidth,
   fontWeight,
+  radius,
   spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 38,
+    paddingVertical: spacing['4xl'],
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
     maxWidth: contentWidth.form,
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 62,
     height: 62,
-    borderRadius: 20,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,

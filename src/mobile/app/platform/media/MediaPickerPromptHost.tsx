@@ -28,6 +28,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
   spacing,
   textStyle,
@@ -191,7 +192,7 @@ export function MediaPickerPromptHost() {
               onPress={() => resolveMediaPickerPrompt(null)}
               variant="surface"
             >
-              <X color={colors.textSoft} size={16} />
+              <X color={colors.textSoft} size={iconSize.sm} />
             </IconButton>
           </View>
 
@@ -207,7 +208,7 @@ export function MediaPickerPromptHost() {
                       ? tr.mediaPicker.cameraMixedDescription
                       : tr.mediaPicker.cameraDescription
                 }
-                icon={<Camera color={colors.primary} size={18} />}
+                icon={<Camera color={colors.primary} size={iconSize.md} />}
                 title={
                   hasDedicatedVideoCaptureOption
                     ? tr.mediaPicker.cameraPhoto
@@ -222,7 +223,7 @@ export function MediaPickerPromptHost() {
                 accentColor={colors.primary}
                 backgroundColor={colors.primaryBg}
                 description={tr.mediaPicker.cameraVideoDescription}
-                icon={<Video color={colors.primary} size={18} />}
+                icon={<Video color={colors.primary} size={iconSize.md} />}
                 title={tr.mediaPicker.cameraVideo}
                 onPress={() => handleResolve({ cameraCaptureMode: 'video', source: 'camera' })}
               />
@@ -233,7 +234,7 @@ export function MediaPickerPromptHost() {
                 accentColor={colors.secondary}
                 backgroundColor={colors.successBg}
                 description={galleryDescription}
-                icon={<Images color={colors.secondary} size={18} />}
+                icon={<Images color={colors.secondary} size={iconSize.md} />}
                 title={tr.mediaPicker.gallery}
                 onPress={() => handleResolve({ source: 'library' })}
               />
@@ -265,10 +266,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 12,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
     overflow: 'hidden',
   },
   handle: {
@@ -282,21 +283,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   headerCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('section', colors.text),
   description: textStyle('compactBodyText', colors.textMuted),
   options: {
-    gap: 8,
+    gap: spacing.sm,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.card,
@@ -307,14 +308,14 @@ const styles = StyleSheet.create({
   optionIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 20,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
   optionBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   optionTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   optionDescription: textStyle('metadataText', colors.textMuted, fontWeight.regular),

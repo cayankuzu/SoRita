@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -22,9 +22,9 @@ export function AuthBrandFooter() {
 const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
-    gap: 4,
-    marginTop: 14,
-    paddingBottom: 6,
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   poweredRow: {
     flexDirection: 'row',

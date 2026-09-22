@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: spacing.lg,
   },
   card: {
     width: '100%',
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 16,
-    gap: 10,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   title: {
-    fontSize: typography.dialogTitleText.fontSize,
+    fontSize: typography.section.fontSize,
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.md,
-    gap: 4,
+    gap: spacing.xs,
   },
   debugLabel: {
     fontSize: typography.labelText.fontSize,

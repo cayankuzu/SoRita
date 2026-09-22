@@ -12,7 +12,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
 
 const QUICK_REACTIONS = [
@@ -213,7 +213,7 @@ export function CommentComposer({
           accessibilityLabel={tr.common.send}
           accessibilityRole="button"
         >
-          <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={15} />
+          <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={iconSize.sm} />
         </Pressable>
       </View>
     </View>

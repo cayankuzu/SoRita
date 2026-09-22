@@ -15,7 +15,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, layout } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, layout } from '@/mobile/app/shared/theme/tokens';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import {
   getMapMarkers,
@@ -103,9 +103,9 @@ function ListTileMedia({
       {showPrivacyBadge ? (
         <View style={styles.visibilityBadge}>
           {list.isPublic ? (
-            <Globe color={colors.onPrimary} size={10} />
+            <Globe color={colors.onPrimary} size={iconSize.xs} />
           ) : (
-            <Lock color={colors.onPrimary} size={10} />
+            <Lock color={colors.onPrimary} size={iconSize.xs} />
           )}
           {!compact ? (
             <AppText style={styles.visibilityBadgeText}>
@@ -118,7 +118,7 @@ function ListTileMedia({
       {(list.likes || 0) > 0 ? (
         <View style={styles.mediaFooterRow}>
           <View style={styles.mediaFooterBadge}>
-            <Heart color={colors.onPrimary} size={10} fill={colors.onPrimary} />
+            <Heart color={colors.onPrimary} size={iconSize.xs} fill={colors.onPrimary} />
             <AppText style={styles.mediaFooterBadgeText}>{list.likes}</AppText>
           </View>
         </View>
@@ -164,7 +164,7 @@ function ListMiniMapToggle({
           isMapInteractive ? styles.titleActionButtonActive : null,
         ]}
       >
-        <Crosshair color={colors.primary} size={10} />
+        <Crosshair color={colors.primary} size={iconSize.xs} />
       </View>
     </Pressable>
   );
@@ -307,7 +307,7 @@ function ListGridTileComponent({
             style={styles.singleActionBadge}
           >
             <View style={styles.singleActionBadgeVisual}>
-              <Ellipsis color={colors.onPrimary} size={10} />
+              <Ellipsis color={colors.onPrimary} size={iconSize.xs} />
             </View>
           </Pressable>
         ) : null}

@@ -20,7 +20,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalSheetProps = {
   documentId: LegalDocumentId | null;
@@ -31,15 +31,15 @@ type AuthLegalSheetProps = {
 function renderDocumentIcon(documentId: LegalDocumentId) {
   switch (documentId) {
     case 'terms':
-      return <Scale color={colors.primary} size={16} />;
+      return <Scale color={colors.primary} size={iconSize.sm} />;
     case 'community':
-      return <Users color={colors.warning} size={16} />;
+      return <Users color={colors.warning} size={iconSize.sm} />;
     case 'privacy':
-      return <ShieldCheck color={colors.secondary} size={16} />;
+      return <ShieldCheck color={colors.secondary} size={iconSize.sm} />;
     case 'kvkk':
-      return <FileText color={colors.purple} size={16} />;
+      return <FileText color={colors.purple} size={iconSize.sm} />;
     default:
-      return <FileText color={colors.primary} size={16} />;
+      return <FileText color={colors.primary} size={iconSize.sm} />;
   }
 }
 
@@ -74,7 +74,7 @@ export function AuthLegalSheet({
         </View>
 
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={14} />
+          <X color={colors.textMuted} size={iconSize.sm} />
         </IconButton>
       </View>
 
@@ -99,13 +99,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   headerTitleRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.md,
   },
   iconWrap: {
     width: 32,
@@ -117,16 +117,16 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('compactTitleText', colors.text),
-  summary: textStyle('supportingText', colors.textSoft),
+  summary: textStyle('bodyText', colors.textSoft),
   scrollContent: {
-    gap: 12,
-    paddingBottom: 4,
+    gap: spacing.md,
+    paddingBottom: spacing.xs,
   },
   section: {
-    gap: 6,
+    gap: spacing.sm,
   },
   sectionTitle: textStyle('compactTitleText', colors.text),
   paragraph: textStyle('readingBodyText', colors.textMuted),

@@ -573,9 +573,9 @@ const styles = StyleSheet.create({
   },
   listFooter: {
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: spacing.lg,
   },
   iosRefreshStatus: {
     alignItems: 'center',

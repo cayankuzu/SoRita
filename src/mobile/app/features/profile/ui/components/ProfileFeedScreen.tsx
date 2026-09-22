@@ -15,7 +15,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import {
@@ -89,7 +89,7 @@ export function ProfileFeedScreen({
           onPress={onBack}
           style={styles.backButton}
         >
-          <ArrowLeft color={colors.textMuted} size={18} />
+          <ArrowLeft color={colors.textMuted} size={iconSize.md} />
         </IconButton>
         <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
       </View>
@@ -144,9 +144,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 8,
-    paddingBottom: 10,
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   title: textStyle('section', colors.text),
   content: {
-    paddingVertical: 10,
-    gap: 12,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
 });

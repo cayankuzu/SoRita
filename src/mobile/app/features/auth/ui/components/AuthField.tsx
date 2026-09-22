@@ -16,8 +16,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
   semanticColors,
+  spacing,
   textStyle,
   touch,
   typography,
@@ -86,9 +88,9 @@ function AuthFieldStatusAccessory({
       style={style}
     >
       {tone === 'success' ? (
-        <CircleCheck color={colors.secondary} size={15} />
+        <CircleCheck color={colors.secondary} size={iconSize.sm} />
       ) : (
-        <CircleAlert color={colors.danger} size={15} />
+        <CircleAlert color={colors.danger} size={iconSize.sm} />
       )}
     </View>
   );
@@ -109,9 +111,9 @@ function PasswordVisibilityButton({
       style={styles.passwordToggle}
     >
       {visible ? (
-        <EyeOff color={colors.textMuted} size={16} />
+        <EyeOff color={colors.textMuted} size={iconSize.sm} />
       ) : (
-        <Eye color={colors.textMuted} size={16} />
+        <Eye color={colors.textMuted} size={iconSize.sm} />
       )}
     </IconButton>
   );
@@ -290,7 +292,7 @@ export const AuthField = React.forwardRef<TextInput, AuthFieldProps>(function Au
 
 const styles = StyleSheet.create({
   block: {
-    gap: 4,
+    gap: spacing.xs,
   },
   label: textStyle('captionText', colors.textMuted, fontWeight.medium),
   inputWrap: {
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    paddingLeft: 32,
+    paddingLeft: spacing['3xl'],
     justifyContent: 'center',
   },
   inputWrapFocused: {
@@ -322,8 +324,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     ...typography.inputText,
     minHeight: MIN_TOUCH_SIZE,
-    paddingVertical: 8,
-    paddingRight: 30,
+    paddingVertical: spacing.sm,
+    paddingRight: spacing['3xl'],
   },
   inputWithToggle: {
     paddingRight: 60,

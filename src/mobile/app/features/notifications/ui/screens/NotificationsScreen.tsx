@@ -29,7 +29,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -145,7 +145,7 @@ export function NotificationsScreen() {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <ArrowLeft color={colors.textMuted} size={18} />
+          <ArrowLeft color={colors.textMuted} size={iconSize.md} />
         </IconButton>
         <View style={styles.headerBody}>
           <View style={styles.headerTitleRow}>
@@ -183,7 +183,7 @@ export function NotificationsScreen() {
           ) : (
             <CheckCheck
               color={unreadCount === 0 ? colors.textDisabled : colors.primary}
-              size={18}
+              size={iconSize.md}
             />
           )}
         </InstantPressable>
@@ -218,7 +218,7 @@ export function NotificationsScreen() {
           errorMessage ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon={<Heart color={colors.danger} size={24} />}
+                icon={<Heart color={colors.danger} size={iconSize.lg} />}
                 title={notificationUiConfig.errorTitle}
                 description={errorMessage}
                 actionLabel={tr.common.retry}
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.screen,
     minHeight: 56,
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   headerTitleDivider: {
     width: 1,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   },
   title: textStyle('section', colors.text),
   subtitle: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     color: colors.primary,
     minHeight: typography.metadataText.lineHeight,
@@ -348,22 +348,22 @@ const styles = StyleSheet.create({
   },
   list: {
     backgroundColor: colors.surface,
-    paddingBottom: 10,
+    paddingBottom: spacing.md,
   },
   listEmpty: {
     flexGrow: 1,
   },
   emptyWrap: {
-    paddingHorizontal: 12,
-    paddingTop: 22,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing['2xl'],
   },
   noticeWrap: {
-    paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
 });

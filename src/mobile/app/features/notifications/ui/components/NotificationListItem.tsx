@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     width: 40,
-    paddingTop: 2,
+    paddingTop: spacing.xxs,
   },
   body: {
     flex: 1,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   timestamp: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     color: colors.textSoft,
   },
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
   actionButton: {
     minWidth: 70,
     minHeight: minTouchSize,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -213,9 +213,9 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   unreadDot: {
     width: 8,
     height: 8,
-    marginTop: 8,
+    marginTop: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
   },

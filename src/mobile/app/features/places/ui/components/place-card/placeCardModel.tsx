@@ -4,6 +4,7 @@ import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type ActionMenuItem = React.ComponentProps<typeof DeferredActionMenuSheet>['items'][number];
 
@@ -87,7 +88,7 @@ export function buildPlaceActionItems(params: {
       ? {
           key: 'edit',
           label: tr.common.edit,
-          renderIcon: (color) => <Pencil color={color} size={14} />,
+          renderIcon: (color) => <Pencil color={color} size={iconSize.sm} />,
           onPress: params.onEditPress,
         }
       : null,
@@ -95,7 +96,7 @@ export function buildPlaceActionItems(params: {
       ? {
           key: 'delete',
           label: tr.common.delete,
-          renderIcon: (color) => <Trash2 color={color} size={14} />,
+          renderIcon: (color) => <Trash2 color={color} size={iconSize.sm} />,
           tone: 'danger',
           onPress: params.onDeletePress,
         }
@@ -104,7 +105,7 @@ export function buildPlaceActionItems(params: {
       ? {
           key: 'report',
           label: tr.profile.actions.report,
-          renderIcon: (color) => <Flag color={color} size={14} />,
+          renderIcon: (color) => <Flag color={color} size={iconSize.sm} />,
           tone: 'danger',
           onPress: params.onReportPress,
         }

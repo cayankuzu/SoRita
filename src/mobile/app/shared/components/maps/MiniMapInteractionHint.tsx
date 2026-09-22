@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapInteractionHintProps = {
   visible: boolean;
@@ -30,12 +30,12 @@ const styles = StyleSheet.create({
     left: 8,
     borderRadius: radius.md,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   title: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   description: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     color: colors.onPrimary,
   },

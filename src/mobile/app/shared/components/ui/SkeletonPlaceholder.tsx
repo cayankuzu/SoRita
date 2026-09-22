@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   group: {
-    gap: 6,
+    gap: spacing.sm,
   },
   cardSkeleton: {
     borderWidth: 1,
@@ -242,20 +242,20 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   tileSkeleton: {
-    gap: 6,
+    gap: spacing.sm,
   },
   tileContent: {
-    gap: 4,
-    paddingHorizontal: 4,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   profileSkeleton: {
     gap: 0,
   },
   profileContent: {
     alignItems: "center",
-    gap: 6,
-    paddingTop: 10,
-    paddingHorizontal: 12,
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   avatar: {
     marginTop: -32,

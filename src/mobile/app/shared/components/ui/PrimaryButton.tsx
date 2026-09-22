@@ -19,6 +19,7 @@ import {
   minTouchSize,
   opacity,
   radius,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.lg,
   },
   content: {
     minHeight: 20,
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   label: {
     ...typography.labelText,

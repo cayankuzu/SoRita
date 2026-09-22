@@ -21,7 +21,7 @@ import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPrevi
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   formatLocationPlaceCardsCount,
   formatPlaceCardLocation,
@@ -223,7 +223,7 @@ export function PlaceCardFull({
           style={styles.locationBar}
         >
           <View style={styles.locationIconWrap}>
-            <MapPin color={colors.primary} size={13} strokeWidth={2.2} />
+            <MapPin color={colors.primary} size={iconSize.xs} strokeWidth={2.2} />
           </View>
           <AppText numberOfLines={1} style={styles.locationText}>
             {locationLabel}
@@ -273,7 +273,7 @@ export function PlaceCardFull({
                 {onPlaceNamePress ? (
                   <ChevronRight
                     color={colors.text}
-                    size={13}
+                    size={iconSize.xs}
                     strokeWidth={2.3}
                     style={styles.contentTitleChevron}
                   />

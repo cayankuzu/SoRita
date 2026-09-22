@@ -9,6 +9,7 @@ import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import {
   colors,
   fontWeight,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -108,8 +109,8 @@ const styles = StyleSheet.create({
   },
   content: {
     backgroundColor: colors.warning,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
   syncing: {

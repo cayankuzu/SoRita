@@ -15,6 +15,7 @@ import type { FeedVisibilityStore } from '@/mobile/app/features/home/application
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { ContentErrorBoundary } from '@/mobile/app/shared/components/ui/ContentErrorBoundary';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
+import { spacing } from '@/mobile/app/shared/theme/tokens';
 
 type HomeFeedCardRowProps = {
   item: PlaceFeedCardItem;
@@ -95,6 +96,6 @@ export const HomeFeedCardRow = React.memo(function HomeFeedCardRow({
 
 const styles = StyleSheet.create({
   cardRow: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
 });

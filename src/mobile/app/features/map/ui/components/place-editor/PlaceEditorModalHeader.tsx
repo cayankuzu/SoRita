@@ -6,7 +6,7 @@ import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/c
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorModalHeaderProps = {
   existingPlaceListName?: string;
@@ -56,7 +56,7 @@ export function PlaceEditorModalHeader({
               style={styles.closeButton}
               variant="surface"
             >
-              <Minus color={colors.textMuted} size={18} />
+              <Minus color={colors.textMuted} size={iconSize.md} />
             </IconButton>
           ) : null}
           <IconButton
@@ -66,7 +66,7 @@ export function PlaceEditorModalHeader({
             style={styles.closeButton}
             variant="surface"
           >
-            <X color={colors.textMuted} size={18} />
+            <X color={colors.textMuted} size={iconSize.md} />
           </IconButton>
         </View>
       </View>

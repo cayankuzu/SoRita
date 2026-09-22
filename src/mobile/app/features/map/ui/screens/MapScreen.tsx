@@ -29,7 +29,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 
 type PlaceEditorModalProps = React.ComponentProps<
@@ -314,7 +314,7 @@ export function MapScreen() {
                 shouldRasterizeIOS
               >
               <View style={styles.searchInputWrap}>
-                <Search color={colors.textSoft} size={16} />
+                <Search color={colors.textSoft} size={iconSize.sm} />
                 <TextInput
                   accessibilityLabel={tr.map.searchPlaceholder}
                   accessibilityState={{ busy: isSearching }}
@@ -352,7 +352,7 @@ export function MapScreen() {
                     hitSlop={hitSlopFor(24)}
                     style={styles.clearButton}
                   >
-                    <X color={colors.textSoft} size={14} />
+                    <X color={colors.textSoft} size={iconSize.sm} />
                   </InstantPressable>
                 ) : null}
               </View>
@@ -370,7 +370,7 @@ export function MapScreen() {
                   {refreshing ? (
                     <ActivityIndicator color={colors.primary} size="small" />
                   ) : (
-                    <RefreshCw color={colors.textMuted} size={16} />
+                    <RefreshCw color={colors.textMuted} size={iconSize.sm} />
                   )}
                 </InstantPressable>
                 <InstantPressable
@@ -389,7 +389,7 @@ export function MapScreen() {
                 >
                   <SlidersHorizontal
                     color={markerFilter !== 'all' ? colors.primary : colors.textMuted}
-                    size={16}
+                    size={iconSize.sm}
                   />
                 </InstantPressable>
               </View>
@@ -514,7 +514,7 @@ export function MapScreen() {
             {isLocating ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <LocateFixed color={colors.text} size={18} />
+              <LocateFixed color={colors.text} size={iconSize.md} />
             )}
           </InstantPressable>
 
@@ -537,7 +537,7 @@ export function MapScreen() {
                   {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
                 </AppText>
               </View>
-              <ChevronUp color={colors.onPrimary} size={16} />
+              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
             </InstantPressable>
           ) : null}
 
@@ -558,7 +558,7 @@ export function MapScreen() {
                 />
                 <AppText style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</AppText>
               </View>
-              <ChevronUp color={colors.onPrimary} size={16} />
+              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
             </InstantPressable>
           ) : null}
         </View>

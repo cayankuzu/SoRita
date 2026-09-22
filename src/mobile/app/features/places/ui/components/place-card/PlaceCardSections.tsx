@@ -35,7 +35,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { categoryMeta } from '@/mobile/app/shared/utils/format';
 
 export function PlaceOwnerHeader({
@@ -96,7 +96,7 @@ export function PlaceSourceBar({
           size={30}
         />
         <View style={styles.sourceBarIcon}>
-          <Repeat2 color={colors.onPrimary} size={12} />
+          <Repeat2 color={colors.onPrimary} size={iconSize.xs} />
         </View>
       </View>
       <View style={styles.sourceBarBody}>
@@ -112,7 +112,7 @@ export function PlaceSourceBar({
           {tr.cards.quotedFromPlaceCard}
         </AppText>
       </View>
-      <ChevronRight color={colors.quote} size={14} />
+      <ChevronRight color={colors.quote} size={iconSize.sm} />
     </Pressable>
   );
 }
@@ -153,12 +153,12 @@ export function PlaceListBar({
         />
       ) : (
         <View style={styles.linkBarCoverFallback}>
-          <ListIcon color={colors.primary} size={16} />
+          <ListIcon color={colors.primary} size={iconSize.sm} />
         </View>
       )}
       <View style={styles.linkBarBody}>
         <View style={styles.linkBarTitleRow}>
-          <ListIcon color={colors.primary} size={12} />
+          <ListIcon color={colors.primary} size={iconSize.xs} />
           <ExpandableText
             text={emoji ? `${emoji} ${name}` : name}
             collapsedLines={1}
@@ -168,9 +168,9 @@ export function PlaceListBar({
         </View>
         <View style={styles.linkBarMetaRow}>
           {isPublic ? (
-            <Globe color={colors.secondary} size={12} />
+            <Globe color={colors.secondary} size={iconSize.xs} />
           ) : (
-            <Lock color={colors.visibilityPrivate} size={12} />
+            <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
           )}
           <AppText
             style={[
@@ -182,7 +182,7 @@ export function PlaceListBar({
           </AppText>
         </View>
       </View>
-      <ChevronRight color={colors.primary} size={14} />
+      <ChevronRight color={colors.primary} size={iconSize.sm} />
     </Pressable>
   );
 }
@@ -302,7 +302,7 @@ export function PlaceCardTags({
   if (place.rating) {
     summaryItems.push(
       <View key="rating" style={[styles.badge, styles.ratingBadge]}>
-        <Star size={12} color={colors.rating} fill={colors.rating} />
+        <Star size={iconSize.xs} color={colors.rating} fill={colors.rating} />
         <AppText style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</AppText>
       </View>,
     );
@@ -310,7 +310,7 @@ export function PlaceCardTags({
   if (place.studentDiscount) {
     summaryItems.push(
       <View key="student" style={[styles.badge, styles.studentBadge]}>
-        <GraduationCap size={12} color={colors.primary} />
+        <GraduationCap size={iconSize.xs} color={colors.primary} />
         <AppText style={[styles.badgeText, styles.studentBadgeText]}>
           {tr.cards.studentDiscount}
         </AppText>
@@ -361,16 +361,16 @@ export function PlaceCardTags({
             {showDetails ? tr.cards.fewerFeatures : tr.cards.moreFeatures(detailCount)}
           </AppText>
           {showDetails ? (
-            <ChevronUp color={colors.primary} size={13} />
+            <ChevronUp color={colors.primary} size={iconSize.xs} />
           ) : (
-            <ChevronDown color={colors.primary} size={13} />
+            <ChevronDown color={colors.primary} size={iconSize.xs} />
           )}
         </InstantPressable>
       ) : null}
 
       {showDetails && detailCategories.length > 0 ? (
         <BadgeRow>
-          <View style={styles.inlineIcon}><Shapes size={12} color={colors.primary} /></View>
+          <View style={styles.inlineIcon}><Shapes size={iconSize.xs} color={colors.primary} /></View>
           {detailCategories.map((category) => {
             const meta = categoryMeta[category] || categoryMeta.other;
             return (
@@ -386,7 +386,7 @@ export function PlaceCardTags({
 
       {showDetails && dietaryOptions.length > 0 ? (
         <BadgeRow>
-          <View style={styles.inlineIcon}><Leaf size={12} color={colors.secondary} /></View>
+          <View style={styles.inlineIcon}><Leaf size={iconSize.xs} color={colors.secondary} /></View>
           {dietaryOptions.map((item) => (
             <View key={item} style={[styles.badge, styles.greenBadge]}>
               <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>
@@ -397,7 +397,7 @@ export function PlaceCardTags({
 
       {showDetails && bestTimes.length > 0 ? (
         <BadgeRow>
-          <View style={styles.inlineIcon}><Clock size={12} color={colors.textSoft} /></View>
+          <View style={styles.inlineIcon}><Clock size={iconSize.xs} color={colors.textSoft} /></View>
           {bestTimes.map((item) => (
             <View key={item} style={styles.badge}><AppText style={styles.badgeText}>{item}</AppText></View>
           ))}
@@ -406,7 +406,7 @@ export function PlaceCardTags({
 
       {showDetails && place.atmosphere?.length ? (
         <BadgeRow>
-          <View style={styles.inlineIcon}><Sparkles size={12} color={colors.purple} /></View>
+          <View style={styles.inlineIcon}><Sparkles size={iconSize.xs} color={colors.purple} /></View>
           {place.atmosphere.map((item) => (
             <View key={item} style={[styles.badge, styles.purpleBadge]}>
               <AppText style={[styles.badgeText, styles.purpleBadgeText]}>{item}</AppText>
@@ -417,7 +417,7 @@ export function PlaceCardTags({
 
       {showDetails && specialFeatures.length > 0 ? (
         <BadgeRow>
-          <View style={styles.inlineIcon}><Star size={12} color={colors.secondary} /></View>
+          <View style={styles.inlineIcon}><Star size={iconSize.xs} color={colors.secondary} /></View>
           {specialFeatures.map((item) => (
             <View key={item} style={[styles.badge, styles.greenBadge]}>
               <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>

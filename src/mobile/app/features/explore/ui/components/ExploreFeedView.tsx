@@ -18,7 +18,7 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 import {
@@ -83,7 +83,7 @@ export function ExploreFeedView({
         onPress={onBack}
         style={styles.backButton}
       >
-        <ArrowLeft color={colors.textMuted} size={18} />
+        <ArrowLeft color={colors.textMuted} size={iconSize.md} />
       </IconButton>
       <AppText style={styles.feedTitle}>{tr.explore.title}</AppText>
     </View>

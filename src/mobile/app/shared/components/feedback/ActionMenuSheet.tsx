@@ -12,8 +12,10 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -58,7 +60,7 @@ export function ActionMenuSheet({
       <View style={styles.header}>
         <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
         <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={14} />
+          <X color={colors.textMuted} size={iconSize.sm} />
         </IconButton>
       </View>
 
@@ -98,13 +100,13 @@ const styles = StyleSheet.create({
     maxWidth: 468,
   },
   sheetContent: {
-    gap: 10,
+    gap: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   title: {
     flex: 1,
@@ -112,17 +114,17 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   actions: {
-    gap: 8,
+    gap: spacing.sm,
   },
   action: {
     minHeight: minTouchSize,
     borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   actionIcon: {
     width: 16,

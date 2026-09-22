@@ -7,7 +7,7 @@ import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/Medi
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -81,7 +81,7 @@ export function ListEditorForm({
             disabled={loading}
             onPress={() => onVisibilityChange(true)}
           >
-            <Globe color={isPublic ? colors.secondary : colors.textMuted} size={14} />
+            <Globe color={isPublic ? colors.secondary : colors.textMuted} size={iconSize.sm} />
             <View style={styles.privacyButtonBody}>
               <AppText style={[styles.privacyText, isPublic ? styles.privacyTextActivePublic : null]}>
                 {t.listEditor.privacyPublic}
@@ -106,7 +106,7 @@ export function ListEditorForm({
             disabled={loading}
             onPress={() => onVisibilityChange(false)}
           >
-            <Lock color={!isPublic ? colors.primary : colors.textMuted} size={14} />
+            <Lock color={!isPublic ? colors.primary : colors.textMuted} size={iconSize.sm} />
             <View style={styles.privacyButtonBody}>
               <AppText style={[styles.privacyText, !isPublic ? styles.privacyTextActivePrivate : null]}>
                 {t.listEditor.privacyPrivate}
@@ -142,7 +142,7 @@ export function ListEditorForm({
             <View style={styles.coverPickerHeader}>
               <View style={styles.coverPickerHeaderCopy}>
                 <View style={styles.coverPickerIconWrap}>
-                  <ImagePlus color={colors.secondary} size={16} />
+                  <ImagePlus color={colors.secondary} size={iconSize.sm} />
                 </View>
                 <View style={styles.coverPickerBody}>
                   <AppText style={styles.coverPickerText}>
@@ -190,7 +190,7 @@ export function ListEditorForm({
               onPress={onRemoveCover}
               style={styles.coverClearButton}
             >
-              <X color={colors.onPrimary} size={14} />
+              <X color={colors.onPrimary} size={iconSize.sm} />
             </Pressable>
           ) : null}
         </View>

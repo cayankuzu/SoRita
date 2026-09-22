@@ -12,7 +12,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 type SettingsBlockedUsersViewProps = {
@@ -70,7 +70,7 @@ export function SettingsBlockedUsersView({
         ListHeaderComponent={<SettingsHeader title={tr.settings.blocked.title} onBack={onBack} />}
         ListEmptyComponent={
           <EmptyState
-            icon={<Ban color={colors.textSoft} size={30} />}
+            icon={<Ban color={colors.textSoft} size={iconSize.xl} />}
             title={tr.settings.blocked.emptyTitle}
             description={tr.settings.blocked.emptyDescription}
           />

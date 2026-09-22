@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorTransientNoticeProps = {
   description: string;
@@ -28,7 +28,7 @@ export function PlaceEditorTransientNotice({
     >
       <View style={styles.card}>
         <View style={styles.iconWrap}>
-          <AlertTriangle color={colors.danger} size={18} />
+          <AlertTriangle color={colors.danger} size={iconSize.md} />
         </View>
         <View style={styles.copy}>
           <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: spacing.xl,
     backgroundColor: colors.overlay,
   },
   card: {
@@ -54,22 +54,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.dangerBorder,
-    padding: 14,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.md,
   },
   iconWrap: {
     width: 34,
     height: 34,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.dangerBg,
   },
   copy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('bodyText', colors.text, fontWeight.strong),
   description: textStyle('metadataText', colors.textMuted, fontWeight.regular),

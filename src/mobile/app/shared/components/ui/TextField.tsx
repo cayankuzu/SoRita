@@ -12,6 +12,7 @@ import {
   minTouchSize,
   radius,
   semanticColors,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -141,7 +142,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 4,
+    gap: spacing.xs,
   },
   label: textStyle('metadataText', colors.textMuted, fontWeight.medium),
   helper: textStyle('metadataText', colors.textMuted),
@@ -158,8 +159,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     ...typography.bodyText,
     includeFontPadding: false,
   },

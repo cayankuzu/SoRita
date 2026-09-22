@@ -6,7 +6,7 @@ import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/compo
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { openSafeExternalUrl } from '@/mobile/app/shared/utils/safeLinks';
 
 type PlaceMenuButtonProps = {
@@ -56,10 +56,10 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
     >
       <View style={styles.menuActionHeader}>
         <View style={styles.menuActionIcon}>
-          <UtensilsCrossed color={colors.primary} size={12} />
+          <UtensilsCrossed color={colors.primary} size={iconSize.xs} />
         </View>
         <AppText style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</AppText>
-        <ExternalLink color={colors.primary} size={12} />
+        <ExternalLink color={colors.primary} size={iconSize.xs} />
       </View>
     </Pressable>
   );

@@ -7,8 +7,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -23,7 +25,7 @@ export function OwnProfileActionBar({ onOpenSettings }: OwnProfileActionBarProps
         title={tr.profile.actions.settings}
         variant="secondary"
         onPress={onOpenSettings}
-        icon={<Settings color={colors.textMuted} size={12} />}
+        icon={<Settings color={colors.textMuted} size={iconSize.xs} />}
         style={styles.actionButton}
         textStyle={styles.actionButtonText}
       />
@@ -37,7 +39,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     minHeight: minTouchSize,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
   },

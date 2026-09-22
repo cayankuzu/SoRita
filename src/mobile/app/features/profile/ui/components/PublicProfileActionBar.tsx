@@ -11,7 +11,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
@@ -84,11 +84,11 @@ export function PublicProfileActionBar({
               size="small"
             />
           ) : isFollowing ? (
-            <UserMinus color={colors.textMuted} size={12} />
+            <UserMinus color={colors.textMuted} size={iconSize.xs} />
           ) : (
             <UserPlus
               color={hasPendingFollowRequest ? colors.textMuted : colors.onPrimary}
-              size={12}
+              size={iconSize.xs}
             />
           )}
           <AppText
@@ -108,7 +108,7 @@ export function PublicProfileActionBar({
         style={styles.moreButton}
         variant="surface"
       >
-        <Ellipsis color={colors.textMuted} size={16} />
+        <Ellipsis color={colors.textMuted} size={iconSize.sm} />
       </IconButton>
     </View>
   );
@@ -118,16 +118,16 @@ const styles = StyleSheet.create({
   profileActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   followButton: {
     minHeight: minTouchSize,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   followButtonPassive: {
     backgroundColor: colors.surfaceMuted,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   unblockButton: {
     minHeight: minTouchSize,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
   },
   unblockButtonText: textStyle('labelText', colors.textMuted),
   moreButton: {

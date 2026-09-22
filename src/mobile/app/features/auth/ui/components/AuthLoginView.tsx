@@ -12,7 +12,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type AuthLoginViewProps = {
@@ -95,7 +95,7 @@ export function AuthLoginView({
       )}
 
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
-        <ArrowLeft color={colors.textMuted} size={18} />
+        <ArrowLeft color={colors.textMuted} size={iconSize.md} />
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
@@ -130,7 +130,7 @@ export function AuthLoginView({
           blurOnSubmit={false}
           returnKeyType="next"
           onSubmitEditing={() => passwordRef.current?.focus()}
-          icon={<Mail color={colors.textMuted} size={14} />}
+          icon={<Mail color={colors.textMuted} size={iconSize.sm} />}
         />
         <AuthField
           ref={passwordRef}
@@ -145,7 +145,7 @@ export function AuthLoginView({
           onFocus={revealPasswordActions}
           returnKeyType="done"
           onSubmitEditing={() => onLogin()}
-          icon={<Lock color={colors.textMuted} size={14} />}
+          icon={<Lock color={colors.textMuted} size={iconSize.sm} />}
         />
         <View style={styles.forgotPasswordRow}>
           <InstantPressable

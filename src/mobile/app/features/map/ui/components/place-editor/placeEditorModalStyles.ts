@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
@@ -41,20 +41,20 @@ export const placeEditorModalStyles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.cardBorder,
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   cancelButton: {
     minHeight: MIN_TOUCH_SIZE,
@@ -62,31 +62,31 @@ export const placeEditorModalStyles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
   },
   cancelButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   headerText: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: spacing.md,
   },
-  headerTitle: textStyle('compactSectionText', colors.text, fontWeight.strong),
+  headerTitle: textStyle('compactTitleText', colors.text, fontWeight.strong),
   headerSubtitle: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   headerMeta: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   saveProgressBanner: {
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
@@ -95,12 +95,12 @@ export const placeEditorModalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   saveProgressMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   saveProgressTitle: {
     flex: 1,
@@ -147,9 +147,9 @@ export const placeEditorModalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: colors.cardBorder,
@@ -157,7 +157,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   stepTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   stepSubtitle: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textSoft,
@@ -165,7 +165,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   stepDots: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   stepDot: {
     width: 10,
@@ -185,19 +185,19 @@ export const placeEditorModalStyles = StyleSheet.create({
     minHeight: 0,
   },
   content: {
-    padding: 14,
+    padding: spacing.lg,
     flexGrow: 1,
   },
   contentWithFooterBuffer: {
-    paddingBottom: 32,
+    paddingBottom: spacing['3xl'],
   },
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
     backgroundColor: colors.glassSurface,
-    paddingHorizontal: 22,
+    paddingHorizontal: spacing['2xl'],
   },
   lockOverlayTitle: {
     ...typography.bodyText,
@@ -213,8 +213,8 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    gap: 8,
-    padding: 12,
+    gap: spacing.sm,
+    padding: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -223,23 +223,23 @@ export const placeEditorModalStyles = StyleSheet.create({
   backButton: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.surfaceMuted,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   backButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   deleteButton: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.dangerBg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   deleteButtonText: textStyle('metadataText', colors.danger, fontWeight.strong),
   nextButton: {
@@ -250,7 +250,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   disabledButton: {
     opacity: 0.45,

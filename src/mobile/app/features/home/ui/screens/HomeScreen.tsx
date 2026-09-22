@@ -33,8 +33,10 @@ import {
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
@@ -272,7 +274,7 @@ export function HomeScreen() {
     return (
       <Screen safeTop={false} variant="feed">
         <EmptyState
-          icon={<MapPin color={colors.danger} size={32} />}
+          icon={<MapPin color={colors.danger} size={iconSize.xl} />}
           title={tr.home.errorTitle}
           description={errorMessage}
           actionLabel={tr.common.retry}
@@ -288,12 +290,12 @@ export function HomeScreen() {
       return (
         <View style={styles.centeredState}>
           <EmptyState
-            icon={<Users color={colors.primary} size={32} />}
+            icon={<Users color={colors.primary} size={iconSize.xl} />}
             title={tr.home.noFollowingTitle}
             description={tr.home.noFollowingDescription}
           />
           <InstantPressable style={styles.primaryCta} onPress={() => navigation.navigate('Explore')}>
-            <MapPin color={colors.onPrimary} size={14} />
+            <MapPin color={colors.onPrimary} size={iconSize.sm} />
             <AppText style={styles.primaryCtaText}>{tr.home.exploreCta}</AppText>
           </InstantPressable>
         </View>
@@ -304,7 +306,7 @@ export function HomeScreen() {
       return (
         <View style={styles.emptyStateWrap}>
           <EmptyState
-            icon={<MapPin color={colors.textSoft} size={32} />}
+            icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
             title={tr.home.noFeedTitle}
             description={tr.home.noFeedDescription}
           />
@@ -377,32 +379,32 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   skeletonWrap: {
     flex: 1,
-    paddingTop: 10,
-    gap: 18,
+    paddingTop: spacing.md,
+    gap: spacing.xl,
   },
   centeredState: {
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingTop: 28,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing['3xl'],
   },
   primaryCta: {
     alignSelf: 'center',
     minHeight: minTouchSize,
     borderRadius: radius.md,
-    paddingHorizontal: 18,
+    paddingHorizontal: spacing.xl,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   primaryCtaText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   emptyStateWrap: {
-    paddingTop: 28,
-    paddingHorizontal: 12,
+    paddingTop: spacing['3xl'],
+    paddingHorizontal: spacing.md,
   },
   feedListContent: {
-    paddingTop: 4,
+    paddingTop: spacing.xs,
   },
   feedListContentEmpty: {
     flexGrow: 1,
@@ -410,12 +412,12 @@ const styles = StyleSheet.create({
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
   },
   listFooterLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   partialDataNotice: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
 });

@@ -10,7 +10,7 @@ import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsPasswordViewProps = {
   currentPassword: string;
@@ -50,7 +50,7 @@ export function SettingsPasswordView({
       <View style={styles.form}>
         <View style={styles.emailInfoCard}>
           <View style={styles.emailInfoHeader}>
-            <Mail color={colors.primary} size={14} />
+            <Mail color={colors.primary} size={iconSize.sm} />
             <AppText style={styles.emailInfoLabel}>{tr.settings.password.emailLabel}</AppText>
           </View>
           <AppText style={styles.emailInfoValue}>{email}</AppText>

@@ -13,7 +13,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   LIST_DESCRIPTION_MAX_LENGTH,
   LIST_NAME_MAX_LENGTH,
@@ -70,7 +70,7 @@ export function PlaceEditorNewListForm({
         style={styles.createListTrigger}
         onPress={() => onShowNewListFormChange(true)}
       >
-        <Plus color={colors.primary} size={16} />
+        <Plus color={colors.primary} size={iconSize.sm} />
         <AppText style={styles.createListTriggerText}>{tr.placeEditor.createList}</AppText>
       </InstantPressable>
     );
@@ -87,7 +87,7 @@ export function PlaceEditorNewListForm({
           onPress={() => onShowNewListFormChange(false)}
           size="sm"
         >
-          <X color={colors.textSoft} size={16} />
+          <X color={colors.textSoft} size={iconSize.sm} />
         </IconButton>
       </View>
 
@@ -107,7 +107,7 @@ export function PlaceEditorNewListForm({
               style={styles.coverPickerHeaderCopy}
             >
               <View style={styles.coverPickerIconWrap}>
-                <ImagePlus color={colors.secondary} size={16} />
+                <ImagePlus color={colors.secondary} size={iconSize.sm} />
               </View>
               <View style={styles.coverPickerBody}>
                 <AppText style={styles.coverPickerTitle}>
@@ -154,7 +154,7 @@ export function PlaceEditorNewListForm({
             style={styles.coverClearInline}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={14} />
+            <X color={colors.onPrimary} size={iconSize.sm} />
           </IconButton>
         ) : null}
       </View>
@@ -188,7 +188,7 @@ export function PlaceEditorNewListForm({
           style={[styles.privacyButton, newListPublic ? styles.privacyButtonActive : null]}
           onPress={() => onNewListPublicChange(true)}
         >
-          <Globe color={newListPublic ? colors.primary : colors.textMuted} size={12} />
+          <Globe color={newListPublic ? colors.primary : colors.textMuted} size={iconSize.xs} />
           <AppText style={[styles.privacyText, newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.publicList}
           </AppText>
@@ -201,7 +201,7 @@ export function PlaceEditorNewListForm({
           style={[styles.privacyButton, !newListPublic ? styles.privateButtonActive : null]}
           onPress={() => onNewListPublicChange(false)}
         >
-          <Lock color={!newListPublic ? colors.primary : colors.textMuted} size={12} />
+          <Lock color={!newListPublic ? colors.primary : colors.textMuted} size={iconSize.xs} />
           <AppText style={[styles.privacyText, !newListPublic ? styles.privacyTextActive : null]}>
             {tr.placeEditor.privateList}
           </AppText>

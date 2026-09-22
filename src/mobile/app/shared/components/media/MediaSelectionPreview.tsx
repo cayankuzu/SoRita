@@ -12,7 +12,7 @@ import Svg, {
 
 import { PROFILE_MEDIA_COVER_SOURCE_ASPECT_RATIO } from '@/mobile/app/contracts/profileMedia';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing } from '@/mobile/app/shared/theme/tokens';
 
 export type MediaSelectionPreviewVariant = 'avatar' | 'profile-cover' | 'list-cover';
 
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',
-    padding: 14,
+    padding: spacing.lg,
     position: 'relative',
   },
   avatarStage: {},

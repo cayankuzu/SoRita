@@ -23,7 +23,7 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 import {
@@ -145,7 +145,7 @@ export function ProfileConnectionsModal({
               style={styles.closeButton}
               variant="surface"
             >
-              <X color={colors.textSoft} size={16} />
+              <X color={colors.textSoft} size={iconSize.sm} />
             </IconButton>
           </View>
 
@@ -178,7 +178,7 @@ export function ProfileConnectionsModal({
               users.length > 0 ? (
                 <View>
                   <View style={styles.searchWrap}>
-                    <Search color={colors.textSoft} size={14} />
+                    <Search color={colors.textSoft} size={iconSize.sm} />
                     <TextInput
                       value={searchQuery}
                       onChangeText={setSearchQuery}
@@ -204,7 +204,7 @@ export function ProfileConnectionsModal({
                         onPress={() => setSearchQuery('')}
                         size="sm"
                       >
-                        <X color={colors.textSoft} size={14} />
+                        <X color={colors.textSoft} size={iconSize.sm} />
                       </IconButton>
                     ) : null}
                   </View>
@@ -218,7 +218,7 @@ export function ProfileConnectionsModal({
             }
             ListEmptyComponent={
               <EmptyState
-                icon={<Users color={colors.textSoft} size={24} />}
+                icon={<Users color={colors.textSoft} size={iconSize.lg} />}
                 title={q ? tr.profile.connections.searchNoResult : emptyTitle}
                 description={q ? tr.profile.connections.searchTryDifferent : ''}
               />
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
   },
   card: {
     width: '100%',
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
   handle: {
     width: 34,
     height: 4,
-    marginTop: 6,
-    marginBottom: 2,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxs,
     borderRadius: radius.pill,
     backgroundColor: colors.borderStrong,
     alignSelf: 'center',
@@ -275,27 +275,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  title: textStyle('compactSectionText', colors.text),
+  title: textStyle('compactTitleText', colors.text),
   closeButton: {
     width: minTouchSize,
     height: minTouchSize,
   },
   searchWrap: {
     minHeight: minTouchSize,
-    marginBottom: 10,
+    marginBottom: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   list: {
-    padding: 12,
-    paddingTop: 10,
+    padding: spacing.md,
+    paddingTop: spacing.md,
   },
   listEmpty: {
     flexGrow: 1,
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.md,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   userBio: {
-    marginTop: 3,
+    marginTop: spacing.xs,
     ...typography.captionText,
     color: colors.textMuted,
   },

@@ -10,7 +10,7 @@ import { Star, StarHalf } from 'lucide-react-native';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 import { compareLocalizedText } from '@/mobile/app/shared/utils/textSort';
@@ -103,11 +103,11 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
               style={styles.starButton}
             >
               {isFull ? (
-                <Star color={colors.rating} fill={colors.rating} size={24} />
+                <Star color={colors.rating} fill={colors.rating} size={iconSize.lg} />
               ) : isHalf ? (
-                <StarHalf color={colors.rating} fill={colors.rating} size={24} />
+                <StarHalf color={colors.rating} fill={colors.rating} size={iconSize.lg} />
               ) : (
-                <Star color={colors.cardBorder} size={24} />
+                <Star color={colors.cardBorder} size={iconSize.lg} />
               )}
             </InstantPressable>
           );
@@ -120,18 +120,18 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
 
 const styles = StyleSheet.create({
   optionRail: {
-    gap: 8,
-    paddingRight: 12,
+    gap: spacing.sm,
+    paddingRight: spacing.md,
     alignItems: 'flex-start',
   },
   optionColumn: {
-    gap: 6,
+    gap: spacing.sm,
   },
   railChip: {
     minHeight: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -149,13 +149,13 @@ const styles = StyleSheet.create({
   ratingSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   starButton: {
     minWidth: MIN_TOUCH_SIZE,
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
   ratingValue: {
     minWidth: 50,
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.warningBg,
     color: colors.warningText,
     ...typography.metadataText,

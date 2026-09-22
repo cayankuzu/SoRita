@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing } from '@/mobile/app/shared/theme/tokens';
 
 type AuthStepDotsProps = {
   current: number;
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   dot: {
     width: 14,

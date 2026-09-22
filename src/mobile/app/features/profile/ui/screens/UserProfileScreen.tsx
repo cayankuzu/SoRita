@@ -32,7 +32,7 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import {
   buildProfileTabOptions,
   resolveProfileTabCount,
@@ -398,7 +398,7 @@ export function UserProfileScreen() {
           icon={
             <MapPin
               color={errorMessage ? colors.danger : colors.textSoft}
-              size={28}
+              size={iconSize.xl}
             />
           }
           title={
@@ -454,7 +454,7 @@ export function UserProfileScreen() {
     if (shouldShowErrorState) {
       return (
         <EmptyState
-          icon={<MapPin color={colors.danger} size={28} />}
+          icon={<MapPin color={colors.danger} size={iconSize.xl} />}
           title={tr.profile.error.contentUnavailable}
           description={errorMessage || tr.profile.error.loadingUnavailable}
           actionLabel={tr.common.retry}
@@ -467,7 +467,7 @@ export function UserProfileScreen() {
     if (tab === 'lists') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={28} />}
+          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
           title={tr.profile.empty.publicNoList}
           description={tr.profile.empty.publicNoListDescription}
         />
@@ -477,7 +477,7 @@ export function UserProfileScreen() {
     if (tab === 'places') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={28} />}
+          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
           title={tr.profile.empty.publicNoPlace}
           description={tr.profile.empty.publicNoPlaceDescription}
         />
@@ -486,7 +486,7 @@ export function UserProfileScreen() {
 
     return (
       <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={28} />}
+        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
         title={tr.profile.empty.publicNoPhoto}
         description={tr.profile.empty.publicNoPhotoDescription}
       />
@@ -629,9 +629,9 @@ export function UserProfileScreen() {
             <EmptyState
               icon={
                 isBlockedByCurrent ? (
-                  <Ban color={colors.textSoft} size={28} />
+                  <Ban color={colors.textSoft} size={iconSize.xl} />
                 ) : (
-                  <UserPlus color={colors.textSoft} size={28} />
+                  <UserPlus color={colors.textSoft} size={iconSize.xl} />
                 )
               }
               title={
@@ -762,13 +762,13 @@ export function UserProfileScreen() {
 
 const styles = StyleSheet.create({
   headerContent: {
-    paddingTop: 10,
+    paddingTop: spacing.md,
   },
   privateStateContent: {
-    paddingTop: 10,
+    paddingTop: spacing.md,
   },
   noticeWrap: {
-    paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
 });

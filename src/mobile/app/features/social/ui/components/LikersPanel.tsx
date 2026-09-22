@@ -19,7 +19,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   touch,
   typography,
@@ -109,7 +111,7 @@ export function LikersPanel({
         <View>
           <View style={styles.panelHeader}>
             <View style={styles.panelTitleRow}>
-              <Users color={colors.danger} size={14} />
+              <Users color={colors.danger} size={iconSize.sm} />
               <AppText accessibilityRole="header" style={styles.panelTitle}>
                 {tr.cards.likedBy}
                 {likeCount > 0 ? ` (${likeCount})` : ''}
@@ -120,13 +122,13 @@ export function LikersPanel({
               onPress={onClose}
               variant="ghost"
             >
-              <X color={colors.textSoft} size={14} />
+              <X color={colors.textSoft} size={iconSize.sm} />
             </IconButton>
           </View>
 
           {likers.length > 0 ? (
             <View style={styles.searchWrap}>
-              <Search color={colors.textSoft} size={13} />
+              <Search color={colors.textSoft} size={iconSize.xs} />
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -145,7 +147,7 @@ export function LikersPanel({
                   size="sm"
                   variant="ghost"
                 >
-                  <X color={colors.textSoft} size={14} />
+                  <X color={colors.textSoft} size={iconSize.sm} />
                 </IconButton>
               ) : null}
             </View>
@@ -185,8 +187,8 @@ const styles = StyleSheet.create({
   panelContent: {
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   panelContentEmpty: {
     flexGrow: 1,
@@ -195,12 +197,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   panelTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   panelTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   searchWrap: {
@@ -209,20 +211,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
     ...typography.compactBodyText,
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
   },
   searchResultCount: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     color: colors.textSoft,
@@ -235,8 +237,8 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_SIZE,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   likerBody: {
     flex: 1,

@@ -11,13 +11,13 @@ import {
 
 export const settingsScreenStyles = StyleSheet.create({
   sectionStack: {
-    gap: 18,
+    gap: spacing.xl,
   },
   form: {
-    gap: 12,
+    gap: spacing.md,
   },
   sectionTitle: {
-    marginTop: 10,
+    marginTop: spacing.md,
     ...typography.labelText,
     color: colors.textSoft,
   },
@@ -25,17 +25,17 @@ export const settingsScreenStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   stepCounter: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   stepCopy: {
-    marginBottom: 14,
-    gap: 4,
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
   stepTitle: textStyle('title', colors.text),
   stepDescription: textStyle('bodyText', colors.textMuted),
   helperCard: {
-    gap: 4,
+    gap: spacing.xs,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.card,
@@ -50,21 +50,21 @@ export const settingsScreenStyles = StyleSheet.create({
   loadingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.card,
   },
   loadingCardBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   loadingCardTitle: textStyle('labelText', colors.text),
   loadingCardText: textStyle('captionText', colors.textMuted),
   stepActions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
+    gap: spacing.md,
+    marginTop: spacing.xl,
   },
   stepButton: {
     flex: 1,
@@ -82,7 +82,7 @@ export const settingsScreenStyles = StyleSheet.create({
     paddingRight: 56,
   },
   emailInfoCard: {
-    gap: 6,
+    gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -92,13 +92,13 @@ export const settingsScreenStyles = StyleSheet.create({
   emailInfoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   emailInfoLabel: textStyle('labelText', colors.textSoft),
   emailInfoValue: textStyle('bodyText', colors.text, fontWeight.strong),
   emailInfoText: textStyle('captionText', colors.textMuted),
   successCard: {
-    gap: 4,
+    gap: spacing.xs,
     borderRadius: radius.lg,
     backgroundColor: colors.successBg,
     padding: spacing.card,
@@ -106,7 +106,7 @@ export const settingsScreenStyles = StyleSheet.create({
   successTitle: textStyle('labelText', colors.secondary),
   successText: textStyle('captionText', colors.secondary),
   blockedList: {
-    paddingBottom: 16,
+    paddingBottom: spacing.lg,
   },
   blockedListEmpty: {
     flexGrow: 1,
@@ -117,7 +117,7 @@ export const settingsScreenStyles = StyleSheet.create({
   blockedUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -129,13 +129,13 @@ export const settingsScreenStyles = StyleSheet.create({
   },
   blockedUserName: textStyle('labelText', colors.text),
   blockedUserUsername: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textSoft,
   },
   blockedUserBio: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.captionText,
     color: colors.textMuted,
   },

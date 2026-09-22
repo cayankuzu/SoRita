@@ -22,8 +22,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -132,7 +134,7 @@ export function ReportActionSheet({
       <View style={styles.header}>
         <View style={styles.titleWrap}>
           <View style={styles.iconWrap}>
-            <Flag color={colors.warning} size={14} />
+            <Flag color={colors.warning} size={iconSize.sm} />
           </View>
           <View style={styles.headerTextWrap}>
             <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
@@ -145,7 +147,7 @@ export function ReportActionSheet({
           onPress={handleClose}
           variant="surface"
         >
-          <X color={colors.textMuted} size={14} />
+          <X color={colors.textMuted} size={iconSize.sm} />
         </IconButton>
       </View>
 
@@ -216,19 +218,19 @@ export function ReportActionSheet({
 
 const styles = StyleSheet.create({
   sheetContent: {
-    paddingTop: 8,
+    paddingTop: spacing.sm,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   titleWrap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.md,
   },
   iconWrap: {
     width: 30,
@@ -240,15 +242,15 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('section', colors.text),
   description: textStyle('bodyText', colors.textMuted),
   options: {
-    gap: 8,
+    gap: spacing.sm,
   },
   detailsWrap: {
-    gap: 6,
+    gap: spacing.sm,
   },
   detailsLabel: textStyle('labelText', colors.text),
   detailsInput: {
@@ -257,8 +259,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     ...typography.bodyText,
     color: colors.text,
   },
@@ -268,8 +270,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   optionActive: {
     borderColor: colors.warning,
@@ -285,15 +287,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.dangerBorder,
     backgroundColor: colors.dangerBg,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     ...typography.captionText,
     fontWeight: fontWeight.medium,
     color: colors.danger,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   actionButton: {

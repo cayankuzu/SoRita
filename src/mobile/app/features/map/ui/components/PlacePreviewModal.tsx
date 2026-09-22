@@ -18,7 +18,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   colors,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   touch,
 } from '@/mobile/app/shared/theme/tokens';
@@ -132,7 +134,7 @@ export function PlacePreviewModal({
                   onPress={onCreatePlaceCard}
                   style={styles.headerButton}
                 >
-                  <Plus color={colors.primary} size={18} />
+                  <Plus color={colors.primary} size={iconSize.md} />
                 </Pressable>
               ) : null}
               {onMinimize ? (
@@ -142,7 +144,7 @@ export function PlacePreviewModal({
                   onPress={onMinimize}
                   style={styles.headerButton}
                 >
-                  <Minus color={colors.textMuted} size={18} />
+                  <Minus color={colors.textMuted} size={iconSize.md} />
                 </Pressable>
               ) : null}
               <Pressable
@@ -151,7 +153,7 @@ export function PlacePreviewModal({
                 onPress={onClose}
                 style={styles.headerButton}
               >
-                <X color={colors.textMuted} size={18} />
+                <X color={colors.textMuted} size={iconSize.md} />
               </Pressable>
             </View>
           </View>
@@ -212,8 +214,8 @@ const styles = StyleSheet.create({
   handleWrap: {
     alignItems: 'center',
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
-    paddingTop: 8,
-    paddingBottom: 2,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxs,
   },
   handle: {
     width: 44,
@@ -225,20 +227,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
   headerCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
-  headerTitle: textStyle('compactSectionText', colors.text),
+  headerTitle: textStyle('compactTitleText', colors.text),
   headerSubtitle: textStyle('compactBodyText', colors.textSoft),
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   headerButton: {
     width: Platform.OS === 'ios' ? touch.ios : touch.android,
@@ -251,9 +253,9 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   content: {
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   cardWrap: {
     overflow: 'hidden',

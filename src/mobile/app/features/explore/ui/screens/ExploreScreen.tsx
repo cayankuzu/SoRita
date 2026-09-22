@@ -37,6 +37,7 @@ import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { spacing } from '@/mobile/app/shared/theme/tokens';
 
 const EXPLORE_PAGER_TABS = ['lists', 'places', 'photos', 'people'] as const;
 const EXPLORE_TAB_LABELS: Record<ExploreTabType, string> = {
@@ -269,7 +270,7 @@ export function ExploreScreen() {
             onTabChange={handleTabChange}
           />
           <SkeletonGroup style={loadMoreStyles.skeletonGrid}>
-            <View style={{ paddingHorizontal: screenPadding, gap: 10 }}>
+            <View style={{ paddingHorizontal: screenPadding, gap: spacing.md }}>
               <ListGridTileSkeleton />
               <ListGridTileSkeleton />
               <ListGridTileSkeleton />
@@ -381,12 +382,12 @@ export function ExploreScreen() {
 
 const loadMoreStyles = StyleSheet.create({
   noticeWrap: {
-    paddingBottom: 10,
+    paddingBottom: spacing.md,
   },
   content: {
-    paddingBottom: 16,
+    paddingBottom: spacing.lg,
   },
   skeletonGrid: {
-    gap: 10,
+    gap: spacing.md,
   },
 });

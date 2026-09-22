@@ -14,7 +14,7 @@ import {
 } from '@/mobile/app/shared/components/maps/mapMarkerClustering';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 
 const DEFAULT_LATITUDE = 39.9334;
@@ -534,8 +534,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   markerShell: {
     width: 22,
@@ -569,12 +569,12 @@ const styles = StyleSheet.create({
   clusterMarker: {
     alignItems: 'center',
     borderColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     borderWidth: 3,
     height: 44,
     justifyContent: 'center',
     minWidth: 38,
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   clusterMarkerText: {
     color: colors.surface,

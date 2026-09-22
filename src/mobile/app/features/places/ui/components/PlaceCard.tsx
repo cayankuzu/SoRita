@@ -29,6 +29,7 @@ import { buildListContentUrl } from '@/mobile/app/shared/utils/contentLinks';
 import { formatPrice } from '@/mobile/app/shared/utils/format';
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
+import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceCardProps = {
   place: Place;
@@ -473,7 +474,7 @@ function PlaceCardComponent({
     {
       key: 'copy-address',
       label: tr.cards.copyLink,
-      renderIcon: (color: string) => <Copy color={color} size={14} />,
+      renderIcon: (color: string) => <Copy color={color} size={iconSize.sm} />,
       onPress: () => {
         void handleCopyAddressPress();
       },
@@ -481,7 +482,7 @@ function PlaceCardComponent({
     {
       key: 'share-more',
       label: tr.cards.shareMore,
-      renderIcon: (color: string) => <Share2 color={color} size={14} />,
+      renderIcon: (color: string) => <Share2 color={color} size={iconSize.sm} />,
       onPress: () => {
         void handleShareLinkPress();
       },

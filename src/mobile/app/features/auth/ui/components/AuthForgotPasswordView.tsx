@@ -12,7 +12,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { useAuthLayoutMode } from '@/mobile/app/features/auth/ui/components/useAuthLayoutMode';
 
 type AuthForgotPasswordViewProps = {
@@ -39,7 +39,7 @@ export function AuthForgotPasswordView({
       </View>
 
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
-        <ArrowLeft color={colors.textMuted} size={18} />
+        <ArrowLeft color={colors.textMuted} size={iconSize.md} />
       </IconButton>
 
       <View style={[styles.headerBlock, compact ? styles.headerBlockCompact : null]}>
@@ -59,7 +59,7 @@ export function AuthForgotPasswordView({
           textContentType="emailAddress"
           returnKeyType="done"
           onSubmitEditing={() => onSubmit()}
-          icon={<Mail color={colors.textMuted} size={14} />}
+          icon={<Mail color={colors.textMuted} size={iconSize.sm} />}
         />
         {error ? (
           <AppText

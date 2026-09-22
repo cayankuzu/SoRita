@@ -39,7 +39,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   getAndroidModalWindowProps,
@@ -480,7 +480,7 @@ export function CommentPanel({
                   onPress={handleClose}
                   variant="surface"
                 >
-                  <X color={colors.textSoft} size={16} />
+                  <X color={colors.textSoft} size={iconSize.sm} />
                 </IconButton>
               </View>
 
@@ -513,7 +513,7 @@ export function CommentPanel({
                   contentContainerStyle={[
                     styles.commentScrollContent,
                     visibleComments.length === 0 ? styles.commentScrollContentEmpty : null,
-                    { paddingBottom: 14 },
+                    { paddingBottom: spacing.lg },
                   ]}
                   initialNumToRender={8}
                   keyboardShouldPersistTaps="handled"

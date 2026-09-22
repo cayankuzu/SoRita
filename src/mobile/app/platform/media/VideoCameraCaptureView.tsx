@@ -21,7 +21,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -117,7 +119,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
         ) : (
           <View style={styles.permissionState}>
             <View style={styles.permissionIconWrap}>
-              <Camera color={colors.primary} size={20} />
+              <Camera color={colors.primary} size={iconSize.md} />
             </View>
             <AppText style={styles.permissionTitle}>{tr.mediaPicker.videoRecorderPermissionTitle}</AppText>
             <AppText style={styles.permissionDescription}>
@@ -146,7 +148,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
             style={styles.topIconButton}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={16} />
+            <X color={colors.onPrimary} size={iconSize.sm} />
           </IconButton>
 
           <View style={styles.timerStack}>
@@ -177,7 +179,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
             style={styles.topIconButton}
             variant="inverse"
           >
-            <RefreshCcw color={colors.onPrimary} size={16} />
+            <RefreshCcw color={colors.onPrimary} size={iconSize.sm} />
           </IconButton>
         </View>
 
@@ -240,9 +242,9 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
           >
             <View style={[styles.recordButtonInner, isRecording ? styles.recordButtonInnerActive : null]}>
               {isRecording ? (
-                <Square color={colors.onPrimary} fill={colors.onPrimary} size={16} />
+                <Square color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.sm} />
               ) : (
-                <Video color={colors.onPrimary} size={20} />
+                <Video color={colors.onPrimary} size={iconSize.md} />
               )}
             </View>
           </Pressable>
@@ -266,11 +268,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 14,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   topIconButton: {
-    borderRadius: 18,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
@@ -278,21 +280,21 @@ const styles = StyleSheet.create({
   timerStack: {
     flex: 1,
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   timerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   liveDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.danger,
   },
   timerText: textStyle('bodyText', colors.onPrimary, fontWeight.strong),
@@ -307,7 +309,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: spacing.md,
   },
   loadingText: {
     ...typography.metadataText,
@@ -316,22 +318,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cameraErrorOverlay: {
-    gap: 14,
-    paddingHorizontal: 24,
+    gap: spacing.lg,
+    paddingHorizontal: spacing['2xl'],
     backgroundColor: colors.darkOverlay,
   },
   permissionState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 22,
+    gap: spacing.md,
+    paddingHorizontal: spacing['2xl'],
     backgroundColor: colors.background,
   },
   permissionIconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radius['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
@@ -353,8 +355,8 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 2,
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   bottomHint: {
     ...typography.metadataText,
@@ -374,7 +376,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkOverlay,
     borderWidth: 3,
     borderColor: colors.cameraBorder,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   recordButtonOuterPressed: {
     transform: [{ scale: 0.96 }],
@@ -382,7 +384,7 @@ const styles = StyleSheet.create({
   recordButtonInner: {
     width: 50,
     height: 50,
-    borderRadius: 24,
+    borderRadius: radius['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.danger,

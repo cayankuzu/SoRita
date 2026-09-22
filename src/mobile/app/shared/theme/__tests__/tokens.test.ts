@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   colors,
+  iconSize,
   letterSpacing,
+  radius,
   semanticColors,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -133,6 +136,26 @@ describe('theme contrast tokens', () => {
     expect(tight).toEqual([]);
   });
 
+  it('keeps the type scale to seven sizes with no in-between steps', () => {
+    const sizes = new Set(
+      Object.values(typography).flatMap((value) =>
+        typeof value === 'object' && value !== null ? [value.fontSize] : [],
+      ),
+    );
+
+    expect([...sizes].sort((a, b) => a - b)).toEqual([12, 14, 16, 18, 20, 24, 28]);
+  });
+
+  it('puts spacing, radius and icon sizes on a 4pt grid', () => {
+    const offGrid = [
+      ...Object.entries(spacing).filter(([name]) => name !== 'xxs'),
+      ...Object.entries(radius).filter(([name]) => name !== 'pill'),
+      ...Object.entries(iconSize),
+    ].filter(([, value]) => value % 4 !== 0);
+
+    expect(offGrid).toEqual([]);
+  });
+
   it('keeps compatibility font-size aliases tied to semantic styles', () => {
     expect(typography.screenTitle).toBe(typography.title.fontSize);
     expect(typography.sectionTitle).toBe(typography.section.fontSize);
@@ -146,20 +169,15 @@ describe('theme contrast tokens', () => {
       lineHeight: 30,
       fontWeight: '700',
     });
-    expect(typography.compactSectionText).toMatchObject({
+    expect(typography.compactTitleText).toMatchObject({
       fontSize: 16,
-      lineHeight: 21,
+      lineHeight: 22,
       fontWeight: '700',
     });
     expect(typography.compactBodyText).toMatchObject({
       fontSize: 12,
       lineHeight: 18,
       fontWeight: '400',
-    });
-    expect(typography.compactTitleText).toMatchObject({
-      fontSize: 15,
-      lineHeight: 20,
-      fontWeight: '700',
     });
     expect(typography.inputText).toMatchObject({
       fontSize: 16,

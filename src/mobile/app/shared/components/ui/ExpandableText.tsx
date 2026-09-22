@@ -17,7 +17,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing, touch } from '@/mobile/app/shared/theme/tokens';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
 
@@ -232,14 +232,14 @@ export function ExpandableText({
                 }}
                 style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
               >
-                <ChevronRight color={iconColor} size={14} />
+                <ChevronRight color={iconColor} size={iconSize.sm} />
               </Pressable>
             ) : (
               <View
                 accessible={false}
                 style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
               >
-                <ChevronRight color={iconColor} size={14} />
+                <ChevronRight color={iconColor} size={iconSize.sm} />
               </View>
             )
           ) : null}
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   textWithIndicator: {
-    paddingRight: 14,
+    paddingRight: spacing.lg,
   },
   hiddenMeasure: {
     position: 'absolute',

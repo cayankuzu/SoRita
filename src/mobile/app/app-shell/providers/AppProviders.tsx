@@ -31,7 +31,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import { StartupShellReadyContext } from '@/mobile/app/app-shell/startup/StartupShellReadyContext';
 import { shouldShowStartupSplash } from '@/mobile/app/app-shell/startup/startupSplashState';
 
@@ -222,12 +222,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing['2xl'],
   },
   startupFooter: {
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 24,
+    gap: spacing.xs,
+    paddingHorizontal: spacing['2xl'],
   },
   startupPoweredRow: {
     flexDirection: 'row',

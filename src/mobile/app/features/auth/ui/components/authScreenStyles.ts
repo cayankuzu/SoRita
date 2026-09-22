@@ -15,36 +15,36 @@ export const authScreenStyles = StyleSheet.create({
   },
   landingScreenRegular: {
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: spacing.xl,
   },
   landingScreenCompact: {
     justifyContent: 'flex-start',
-    paddingTop: 8,
+    paddingTop: spacing.sm,
   },
   landingContent: {
     width: '100%',
-    gap: 10,
+    gap: spacing.md,
   },
   logoWrap: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   landingSubtitle: {
     ...typography.bodyText,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 18,
+    marginBottom: spacing.xl,
   },
   authScreen: {
     flexGrow: 1,
-    paddingTop: 6,
+    paddingTop: spacing.sm,
   },
   authBrandRow: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   authBrandRowCompact: {
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   backButton: {
     width: 44,
@@ -54,44 +54,44 @@ export const authScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerBlock: {
-    marginTop: 4,
-    marginBottom: 14,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
   headerBlockCompact: {
     marginTop: 0,
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   previewBackRow: {
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   stepProgress: {
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   stepCounter: textStyle('labelText', colors.textMuted),
   stepCopy: {
-    marginBottom: 14,
-    gap: 4,
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
   stepTitle: textStyle('title', colors.text),
   stepDescription: textStyle('bodyText', colors.textMuted),
   screenTitle: textStyle('headlineText', colors.text),
   screenSubtitle: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.bodyText,
     color: colors.textMuted,
   },
   formBlock: {
-    gap: 12,
+    gap: spacing.md,
   },
   confirmationCard: {
-    gap: 8,
+    gap: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.primaryBg,
     padding: spacing.card,
@@ -109,7 +109,7 @@ export const authScreenStyles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   forgotPasswordRow: {
     alignItems: 'flex-end',
@@ -118,14 +118,14 @@ export const authScreenStyles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   footerLink: textStyle('bodyText', colors.primary, fontWeight.strong),
   registerTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   spacer: {
     width: 44,
@@ -137,7 +137,7 @@ export const authScreenStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   atIcon: textStyle('bodyText', colors.textMuted, fontWeight.medium),
   photoSection: {
@@ -145,7 +145,7 @@ export const authScreenStyles = StyleSheet.create({
     width: '100%',
   },
   helperCard: {
-    gap: 4,
+    gap: spacing.xs,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.card,
@@ -154,7 +154,7 @@ export const authScreenStyles = StyleSheet.create({
   helperCardText: textStyle('captionText', colors.textMuted, fontWeight.regular),
   selectionMeta: textStyle('captionText', colors.textMuted, fontWeight.medium),
   formError: {
-    marginTop: 12,
+    marginTop: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.dangerBg,
     color: colors.danger,
@@ -169,19 +169,19 @@ export const authScreenStyles = StyleSheet.create({
     color: colors.textMuted,
   },
   bottomActions: {
-    gap: 10,
-    marginTop: 18,
-    paddingBottom: 10,
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   bottomActionsCompact: {
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   stepActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 18,
-    paddingBottom: 10,
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   stepButton: {
     flex: 1,

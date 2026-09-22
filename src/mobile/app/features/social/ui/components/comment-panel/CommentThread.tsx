@@ -15,7 +15,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   formatRelativeDateTime,
   hasMeaningfulUpdate,
@@ -152,7 +152,7 @@ export function CommentThread({
                 <View style={[styles.commentLikeButton, comment.liked ? styles.commentLikeButtonActive : null]}>
                   <Heart
                     color={comment.liked ? colors.danger : colors.textSoft}
-                    size={15}
+                    size={iconSize.sm}
                     fill={comment.liked ? colors.danger : 'transparent'}
                   />
                 </View>
@@ -194,7 +194,7 @@ export function CommentThread({
               style={styles.commentInlineAction}
               hitSlop={hitSlopFor(30)}
             >
-              <Reply color={colors.textSoft} size={12} />
+              <Reply color={colors.textSoft} size={iconSize.xs} />
               <AppText style={styles.commentInlineActionText}>{tr.cards.reply}</AppText>
             </InstantPressable>
 
@@ -211,7 +211,7 @@ export function CommentThread({
               >
                 <MoreHorizontal
                   color={isEditing ? colors.primary : colors.textSoft}
-                  size={14}
+                  size={iconSize.sm}
                 />
               </InstantPressable>
             ) : null}
@@ -228,9 +228,9 @@ export function CommentThread({
               hitSlop={hitSlopFor(30)}
             >
               {repliesExpanded ? (
-                <ChevronUp color={colors.textSoft} size={12} />
+                <ChevronUp color={colors.textSoft} size={iconSize.xs} />
               ) : (
-                <ChevronDown color={colors.textSoft} size={12} />
+                <ChevronDown color={colors.textSoft} size={iconSize.xs} />
               )}
               <AppText style={styles.replyToggleText}>
                 {repliesExpanded ? tr.cards.hideReplies : tr.cards.viewReplies(replyCount)}
@@ -245,7 +245,7 @@ export function CommentThread({
                 onPress={() => onLoadMoreReplies(comment.id)}
                 hitSlop={hitSlopFor(30)}
               >
-                <ChevronDown color={colors.textSoft} size={12} />
+                <ChevronDown color={colors.textSoft} size={iconSize.xs} />
                 <AppText style={styles.replyToggleText}>
                   {tr.cards.viewReplies(hiddenReplyCount)}
                 </AppText>

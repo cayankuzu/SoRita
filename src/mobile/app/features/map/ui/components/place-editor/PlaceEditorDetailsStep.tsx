@@ -16,6 +16,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -138,10 +139,10 @@ export function PlaceEditorDetailsStep({
 
 const styles = StyleSheet.create({
   stepContent: {
-    gap: 12,
+    gap: spacing.md,
   },
   section: {
-    gap: 8,
+    gap: spacing.sm,
   },
   sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
@@ -152,14 +153,14 @@ const styles = StyleSheet.create({
   selectionMeta: textStyle('metadataText', colors.primary, fontWeight.strong),
   inlineFields: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.md,
   },
   inlineField: {
     flex: 1,
   },
   segmentedRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   segmentButton: {
     flex: 1,

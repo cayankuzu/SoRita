@@ -4,17 +4,17 @@ import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mo
 
 export const exploreScreenStyles = StyleSheet.create({
   headerRail: {
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   header: {
-    paddingBottom: 10,
-    gap: 4,
+    paddingBottom: spacing.md,
+    gap: spacing.xs,
   },
   title: textStyle('title', colors.text),
   subtitle: textStyle('bodyText', colors.textMuted),
   filtersSection: {
-    gap: 8,
+    gap: spacing.sm,
   },
   searchWrap: {
     minHeight: 44,
@@ -22,16 +22,16 @@ export const exploreScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
     ...typography.bodyText,
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   searchClearButton: {
     width: 28,
@@ -46,7 +46,7 @@ export const exploreScreenStyles = StyleSheet.create({
   },
   tabRow: {
     gap: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     alignItems: 'center',
   },
   tabButton: {
@@ -55,9 +55,9 @@ export const exploreScreenStyles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     minHeight: 44,
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -75,16 +75,16 @@ export const exploreScreenStyles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
     justifyContent: 'space-between',
     paddingHorizontal: 0,
   },
   feedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 8,
-    paddingBottom: 10,
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -96,8 +96,8 @@ export const exploreScreenStyles = StyleSheet.create({
   },
   feedTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   feedContent: {
-    paddingVertical: 10,
-    gap: 12,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
   feedList: {
     flex: 1,

@@ -29,7 +29,7 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
@@ -292,7 +292,7 @@ export function ProfileScreen() {
       return (
         <Screen>
           <EmptyState
-            icon={<MapPin color={colors.danger} size={28} />}
+            icon={<MapPin color={colors.danger} size={iconSize.xl} />}
             title={tr.profile.error.ownUnavailable}
             description={errorMessage}
             actionLabel={tr.common.retry}
@@ -360,7 +360,7 @@ export function ProfileScreen() {
     if (shouldShowErrorState) {
       return (
         <EmptyState
-          icon={<MapPin color={colors.danger} size={28} />}
+          icon={<MapPin color={colors.danger} size={iconSize.xl} />}
           title={tr.profile.error.contentUnavailable}
           description={errorMessage || tr.profile.error.loadingUnavailable}
           actionLabel={tr.common.retry}
@@ -373,7 +373,7 @@ export function ProfileScreen() {
     if (tab === 'lists') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={28} />}
+          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
           title={tr.profile.empty.myNoList}
           description={tr.profile.empty.myNoListDescription}
         />
@@ -383,7 +383,7 @@ export function ProfileScreen() {
     if (tab === 'places') {
       return (
         <EmptyState
-          icon={<MapPin color={colors.textSoft} size={28} />}
+          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
           title={tr.profile.empty.myNoPlace}
           description={tr.profile.empty.myNoPlaceDescription}
         />
@@ -392,7 +392,7 @@ export function ProfileScreen() {
 
     return (
       <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={28} />}
+        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
         title={tr.profile.empty.myNoPhoto}
         description={tr.profile.empty.myNoPhotoDescription}
       />
@@ -579,9 +579,9 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   headerContent: {
-    paddingTop: 10,
+    paddingTop: spacing.md,
   },
   noticeWrap: {
-    paddingBottom: 10,
+    paddingBottom: spacing.md,
   },
 });

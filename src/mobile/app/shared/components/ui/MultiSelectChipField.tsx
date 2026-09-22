@@ -11,6 +11,7 @@ import {
   minTouchSize,
   opacity,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: spacing.sm,
   },
   chip: {
     minHeight: minTouchSize,
@@ -74,8 +75,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   chipSelected: {
     borderColor: colors.primary,

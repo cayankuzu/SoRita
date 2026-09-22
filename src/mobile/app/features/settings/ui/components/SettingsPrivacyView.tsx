@@ -8,7 +8,7 @@ import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/u
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsPrivacyViewProps = {
   analyticsConsentGranted: boolean;
@@ -40,7 +40,7 @@ export function SettingsPrivacyView({
         <PrivacyOption
           active={isPublicAccount}
           disabled={isSavingPrivacy}
-          icon={<Globe color={isPublicAccount ? colors.primary : colors.textMuted} size={18} />}
+          icon={<Globe color={isPublicAccount ? colors.primary : colors.textMuted} size={iconSize.md} />}
           title={tr.settings.privacy.public}
           description={tr.settings.privacy.publicDescription}
           onPress={() => {
@@ -53,7 +53,7 @@ export function SettingsPrivacyView({
         <PrivacyOption
           active={analyticsConsentGranted}
           disabled={isSavingAnalyticsConsent}
-          icon={<BarChart3 color={analyticsConsentGranted ? colors.primary : colors.textMuted} size={18} />}
+          icon={<BarChart3 color={analyticsConsentGranted ? colors.primary : colors.textMuted} size={iconSize.md} />}
           title={tr.settings.privacy.analyticsEnabled}
           description={tr.settings.privacy.analyticsEnabledDescription}
           onPress={() => {
@@ -63,7 +63,7 @@ export function SettingsPrivacyView({
         <PrivacyOption
           active={!analyticsConsentGranted}
           disabled={isSavingAnalyticsConsent}
-          icon={<BarChart3 color={!analyticsConsentGranted ? colors.primary : colors.textMuted} size={18} />}
+          icon={<BarChart3 color={!analyticsConsentGranted ? colors.primary : colors.textMuted} size={iconSize.md} />}
           title={tr.settings.privacy.analyticsDisabled}
           description={tr.settings.privacy.analyticsDisabledDescription}
           onPress={() => {
@@ -73,7 +73,7 @@ export function SettingsPrivacyView({
         <PrivacyOption
           active={!isPublicAccount}
           disabled={isSavingPrivacy}
-          icon={<LockKeyhole color={!isPublicAccount ? colors.primary : colors.textMuted} size={18} />}
+          icon={<LockKeyhole color={!isPublicAccount ? colors.primary : colors.textMuted} size={iconSize.md} />}
           title={tr.settings.privacy.private}
           description={tr.settings.privacy.privateDescription}
           onPress={() => {

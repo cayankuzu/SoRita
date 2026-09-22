@@ -13,6 +13,7 @@ import type {
   FeedActionLocation,
 } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 export type FeedActionBarProps = {
   comments?: FeedActionComment[];
@@ -115,7 +116,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
     secondaryActions.push({
       key: 'focus-map',
       label: props.focusActionActive ? tr.cards.hideMiniMap : tr.cards.focusMiniMap,
-      renderIcon: (color) => <Crosshair color={color} size={16} />,
+      renderIcon: (color) => <Crosshair color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         if (props.focusActionActive) {
@@ -131,7 +132,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
     secondaryActions.push({
       key: 'add-to-list',
       label: tr.cards.addToListAction,
-      renderIcon: (color) => <ListPlus color={color} size={16} />,
+      renderIcon: (color) => <ListPlus color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         props.onAddToListPress?.();
@@ -143,7 +144,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
     secondaryActions.push({
       key: 'address',
       label: tr.cards.showAddressAction,
-      renderIcon: (color) => <MapPin color={color} size={16} />,
+      renderIcon: (color) => <MapPin color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         state.setShowAddress((visible) => !visible);
@@ -155,7 +156,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
     secondaryActions.push({
       key: 'content-actions',
       label: tr.common.contentActionsTitle,
-      renderIcon: (color) => <Ellipsis color={color} size={16} />,
+      renderIcon: (color) => <Ellipsis color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         props.onOverflowPress?.();
@@ -168,7 +169,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
       key: 'report',
       label: tr.cards.reportAction,
       tone: 'danger',
-      renderIcon: (color) => <Flag color={color} size={16} />,
+      renderIcon: (color) => <Flag color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         state.setShowReportSheet(true);

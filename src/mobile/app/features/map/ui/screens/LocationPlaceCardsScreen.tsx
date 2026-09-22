@@ -25,7 +25,7 @@ import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/Sta
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { formatLocationPlaceCardsCount } from '@/mobile/app/shared/utils/format';
 import { getMarkerColorByVisibility } from '@/mobile/app/shared/utils/markerColors';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -127,7 +127,7 @@ export function LocationPlaceCardsScreen() {
           onEndReachedThreshold={0.4}
           ListEmptyComponent={
             <EmptyState
-              icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={30} />}
+              icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={iconSize.xl} />}
               title={errorMessage ? tr.map.searchUnavailableTitle : tr.map.locationCardsEmptyTitle}
               description={errorMessage || tr.map.locationCardsEmptyDescription}
               actionLabel={errorMessage ? tr.common.retry : undefined}
@@ -225,16 +225,16 @@ const styles = StyleSheet.create({
   loadingScreen: {
     flex: 1,
     backgroundColor: colors.background,
-    gap: 12,
-    paddingHorizontal: 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingBottom: 18,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
   contentEmpty: {
     flexGrow: 1,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   listFooter: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: spacing.lg,
   },
   cardShell: {
     overflow: 'hidden',
@@ -260,8 +260,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   highlightPillText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

@@ -13,7 +13,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ScreenState =
   | { status: 'loading' }
@@ -160,24 +160,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: spacing.md,
   },
   errorCard: {
     width: '100%',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    padding: 14,
+    padding: spacing.lg,
   },
   actions: {
-    gap: 10,
+    gap: spacing.md,
   },
   actionButton: {
     width: '100%',
   },
   title: {
     color: colors.text,
-    ...typography.dialogTitleText,
+    ...typography.section,
     textAlign: 'center',
   },
   description: {

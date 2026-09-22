@@ -16,9 +16,11 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   layout,
   minTouchSize,
   radius,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
@@ -117,7 +119,7 @@ export function AppHeader() {
           onPress={openNotifications}
           style={styles.notificationButton}
         >
-          <Bell color={colors.textMuted} size={20} />
+          <Bell color={colors.textMuted} size={iconSize.md} />
           {notificationCount > 0 ? (
             <View
               accessibilityElementsHidden
@@ -159,7 +161,7 @@ const styles = StyleSheet.create({
     // The count sets the badge's size in both directions: a hard height turned
     // a scaled-up numeral into a clipped one.
     minHeight: 16,
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
     borderRadius: radius.pill,
     backgroundColor: colors.danger,
     alignItems: 'center',

@@ -10,7 +10,7 @@ import { Image as ImageIcon, Play } from 'lucide-react-native';
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type MediaThumbnailViewProps = {
   accessibilityLabel?: string;
@@ -48,9 +48,9 @@ function getPreviewUris(item: MediaThumbnailViewProps['item']) {
 
 function getFallbackIcon(type: PlaceMedia['type']) {
   return type === 'video' ? (
-    <Play color={colors.textSoft} fill={colors.textSoft} size={16} />
+    <Play color={colors.textSoft} fill={colors.textSoft} size={iconSize.sm} />
   ) : (
-    <ImageIcon color={colors.textSoft} size={16} />
+    <ImageIcon color={colors.textSoft} size={iconSize.sm} />
   );
 }
 
@@ -164,7 +164,7 @@ export function MediaThumbnailView(props: MediaThumbnailViewProps) {
       {props.item.type === 'video' && !shouldUseVideoSurface && showPlayOverlay ? (
         <View pointerEvents="none" style={styles.playOverlay}>
           <View style={styles.playBadge}>
-            <Play color={colors.onPrimary} fill={colors.onPrimary} size={10} />
+            <Play color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.xs} />
           </View>
         </View>
       ) : null}
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   playBadge: {
     width: 18,
     height: 18,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
@@ -207,8 +207,8 @@ const styles = StyleSheet.create({
     bottom: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   durationText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

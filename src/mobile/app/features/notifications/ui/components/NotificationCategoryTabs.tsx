@@ -9,6 +9,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -65,16 +66,16 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 10,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
   },
   tab: {
     alignSelf: 'center',
     height: minTouchSize,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

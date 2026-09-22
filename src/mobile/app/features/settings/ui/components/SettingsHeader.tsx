@@ -6,7 +6,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsHeaderProps = {
   title: string;
@@ -26,7 +26,7 @@ export function SettingsHeader({
   return (
     <View style={styles.header}>
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} style={styles.backButton}>
-        <ArrowLeft color={colors.textMuted} size={18} />
+        <ArrowLeft color={colors.textMuted} size={iconSize.md} />
       </IconButton>
       <AppText accessibilityRole="header" style={styles.headerTitle}>{title}</AppText>
       {actionLabel && onAction ? (

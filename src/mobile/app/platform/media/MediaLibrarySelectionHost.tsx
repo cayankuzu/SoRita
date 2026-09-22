@@ -43,7 +43,9 @@ import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimati
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   touch,
 } from '@/mobile/app/shared/theme/tokens';
@@ -376,7 +378,7 @@ export function MediaLibrarySelectionHost() {
               onPress={() => resolveMediaLibrarySelection(null)}
               variant="surface"
             >
-              <X color={colors.textSoft} size={16} />
+              <X color={colors.textSoft} size={iconSize.sm} />
             </IconButton>
           </View>
 
@@ -453,26 +455,26 @@ const styles = StyleSheet.create({
   },
   sheet: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   headerCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
-  title: textStyle('compactSectionText', colors.text),
+  title: textStyle('compactTitleText', colors.text),
   description: textStyle('metadataText', colors.textMuted, fontWeight.regular),
   footer: {
     flexDirection: 'row',
-    gap: 8,
-    paddingTop: 10,
+    gap: spacing.sm,
+    paddingTop: spacing.md,
   },
   footerSecondaryButton: {
     flex: 1,

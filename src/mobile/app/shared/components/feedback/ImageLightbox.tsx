@@ -27,8 +27,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -118,7 +120,7 @@ export function ImageLightbox({
             {
               key: 'download-image',
               label: tr.common.download,
-              renderIcon: (color) => <Download color={color} size={14} />,
+              renderIcon: (color) => <Download color={color} size={iconSize.sm} />,
               onPress: () => {
                 setMenuVisible(false);
                 void handleDownloadCurrent();
@@ -172,7 +174,7 @@ export function ImageLightbox({
             style={styles.topActionButton}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={18} />
+            <X color={colors.onPrimary} size={iconSize.md} />
           </IconButton>
 
           <View style={styles.topBarCopy}>
@@ -196,7 +198,7 @@ export function ImageLightbox({
               style={styles.topActionButton}
               variant="inverse"
             >
-              <MoreHorizontal color={colors.onPrimary} size={18} />
+              <MoreHorizontal color={colors.onPrimary} size={iconSize.md} />
             </IconButton>
           ) : (
             <View style={styles.topActionSpacer} />
@@ -273,8 +275,8 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   topActionButton: {
     width: minTouchSize,
@@ -296,9 +298,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.controlsOverlay,
     borderWidth: 1,
     borderColor: colors.controlsBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xxs,
   },
   topBarTitle: {
     color: colors.onPrimary,

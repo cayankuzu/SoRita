@@ -13,7 +13,7 @@ import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPrevi
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { getCoverPhoto } from '@/mobile/app/shared/utils/format';
 import {
   getMapMarkers,
@@ -47,7 +47,7 @@ export function PlaceEditorListCards({
       {listSelectionNotice ? (
         <View style={styles.listSelectionNotice}>
           <View style={styles.listSelectionNoticeIconWrap}>
-            <Info color={colors.warningText} size={12} />
+            <Info color={colors.warningText} size={iconSize.xs} />
           </View>
           <View style={styles.listSelectionNoticeBody}>
             <AppText style={styles.listSelectionNoticeTitle}>{tr.placeEditor.listHintTitle}</AppText>
@@ -126,9 +126,9 @@ export function PlaceEditorListCards({
                   </AppText>
                   <View style={styles.listPrivacyBadge}>
                     {list.isPublic ? (
-                      <Globe color={colors.primary} size={12} />
+                      <Globe color={colors.primary} size={iconSize.xs} />
                     ) : (
-                      <Lock color={colors.visibilityPrivate} size={12} />
+                      <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
                     )}
                     <AppText style={styles.listPrivacyText}>
                       {list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList}

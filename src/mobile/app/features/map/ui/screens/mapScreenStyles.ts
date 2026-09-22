@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 export const mapScreenStyles = StyleSheet.create({
   container: {
@@ -11,22 +11,22 @@ export const mapScreenStyles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    gap: 6,
+    gap: spacing.sm,
     elevation: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.md,
   },
   searchControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 48,
-    paddingLeft: 10,
-    paddingRight: 4,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -40,10 +40,10 @@ export const mapScreenStyles = StyleSheet.create({
   searchInputWrap: {
     flex: 1,
     minHeight: 44,
-    paddingRight: 6,
+    paddingRight: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
@@ -53,7 +53,7 @@ export const mapScreenStyles = StyleSheet.create({
     color: colors.text,
     backgroundColor: 'transparent',
     includeFontPadding: false,
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     textAlignVertical: 'center',
   },
   clearButton: {
@@ -65,12 +65,12 @@ export const mapScreenStyles = StyleSheet.create({
   },
   searchActionGroup: {
     flexDirection: 'row',
-    gap: 4,
+    gap: spacing.xs,
   },
   floatingSearchAction: {
     width: 44,
     height: 44,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -91,8 +91,8 @@ export const mapScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 8,
-    gap: 4,
+    padding: spacing.sm,
+    gap: spacing.xs,
     shadowColor: colors.text,
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -100,8 +100,8 @@ export const mapScreenStyles = StyleSheet.create({
     elevation: 6,
   },
   filterMenuTitle: {
-    paddingHorizontal: 4,
-    paddingBottom: 4,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     color: colors.textSoft,
@@ -109,10 +109,10 @@ export const mapScreenStyles = StyleSheet.create({
   filterOption: {
     minHeight: 44,
     borderRadius: radius.md,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   filterOptionActive: {
     backgroundColor: colors.surfaceMuted,
@@ -120,7 +120,7 @@ export const mapScreenStyles = StyleSheet.create({
   filterOptionDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
   },
   filterOptionDotNone: {
     backgroundColor: 'transparent',
@@ -153,19 +153,19 @@ export const mapScreenStyles = StyleSheet.create({
     flexGrow: 0,
   },
   resultsScrollContent: {
-    paddingBottom: 4,
+    paddingBottom: spacing.xs,
   },
   resultsHeader: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surfaceMuted,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
   resultsHeaderText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   resultRow: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
@@ -174,7 +174,7 @@ export const mapScreenStyles = StyleSheet.create({
   },
   resultTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   resultAddress: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textMuted,
@@ -184,12 +184,12 @@ export const mapScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   emptyResultsTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   emptyResultsDescription: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textMuted,
@@ -207,7 +207,7 @@ export const mapScreenStyles = StyleSheet.create({
     right: 12,
     width: 44,
     height: 44,
-    borderRadius: 20,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -224,11 +224,11 @@ export const mapScreenStyles = StyleSheet.create({
     minHeight: 46,
     borderRadius: radius.lg,
     backgroundColor: colors.text,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
     shadowColor: colors.text,
     shadowOpacity: 0.18,
     shadowRadius: 10,
@@ -237,7 +237,7 @@ export const mapScreenStyles = StyleSheet.create({
   },
   reopenEditorBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   reopenEditorTitle: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   reopenEditorSubtitle: textStyle('metadataText', colors.onDarkSubtle),

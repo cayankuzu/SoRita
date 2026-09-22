@@ -9,6 +9,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
   spacing,
@@ -91,7 +92,7 @@ export function AuthLegalConsentCard({
         onPress={onToggle}
       >
         <View style={[styles.checkbox, accepted ? styles.checkboxChecked : null]}>
-          {accepted ? <Check color={colors.onPrimary} size={12} /> : null}
+          {accepted ? <Check color={colors.onPrimary} size={iconSize.xs} /> : null}
         </View>
         <AppText style={styles.checkboxLabel}>
           {tr.auth.legalConsent.consentLabel}
@@ -103,25 +104,25 @@ export function AuthLegalConsentCard({
 
 const styles = StyleSheet.create({
   card: {
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
     padding: spacing.card,
   },
   copyBlock: {
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('compactTitleText', colors.text),
   linksText: textStyle('captionText', colors.textMuted, fontWeight.regular),
   linksRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: spacing.xs,
   },
   linkButton: {
     minHeight: minTouchSize,
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   inlineLink: {
     ...typography.labelText,
@@ -132,13 +133,13 @@ const styles = StyleSheet.create({
     minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: spacing.sm,
   },
   checkbox: {
     width: 22,
     height: 22,
     marginTop: 1,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     flex: 1,
-    ...typography.supportingText,
+    ...typography.bodyText,
     color: colors.textMuted,
   },
 });

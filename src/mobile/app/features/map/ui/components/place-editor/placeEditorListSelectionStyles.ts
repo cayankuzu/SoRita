@@ -11,10 +11,10 @@ import {
 
 export const placeEditorListSelectionStyles = StyleSheet.create({
   stepContent: {
-    gap: 12,
+    gap: spacing.md,
   },
   section: {
-    gap: 8,
+    gap: spacing.sm,
   },
   sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {
@@ -25,11 +25,11 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   listSelectionNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: spacing.sm,
     backgroundColor: colors.warningBg,
     borderRadius: radius.md,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.warning,
     shadowColor: colors.warningText,
@@ -49,12 +49,12 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   listSelectionNoticeBody: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xxs,
   },
   listSelectionNoticeTitle: textStyle('metadataText', colors.warningText, fontWeight.strong),
   listSelectionNoticeText: textStyle('metadataText', colors.warningText, fontWeight.strong),
   listWrap: {
-    gap: 8,
+    gap: spacing.sm,
   },
   listCard: {
     minHeight: 80,
@@ -64,7 +64,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     padding: spacing.card,
     overflow: 'hidden',
   },
@@ -117,7 +117,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   listBody: {
     flex: 1,
     minWidth: 0,
-    gap: 6,
+    gap: spacing.sm,
   },
   listTitleRow: {
     flexDirection: 'row',
@@ -137,7 +137,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: spacing.sm,
   },
   listMeta: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   listMetaDisabled: {
@@ -146,9 +146,9 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   listPrivacyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     minHeight: 24,
-    paddingHorizontal: 6,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -165,11 +165,11 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   createListTriggerText: textStyle('metadataText', colors.primary, fontWeight.strong),
   createListCard: {
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     padding: spacing.card,
     backgroundColor: colors.successBg,
@@ -183,7 +183,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   coverPickerRow: {
     width: '100%',
-    gap: 8,
+    gap: spacing.sm,
   },
   coverPicker: {
     width: '100%',
@@ -192,7 +192,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.secondary,
     backgroundColor: colors.surfaceMuted,
-    gap: 10,
+    gap: spacing.md,
     padding: spacing.md,
   },
   coverPickerSelected: {
@@ -202,12 +202,12 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.sm,
   },
   coverPickerHeaderCopy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     flex: 1,
     minHeight: 48,
   },
@@ -221,7 +221,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   coverPickerBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   coverPickerTitle: textStyle('metadataText', colors.secondary, fontWeight.strong),
   coverPickerHint: textStyle('metadataText', colors.textMuted),
@@ -231,7 +231,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -246,7 +246,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   },
   privacyRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.sm,
   },
   privacyButton: {
     flex: 1,
@@ -255,7 +255,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,

@@ -60,6 +60,47 @@ for (const path of await collectFiles(sourceRoot)) {
     relativePath,
     source,
   }));
+  violations.push(...findScaleViolations(source, relativePath));
+}
+
+// 807 hand-typed spacing values in 33 sizes, 280 icons in 17 sizes and 51
+// radii in 16 were moved onto the 4pt scale in one pass. These rules keep a
+// literal from coming back. What stays literal is deliberate: 0 and 1 resets,
+// negative overlap offsets, dimensions of 48 and up, circles sized by their
+// own box, and computed expressions.
+function findScaleViolations(source, relativePath) {
+  const found = [];
+  const lucideNames = new Set();
+  for (const match of source.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]lucide-react-native['"]/gu)) {
+    for (const name of match[1].split(',')) {
+      const local = name.trim().split(/\s+as\s+/u).pop();
+      if (local) lucideNames.add(local);
+    }
+  }
+
+  source.split(/\r?\n/).forEach((line, index) => {
+    const spacingMatch = line.match(
+      /\b(?:padding|margin)(?:Horizontal|Vertical|Top|Bottom|Left|Right|Start|End)?\s*:\s*(\d+)\s*[,}]|\b(?:gap|rowGap|columnGap)\s*:\s*(\d+)\s*[,}]/u,
+    );
+    const spacingValue = Number(spacingMatch?.[1] ?? spacingMatch?.[2]);
+    if (spacingValue >= 2 && spacingValue < 48) {
+      found.push(`${relativePath}:${index + 1} raw spacing ${spacingValue}; use spacing.*`);
+    }
+
+    const radiusMatch = line.match(/\bborder(?:TopLeft|TopRight|BottomLeft|BottomRight)?Radius\s*:\s*(\d+)\s*[,}]/u);
+    const radiusValue = Number(radiusMatch?.[1]);
+    if (radiusValue >= 3 && radiusValue <= 26) {
+      found.push(`${relativePath}:${index + 1} raw radius ${radiusValue}; use radius.*`);
+    }
+
+    for (const match of line.matchAll(/<([A-Z][A-Za-z0-9]*)\b[^>]*?\bsize=\{(\d+)\}/gu)) {
+      if (lucideNames.has(match[1])) {
+        found.push(`${relativePath}:${index + 1} raw icon size ${match[2]}; use iconSize.*`);
+      }
+    }
+  });
+
+  return found;
 }
 
 // The theme file is exempt from the raw-colour rule because it is where the

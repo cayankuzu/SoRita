@@ -3,7 +3,7 @@ import { Image as ImageIcon, List, MapPin } from 'lucide-react-native';
 
 import type { ProfileTabOption } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileTabCounts = {
   gallery?: number;
@@ -40,19 +40,19 @@ export function buildProfileTabOptions(counts: ProfileTabCounts): ProfileTabOpti
       key: 'lists',
       label: tr.profile.tabs.lists,
       count: counts.lists,
-      renderIcon: (active) => <List color={tabIconColor(active)} size={13} />,
+      renderIcon: (active) => <List color={tabIconColor(active)} size={iconSize.xs} />,
     },
     {
       key: 'places',
       label: tr.profile.tabs.places,
       count: counts.places,
-      renderIcon: (active) => <MapPin color={tabIconColor(active)} size={13} />,
+      renderIcon: (active) => <MapPin color={tabIconColor(active)} size={iconSize.xs} />,
     },
     {
       key: 'gallery',
       label: tr.profile.tabs.gallery,
       count: counts.gallery,
-      renderIcon: (active) => <ImageIcon color={tabIconColor(active)} size={13} />,
+      renderIcon: (active) => <ImageIcon color={tabIconColor(active)} size={iconSize.xs} />,
     },
   ];
 }

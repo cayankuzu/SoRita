@@ -109,7 +109,7 @@ export function PlaceEditorBasicsStep({
 
 const styles = StyleSheet.create({
   stepContent: {
-    gap: 12,
+    gap: spacing.md,
   },
   coordCard: {
     backgroundColor: colors.primaryBg,
@@ -118,19 +118,19 @@ const styles = StyleSheet.create({
   },
   coordTitle: textStyle('metadataText', colors.primary, fontWeight.strong),
   coordText: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   coordMeta: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     color: colors.primary,
   },
   requirementsCard: {
-    gap: 3,
+    gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   requirementsTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   requirementsText: textStyle('metadataText', colors.textMuted),
   section: {
-    gap: 8,
+    gap: spacing.sm,
   },
   sectionTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   sectionHelper: {

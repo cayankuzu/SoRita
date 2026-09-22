@@ -4,7 +4,7 @@ import { Check } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PrivacyOptionProps = {
   active: boolean;
@@ -37,7 +37,7 @@ export function PrivacyOption({ active, icon, title, description, disabled = fal
           {disabled ? (
             <ActivityIndicator color={colors.onPrimary} size="small" />
           ) : (
-            <Check color={colors.onPrimary} size={12} strokeWidth={2.5} />
+            <Check color={colors.onPrimary} size={iconSize.xs} strokeWidth={2.5} />
           )}
         </View>
       ) : null}
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     padding: spacing.card,
   },
   privacyCardActive: {
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   privacyIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
@@ -77,14 +77,14 @@ const styles = StyleSheet.create({
   },
   privacyTitle: textStyle('labelText', colors.text),
   privacyDescription: {
-    marginTop: 3,
+    marginTop: spacing.xs,
     ...typography.captionText,
     color: colors.textMuted,
   },
   activeCheck: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,

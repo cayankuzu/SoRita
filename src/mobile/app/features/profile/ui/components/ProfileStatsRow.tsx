@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileStat = {
   label: string;
@@ -39,16 +39,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 12,
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
   item: {
     flex: 1,
     alignItems: 'center',
   },
-  value: textStyle('compactSectionText', colors.text, fontWeight.medium),
+  value: textStyle('compactTitleText', colors.text, fontWeight.medium),
   label: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     ...typography.metadataText,
     color: colors.textSoft,
   },

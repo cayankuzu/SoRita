@@ -18,8 +18,10 @@ import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimati
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -96,7 +98,7 @@ export function CommentActionSheet({
         ...(comment.content.trim()
           ? [
               {
-                icon: <Copy color={colors.textSoft} size={14} />,
+                icon: <Copy color={colors.textSoft} size={iconSize.sm} />,
                 key: 'copy',
                 label: tr.cards.copy,
                 onPress: () => onCopy(comment),
@@ -106,7 +108,7 @@ export function CommentActionSheet({
         ...(comment.canEdit
           ? [
               {
-                icon: <Pencil color={isEditing ? colors.primary : colors.textSoft} size={14} />,
+                icon: <Pencil color={isEditing ? colors.primary : colors.textSoft} size={iconSize.sm} />,
                 key: 'edit',
                 label: tr.cards.editComment,
                 onPress: () => onEdit(comment),
@@ -116,7 +118,7 @@ export function CommentActionSheet({
         ...(comment.canReport
           ? [
               {
-                icon: <Flag color={colors.warning} size={14} />,
+                icon: <Flag color={colors.warning} size={iconSize.sm} />,
                 key: 'report',
                 label: tr.cards.report,
                 onPress: () => onReport(comment),
@@ -126,7 +128,7 @@ export function CommentActionSheet({
         ...(comment.canDelete
           ? [
               {
-                icon: <Trash2 color={colors.danger} size={14} />,
+                icon: <Trash2 color={colors.danger} size={iconSize.sm} />,
                 key: 'delete',
                 label: tr.common.delete,
                 onPress: () => onDelete(comment),
@@ -178,7 +180,7 @@ export function CommentActionSheet({
               onPress={onClose}
               variant="surface"
             >
-              <X color={colors.textSoft} size={14} />
+              <X color={colors.textSoft} size={iconSize.sm} />
             </IconButton>
           </View>
 
@@ -212,10 +214,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
   handle: {
     alignSelf: 'center',
@@ -228,28 +230,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: textStyle('compactTitleText', colors.text),
   subtitle: textStyle('compactBodyText', colors.textSoft),
   options: {
-    gap: 8,
+    gap: spacing.sm,
   },
   actionRow: {
     minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   actionRowDanger: {
     backgroundColor: colors.dangerBg,

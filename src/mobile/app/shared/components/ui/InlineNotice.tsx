@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type InlineNoticeProps = {
   title: string;
@@ -81,9 +81,9 @@ const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
     borderRadius: radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
   },
   title: {
     ...typography.captionText,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignSelf: 'flex-start',
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   actionLabel: {
     ...typography.captionText,

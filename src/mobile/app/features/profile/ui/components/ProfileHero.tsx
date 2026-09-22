@@ -19,7 +19,7 @@ import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, minTouchSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
+import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
@@ -99,7 +99,7 @@ export function ProfileHero({
             style={[styles.backButton, { top: insets.top + 12 }]}
             variant="inverse"
           >
-            <ArrowLeft color={colors.onPrimary} size={18} />
+            <ArrowLeft color={colors.onPrimary} size={iconSize.md} />
           </IconButton>
         ) : null}
       </View>
@@ -171,25 +171,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    gap: 10,
+    gap: spacing.md,
   },
   avatarFrame: {
     borderRadius: radius.pill,
-    padding: 4,
+    padding: spacing.xs,
     backgroundColor: colors.surface,
   },
   actionSlot: {
     flexShrink: 1,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   name: {
-    marginTop: 10,
+    marginTop: spacing.md,
     ...typography.title,
     color: colors.text,
   },
   username: textStyle('captionText', colors.textSoft),
   bio: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     ...typography.bodyText,
     color: colors.textMuted,
   },

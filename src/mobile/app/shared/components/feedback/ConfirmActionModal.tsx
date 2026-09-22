@@ -8,7 +8,7 @@ import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaf
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ConfirmActionModalProps = {
   visible: boolean;
@@ -105,7 +105,7 @@ export function ConfirmActionModal({
     >
       <View style={styles.confirmHeader}>
         <View style={[styles.confirmIcon, isDanger ? styles.confirmIconDanger : styles.confirmIconPrimary]}>
-          <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={18} />
+          <AlertTriangle color={isDanger ? colors.danger : colors.primary} size={iconSize.md} />
         </View>
         <View style={styles.confirmCopy}>
           <AppText ref={titleRef} accessibilityRole="header" style={styles.confirmTitle}>{title}</AppText>
@@ -129,12 +129,12 @@ const styles = StyleSheet.create({
   confirmHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.md,
   },
   confirmIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -146,24 +146,24 @@ const styles = StyleSheet.create({
   },
   confirmCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   confirmTitle: textStyle('section', colors.text),
   confirmText: textStyle('bodyText', colors.textMuted),
   errorText: {
-    marginTop: 4,
+    marginTop: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.dangerBorder,
     backgroundColor: colors.dangerBg,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     ...typography.captionText,
     color: colors.danger,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   modalButton: {

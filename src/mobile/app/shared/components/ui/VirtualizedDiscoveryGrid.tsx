@@ -222,6 +222,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   cell: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
 });

@@ -31,7 +31,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
+  radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -99,7 +102,7 @@ function MediaLightboxPage({
             priority={isActive ? 'high' : 'normal'}
             fallback={
               <View style={styles.videoPosterFallback}>
-                <Play color={colors.onPrimary} fill={colors.onPrimary} size={20} />
+                <Play color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.md} />
               </View>
             }
           />
@@ -278,7 +281,7 @@ export function MediaLightbox({
       nextItems.push({
         key: 'download-media',
         label: tr.common.download,
-        renderIcon: (color) => <Download color={color} size={14} />,
+        renderIcon: (color) => <Download color={color} size={iconSize.sm} />,
         onPress: () => {
           setMenuVisible(false);
           void handleDownloadCurrent();
@@ -291,7 +294,7 @@ export function MediaLightbox({
         key: 'delete-media',
         label: tr.common.delete,
         tone: 'danger',
-        renderIcon: (color) => <Trash2 color={color} size={14} />,
+        renderIcon: (color) => <Trash2 color={color} size={iconSize.sm} />,
         onPress: () => {
           triggerHaptic('medium');
           setMenuVisible(false);
@@ -344,7 +347,7 @@ export function MediaLightbox({
             onPress={handleClose}
             variant="inverse"
           >
-            <X color={colors.onPrimary} size={18} />
+            <X color={colors.onPrimary} size={iconSize.md} />
           </IconButton>
 
           <View style={styles.topBarCopy}>
@@ -371,7 +374,7 @@ export function MediaLightbox({
               }}
               variant="inverse"
             >
-              <MoreHorizontal color={colors.onPrimary} size={18} />
+              <MoreHorizontal color={colors.onPrimary} size={iconSize.md} />
             </IconButton>
           ) : (
             <View style={styles.topActionSpacer} />
@@ -478,13 +481,13 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   topActionButton: {
     width: minTouchSize,
     height: minTouchSize,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.lightboxChrome,
@@ -498,16 +501,16 @@ const styles = StyleSheet.create({
   topBarCopy: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.lightboxChrome,
     borderWidth: 1,
     borderColor: colors.controlsBorder,
   },
   topBarTitle: textStyle('bodyText', colors.onPrimary, fontWeight.strong),
   topBarSubtitle: {
-    marginTop: 3,
+    marginTop: spacing.xs,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     color: colors.onDarkFaint,
@@ -522,12 +525,12 @@ const styles = StyleSheet.create({
   mediaPage: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   mediaFrame: {
     flex: 1,
     width: '100%',
-    borderRadius: 24,
+    borderRadius: radius['2xl'],
     overflow: 'hidden',
     backgroundColor: colors.lightboxDeep,
     borderWidth: 1,

@@ -18,7 +18,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
 export type ExploreListItem = {
@@ -66,7 +66,7 @@ function ExplorePageEmptyState({
     return (
       <View style={styles.errorWrap}>
         <EmptyState
-          icon={<Compass color={colors.danger} size={28} />}
+          icon={<Compass color={colors.danger} size={iconSize.xl} />}
           title={tr.explore.errorTitle}
           description={errorMessage}
           actionLabel={tr.common.retry}
@@ -80,7 +80,7 @@ function ExplorePageEmptyState({
   if (tab === 'lists') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={28} />}
+        icon={<Compass color={colors.textSoft} size={iconSize.xl} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noList}
         description={
           searchQuery.trim()
@@ -96,7 +96,7 @@ function ExplorePageEmptyState({
   if (tab === 'places') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={28} />}
+        icon={<Compass color={colors.textSoft} size={iconSize.xl} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPlace}
         description={
           searchQuery.trim()
@@ -112,7 +112,7 @@ function ExplorePageEmptyState({
   if (tab === 'photos') {
     return (
       <EmptyState
-        icon={<Compass color={colors.textSoft} size={28} />}
+        icon={<Compass color={colors.textSoft} size={iconSize.xl} />}
         title={searchQuery.trim() ? tr.explore.empty.noResult : tr.explore.empty.noPhoto}
         description={
           searchQuery.trim()
@@ -127,7 +127,7 @@ function ExplorePageEmptyState({
 
   return (
     <EmptyState
-      icon={<Compass color={colors.textSoft} size={28} />}
+      icon={<Compass color={colors.textSoft} size={iconSize.xl} />}
       title={searchQuery.trim() ? tr.explore.empty.noUserResult : tr.explore.empty.noUser}
       description={
         searchQuery.trim()
@@ -369,14 +369,14 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
 
 const styles = StyleSheet.create({
   errorWrap: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   loadMoreLabel: textStyle('metadataText', colors.primary, fontWeight.strong),
   loadMoreStatus: {
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
   },
 });

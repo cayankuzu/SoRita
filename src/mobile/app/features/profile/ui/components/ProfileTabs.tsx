@@ -9,8 +9,10 @@ import { tr } from "@/mobile/app/shared/i18n/tr";
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from "@/mobile/app/shared/theme/tokens";
@@ -159,7 +161,7 @@ export function ProfileTabs({
           >
             <SlidersHorizontal
               color={filterOpen ? colors.primary : colors.textMuted}
-              size={13}
+              size={iconSize.xs}
             />
             {!compact ? (
               <>
@@ -172,9 +174,9 @@ export function ProfileTabs({
                   {activeFilterLabel}
                 </AppText>
                 {filterOpen ? (
-                  <ChevronUp color={colors.primary} size={12} />
+                  <ChevronUp color={colors.primary} size={iconSize.xs} />
                 ) : (
-                  <ChevronDown color={colors.textMuted} size={12} />
+                  <ChevronDown color={colors.textMuted} size={iconSize.xs} />
                 )}
               </>
             ) : null}
@@ -238,20 +240,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingVertical: 10,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
   },
   buttonCompact: {
     flexDirection: "column",
-    gap: 2,
-    paddingHorizontal: 2,
-    paddingVertical: 6,
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.xxs,
+    paddingVertical: spacing.sm,
   },
   labelWrap: {
     maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: spacing.xs,
   },
   text: {
     ...typography.captionText,
@@ -267,11 +269,11 @@ const styles = StyleSheet.create({
   countBadge: {
     minWidth: 18,
     minHeight: 18,
-    borderRadius: 10,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: 'transparent',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 1,
   },
   countBadgeActive: {
@@ -282,8 +284,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   filterWrap: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
@@ -294,17 +296,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: spacing.xs,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: colors.cardBorder,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   activeIndicatorSlot: {
     position: "absolute",
     left: 0,
     bottom: -1,
     height: 2,
-    paddingHorizontal: 6,
+    paddingHorizontal: spacing.sm,
   },
   activeIndicator: {
     flex: 1,
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: spacing.sm,
   },
   filterChip: {
     minHeight: minTouchSize,
@@ -331,8 +333,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   filterChipActive: {
     backgroundColor: colors.primaryBg,

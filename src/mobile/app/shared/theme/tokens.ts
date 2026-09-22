@@ -61,16 +61,25 @@ export const colors = {
   onDarkSubtle: 'rgba(255, 255, 255, 0.72)',
 };
 
+/**
+ * A 4pt scale. The app had grown 33 distinct raw spacing values (6, 10, 14
+ * and 18 among the most common), so neighbouring screens never shared a
+ * rhythm. `xxs` exists only for optical nudges such as a subtitle sitting 2dp
+ * under its title; layout spacing starts at `xs`.
+ */
 export const spacing = {
+  xxs: 2,
   xs: 4,
-  sm: 6,
-  md: 10,
-  lg: 12,
-  xl: 18,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
   '2xl': 24,
-  screen: 12,
-  section: 16,
-  card: 10,
+  '3xl': 32,
+  '4xl': 40,
+  screen: 16,
+  section: 24,
+  card: 12,
 };
 
 export const layout = {
@@ -84,21 +93,25 @@ export const layout = {
   thumbnailSize: 56,
 };
 
+/**
+ * Seven sizes: 12, 14, 16, 18, 20, 24, 28. The scale used to have ten,
+ * including the in-between 13, 15 and 17 that make neighbouring text look
+ * almost-but-not-quite the same. Secondary reading text (comments, place
+ * descriptions, field helpers) moved from 13 to 14, the size it is read at in
+ * every mature feed app.
+ */
 const typographyStyles = {
-  display: { fontSize: 26, lineHeight: 33, fontWeight: '800' as const },
+  display: { fontSize: 28, lineHeight: 36, fontWeight: '800' as const },
   headlineText: { fontSize: 24, lineHeight: 30, fontWeight: '700' as const },
   title: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const },
-  dialogTitleText: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
-  section: { fontSize: 17, lineHeight: 22, fontWeight: '700' as const },
-  compactSectionText: { fontSize: 16, lineHeight: 21, fontWeight: '700' as const },
+  section: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
   inputText: { fontSize: 16, lineHeight: 22, fontWeight: '400' as const },
-  compactTitleText: { fontSize: 15, lineHeight: 20, fontWeight: '700' as const },
+  compactTitleText: { fontSize: 16, lineHeight: 22, fontWeight: '700' as const },
   bodyText: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
-  readingBodyText: { fontSize: 14, lineHeight: 21, fontWeight: '400' as const },
-  labelText: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
-  captionText: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
-  supportingText: { fontSize: 13, lineHeight: 19, fontWeight: '400' as const },
-  supportingLabelText: { fontSize: 13, lineHeight: 19, fontWeight: '600' as const },
+  readingBodyText: { fontSize: 14, lineHeight: 22, fontWeight: '400' as const },
+  labelText: { fontSize: 14, lineHeight: 20, fontWeight: '700' as const },
+  captionText: { fontSize: 14, lineHeight: 20, fontWeight: '500' as const },
+  supportingLabelText: { fontSize: 14, lineHeight: 20, fontWeight: '600' as const },
   metadataText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
   compactBodyText: { fontSize: 12, lineHeight: 18, fontWeight: '400' as const },
 } as const;
@@ -169,10 +182,12 @@ export const letterSpacing = {
 } as const;
 
 export const radius = {
+  xs: 4,
   sm: 8,
-  md: 11,
-  lg: 15,
+  md: 12,
+  lg: 16,
   xl: 20,
+  '2xl': 24,
   pill: 999,
 };
 
@@ -273,10 +288,19 @@ export const opacity = {
   muted: 0.72,
 } as const;
 
+/**
+ * Six icon sizes. 280 icons had been sized by hand at 17 different values, so
+ * the same glyph rendered at 13, 14 and 16 on neighbouring screens. `xs` is
+ * for glyphs inside a chip or badge, `sm` beside body text, `md` for a
+ * control, `lg` for a primary action, `xl` and `xxl` for empty states.
+ */
 export const iconSize = {
-  sm: 14,
-  md: 18,
-  lg: 20,
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
+  xxl: 40,
 } as const;
 
 export const contentWidth = {

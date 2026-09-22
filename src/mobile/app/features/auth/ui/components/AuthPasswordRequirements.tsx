@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { getAuthPasswordRequirementProgress } from '@/mobile/app/features/auth/application/authPasswordRequirements';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type AuthPasswordRequirementsProps = {
   password: string;
@@ -53,11 +53,11 @@ export function AuthPasswordRequirements({ password }: AuthPasswordRequirementsP
 
 const styles = StyleSheet.create({
   block: {
-    gap: 6,
+    gap: spacing.sm,
   },
   meter: {
     flexDirection: 'row',
-    gap: 4,
+    gap: spacing.xs,
   },
   meterItem: {
     flex: 1,

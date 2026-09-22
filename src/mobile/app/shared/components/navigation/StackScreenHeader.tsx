@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, minTouchSize, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type StackScreenHeaderProps = {
   onBack: () => void;
@@ -33,7 +33,7 @@ export function StackScreenHeader({
       ]}
     >
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack} variant="surface">
-        <ArrowLeft color={colors.text} size={18} />
+        <ArrowLeft color={colors.text} size={iconSize.md} />
       </IconButton>
       <View style={styles.copy}>
         <AppText accessibilityRole="header" numberOfLines={1} style={styles.title}>
@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
     minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingBottom: 10,
+    gap: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.background,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xxs,
   },
   title: textStyle('section', colors.text),
   subtitle: textStyle('captionText', colors.textSoft),

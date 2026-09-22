@@ -13,7 +13,7 @@ import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
@@ -88,7 +88,7 @@ export function ListDetailHeader({
 
           {list.coverImage ? (
             <View style={styles.coverHintChip}>
-              <ImageIcon color={colors.onPrimary} size={12} />
+              <ImageIcon color={colors.onPrimary} size={iconSize.xs} />
               <AppText style={styles.coverHintText}>{tr.listDetail.openCover}</AppText>
             </View>
           ) : null}
@@ -103,21 +103,21 @@ export function ListDetailHeader({
             <MetaChip
               icon={
                 list.isPublic ? (
-                  <Globe color={colors.secondary} size={12} />
+                  <Globe color={colors.secondary} size={iconSize.xs} />
                 ) : (
-                  <Lock color={colors.visibilityPrivate} size={12} />
+                  <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
                 )
               }
               label={list.isPublic ? tr.listDetail.public : tr.listDetail.private}
               tone={list.isPublic ? 'accent' : 'neutral'}
             />
             <MetaChip
-              icon={<MapPin color={colors.textMuted} size={12} />}
+              icon={<MapPin color={colors.textMuted} size={iconSize.xs} />}
               label={tr.cards.placesCount(list.places.length)}
             />
             {(list.likes || 0) > 0 ? (
               <MetaChip
-                icon={<Heart color={colors.danger} fill={colors.danger} size={12} />}
+                icon={<Heart color={colors.danger} fill={colors.danger} size={iconSize.xs} />}
                 label={`${list.likes}`}
               />
             ) : null}

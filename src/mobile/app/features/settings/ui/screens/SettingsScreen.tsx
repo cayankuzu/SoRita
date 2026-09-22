@@ -26,7 +26,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import {
   normalizeUserBioInput,
   normalizeUserNameInput,
@@ -77,19 +77,19 @@ const sections: SettingsMenuSectionDescriptor[] = [
     title: tr.settings.sections.account,
     items: [
       {
-        icon: <UserIcon color={colors.primary} size={18} />,
+        icon: <UserIcon color={colors.primary} size={iconSize.md} />,
         label: tr.settings.editProfile.title,
         color: colors.primaryBg,
         action: 'openEditProfile',
       },
       {
-        icon: <Shield color={colors.secondary} size={18} />,
+        icon: <Shield color={colors.secondary} size={iconSize.md} />,
         label: tr.settings.privacy.title,
         color: colors.successBg,
         action: 'openPrivacy',
       },
       {
-        icon: <Lock color={colors.primary} size={18} />,
+        icon: <Lock color={colors.primary} size={iconSize.md} />,
         label: tr.settings.password.title,
         color: colors.primaryBg,
         action: 'openPassword',
@@ -100,26 +100,26 @@ const sections: SettingsMenuSectionDescriptor[] = [
     title: tr.settings.sections.other,
     items: [
       {
-        icon: <Ban color={colors.textMuted} size={18} />,
+        icon: <Ban color={colors.textMuted} size={iconSize.md} />,
         label: tr.settings.blocked.title,
         color: colors.surfaceMuted,
         action: 'openBlocked',
       },
       {
-        icon: <Shield color={colors.primary} size={18} />,
+        icon: <Shield color={colors.primary} size={iconSize.md} />,
         label: tr.settings.personalDataExport,
         color: colors.primaryBg,
         action: 'exportPersonalData',
         disabledWhenExporting: true,
       },
       {
-        icon: <LogOut color={colors.textMuted} size={18} />,
+        icon: <LogOut color={colors.textMuted} size={iconSize.md} />,
         label: tr.settings.logout,
         color: colors.surfaceMuted,
         action: 'requestLogout',
       },
       {
-        icon: <Trash2 color={colors.danger} size={18} />,
+        icon: <Trash2 color={colors.danger} size={iconSize.md} />,
         label: tr.settings.deleteAccount,
         color: colors.dangerBg,
         action: 'requestDeleteAccount',
@@ -134,7 +134,7 @@ if (__DEV__) {
     title: tr.uiCatalog.developerSection,
     items: [
       {
-        icon: <Palette color={colors.purple} size={18} />,
+        icon: <Palette color={colors.purple} size={iconSize.md} />,
         label: tr.uiCatalog.title,
         color: colors.purpleBg,
         action: 'openDeveloperCatalog',

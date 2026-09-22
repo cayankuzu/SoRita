@@ -18,7 +18,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
   fontWeight,
+  iconSize,
   radius,
+  spacing,
   textStyle,
   touch,
   typography,
@@ -103,7 +105,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
             accessibilityElementsHidden
             style={isAddressExpanded ? styles.addressToggleIconExpanded : null}
           >
-            <ChevronRight color={colors.primary} size={14} />
+            <ChevronRight color={colors.primary} size={iconSize.sm} />
           </View>
         </Pressable>
       </View>
@@ -116,7 +118,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           style={[styles.secondaryPanelButton, isCopying ? styles.buttonDisabled : null]}
           onPress={() => void copyAddress()}
         >
-          <Copy color={colors.textMuted} size={12} />
+          <Copy color={colors.textMuted} size={iconSize.xs} />
           <AppText style={styles.secondaryPanelText}>{tr.cards.copy}</AppText>
         </Pressable>
       </View>
@@ -127,27 +129,27 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
 const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
   panelTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   addressCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   addressLinkButton: {
     flex: 1,
     minWidth: 0,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
-    gap: 4,
+    gap: spacing.xs,
   },
   addressLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   addressLinkText: {
@@ -159,7 +161,7 @@ const styles = StyleSheet.create({
   addressToggleButton: {
     width: Platform.OS === 'ios' ? touch.ios : touch.android,
     height: Platform.OS === 'ios' ? touch.ios : touch.android,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -174,14 +176,14 @@ const styles = StyleSheet.create({
   },
   panelActions: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.sm,
   },
   secondaryPanelButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,

@@ -16,7 +16,7 @@ import { AuthLoginView } from '@/mobile/app/features/auth/ui/components/AuthLogi
 import { AuthRegisterFlow } from '@/mobile/app/features/auth/ui/components/AuthRegisterFlow';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 const registerStepCopy = tr.auth.register.steps;
 
@@ -36,19 +36,19 @@ export function AuthScreen() {
     () => [
       {
         ...registerStepCopy[0],
-        icon: <User color={colors.primary} size={20} />,
+        icon: <User color={colors.primary} size={iconSize.md} />,
       },
       {
         ...registerStepCopy[1],
-        icon: <Lock color={colors.primary} size={20} />,
+        icon: <Lock color={colors.primary} size={iconSize.md} />,
       },
       {
         ...registerStepCopy[2],
-        icon: <Sparkles color={colors.primary} size={20} />,
+        icon: <Sparkles color={colors.primary} size={iconSize.md} />,
       },
       {
         ...registerStepCopy[3],
-        icon: <Camera color={colors.primary} size={20} />,
+        icon: <Camera color={colors.primary} size={iconSize.md} />,
       },
     ],
     [],

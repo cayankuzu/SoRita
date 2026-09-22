@@ -21,7 +21,7 @@ import {
   buildStaticMapUrl,
   getStaticMapPreviewWidth,
 } from '@/mobile/app/shared/utils/staticMapPreview';
-import { colors, fontWeight, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, iconSize, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapPreviewProps = {
   places: MapMarkerItem[];
@@ -65,7 +65,7 @@ function MiniMapFallback({ places }: MiniMapFallbackProps) {
   return (
     <View style={styles.fallbackContent}>
       <View style={styles.fallbackPin}>
-        <MapPin color={colors.primary} size={16} />
+        <MapPin color={colors.primary} size={iconSize.sm} />
       </View>
       <AppText numberOfLines={1} style={styles.fallbackTitle}>
         {title}
@@ -256,14 +256,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.mapBackground,
   },
   fallbackPin: {
     width: 30,
     height: 30,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
