@@ -194,6 +194,34 @@ sertleştirme, `G45` gizlilik/KVKK, `G46` kötüye kullanım,
 - **Kanıtsız 9.8 alamayacaklar:** `C17` iOS satırları, `C18` HIG, `C19`
   VoiceOver, `C20` iOS dinamik tip, `D21` iOS cold start.
 
+## AAA premium UI/UX kapsamı — kalan fazlara eklenen
+
+2026-09-22'de ayrı bir 10-PASS "AAA premium UI/UX + KISS + component
+architecture" planı istendi. Ayrı süreç olarak **çalıştırılmadı**: maddelerinin
+çoğu bu denetimin halihazırda tamamladığı kategorilerle birebir örtüşüyor
+(design system → B9, ekran incelemesi → Grup A+B, responsive/a11y → C17–C20,
+motion → B14/B16, regression → her fazın kapıları). Paralel süreç aynı işi
+ikinci kez yapar ve kanıt izini böler.
+
+Örtüşmeyen ve SoRita'ya özgü olan maddeleri **kalan fazlara dağıttım**:
+
+| Madde | Hangi faza |
+|---|---|
+| Component duplicate analizi ve birleştirme | Faz 4 (E28) |
+| Gereksiz abstraction / context / wrapper temizliği | Faz 4 (E29, E32) |
+| God component ayrıştırma | Faz 4 (E27) |
+| PlaceCard varyant sistemi (`PlaceCard` / `Compact` / `Horizontal`) | Faz 4 |
+| Component envanteri: hangi primitive var, hangisi eksik, hangisi fazla | Faz 4 |
+| Map UI tek görsel sistem (kontroller, preview, sheet, durumlar) | Faz 4 |
+| Form UX standardizasyonu (label/helper/error/focus/disabled/loading) | Faz 5 (F35 ile) |
+| Render/re-render, unstable key, inline nesne patlaması | Faz 5 (F35, D22 devamı) |
+
+**Uygulanan kural:** "Tek kullanım + değişmeyecek davranış = component oluşturma."
+Ölçülen 49 birebir tekrar eden stil gövdesinin çoğu birleştirilmedi; çünkü
+`{alignItems:'center', flexDirection:'row', gap:6}` gibi gövdeler bir tasarım
+kararı değil, tesadüfi düzen ilkelidir ve token'a çevirmek dolaylılık ekler,
+sadeleştirmez. Birleştirme yalnız tekrar eden **kararlar** için yapıldı.
+
 ### ⬜ Faz 4 — PASS 4 · Grup E · **9 kategori** · mimari ve kod kalitesi
 `E26` katman disiplini, `E27` god class, `E28` DRY, `E29` KISS, `E30` hardcode,
 `E31` isimlendirme, `E32` ölü kod, `E33` test edilebilirlik, `E34` genişleyebilirlik.

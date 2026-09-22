@@ -20,6 +20,7 @@ import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedbac
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { saveUriToGallery } from '@/mobile/app/platform/media/gallery';
@@ -69,6 +70,12 @@ export function ImageLightbox({
 
     return uri ? [uri] : [];
   }, [uri, uris]);
+
+  // Fullscreen media sits on a near-black backdrop. Without this the system
+  // bars keep their light-surface treatment and the clock and battery icons
+  // are drawn dark-on-dark.
+  useSystemBarMode('media', imageUris.length > 0);
+
   const startIndex = imageUris.length
     ? Math.min(Math.max(initialIndex, 0), imageUris.length - 1)
     : 0;

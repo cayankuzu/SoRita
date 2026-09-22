@@ -26,6 +26,7 @@ import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/A
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
+import { useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -242,6 +243,12 @@ export function MediaLightbox({
       }, []),
     [items],
   );
+
+  // Fullscreen media sits on a near-black backdrop. Without this the system
+  // bars keep their light-surface treatment and the clock and battery icons
+  // are drawn dark-on-dark.
+  useSystemBarMode('media', visibleItems.length > 0);
+
   const startIndex = React.useMemo(() => {
     if (visibleItems.length === 0) {
       return 0;

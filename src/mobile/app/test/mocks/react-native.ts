@@ -131,12 +131,15 @@ export const ToastAndroid = {
   show: () => undefined,
 };
 
-export const StatusBar = {
+// React Native's StatusBar is both a component and a namespace of imperative
+// setters. It was mocked as the namespace alone, so anything that rendered
+// `<StatusBar />` - which AppSystemBars does - could not be tested at all.
+export const StatusBar = Object.assign(createHostComponent('StatusBar'), {
   currentHeight: undefined as number | undefined,
   setBackgroundColor: () => undefined,
   setBarStyle: () => undefined,
   setTranslucent: () => undefined,
-};
+});
 
 export const InteractionManager = {
   runAfterInteractions: (task?: () => void) => {
