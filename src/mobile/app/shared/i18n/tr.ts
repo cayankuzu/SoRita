@@ -760,7 +760,7 @@ export const tr = {
     filterAll: 'Tümü',
     filterButton: 'Pin filtresi',
     refreshButton: 'Haritayı yenile',
-    filterMixed: 'Sadece ikisi',
+    filterMixed: 'Açık ve özel',
     filterNone: 'Tüm pinleri gizle',
     filterPrivate: 'Özel',
     filterPublic: 'Herkese açık',

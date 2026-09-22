@@ -1,5 +1,6 @@
 import { env } from '@/mobile/app/platform/config/env';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
+import { quietBasemapStaticParams } from '@/mobile/app/shared/utils/quietBasemap';
 
 export const DEFAULT_MINI_MAP_PREVIEW_HEIGHT = 148;
 
@@ -99,6 +100,7 @@ export function buildStaticMapUrl(places: MapMarkerItem[], height: number, width
   params.set('scale', '2');
   params.set('maptype', 'roadmap');
   params.set('key', env.googleMapsStaticApiKey);
+  quietBasemapStaticParams().forEach((style) => params.append('style', style));
 
   if (normalizedPlaces.length === 1) {
     params.set('center', `${normalizedPlaces[0].lat},${normalizedPlaces[0].lng}`);

@@ -33,9 +33,19 @@ function toSingleMarker(place: MapMarkerItem, index: number): MapMarkerCluster {
   };
 }
 
+// Zoomed out past a district, pins a few streets apart draw on top of each
+// other: three Istanbul places read as one pin that only the top one of could
+// be tapped. From that zoom out, a 12-cell grid (about 30dp a cell on a phone)
+// merges them into one counted marker, which zooms in when tapped. Closer in,
+// every place keeps its own pin.
+export const PROXIMITY_CLUSTER_LATITUDE_DELTA = 0.05;
+const PROXIMITY_GRID_SIDE = 12;
+
 /**
- * Bounds native marker work to a fixed budget. Dense viewports are reduced to a
- * deterministic 10x10 grid; sparse viewports retain one-to-one marker behavior.
+ * Bounds native marker work to a fixed budget and keeps nearby pins from
+ * stacking. Dense viewports are reduced to a deterministic 10x10 grid,
+ * zoomed-out viewports to a 12x12 one; close-up viewports keep one marker per
+ * place.
  */
 export function clusterMapMarkers(
   places: MapMarkerItem[],
@@ -49,12 +59,15 @@ export function clusterMapMarkers(
   const visibleEntries = places
     .map((place, index) => ({ index, place }))
     .filter(({ place }) => isInsideRegion(place, region));
+  const overBudget = visibleEntries.length > maxMarkers;
 
-  if (visibleEntries.length <= maxMarkers) {
+  if (!overBudget && region.latitudeDelta < PROXIMITY_CLUSTER_LATITUDE_DELTA) {
     return visibleEntries.map(({ index, place }) => toSingleMarker(place, index));
   }
 
-  const gridSide = Math.max(1, Math.floor(Math.sqrt(maxMarkers)));
+  const gridSide = overBudget
+    ? Math.max(1, Math.floor(Math.sqrt(maxMarkers)))
+    : PROXIMITY_GRID_SIDE;
   const latitudeMin = region.latitude - region.latitudeDelta / 2;
   const longitudeMin = region.longitude - region.longitudeDelta / 2;
   const latitudeStep = region.latitudeDelta / gridSide;

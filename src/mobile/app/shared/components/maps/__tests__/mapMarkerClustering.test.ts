@@ -42,4 +42,26 @@ describe('clusterMapMarkers', () => {
   it('returns no marker when the configured budget is zero', () => {
     expect(clusterMapMarkers([{ lat: 40, lng: 29, name: 'Place' }], region, 0)).toEqual([]);
   });
+
+  it('merges pins a few streets apart when zoomed out to a country', () => {
+    const country = { latitude: 39, longitude: 32, latitudeDelta: 8, longitudeDelta: 8 };
+    const clusters = clusterMapMarkers([
+      { lat: 41.03, lng: 28.98, name: 'Karaköy' },
+      { lat: 41.04, lng: 29.0, name: 'Beşiktaş' },
+      { lat: 41.02, lng: 28.97, name: 'Galata' },
+      { lat: 39.77, lng: 30.52, name: 'Eskişehir' },
+    ], country);
+
+    expect(clusters.map((cluster) => cluster.memberIndices.length).sort()).toEqual([1, 3]);
+  });
+
+  it('keeps one pin per place once zoomed in to a street', () => {
+    const street = { latitude: 41.03, longitude: 28.98, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+    const clusters = clusterMapMarkers([
+      { lat: 41.0301, lng: 28.9801, name: 'A' },
+      { lat: 41.0302, lng: 28.9802, name: 'B' },
+    ], street);
+
+    expect(clusters.map((cluster) => cluster.memberIndices)).toEqual([[0], [1]]);
+  });
 });

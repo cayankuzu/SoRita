@@ -205,6 +205,7 @@ function MiniMapPreviewComponent({
           places={places}
           interactive={interactive}
           liteMode={liteMode ?? !interactive}
+          quietBasemap
           onMapGesture={onMapGesture}
           onMarkerPress={onMarkerPress}
           highlightedIndex={highlightedIndex}

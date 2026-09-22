@@ -16,6 +16,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
+import { QUIET_BASEMAP_RULES } from '@/mobile/app/shared/utils/quietBasemap';
 
 const DEFAULT_LATITUDE = 39.9334;
 const DEFAULT_LONGITUDE = 32.8597;
@@ -202,6 +203,7 @@ function GoogleMapViewComponent({
   instanceId = 0,
   interactive = true,
   liteMode = false,
+  quietBasemap = false,
   highlightedIndex = null,
   focusIndex = null,
   focusTrigger = 0,
@@ -399,6 +401,7 @@ function GoogleMapViewComponent({
         style={styles.map}
         provider={PROVIDER_GOOGLE}
         liteMode={liteMode}
+        customMapStyle={quietBasemap ? QUIET_BASEMAP_RULES : undefined}
         cacheEnabled={!interactive}
         mapType="standard"
         initialRegion={initialRegion}
@@ -492,6 +495,7 @@ function areGoogleMapViewPropsEqual(previous: SharedMapProps, next: SharedMapPro
   return (
     previous.interactive === next.interactive &&
     previous.liteMode === next.liteMode &&
+    previous.quietBasemap === next.quietBasemap &&
     previous.highlightedIndex === next.highlightedIndex &&
     previous.focusIndex === next.focusIndex &&
     previous.focusTrigger === next.focusTrigger &&

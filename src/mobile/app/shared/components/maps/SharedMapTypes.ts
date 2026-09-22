@@ -11,6 +11,9 @@ export type SharedMapProps = {
   instanceId?: number;
   interactive?: boolean;
   liteMode?: boolean;
+  // Hides businesses and transit icons for a preview; the main map keeps them
+  // because people pick where to add a place by the businesses they see.
+  quietBasemap?: boolean;
   highlightedIndex?: number | null;
   focusIndex?: number | null;
   focusTrigger?: number;
