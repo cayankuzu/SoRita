@@ -81,26 +81,74 @@ violations.push(...findTypographyViolations({
 // Design tokens rot quietly: four different names once held the same cover
 // placeholder and one of them was referenced nowhere at all. A token nothing
 // reads is not a design decision, it is a claim the palette no longer honours.
-const colourBlock = themeSource.match(/export const colors = \{([\s\S]*?)\n\};/);
-if (!colourBlock) {
-  violations.push(`${relative(workspace, themeTokens)} colour palette could not be parsed`);
-} else {
-  const declared = [...colourBlock[1].matchAll(/^\s*([A-Za-z0-9_]+):/gm)].map((m) => m[1]);
-  // tokens.ts is included on purpose: semanticColors consumes the raw palette
-  // from inside the same file, and that counts as a real reference.
-  const allSources = await Promise.all(
-    [...(await collectFiles(sourceRoot))]
-      .filter((file) => ['.ts', '.tsx'].includes(extname(file)))
-      .map((file) => readFile(file, 'utf8')),
+const themeRelative = relative(workspace, themeTokens);
+
+// tokens.ts is included on purpose: semanticColors consumes the raw palette
+// from inside the same file, and that counts as a real reference.
+const allSources = await Promise.all(
+  [...(await collectFiles(sourceRoot))]
+    .filter((file) => ['.ts', '.tsx'].includes(extname(file)))
+    .map((file) => readFile(file, 'utf8')),
+);
+const corpus = allSources.join('\n');
+
+function declaredNames(blockName) {
+  const block = themeSource.match(
+    new RegExp(`export const ${blockName} = \\{([\\s\\S]*?)\\n\\};`, 'u'),
   );
-  const corpus = allSources.join('\n');
+  if (!block) {
+    violations.push(`${themeRelative} ${blockName} block could not be parsed`);
+    return null;
+  }
+  return [...block[1].matchAll(/^\s*'?([A-Za-z0-9_]+)'?:/gmu)].map((match) => match[1]);
+}
+
+// A token nothing reads is not a design decision, it is a claim the system no
+// longer honours. Colour rot was already caught here; spacing rotted the same
+// way unseen, and `spacing.none` sat declared with zero readers.
+for (const [blockName, accessor] of [
+  ['colors', 'colors'],
+  ['spacing', 'spacing'],
+  ['radius', 'radius'],
+]) {
+  const declared = declaredNames(blockName);
+  if (!declared) continue;
+
   for (const name of declared) {
-    const uses = corpus.split(`colors.${name}`).length - 1;
-    if (uses === 0) {
+    const dotted = corpus.split(`${accessor}.${name}`).length - 1;
+    const bracketed = corpus.split(`${accessor}['${name}']`).length - 1;
+    if (dotted + bracketed === 0) {
       violations.push(
-        `${relative(workspace, themeTokens)} declares colour token "${name}" that nothing reads`,
+        `${themeRelative} declares ${blockName} token "${name}" that nothing reads`,
       );
     }
+  }
+}
+
+// Two names for one value is how a design system stops being one. The discovery
+// tiles had minted `compactCardTitleText` and `compactCardMetaText`, byte-identical
+// to `labelText` and `metadataText`, and nothing noticed until they were measured.
+const typographyBlock = themeSource.match(
+  /const typographyStyles = \{([\s\S]*?)\n\} as const;/u,
+);
+if (!typographyBlock) {
+  violations.push(`${themeRelative} typographyStyles block could not be parsed`);
+} else {
+  const seen = new Map();
+  const entryPattern =
+    /^\s*([A-Za-z0-9_]+):\s*\{\s*fontSize:\s*(\d+),\s*lineHeight:\s*(\d+),\s*fontWeight:\s*'(\d+)'/gmu;
+  for (const [, name, fontSize, lineHeight, fontWeight] of typographyBlock[1].matchAll(
+    entryPattern,
+  )) {
+    const signature = `${fontSize}/${lineHeight}/${fontWeight}`;
+    const existing = seen.get(signature);
+    if (existing) {
+      violations.push(
+        `${themeRelative} typography token "${name}" duplicates "${existing}" (${signature}); reuse it instead`,
+      );
+      continue;
+    }
+    seen.set(signature, name);
   }
 }
 

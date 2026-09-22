@@ -51,10 +51,10 @@ export const discoveryTileStyles = StyleSheet.create({
   ownerBody: {
     flex: 1,
   },
-  ownerName: textStyle('compactCardTitleText', colors.text),
+  ownerName: textStyle('labelText', colors.text),
   ownerUsername: {
-    fontSize: typography.compactCardMetaText.fontSize,
-    lineHeight: typography.compactCardMetaText.lineHeight,
+    fontSize: typography.metadataText.fontSize,
+    lineHeight: typography.metadataText.lineHeight,
     color: colors.textSoft,
   },
   mediaSquare: {
@@ -84,7 +84,7 @@ export const discoveryTileStyles = StyleSheet.create({
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: 6,
   },
-  visibilityBadgeText: textStyle('compactCardMetaText', colors.onPrimary, fontWeight.strong),
+  visibilityBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   iconBadgeRight: {
     width: 20,
     height: 20,
@@ -118,7 +118,7 @@ export const discoveryTileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  mediaFooterBadgeText: textStyle('compactCardMetaText', colors.onPrimary, fontWeight.strong),
+  mediaFooterBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   singleActionBadge: {
     position: 'absolute',
     top: 0,
@@ -187,10 +187,10 @@ export const discoveryTileStyles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-  tileTitle: textStyle('compactCardTitleText', colors.text),
+  tileTitle: textStyle('labelText', colors.text),
   tileDescription: {
     marginTop: 3,
-    ...typography.compactCardMetaText,
+    ...typography.metadataText,
     color: colors.textMuted,
   },
   listContextBar: {
@@ -227,14 +227,14 @@ export const discoveryTileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  listContextTitle: textStyle('compactCardTitleText', colors.text),
+  listContextTitle: textStyle('labelText', colors.text),
   listContextMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 1,
   },
-  listContextMetaText: textStyle('compactCardMetaText', colors.textSoft),
+  listContextMetaText: textStyle('metadataText', colors.textSoft),
   listContextMetaTextPrivate: {
     color: colors.visibilityPrivate,
   },
@@ -249,16 +249,16 @@ export const discoveryTileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-  tileMeta: textStyle('compactCardMetaText', colors.textSoft),
+  tileMeta: textStyle('metadataText', colors.textSoft),
   tileTimestamp: {
     marginTop: 3,
-    fontSize: typography.compactCardMetaText.fontSize,
-    lineHeight: typography.compactCardMetaText.lineHeight,
+    fontSize: typography.metadataText.fontSize,
+    lineHeight: typography.metadataText.lineHeight,
     color: colors.textSoft,
   },
   tileMetaSummary: {
     marginTop: 3,
-    ...typography.compactCardMetaText,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   tileSecondaryRow: {
@@ -270,7 +270,7 @@ export const discoveryTileStyles = StyleSheet.create({
   },
   tileTimestampInline: {
     flex: 1,
-    ...typography.compactCardMetaText,
+    ...typography.metadataText,
     color: colors.textSoft,
   },
   ratingRow: {
@@ -278,7 +278,7 @@ export const discoveryTileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  ratingText: textStyle('compactCardMetaText', colors.warningText),
+  ratingText: textStyle('metadataText', colors.warningText),
   photoCountBadge: {
     position: 'absolute',
     top: 4,
@@ -304,7 +304,7 @@ export const discoveryTileStyles = StyleSheet.create({
     alignSelf: 'stretch',
     backgroundColor: colors.controlsDivider,
   },
-  photoCountText: textStyle('compactCardMetaText', colors.onPrimary, fontWeight.strong),
+  photoCountText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   userCover: {
     height: 50,
     backgroundColor: colors.coverFallback,
@@ -351,7 +351,7 @@ export const discoveryTileStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  followButtonText: textStyle('compactCardTitleText', colors.onPrimary),
+  followButtonText: textStyle('labelText', colors.onPrimary),
   followButtonTextPassive: {
     color: colors.textMuted,
   },

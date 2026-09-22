@@ -62,7 +62,6 @@ export const colors = {
 };
 
 export const spacing = {
-  none: 0,
   xs: 4,
   sm: 6,
   md: 10,
@@ -102,8 +101,6 @@ const typographyStyles = {
   supportingLabelText: { fontSize: 13, lineHeight: 19, fontWeight: '600' as const },
   metadataText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
   compactBodyText: { fontSize: 12, lineHeight: 18, fontWeight: '400' as const },
-  compactCardTitleText: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
-  compactCardMetaText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
 } as const;
 
 export const typography = {
