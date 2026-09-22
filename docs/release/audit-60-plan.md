@@ -7,7 +7,155 @@ kategori ≥9.8 alsın.
 9.8'e çıkan kategoriler, ve **Cayan'ın yapması gerekenler**. Onay gelmeden
 sonraki faza geçilmez.
 
-Son güncelleme: 2026-09-22.
+Son güncelleme: 2026-09-23.
+
+**Geçerli olan:** aşağıdaki [Faz haritası v2](#faz-haritası-v2). Onun
+altındaki v1 bölümleri geçmiş kayıt; bulguların ve kanıtların kaynağı olarak
+duruyor.
+
+---
+
+## Faz haritası v2
+
+2026-09-23'te iki şey değişti. (1) 60 kategorilik denetime **AAA premium
+UI/UX + KISS + component architecture** promptunun 10 PASS'ı eklendi.
+(2) "Riskli ya da ön koşulu eksik adımı atla" kuralı: bir faz senin
+erişimini bekliyorsa beklemiyoruz, ön koşulu olmayan sonraki faza geçiyoruz.
+
+UI/UX promptu ayrı bir süreç olarak koşmuyor, maddeleri aynı kategorilere
+düşüyor ve kanıt izi tek kalıyor. Sıra değişikliğinin gerekçesi: işlem
+matrisi test hesabı bekliyor; UI/UX işi hiçbir şey beklemiyor. Üstelik cihaz
+akışları (Maestro) UI oturduktan **sonra** yazılırsa bir kez yazılır.
+
+| Faz | Kapsam | Kategoriler | UI/UX prompt | Ön koşul | Durum |
+|---|---|---|---|---|---|
+| 0 | OTA zemini, PASS 0 envanter | — | — | — | ✅ |
+| 1 | iOS OTA açılışı (runtime 1.0.108) | H52, I57, I55 | — | Apple / TestFlight | 🔶 build ✅, TestFlight'ta |
+| 2 | Design system envanteri, ekran ekran inceleme, duplicate analizi | B9, A2, A4, E28 | PASS 1–3 | yok | 🔶 analiz ✅, düzeltmeler cihazda doğrulanacak |
+| 3 | Token standardizasyonu | B9–B13, E30 | PASS 4 | görsel onay | ⬜ |
+| 4 | Component sistemi: PlaceCard varyantları, form UX, harita UI, durum bileşenleri | B9, E28, A4, A5 | PASS 5, §6–§8 | yok | ⬜ |
+| 5 | KISS temizliği, god component | E26–E34 | PASS 6, §10–§11 | yok | ⬜ |
+| 6 | Responsive/a11y, motion, görsel tutarlılık, ekran hiyerarşisi | C17–C20, B14–B16, A1–A8 | PASS 7–9, §3, §9, §12 | iOS cihaz (C) | ⬜ |
+| 7–10 | İşlem matrisi I–IV: 55 işlem × 6 kontrol | A8, G41, J, F37–F39, I57, A3 | PASS 10 | 2 test hesabı | ⬜ |
+| 11 | Güvenlik ve gizlilik | G41–G46 | — | Ed25519 anahtarı, staging | ⬜ |
+| 12 | Veri, durum, ağ | F35–F40 | — | yok | ⬜ |
+| 13 | Altyapı ve operasyon | H47–H54 | — | pano erişimleri | ⬜ |
+| 14 | Performans | D21–D25 | §13 | yok | ⬜ |
+| 15 | Toplu native sürüm, yayın, yasal | I55–I60, J | — | konsollar, hukuk | ⬜ |
+| 16 | Final denetim: iki prompt baştan, tek commit | 61 alanın hepsi | final rapor | — | ⬜ |
+
+### UI/UX prompt maddelerinin yerleşimi
+
+| UI/UX prompt maddesi | Faz |
+|---|---|
+| §1 repo incelemesi, UI ↔ component mimarisi kopukluğu | 2 |
+| §2 SoRita kimliği (sakin, görsel ağırlıklı, kalabalık değil) | 2'de ölçüt, 3–6'da uygulanır |
+| §3 ekran ekran hiyerarşi, birincil/ikincil aksiyon, yoğunluk, ritim | 2 tespit, 6 uygulama |
+| §4 tek kaynak token sistemi (colors…zIndex) | 3 |
+| §5 component sistemi, "tek kullanım = component yok" | 4 |
+| §6 PlaceCard tek görsel dil ve gerçek varyantlar | 4 |
+| §7 harita UI tek sistem | 4 |
+| §8 form UX standardı | 4 |
+| §9 AAA cila: pressed/focus/disabled/loading, skeleton, layout stabilitesi | 6 |
+| §10 KISS temizliği: duplicate, ölü kod, gereksiz wrapper/context/state | 5 |
+| §11 god component | 5 |
+| §12 responsive/a11y, 1.5× tipografi sorunlarının benzerleri | 6 |
+| §13 render performansı, her `useMemo`/`useCallback`'in sorgulanması | 14 |
+| §14 PASS 10 regresyon | her fazın kapıları + 16 |
+| §16 final UI/UX raporu | 16 |
+
+Yeni özellik yok: promptun PlaceCard maddesindeki "rating" ve "distance"
+SoRita'da yoksa **eklenmez**, mevcut meta alanlarıyla aynı ızgara kurulur.
+
+### Faz sonu kuralı
+
+Her faz: denetle → düzelt → cihazda kanıtla → `typecheck`, `security:verify`,
+`check:release` yeşil → tik yalnız kanıtla → özet, Cayan'ın manuel adımları,
+devam onayı.
+
+---
+
+## Faz 1 kaydı — iOS OTA (2026-09-23)
+
+- HEAD, Android'in 1.0.108 binary'sine (`53d8d90`) göre `OTA_SAFE`; iOS aynı
+  runtime'a katılabilir.
+- İlk iOS build (`b8f54bb5`) `pod install`'da düştü: react-native-firebase
+  26.4, Firebase'i SPM ile çözüyor ve bu projenin static frameworks'ü altında
+  SPM'i reddediyor. 1.0.102 build'i 25.1 ile CocoaPods yolundan geçmişti.
+- Düzeltme: plugin'in kendi `ios.disableSPM` seçeneği (`6aa074b`, dal
+  `ios-firebase-cocoapods`). Linkage ve runtime değişmedi.
+- İkinci build (`25c05493`, 1.0.109 / 94, runtime 1.0.108) **başarılı**;
+  TestFlight'a gönderildi.
+- **Açık karar:** düzeltme `app.config.ts`'e dokunduğu için sınıflandırıcı onu
+  Android için de native sayıyor. Dal main'e alındığı an Android OTA,
+  yeni Android binary'si mağazada kaydedilene kadar kilitlenir. Bu yüzden dal
+  şimdilik ayrı. Main'e alınması ve iOS kaydı (`ota:record-binary`, binary
+  commit'i HEAD'in atası olmalı) Cayan yeni Android paketini Play'e
+  yüklediği gün birlikte yapılır; Faz 15'i beklemek zorunda değil. O güne
+  kadar Android OTA açık kalır, iOS TestFlight gömülü JavaScript'le çalışır.
+
+## Faz 2 raporu — UI/UX PASS 1–3 (2026-09-23)
+
+Cihaz: Redmi Note 9 Pro, Android 10, 1080×2400, yoğunluk 440 (2.75×), yazı
+ölçeği 1.0. Ekranlar yalnız okuma amaçlı gezildi; hiçbir veri yazan butona
+basılmadı.
+
+### PASS 1 — Design system envanteri
+
+| Grup | Durum | Bulgu |
+|---|---|---|
+| Tipografi | ✅ | 16 stil, 10 boyut; kodda ham `fontSize`/`lineHeight` **0** |
+| Renk | ⚠ | 60 token, semantik katman var; 5 hex birden çok isim taşıyor (`#b45309` ×3, `#047857` ×3, `#2563eb` ×3, `#6d28d9` ×2, `#475569` ×2); nötrlerde slate ile bir Tailwind gray (`#e5e7eb`) karışık |
+| Boşluk | ⚠ | 9 token; 6/10/18 4pt ızgarası dışında; kodda **807 ham değer, 33 farklı** |
+| Köşe | ⚠ | 8/11/15/20 — 11 ve 15 ızgara dışı; kodda 51 ham, 16 farklı |
+| İkon boyutu | 🔴 | 3 token (14/18/20), 5 okuyucu; kodda **280 ham, 17 farklı** |
+| Gölge | ⚠ | 3 seviye; `shadowColor` zaten %12 alfa taşıyor, `shadowOpacity` ikinci kez çarpıyor → iOS'ta etkin gölge %1.4–2.4, görünmez |
+| zIndex / opacity | 🔴 | token yok; 15 ham zIndex (5 farklı, `1000` dahil), 14 ham opacity (10 farklı) |
+| Motion | ✅ | 3 süre token'ı; kodda 4 ham süre |
+
+### PASS 2 — Ekran ekran inceleme
+
+| Ekran | Bulgu | Sınıf | Nerede |
+|---|---|---|---|
+| Liste detayı, konum kartları | Fotoğraf sağda 12dp kısa: `aspectRatio` + `marginHorizontal` aynı view'da, Yoga margini iki kez düşüyor | DÜZELTME | ✅ bu faz |
+| Liste detayı, bildirimler, ayarlar, auth | Tab dışı her ekranda alt güvenli alan iki kez: bu telefonda 57dp ölü şerit, bildirimde son satır kesik | DÜZELTME | ✅ bu faz |
+| Profil, kullanıcı profili | Sekme sayaçları yüklenen sayfanın uzunluğu: açılmamış sekme "0", 24+ içerikte "24" | DÜZELTME | ✅ bu faz |
+| Liste detayı | Mekân kartları ekran kenarına dayanıyor, köşeleri kesiliyor; başlık kartı 12dp içeride | DÜZELTME | ✅ bu faz |
+| Mekân kartı | "Diğer özellikler +13" 48dp boyalı, yanındaki chip'ler 24dp | CİLA | ✅ bu faz |
+| Mekân kartı, liste detayı | Menü butonu ekran okuyucuya "Profil işlemleri" diyor | DÜZELTME | ✅ bu faz |
+| Ana akış kartı | Mekân adı 5. sırada (yazar → liste → adres → harita → **ad**); 4 iç içe kutu (kart > liste kutusu > adres hapı > harita çerçevesi) | CİLA | Faz 6 |
+| Ana akış kartı | Beğeni sayısı kalpten ayrı 48dp hücrede, kopuk duruyor | CİLA | Faz 4 |
+| Statik harita | Rakip işletme POI'leri (ör. başka tatlıcılar) kartın haritasında | CİLA | Faz 4 |
+| Harita | İstanbul'da 3 pin üst üste, küme sayısı yok; lejantta "Sadece ikisi" belirsiz; ilk açılış ipucu Google logosunu örtüyor | DÜZELTME/CİLA | Faz 4 |
+| Keşfet, kullanıcı profili | Kapaksız liste karosu: 110dp boş mavi alan + 16dp emoji | CİLA | Faz 4 |
+| Keşfet | Karo başlığında 16dp avatar, 2 satırlık isim bloğunun yanında küçük; baş harfler okunmuyor | CİLA | Faz 3 |
+| Profil | İstatistik satırı ile sekmeler arasında büyük boşluk | CİLA | Faz 3 |
+| Bildirimler | Türkçe karakter eksik ("begendi"), beğen-geri al-beğen aynı bildirimi iki kez üretiyor — ikisi de repoda olmayan bir DB trigger'ından | DÜZELTME | Faz 7–10 (migration onayı) |
+| Bildirimler | Stack ekranı başlığında marka logosu tekrar; tarih mutlak | CİLA | Faz 6 |
+| Ayarlar | Temiz. Aynı kalkan ikonu iki farklı renkte (Gizlilik yeşil, Kişisel veriler mavi) | CİLA | Faz 3 |
+| Yorumlar sheet'i | Temiz, boş durum yönlendirici | — | — |
+
+### PASS 3 — Duplicate analizi (ölçüm)
+
+| Kalıp | Ölçüm | Hedef | Faz |
+|---|---|---|---|
+| Chip / pill / badge | 19 dosyada **72** ayrı stil tanımı, ortak primitive yok | `Chip` (seçilebilir) + `Badge` (statik) | 4 |
+| Modal katmanı | `ModalScaffold` 5 kullanıcı; **8** dosya kendi `<Modal>`'ını yazıyor | Tek `Sheet`/`ModalScaffold` | 4 |
+| Lightbox | `ImageLightbox` (329 satır) + `MediaLightbox` (552 satır) | Tek lightbox | 5 |
+| Basma primitive'i | 35 dosya `InstantPressable` (haptik + basılı durum), **34** dosya ham `Pressable` | Tek yol | 4 |
+| Profil sekme dizisi | İki ekranda birebir 30 satır | ✅ `buildProfileTabOptions` ile tekilleşti | bu faz |
+| Başlık | `StackScreenHeader`, bildirimlerin kendi başlığı, profil hero geri butonu | Tek başlık | 4 |
+
+### Bu fazda teslim edilen
+
+| # | Değişiklik | Test |
+|---|---|---|
+| F1 | Mekân fotoğrafı: inset sarmalayıcıya, `aspectRatio` iç çerçevede; sayfa genişliği pager'dan | yeni test, eski kodda kırılıyor |
+| F2 | `Screen`: alt inset tek sahipli (içerik padding'i) | yeni test, eski kodda 104 ≠ 57 |
+| F3 | Profil sayaçları: tüm sayfalar gelince yüklenen uzunluk, öncesinde sunucu toplamı, yoksa sayı yok | 4 yeni test |
+| F4 | İçerik menüsü etiketi "İçerik işlemleri"; kullanılmayan `overflowActionLabel` prop'u silindi | mevcut test güncellendi |
+| F5 | Özellik açma chip'i 24dp boyalı + `hitSlopFor(24)` → 48dp etkin | touch-target guard |
+| F6 | Liste detayı kartlarına başlıkla aynı 12dp inset | cihazda |
 
 ---
 
@@ -50,7 +198,7 @@ Promptun kendi kuralları hedefi zorlaştırıyor, bunu baştan kabul ediyoruz:
 
 ---
 
-## Faz haritası
+## Faz haritası v1 (geçmiş kayıt)
 
 Prompt PASS 0–8 diyor; her PASS'ı "denetle → 9.8'e çıkar → kanıtla" olarak
 genişletiyoruz.
