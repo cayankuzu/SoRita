@@ -229,6 +229,15 @@ having worked once.
 
 Four consecutive production deliveries on runtime 1.0.108, all verified on the store-installed handset.
 
+2026-09-22, sixth delivery, the system-bar treatment for fullscreen media:
+
+| Step | Observed |
+| --- | --- |
+| Publish | Group `e799bb9c-612f-4d59-9113-98073fef974d`, Android update `01a0c7e6-9bdc-7bb1-81d3-a4e2606c040c`, runtime `1.0.108`, 100%. |
+| Before | Lightbox open: clock, wifi and battery drawn dark against the near-black backdrop. |
+| After | Same screen, same capture method: those icons render light and read cleanly. |
+| Still open | The Android navigation bar stays light under the lightbox. `StatusBar` does not control it, so this needs a separate API and is recorded rather than claimed fixed. |
+
 ## Rollback
 
 Use [`ota-rollback-runbook.md`](./ota-rollback-runbook.md). The publisher prints the exact command for
