@@ -45,14 +45,23 @@ export function toStaticMapColor(color?: string) {
 }
 
 /**
- * The feed card's map box: the card is inset by 12 and `mapWrap` pads another
- * 12, so 24 a side. This is the estimate used to warm the cache before the box
- * has been laid out - MiniMapPreview asks for its measured width once it has
- * one, because the same component also renders inside discovery tiles less
- * than half this wide.
+ * The feed card's map box, as a fraction of the viewport.
+ *
+ * This used to subtract 48, reasoning that the card insets 12 and `mapWrap`
+ * pads another 12. Measuring the rendered box on hardware contradicted that:
+ * the gap is 59dp at both 393dp (393 - 334) and 360dp (360 - 301). The
+ * 11dp overshoot made the requested image wider than the box it was drawn
+ * into, and `contentFit: 'cover'` paid for it by cropping the sides - at
+ * 360dp that clipped the Google attribution and the edge place labels.
+ *
+ * It stays an estimate: it warms the cache before layout, and MiniMapPreview
+ * switches to its measured width as soon as it has one, because the same
+ * component also renders inside discovery tiles less than half this wide.
  */
+const FEED_CARD_MAP_INSET = 60;
+
 export function getStaticMapPreviewWidth(viewportWidth: number) {
-  return Math.min(480, Math.max(240, viewportWidth - 48));
+  return Math.min(480, Math.max(240, viewportWidth - FEED_CARD_MAP_INSET));
 }
 
 export function buildStaticMapUrl(places: MapMarkerItem[], height: number, width: number) {
