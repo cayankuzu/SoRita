@@ -1,20 +1,21 @@
 import type { InitialState, PartialState, NavigationState } from '@react-navigation/native';
 
+// AuthCallback and ResetPassword are deliberately absent from both sets. They
+// are reachable only through a deep link and their params carry a single-use
+// token, so restoring one replays a token that was already spent: launching the
+// app from the home screen opened on "this link has been used or has expired"
+// instead of the app.
 const AUTHENTICATED_ROOT_ROUTE_NAMES = new Set([
-  'AuthCallback',
   'ListDetail',
   'LocationPlaceCards',
   'MainTabs',
   'Notifications',
-  'ResetPassword',
   'Settings',
   ...(__DEV__ ? ['UICatalog'] : []),
   'UserProfile',
 ]);
 const UNAUTHENTICATED_ROOT_ROUTE_NAMES = new Set([
   'Auth',
-  'AuthCallback',
-  'ResetPassword',
 ]);
 const MAIN_TAB_ROUTE_NAMES = new Set([
   'Explore',

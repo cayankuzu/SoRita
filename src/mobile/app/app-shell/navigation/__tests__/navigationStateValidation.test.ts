@@ -48,6 +48,42 @@ describe('sanitizePersistedNavigationState', () => {
     expect(sanitizePersistedNavigationState(state, true)).toEqual(state);
   });
 
+  // The reported defect: launching the app from the home screen icon opened on
+  // "this link has been used or has expired". A reset link leaves a single-use
+  // token in the route params, the state was persisted with it, and every plain
+  // launch restored that route and spent the token again.
+  it('drops a persisted state pointing at a one-shot deep-link route', () => {
+    const state: InitialState = {
+      index: 0,
+      routes: [{ name: 'ResetPassword', params: { state: 'already-spent' } }],
+    };
+
+    expect(sanitizePersistedNavigationState(state, true)).toBeUndefined();
+    expect(sanitizePersistedNavigationState(state, false)).toBeUndefined();
+  });
+
+  it('drops a persisted signup callback for the same reason', () => {
+    const state: InitialState = {
+      index: 0,
+      routes: [{ name: 'AuthCallback', params: { code: 'already-spent' } }],
+    };
+
+    expect(sanitizePersistedNavigationState(state, true)).toBeUndefined();
+    expect(sanitizePersistedNavigationState(state, false)).toBeUndefined();
+  });
+
+  it('drops the whole stack when a one-shot route sits above a valid one', () => {
+    const state: InitialState = {
+      index: 1,
+      routes: [
+        { name: 'MainTabs', state: { index: 0, routes: [{ name: 'Home' }] } },
+        { name: 'ResetPassword', params: { state: 'already-spent' } },
+      ],
+    };
+
+    expect(sanitizePersistedNavigationState(state, true)).toBeUndefined();
+  });
+
   it('drops an authenticated state with an invalid nested tab route', () => {
     const state: InitialState = {
       index: 0,
