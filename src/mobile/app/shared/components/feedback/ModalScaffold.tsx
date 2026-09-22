@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  AccessibilityInfo,
-  findNodeHandle,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,6 +20,7 @@ import {
   spacing,
 } from '@/mobile/app/shared/theme/tokens';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
+import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   getAndroidModalWindowProps,
@@ -29,7 +28,6 @@ import {
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
 
-type FocusTarget = Parameters<typeof findNodeHandle>[0];
 
 type ModalScaffoldProps = {
   accessibilityLabel: string;
@@ -65,7 +63,6 @@ export function ModalScaffold({
   const animationType = useModalAnimationType(variant === 'sheet' ? 'slide' : 'fade');
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const wasVisibleRef = React.useRef(false);
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
     topInset: insets.top,
     bottomInset: insets.bottom,
@@ -81,43 +78,12 @@ export function ModalScaffold({
     minHeight: 224,
   });
 
-  React.useEffect(() => {
-    if (visible) {
-      wasVisibleRef.current = true;
-      const focusTimer = setTimeout(() => {
-        const targetHandle = initialFocusRef?.current
-          ? findNodeHandle(initialFocusRef.current as FocusTarget)
-          : null;
-
-        if (targetHandle) {
-          AccessibilityInfo.setAccessibilityFocus(targetHandle);
-          return;
-        }
-
-        AccessibilityInfo.announceForAccessibility(accessibilityLabel);
-      }, 120);
-
-      return () => clearTimeout(focusTimer);
-    }
-
-    if (wasVisibleRef.current) {
-      wasVisibleRef.current = false;
-
-      if (returnFocusRef?.current) {
-        const restoreTimer = setTimeout(() => {
-          const targetHandle = findNodeHandle(returnFocusRef.current as FocusTarget);
-
-          if (targetHandle) {
-            AccessibilityInfo.setAccessibilityFocus(targetHandle);
-          }
-        }, 80);
-
-        return () => clearTimeout(restoreTimer);
-      }
-    }
-
-    return undefined;
-  }, [accessibilityLabel, initialFocusRef, returnFocusRef, visible]);
+  useModalAccessibilityFocus({
+    accessibilityLabel,
+    initialFocusRef,
+    returnFocusRef,
+    visible,
+  });
 
   return (
     <Modal

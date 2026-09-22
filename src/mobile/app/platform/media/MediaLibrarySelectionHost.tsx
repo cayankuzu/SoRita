@@ -38,6 +38,7 @@ import {
   type MediaLibraryAssetTileItem,
 } from '@/mobile/app/platform/media/mediaLibraryAssetPreparation';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   colors,
@@ -92,6 +93,8 @@ export function MediaLibrarySelectionHost() {
   }, [allowVideos, options.visibleFilters]);
   const title = allowVideos ? tr.mediaPicker.mixedTitle : tr.mediaPicker.title;
   const description = allowVideos ? tr.placeEditor.mediaHint : tr.mediaPicker.galleryDescription;
+
+  useModalAccessibilityFocus({ accessibilityLabel: title, visible });
   const selectedAssets = React.useMemo(
     () =>
       selectedIds

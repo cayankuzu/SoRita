@@ -22,6 +22,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -113,6 +114,9 @@ export function MediaPickerPromptHost() {
   );
   const hasDedicatedVideoCaptureOption = cameraCaptureModes.includes('video');
   const title = allowVideos ? tr.mediaPicker.mixedTitle : tr.mediaPicker.title;
+
+  useModalAccessibilityFocus({ accessibilityLabel: title, visible });
+
   const description = allowVideos
     ? allowMultiple
       ? tr.mediaPicker.multiMediaDescription

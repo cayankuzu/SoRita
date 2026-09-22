@@ -13,6 +13,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   colors,
@@ -80,6 +81,7 @@ export function CommentActionSheet({
   onReport,
 }: CommentActionSheetProps) {
   const animationType = useModalAnimationType('slide');
+  useModalAccessibilityFocus({ accessibilityLabel: tr.cards.commentActionsTitle, visible: Boolean(comment) });
   const insets = useSafeAreaInsets();
   const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
     topInset: insets.top,
