@@ -166,7 +166,7 @@
     "react-native-maps": "1.27.2",
     "react-native-pager-view": "8.0.0",
     "react-native-safe-area-context": "~5.6.2",
-    "react-native-screens": "~4.23.0",
+    "react-native-screens": "~4.28.0",
     "react-native-svg": "15.15.3",
     "react-native-url-polyfill": "^3.0.0",
     "zod": "^4.4.3"
