@@ -11,9 +11,9 @@ import {
 
 describe('getStaticMapPreviewWidth', () => {
   // Measured on a Redmi Note 9 Pro by reading the rendered map box out of a
-  // screen capture at two densities. Both showed a 59dp gap, so an estimate
-  // that overshoots gets cropped by contentFit: 'cover' and eats the Google
-  // attribution at the narrow end.
+  // screen capture at two densities; both showed a 59dp gap. An estimate that
+  // overshoots is not visible - the measured width replaces it - but it costs
+  // a Static Maps request that is thrown away the moment layout reports.
   it.each([
     { viewport: 393, renderedBox: 334 },
     { viewport: 360, renderedBox: 301 },

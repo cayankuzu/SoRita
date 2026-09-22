@@ -48,15 +48,18 @@ export function toStaticMapColor(color?: string) {
  * The feed card's map box, as a fraction of the viewport.
  *
  * This used to subtract 48, reasoning that the card insets 12 and `mapWrap`
- * pads another 12. Measuring the rendered box on hardware contradicted that:
- * the gap is 59dp at both 393dp (393 - 334) and 360dp (360 - 301). The
- * 11dp overshoot made the requested image wider than the box it was drawn
- * into, and `contentFit: 'cover'` paid for it by cropping the sides - at
- * 360dp that clipped the Google attribution and the edge place labels.
+ * pads another 12. Measuring the rendered box on hardware contradicted the
+ * arithmetic: the gap is 59dp at both 393dp (393 - 334) and 360dp (360 - 301).
  *
- * It stays an estimate: it warms the cache before layout, and MiniMapPreview
- * switches to its measured width as soon as it has one, because the same
- * component also renders inside discovery tiles less than half this wide.
+ * The overshoot was never visible - `MiniMapPreview` swaps in its measured
+ * width as soon as layout reports one. What it cost was a wasted Static Maps
+ * request per card: the warm-up fetched one width, layout then asked for
+ * another. Subtracting the measured 60 makes the guess land on the box the
+ * card actually gets, so the warmed URL is usually the one that renders.
+ *
+ * It stays an estimate on purpose. The same component also renders inside
+ * discovery tiles less than half this wide, so no viewport formula is right
+ * everywhere and the measured width remains the authority.
  */
 const FEED_CARD_MAP_INSET = 60;
 
