@@ -41,7 +41,7 @@ describe('FeedActionButtons hierarchy', () => {
           onLikersPress={onLikersPress}
           onOverflowPress={vi.fn()}
           onSharePress={vi.fn()}
-          overflowActionLabel={tr.profile.actions.menuTitle}
+          overflowActionLabel={tr.common.contentActionsTitle}
           showCommentAction
           showComments={false}
           showOverflowAction
@@ -58,7 +58,7 @@ describe('FeedActionButtons hierarchy', () => {
       `${tr.cards.likedBy}: 3`,
       tr.cards.commentAction,
       tr.cards.share,
-      tr.profile.actions.menuTitle,
+      tr.common.contentActionsTitle,
     ]);
 
     actions.forEach((action) => {

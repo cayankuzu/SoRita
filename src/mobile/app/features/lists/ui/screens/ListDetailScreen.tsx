@@ -442,7 +442,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           subtitle={tr.cards.placesCount(displayPlaces.length)}
           rightAction={actionItems.length > 0 ? (
             <IconButton
-              accessibilityLabel={tr.profile.actions.menuTitle}
+              accessibilityLabel={tr.common.contentActionsTitle}
               onPress={() => setListActionMenuVisible(true)}
               variant="surface"
             >

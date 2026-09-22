@@ -47,7 +47,6 @@ export type FeedActionBarProps = {
   onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
   onSharePress?: () => void;
   onUserPress?: (userId: string) => void;
-  overflowActionLabel?: string;
   reportDescription?: string;
   reportTitle?: string;
   showAddToList?: boolean;
@@ -155,7 +154,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
   if (props.showOverflowAction && props.onOverflowPress) {
     secondaryActions.push({
       key: 'content-actions',
-      label: props.overflowActionLabel ?? tr.profile.actions.menuTitle,
+      label: tr.common.contentActionsTitle,
       renderIcon: (color) => <Ellipsis color={color} size={16} />,
       onPress: () => {
         closeSecondaryActions();
@@ -193,7 +192,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
         onLikersPress={() => state.setShowLikers(true)}
         onOverflowPress={() => setShowSecondaryActions(true)}
         onSharePress={props.onSharePress}
-        overflowActionLabel={props.overflowActionLabel ?? tr.profile.actions.menuTitle}
+        overflowActionLabel={tr.common.contentActionsTitle}
         showCommentAction={props.showCommentAction ?? true}
         showComments={state.showComments}
         showOverflowAction={secondaryActions.length > 0}
@@ -203,7 +202,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
       {showSecondaryActions && secondaryActions.length > 0 ? (
         <DeferredActionMenuSheet
           visible
-          title={tr.profile.actions.menuTitle}
+          title={tr.common.contentActionsTitle}
           items={secondaryActions}
           onClose={closeSecondaryActions}
         />
