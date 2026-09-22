@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { ArrowLeft, CheckCheck, Heart } from 'lucide-react-native';
+import { CheckCheck, Heart } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -19,17 +19,15 @@ import { NotificationCategoryTabs } from '@/mobile/app/features/notifications/ui
 import { NotificationListItem } from '@/mobile/app/features/notifications/ui/components/NotificationListItem';
 import { NotificationsEmptyState } from '@/mobile/app/features/notifications/ui/components/NotificationsEmptyState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { NotificationListSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 const categories: Array<{ key: NotificationCategory; label: string }> = [
@@ -139,55 +137,35 @@ export function NotificationsScreen() {
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
     >
-      <View style={styles.header}>
-        <IconButton
-          accessibilityLabel={tr.common.back}
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <ArrowLeft color={colors.textMuted} size={iconSize.md} />
-        </IconButton>
-        <View style={styles.headerBody}>
-          <View style={styles.headerTitleRow}>
-            <SoRitaLogo size="sm" showIcon={false} showTagline={false} />
-            <View style={styles.headerTitleDivider} />
-            <AppText style={styles.title}>{notificationUiConfig.title}</AppText>
-          </View>
-          <AppText accessibilityLiveRegion="polite" style={styles.subtitle}>
-            {unreadCount > 0
-              ? notificationUiConfig.newCount(unreadCount)
-              : tr.notifications.resultCount(filteredItems.length)}
-          </AppText>
-        </View>
-        <InstantPressable
-          accessibilityLabel={
-            unreadCount > 0
-              ? `${notificationUiConfig.markAllReadLabel}, ${tr.notifications.unreadHint(unreadCount)}`
-              : notificationUiConfig.markAllReadLabel
-          }
-          accessibilityRole="button"
-          accessibilityState={{
-            busy: isMarkingAllRead,
-            disabled: unreadCount === 0 || isMarkingAllRead,
-          }}
-          disabled={unreadCount === 0 || isMarkingAllRead}
-          onPress={handleMarkAllRead}
-          style={({ pressed }) => [
-            styles.markAllButton,
-            unreadCount === 0 || isMarkingAllRead ? styles.markAllButtonDisabled : null,
-            pressed && unreadCount > 0 && !isMarkingAllRead ? styles.markAllButtonPressed : null,
-          ]}
-        >
-          {isMarkingAllRead ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
+      {/* The same header every stack screen uses. The brand logo it used to
+          repeat belongs to the tab screens' app bar, not a screen reached
+          from it. */}
+      <StackScreenHeader
+        onBack={() => navigation.goBack()}
+        title={notificationUiConfig.title}
+        subtitle={
+          unreadCount > 0
+            ? notificationUiConfig.newCount(unreadCount)
+            : tr.notifications.resultCount(filteredItems.length)
+        }
+        rightAction={
+          <IconButton
+            accessibilityLabel={
+              unreadCount > 0
+                ? `${notificationUiConfig.markAllReadLabel}, ${tr.notifications.unreadHint(unreadCount)}`
+                : notificationUiConfig.markAllReadLabel
+            }
+            disabled={unreadCount === 0}
+            loading={isMarkingAllRead}
+            onPress={handleMarkAllRead}
+          >
             <CheckCheck
               color={unreadCount === 0 ? colors.textDisabled : colors.primary}
               size={iconSize.md}
             />
-          )}
-        </InstantPressable>
-      </View>
+          </IconButton>
+        }
+      />
 
       <NotificationCategoryTabs
         tabs={categories}
@@ -289,62 +267,6 @@ const styles = StyleSheet.create({
   },
   screenContent: {
     paddingBottom: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.screen,
-    minHeight: 56,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.cardBorder,
-  },
-  backButton: {
-    width: minTouchSize,
-    height: minTouchSize,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBody: {
-    flex: 1,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headerTitleDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: colors.cardBorder,
-  },
-  markAllButton: {
-    width: minTouchSize,
-    height: minTouchSize,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  markAllButtonDisabled: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  markAllButtonPressed: {
-    opacity: 0.82,
-  },
-  title: textStyle('section', colors.text),
-  subtitle: {
-    marginTop: spacing.xxs,
-    ...typography.metadataText,
-    color: colors.primary,
-    minHeight: typography.metadataText.lineHeight,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   list: {
     backgroundColor: colors.surface,

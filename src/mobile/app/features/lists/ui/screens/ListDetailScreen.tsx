@@ -444,7 +444,6 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             <IconButton
               accessibilityLabel={tr.common.contentActionsTitle}
               onPress={() => setListActionMenuVisible(true)}
-              variant="surface"
             >
               <Ellipsis color={colors.text} size={iconSize.sm} />
             </IconButton>

@@ -32,7 +32,7 @@ export function StackScreenHeader({
         { paddingHorizontal: screenPadding, paddingTop: insets.top + 8 },
       ]}
     >
-      <IconButton accessibilityLabel={tr.common.back} onPress={onBack} variant="surface">
+      <IconButton accessibilityLabel={tr.common.back} onPress={onBack}>
         <ArrowLeft color={colors.text} size={iconSize.md} />
       </IconButton>
       <View style={styles.copy}>
@@ -40,7 +40,7 @@ export function StackScreenHeader({
           {title}
         </AppText>
         {subtitle ? (
-          <AppText numberOfLines={1} style={styles.subtitle}>
+          <AppText accessibilityLiveRegion="polite" numberOfLines={1} style={styles.subtitle}>
             {subtitle}
           </AppText>
         ) : null}
