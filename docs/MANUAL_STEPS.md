@@ -13,14 +13,17 @@ repository alone. It does not grant provider access or authorize deployment,
 traffic changes, credential rotation, database mutation, restore or store
 submission.
 
-## 0. Supabase Auth redirect allowlist (blocks password reset today)
+## 0. Supabase Auth redirect allowlist (reference — already satisfied)
 
-Do this first if password reset opens a web page instead of the app.
+Nothing to do here. This section previously said the allowlist was blocking
+password reset. That was wrong, and the correction is kept on the record: the
+project allowlist already carries `sorita://**`, and a device logcat showed the
+deep link arriving intact with its `flow` and `state` parameters. The reset
+failures had other causes, all in app code (see the `fix:` commits around
+`f07e41d`…`5057470` and the navigation-restore fix that followed).
 
-Supabase only honours a `redirect_to` that appears in the project's allowlist.
-When it does not match, it silently falls back to **Site URL**, so the recovery
-mail lands on the website, the app never receives the deep link, and the reset
-screen reports the link as unusable because it never saw one.
+Keep the section as the reference for what the app asks for, so a future
+allowlist edit does not narrow it by accident.
 
 The app asks for exactly two targets, built in `buildTrackedAppUrl`
 (`src/mobile/app/app-shell/auth/session/authRedirectState.ts`) from the
@@ -31,19 +34,15 @@ The app asks for exactly two targets, built in `buildTrackedAppUrl`
 | Password reset | `sorita://reset-password` |
 | Signup confirmation | `sorita://auth/callback` |
 
-Both carry `?flow=…&state=…` query parameters, so the allowlist entries need a
-wildcard to match:
-
-```text
-sorita://reset-password*
-sorita://auth/callback*
-```
+Both carry `?flow=…&state=…` query parameters, so any allowlist entry must keep
+a wildcard. A single `sorita://**` covers both and is what the project uses.
 
 - **Panel/location:** Supabase Dashboard → Authentication → URL Configuration →
   Redirect URLs.
-- **Note:** "Send password recovery" from the dashboard user page sends no
-  `redirect_to` at all, so it always opens Site URL. That is expected and is
-  not a test of this setting — trigger the reset from inside the app instead.
+- **Known-good behaviour, not a bug:** "Send password recovery" from the
+  dashboard user page sends no `redirect_to` at all, so it always opens Site
+  URL in a browser. It is not a test of this setting and never opens the app —
+  trigger the reset from inside the app instead.
 - **Verification:** request a reset from the app, open the mail on the device,
   and confirm the app opens on "Şifreni sıfırla" rather than a browser.
 
