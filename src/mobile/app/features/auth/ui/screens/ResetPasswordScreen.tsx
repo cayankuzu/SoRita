@@ -13,6 +13,7 @@ import {
   normalizeAuthRedirectParams,
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
+import { resolvePasswordResetLinkAction } from '@/mobile/app/features/auth/application/passwordResetLinkState';
 import { validateResetPasswordInput } from '@/mobile/app/features/auth/application/resetPasswordValidation';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
@@ -46,6 +47,8 @@ export function ResetPasswordScreen() {
   const [confirmError, setConfirmError] = useState('');
   const [submissionError, setSubmissionError] = useState('');
   const passwordConfirmRef = React.useRef<TextInput>(null);
+  /** The single-use state token this screen has already spent. */
+  const preparedStateRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +64,24 @@ export function ResetPasswordScreen() {
       }
     };
 
+    const action = resolvePasswordResetLinkAction({
+      linkingResolved: incomingUrl !== null,
+      preparedState: preparedStateRef.current,
+      state: payload.state,
+    });
+
+    if (action !== 'prepare') {
+      if (action === 'fail') {
+        fail(tr.auth.callback.passwordResetLinkInvalid);
+      }
+
+      return () => {
+        active = false;
+      };
+    }
+
+    preparedStateRef.current = payload.state ?? null;
+
     const preparePasswordReset = async () => {
       await preparePasswordResetRedirect(payload);
       if (active) {
@@ -75,7 +96,7 @@ export function ResetPasswordScreen() {
     return () => {
       active = false;
     };
-  }, [payload]);
+  }, [incomingUrl, payload]);
 
   const submitPassword = useCallback(async () => {
     const validation = validateResetPasswordInput(password, passwordConfirm);
