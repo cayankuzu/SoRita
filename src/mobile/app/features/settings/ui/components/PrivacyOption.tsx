@@ -4,7 +4,7 @@ import { Check } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type PrivacyOptionProps = {
   active: boolean;
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 10,
+    padding: spacing.card,
   },
   privacyCardActive: {
     borderColor: colors.primary,

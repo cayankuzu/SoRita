@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.md,
   },
   userBody: {
     flex: 1,

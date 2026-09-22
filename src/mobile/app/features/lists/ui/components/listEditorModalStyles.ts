@@ -4,6 +4,7 @@ import {
   colors,
   fontWeight,
   radius,
+  spacing,
   textStyle,
   touch,
   typography,
@@ -146,7 +147,7 @@ export const listEditorModalStyles = StyleSheet.create({
     borderColor: colors.secondary,
     backgroundColor: colors.successBg,
     gap: 10,
-    padding: 10,
+    padding: spacing.md,
   },
   coverPickerSelected: {
     backgroundColor: colors.surface,

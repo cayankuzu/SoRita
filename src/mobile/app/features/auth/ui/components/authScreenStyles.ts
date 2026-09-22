@@ -1,6 +1,13 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const authScreenStyles = StyleSheet.create({
   landingScreen: {
@@ -87,7 +94,7 @@ export const authScreenStyles = StyleSheet.create({
     gap: 8,
     borderRadius: radius.lg,
     backgroundColor: colors.primaryBg,
-    padding: 10,
+    padding: spacing.card,
   },
   confirmationTitle: textStyle('bodyText', colors.primaryDark, fontWeight.strong),
   confirmationText: textStyle('bodyText', colors.textMuted),
@@ -141,7 +148,7 @@ export const authScreenStyles = StyleSheet.create({
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.card,
   },
   helperCardTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   helperCardText: textStyle('captionText', colors.textMuted, fontWeight.regular),
@@ -153,7 +160,7 @@ export const authScreenStyles = StyleSheet.create({
     color: colors.danger,
     ...typography.captionText,
     fontWeight: fontWeight.medium,
-    padding: 10,
+    padding: spacing.md,
   },
   counterText: {
     marginTop: -6,

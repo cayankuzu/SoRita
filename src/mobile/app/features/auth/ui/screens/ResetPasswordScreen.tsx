@@ -20,7 +20,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, radius, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
 
 type ScreenState =
   | { status: 'loading' }
@@ -239,6 +239,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerBg,
     color: colors.danger,
     ...typography.supportingLabelText,
-    padding: 10,
+    padding: spacing.md,
   },
 });

@@ -1,6 +1,13 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const placeEditorListSelectionStyles = StyleSheet.create({
   stepContent: {
@@ -58,7 +65,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 10,
+    padding: spacing.card,
     overflow: 'hidden',
   },
   listCardSelected: {
@@ -164,7 +171,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   createListCard: {
     gap: 10,
     borderRadius: radius.lg,
-    padding: 10,
+    padding: spacing.card,
     backgroundColor: colors.successBg,
     borderWidth: 1,
     borderColor: colors.secondary,
@@ -186,7 +193,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderColor: colors.secondary,
     backgroundColor: colors.surfaceMuted,
     gap: 10,
-    padding: 10,
+    padding: spacing.md,
   },
   coverPickerSelected: {
     backgroundColor: colors.surface,

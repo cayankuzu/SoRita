@@ -12,7 +12,14 @@ import { OptionRail, RatingSelector } from '@/mobile/app/features/map/ui/compone
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   PLACE_ADDRESS_MAX_LENGTH,
   PLACE_NAME_MAX_LENGTH,
@@ -107,7 +114,7 @@ const styles = StyleSheet.create({
   coordCard: {
     backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
-    padding: 10,
+    padding: spacing.card,
   },
   coordTitle: textStyle('metadataText', colors.primary, fontWeight.strong),
   coordText: {
@@ -128,7 +135,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.card,
   },
   requirementsTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   requirementsText: textStyle('metadataText', colors.textMuted),

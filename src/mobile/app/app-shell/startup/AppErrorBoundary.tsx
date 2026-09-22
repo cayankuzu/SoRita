@@ -11,6 +11,7 @@ import {
   colors,
   fontWeight,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   debugBox: {
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.md,
     gap: 4,
   },
   debugLabel: {

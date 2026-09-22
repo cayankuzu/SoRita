@@ -28,6 +28,7 @@ import {
   colors,
   fontWeight,
   radius,
+  spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: radius.lg,
     borderWidth: 1,
-    padding: 10,
+    padding: spacing.card,
   },
   optionCardPressed: {
     opacity: 0.92,

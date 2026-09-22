@@ -79,17 +79,29 @@ edilmedi.
 
 Bunlar bilerek açık bırakıldı; sessizce geçilmedi.
 
-### A1 — Kart dolgusu merkezîleşmemiş (P2)
+### A1 — Kart dolgusu merkezîleşmemiş (P2) — kısmen kapatıldı
 
-Kart benzeri 35 stil girişinde dolgu 10, 12, 14, 16 ve 18 arasında dağılıyor;
-18 yer ham `padding: 10` yazıyor ve `spacing.card = 10` token'ı kullanılmıyor.
+**2026-09-22 güncellemesi.** Bulgunun güvenli yarısı kapatıldı. Ham
+`padding: 10` yazan **21 stil girişi** ölçüldü ve kapsayan stil adına göre
+ayrıldı: 13'ü gerçekten kart (`coordCard`, `privacyCard`, `successCard`,
+`optionCard`…) → `spacing.card`; 8'i kart değil (`formError`, `coverPicker`,
+`userRow`, `debugBox`, `list`) → `spacing.md`. İki token da 10 olduğu için
+**görsel olarak hiçbir şey değişmedi**; `spacing.card` 3 kullanımdan 16'ya
+çıktı ve ham `padding: 10` sayısı sıfırlandı.
 
-Bilerek dokunulmadı: bu girişlerin hepsi kart değil (bir kısmı satır, modal,
-hata ekranı), hepsini `spacing.card` yapmak yanlış anlam yükler. 14px'in ise
-karşılığı olan bir token yok — gerçek sapma orada. Ölçek kararı verilmeden
-yapılacak toplu ikame, kodu düzeltmeden yalnız daha dolambaçlı hâle getirir.
+Önceki pasın "hepsi kart değil" uyarısı doğruydu ve ayrım stil adından
+ölçülerek yapıldı, varsayılarak değil.
 
-**Öneri:** Önce ölçek kararı (kart dolgusu kaç kademe olacak), sonra ikame.
+**Açık kalan — ölçeğin tamamı.** Guard'a "ham boşluk literali bir token
+değerine eşitse kır" kuralı eklenmek istendi ve ölçüldü: **540 ihlal**
+(`10px`:195, `4px`:143, `6px`:108, `12px`:67, `18px`:14, `16px`:8, `24px`:5),
+`paddingHorizontal`, `gap`, `marginTop` gibi tüm eksenlerde. Bu kural şu an
+build'i anında kırar ve 540 noktalık mekanik ikame ister. Kendi pasını
+hak ediyor; tek oturumda yapılacak toplu codemod bu boyutta regresyon riski
+taşır.
+
+**Öneri:** Ölçek kararı (14px'in token karşılığı olacak mı) verildikten sonra
+540 noktalık ikame ayrı bir pasta, guard'ı da o pasın sonunda ekleyerek.
 
 ### A2 — Boşluk ölçeği modüler değil (P2)
 

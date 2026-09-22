@@ -11,6 +11,7 @@ import {
   fontWeight,
   minTouchSize,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.card,
   },
   copyBlock: {
     gap: 4,

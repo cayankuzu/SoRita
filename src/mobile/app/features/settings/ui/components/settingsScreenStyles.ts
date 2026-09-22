@@ -4,6 +4,7 @@ import {
   colors,
   fontWeight,
   radius,
+  spacing,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -37,7 +38,7 @@ export const settingsScreenStyles = StyleSheet.create({
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.card,
   },
   helperCardTitle: textStyle('labelText', colors.text),
   helperCardText: textStyle('captionText', colors.textMuted),
@@ -52,7 +53,7 @@ export const settingsScreenStyles = StyleSheet.create({
     gap: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    padding: 10,
+    padding: spacing.card,
   },
   loadingCardBody: {
     flex: 1,
@@ -86,7 +87,7 @@ export const settingsScreenStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
-    padding: 10,
+    padding: spacing.card,
   },
   emailInfoHeader: {
     flexDirection: 'row',
@@ -100,7 +101,7 @@ export const settingsScreenStyles = StyleSheet.create({
     gap: 4,
     borderRadius: radius.lg,
     backgroundColor: colors.successBg,
-    padding: 10,
+    padding: spacing.card,
   },
   successTitle: textStyle('labelText', colors.secondary),
   successText: textStyle('captionText', colors.secondary),
@@ -121,7 +122,7 @@ export const settingsScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 10,
+    padding: spacing.md,
   },
   blockedUserBody: {
     flex: 1,

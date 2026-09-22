@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   body: textStyle('bodyText', colors.textMuted),
   list: {
     gap: 6,
-    padding: 10,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
   },
