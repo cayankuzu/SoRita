@@ -13,7 +13,11 @@ describe('logger', () => {
     vi.doUnmock('@/mobile/app/platform/observability/sentry');
   });
 
-  it('redacts sensitive metadata and avoids console output in production mode', async () => {
+  // This test used to pin "no console output in production". That silence cost
+  // a full day: a release build on a cable emitted not one diagnostic line, so
+  // a deep-link bug could only be guessed at. What has to hold is not silence
+  // but that nothing secret is printed, which is what this now proves.
+  it('redacts sensitive metadata and mirrors the redacted line to the console', async () => {
     vi.stubGlobal('__DEV__', false);
     vi.doMock('@/mobile/app/platform/observability/sentry', () => ({
       captureAppMessage: captureAppMessageMock,
@@ -31,7 +35,15 @@ describe('logger', () => {
       },
     });
 
-    expect(consoleWarnSpy).not.toHaveBeenCalled();
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+
+    const printed = String(consoleWarnSpy.mock.calls[0]?.[0] ?? '');
+    expect(printed).toContain('[SoRita][auth][WARN] Session refresh failed');
+    for (const secret of ['secret-token', 'refresh-secret', 'user@example.com']) {
+      expect(printed).not.toContain(secret);
+    }
+    expect(printed).toContain('[redacted]');
+
     expect(captureAppMessageMock).toHaveBeenCalledWith('[auth] Session refresh failed', {
       extras: {
         access_token: '[redacted]',
@@ -45,5 +57,24 @@ describe('logger', () => {
     });
 
     consoleWarnSpy.mockRestore();
+  });
+
+  it('keeps an error line free of secrets too', async () => {
+    vi.stubGlobal('__DEV__', false);
+    vi.doMock('@/mobile/app/platform/observability/sentry', () => ({
+      captureAppMessage: captureAppMessageMock,
+    }));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const { logger } = await import('@/mobile/app/platform/feedback/logger');
+
+    logger.error('media', 'Upload failed', { apiKey: 'sk-live-123', owner: 'user@example.com' });
+
+    const printed = String(consoleErrorSpy.mock.calls[0]?.[0] ?? '');
+    expect(printed).toContain('[SoRita][media][ERROR] Upload failed');
+    expect(printed).not.toContain('sk-live-123');
+    expect(printed).not.toContain('user@example.com');
+
+    consoleErrorSpy.mockRestore();
   });
 });

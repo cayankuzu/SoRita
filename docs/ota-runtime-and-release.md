@@ -20,6 +20,41 @@ for which installed binaries an update can reach.
 | Environment | Store builds and updates both read the EAS `production` environment, so the public config inside an update matches the binary it lands on. |
 | Update code signing | **Not used.** EAS Update code signing is unavailable on the account's current plan. Updates are served over HTTPS by Expo; their integrity rests on the security of the Expo account. See [Code signing decision](#code-signing-decision). |
 
+## Prove a device actually receives updates
+
+An update reaches only a binary whose embedded runtime string is identical.
+A binary built before `nativeRuntimeVersion` was split from `version` embeds the
+marketing version instead, so every update published afterwards misses it — and
+**nothing says so**. expo-updates asks the server, the server has no update for
+that runtime, and the app logs `No update available`, which is true and
+completely misleading.
+
+That happened on 2026-09-22: a sideloaded test build embedded `1.0.109` while
+the repository published for `1.0.108`. Six fixes were published and verified as
+"delivered"; none of them ever reached the device, and a day went into chasing
+app bugs that were in fact fixes that never arrived.
+
+Check the binary rather than trusting the log:
+
+```bash
+npm run ota:verify-device                       # the attached Android device
+npm run ota:verify-device -- --apk <path.apk>   # an artifact, before installing it
+```
+
+It reads the runtime the binary embeds out of its resource table and compares it
+with the runtime `app.config.ts` publishes for, failing with the exact mismatch.
+
+- Run it whenever a build is sideloaded onto a test device, and after any change
+  to `nativeRuntimeVersion`.
+- `No update available` is only meaningful once this has passed. Before that it
+  cannot distinguish "up to date" from "stranded".
+- An AAB cannot be checked directly; convert it first
+  (`bundletool build-apks --mode=universal`) and check the universal APK.
+- iOS has no equivalent command, because the runtime lives in `Info.plist`
+  inside a signed IPA. Use `npm run ota:record-binary`, which reads the channel
+  and runtime EAS recorded for the build, and treat a device whose runtime was
+  never recorded as stranded.
+
 ## Ship a JavaScript change (no store build)
 
 1. Commit the change on `main` and push it.

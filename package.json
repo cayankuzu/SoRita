@@ -70,7 +70,7 @@
     "open:android": "node utils/android-launch-app.mjs",
     "ops:rpc:verify": "node utils/ops/verify-rpc-contract.mjs",
     "ota:classify": "node utils/guards/classify-ota-change.mjs",
-    "ota:classifier:test": "node --test utils/guards/__tests__/classify-ota-change.test.mjs utils/guards/__tests__/ota-workflows.test.mjs utils/eas/check-update-code-signing.test.mjs utils/eas/materialize-asc-api-key.test.mjs utils/eas/verify-build-evidence.test.mjs utils/eas/verify-production-ios-build.test.mjs utils/eas/ota-binaries.test.mjs utils/eas/publish-ota.test.mjs",
+    "ota:classifier:test": "node --test utils/guards/__tests__/classify-ota-change.test.mjs utils/guards/__tests__/ota-workflows.test.mjs utils/eas/check-update-code-signing.test.mjs utils/eas/materialize-asc-api-key.test.mjs utils/eas/verify-build-evidence.test.mjs utils/eas/verify-production-ios-build.test.mjs utils/eas/ota-binaries.test.mjs utils/eas/publish-ota.test.mjs utils/eas/device-runtime.test.mjs",
     "ota:publish": "node utils/eas/publish-ota.mjs",
     "ota:record-binary": "node utils/eas/ota-binaries.mjs",
     "ops:private-covers:audit": "node utils/ops/migrate-private-list-covers.mjs",
@@ -115,7 +115,8 @@
     "typecheck:app": "tsc --noEmit",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "ui-copy:check": "node utils/guards/check-ui-copy.mjs",
-    "ui-tokens:check": "node utils/guards/check-ui-tokens.mjs && node --test utils/guards/__tests__/ui-token-typography.test.mjs"
+    "ui-tokens:check": "node utils/guards/check-ui-tokens.mjs && node --test utils/guards/__tests__/ui-token-typography.test.mjs",
+    "ota:verify-device": "node utils/eas/check-device-runtime.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^2.2.0",
