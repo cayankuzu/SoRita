@@ -175,7 +175,10 @@ describe('authRedirectHandlers', () => {
       'Bu sıfırlama bağlantısı kullanılmış veya süresi dolmuş. Yeni bir sıfırlama e-postası iste.',
     );
 
-    expect(discardPendingAuthRedirectStateMock).toHaveBeenCalledWith('reset-state');
+    // The provider-error branch runs before the state is consumed, so the
+    // token is still good. Discarding it here turned one bad attempt into a
+    // permanently dead link.
+    expect(discardPendingAuthRedirectStateMock).not.toHaveBeenCalled();
     expect(persistAuthSessionMock).not.toHaveBeenCalled();
     expect(clearPendingAuthRedirectStatesMock).not.toHaveBeenCalled();
     expect(signOutMock).not.toHaveBeenCalled();
@@ -198,7 +201,9 @@ describe('authRedirectHandlers', () => {
     ).rejects.toThrow();
 
     expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
-    expect(discardPendingAuthRedirectStateMock).toHaveBeenCalledWith('missing');
+    // consumePendingAuthRedirectState already removed whatever it validated,
+    // so the failure path has nothing left to discard.
+    expect(discardPendingAuthRedirectStateMock).not.toHaveBeenCalled();
     expect(persistAuthSessionMock).not.toHaveBeenCalled();
     expect(clearPendingAuthRedirectStatesMock).not.toHaveBeenCalled();
     expect(signOutMock).not.toHaveBeenCalled();

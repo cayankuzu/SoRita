@@ -7,7 +7,6 @@ import {
 import {
   clearPendingAuthRedirectStates,
   consumePendingAuthRedirectState,
-  discardPendingAuthRedirectState,
   type AuthRedirectParams,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
 import { runWithPasswordRecoverySessionExchange } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
@@ -27,11 +26,12 @@ async function failAuthRedirect(message: string): Promise<never> {
   throw new Error(message);
 }
 
-async function failPasswordResetRedirect(
-  payload: AuthRedirectParams,
-  message: string,
-): Promise<never> {
-  await discardPendingAuthRedirectState(payload.state);
+async function failPasswordResetRedirect(message: string): Promise<never> {
+  // Deliberately does not discard the state. consumePendingAuthRedirectState
+  // already removes it when it validates one, so discarding here only ever
+  // destroyed a token that was still good - the provider-error branch above
+  // runs before the state is consumed. That turned one bad attempt into a
+  // permanently dead link, which is why retrying the same mail kept failing.
   throw new Error(message);
 }
 
@@ -77,7 +77,7 @@ export async function completeSignupRedirect(payload: AuthRedirectParams) {
 
 export async function preparePasswordResetRedirect(payload: AuthRedirectParams) {
   if (hasProviderError(payload)) {
-    await failPasswordResetRedirect(payload, tr.auth.callback.passwordResetLinkInvalid);
+    await failPasswordResetRedirect(tr.auth.callback.passwordResetLinkInvalid);
   }
 
   const validation = await consumePendingAuthRedirectState({
@@ -87,13 +87,21 @@ export async function preparePasswordResetRedirect(payload: AuthRedirectParams) 
   });
 
   if (!validation.success || payload.flow !== 'password-reset') {
-    await failPasswordResetRedirect(payload, tr.auth.callback.passwordResetLinkInvalid);
+    // The reason was computed and then thrown away, so every one of these
+    // failures reached the user as the same sentence and none of them could
+    // be told apart from a report. Record which case it was.
+    logger.warn('auth', 'Password reset link rejected', {
+      flow: payload.flow,
+      hasState: Boolean(payload.state),
+      reason: validation.success ? 'flow_mismatch' : validation.reason,
+    });
+    await failPasswordResetRedirect(tr.auth.callback.passwordResetLinkInvalid);
   }
 
   await runWithPasswordRecoverySessionExchange(() =>
     resolveSessionFromPayload(
       payload,
-      (message) => failPasswordResetRedirect(payload, message),
+      (message) => failPasswordResetRedirect(message),
     ),
   );
 }
