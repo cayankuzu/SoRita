@@ -13,7 +13,7 @@ import {
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
 import { resolvePasswordResetLinkAction } from '@/mobile/app/features/auth/application/passwordResetLinkState';
-import { useIncomingAuthUrl } from '@/mobile/app/features/auth/application/useIncomingAuthUrl';
+import { useAuthDeepLink } from '@/mobile/app/app-shell/auth/session/authDeepLinkUrl';
 import { validateResetPasswordInput } from '@/mobile/app/features/auth/application/resetPasswordValidation';
 import { AuthField } from '@/mobile/app/features/auth/ui/components/AuthField';
 import { AuthPasswordRequirements } from '@/mobile/app/features/auth/ui/components/AuthPasswordRequirements';
@@ -33,7 +33,7 @@ export function ResetPasswordScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'ResetPassword'>();
   const { refreshUser, user } = useAuth();
-  const incoming = useIncomingAuthUrl();
+  const incoming = useAuthDeepLink();
   const payload = useMemo(() => {
     const parsedPayload = incoming.url ? parseAuthDeepLinkUrl(incoming.url) : null;
     return parsedPayload?.target === 'reset-password'

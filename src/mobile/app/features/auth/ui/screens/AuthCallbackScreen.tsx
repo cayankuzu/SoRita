@@ -8,7 +8,7 @@ import {
   normalizeAuthRedirectParams,
   parseAuthDeepLinkUrl,
 } from '@/mobile/app/app-shell/auth/session/authRedirectState';
-import { useIncomingAuthUrl } from '@/mobile/app/features/auth/application/useIncomingAuthUrl';
+import { useAuthDeepLink } from '@/mobile/app/app-shell/auth/session/authDeepLinkUrl';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -39,7 +39,7 @@ export function AuthCallbackScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'AuthCallback'>();
   const { refreshUser, user } = useAuth();
-  const incoming = useIncomingAuthUrl();
+  const incoming = useAuthDeepLink();
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const payload = useMemo(() => {

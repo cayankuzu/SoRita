@@ -11,6 +11,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { MainTabs } from '@/mobile/app/app-shell/navigation/MainTabs';
+import { startAuthDeepLinkCapture } from '@/mobile/app/app-shell/auth/session/authDeepLinkUrl';
 import { buildNavigationLinkingPrefixes } from '@/mobile/app/app-shell/navigation/linkingPrefixes';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
@@ -191,6 +192,13 @@ export function RootNavigator() {
     },
     [cancelPendingNavigationStatePersist, persistLatestNavigationState],
   );
+
+  // Auth deep links must be captured from app start. A warm launch delivers the
+  // link as a `url` event and navigates afterwards, so a listener registered by
+  // the screen never sees it.
+  useEffect(() => {
+    startAuthDeepLinkCapture();
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'android') {
