@@ -28,6 +28,8 @@ export type ActionMenuSheetItem = {
 type ActionMenuSheetProps = {
   visible: boolean;
   title: string;
+  // Whose content the actions apply to, such as a comment's author.
+  subtitle?: string;
   items: readonly ActionMenuSheetItem[];
   onClose: () => void;
   returnFocusRef?: React.RefObject<unknown>;
@@ -36,6 +38,7 @@ type ActionMenuSheetProps = {
 export function ActionMenuSheet({
   visible,
   title,
+  subtitle,
   items,
   onClose,
   returnFocusRef,
@@ -53,7 +56,7 @@ export function ActionMenuSheet({
       dismissOnBackdropPress
       contentContainerStyle={styles.sheetContent}
     >
-      <SheetHeader onClose={onClose} title={title} titleRef={titleRef} />
+      <SheetHeader onClose={onClose} subtitle={subtitle} title={title} titleRef={titleRef} />
 
       <View>
         {items.map((item) => {
