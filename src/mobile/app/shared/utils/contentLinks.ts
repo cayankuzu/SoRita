@@ -1,4 +1,5 @@
 import { env } from '@/mobile/app/platform/config/env';
+import { PUBLIC_WEBSITE_URL } from '@/mobile/app/platform/config/publicWebsite';
 
 function buildQuery(params: Record<string, string | null | undefined>) {
   const pairs = Object.entries(params).flatMap(([key, value]) =>
@@ -9,24 +10,17 @@ function buildQuery(params: Record<string, string | null | undefined>) {
 
 /**
  * Where a shared link sends someone without the content: the app itself on a
- * verified app-link host, the website's download page, or, in development,
- * the app's own scheme.
+ * verified app-link host, otherwise the website's download page.
  */
 export function buildDownloadUrl() {
-  if (env.appLinkDomain) {
-    return `https://${env.appLinkDomain}`;
-  }
-  if (env.publicWebUrl) {
-    return `${env.publicWebUrl}/download/`;
-  }
-  return `${env.appScheme}://`;
+  return env.appLinkDomain ? `https://${env.appLinkDomain}` : `${PUBLIC_WEBSITE_URL}/download/`;
 }
 
 /**
  * The link a list or place is shared with. A custom-scheme link is plain,
- * unclickable text in WhatsApp or Instagram, so a release shares an HTTPS
- * link: the verified app-link host when there is one, otherwise the
- * website's handoff page, which opens the app or offers the stores.
+ * unclickable text in WhatsApp or Instagram, so it is always HTTPS: the
+ * verified app-link host when there is one, otherwise the website's handoff
+ * page, which opens the app or offers the stores.
  */
 export function buildListContentUrl(listId?: string | null, placeId?: string | null) {
   if (!listId) {
@@ -36,8 +30,5 @@ export function buildListContentUrl(listId?: string | null, placeId?: string | n
   if (env.appLinkDomain) {
     return `https://${env.appLinkDomain}/lists/${encodeURIComponent(listId)}${buildQuery({ placeId })}`;
   }
-  if (env.publicWebUrl) {
-    return `${env.publicWebUrl}/lists/${buildQuery({ listId, placeId })}`;
-  }
-  return `${env.appScheme}://lists/${encodeURIComponent(listId)}${buildQuery({ placeId })}`;
+  return `${PUBLIC_WEBSITE_URL}/lists/${buildQuery({ listId, placeId })}`;
 }
