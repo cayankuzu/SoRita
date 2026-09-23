@@ -51,7 +51,7 @@ function renderThread(overrides: Partial<FeedActionComment> = {}) {
       <CommentThread
         comment={renderedComment}
         depth={0}
-        hiddenReplyCount={0}
+        moreReplies={null}
         repliesExpanded={false}
         replyCount={0}
         onLoadMoreReplies={vi.fn()}
@@ -84,8 +84,13 @@ describe('CommentThread reaction actions', () => {
     expect(likersAction).toBeDefined();
     expect(likeAction?.props.onLongPress).toBeUndefined();
     expect(likeAction?.props.accessibilityState).toEqual({ selected: false });
-    expect(StyleSheet.flatten(likeAction?.props.style)).toMatchObject({ width: 48, height: 48 });
-    expect(StyleSheet.flatten(likersAction?.props.style)).toMatchObject({ minWidth: 48, height: 48 });
+    // Painted small like YouTube's; the target is the painted box plus slop.
+    [likeAction, likersAction].forEach((action) => {
+      const style = StyleSheet.flatten(action?.props.style);
+      const slop = typeof action?.props.hitSlop === 'number' ? action.props.hitSlop : 0;
+      expect(Number(style.height) + 2 * slop).toBeGreaterThanOrEqual(48);
+      expect(Number(style.width ?? style.minWidth) + 2 * slop).toBeGreaterThanOrEqual(48);
+    });
 
     let likeResult: unknown;
     act(() => {
@@ -114,5 +119,71 @@ describe('CommentThread reaction actions', () => {
     expect(actions.find(
       (action) => action.props.accessibilityLabel === tr.cards.unlikeComment,
     )?.props.accessibilityState).toEqual({ selected: true });
+  });
+});
+
+describe('CommentThread replies', () => {
+  const pressable = (renderer: TestRenderer.ReactTestRenderer, label: string) =>
+    renderer.root.find(
+      (node) => String(node.type) === 'InstantPressable' && node.props.accessibilityLabel === label,
+    );
+
+  function renderWithReplies(props: {
+    moreReplies?: { count: number; rootId: string } | null;
+    repliesExpanded: boolean;
+  }) {
+    const onLoadMoreReplies = vi.fn();
+    const onToggleReplies = vi.fn();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <CommentThread
+          comment={comment}
+          depth={0}
+          moreReplies={props.moreReplies ?? null}
+          repliesExpanded={props.repliesExpanded}
+          replyCount={4}
+          onLoadMoreReplies={onLoadMoreReplies}
+          onOpenCommentMenu={vi.fn()}
+          onShowCommentLikers={vi.fn()}
+          onStartReply={vi.fn()}
+          onToggleCommentLike={vi.fn()}
+          onToggleReplies={onToggleReplies}
+        />,
+      );
+    });
+
+    const labels = renderer.root
+      .findAll((node) => String(node.type) === 'InstantPressable')
+      .map((node) => node.props.accessibilityLabel);
+
+    return { labels, onLoadMoreReplies, onToggleReplies, renderer };
+  }
+
+  it('offers a thread behind its reply count and says when it is open', () => {
+    const closed = renderWithReplies({ repliesExpanded: false });
+    expect(closed.labels).toContain(tr.cards.viewReplies(4));
+
+    const toggle = pressable(closed.renderer, tr.cards.viewReplies(4));
+    expect(toggle.props.accessibilityState).toEqual({ expanded: false });
+    act(() => toggle.props.onPress());
+    expect(closed.onToggleReplies).toHaveBeenCalledWith('comment-1');
+
+    const open = renderWithReplies({ repliesExpanded: true });
+    expect(open.labels).toContain(tr.cards.hideReplies);
+  });
+
+  it('shows the rest of a thread from its last visible reply', () => {
+    const { labels, onLoadMoreReplies, renderer } = renderWithReplies({
+      moreReplies: { count: 5, rootId: 'root-1' },
+      repliesExpanded: false,
+    });
+    expect(labels).toContain(tr.cards.moreReplies(5));
+
+    act(() => {
+      pressable(renderer, tr.cards.moreReplies(5)).props.onPress();
+    });
+    expect(onLoadMoreReplies).toHaveBeenCalledWith('root-1');
   });
 });

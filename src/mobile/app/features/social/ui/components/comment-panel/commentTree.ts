@@ -2,10 +2,16 @@ import type { FeedActionComment } from '@/mobile/app/features/social/ui/componen
 
 export const DEFAULT_VISIBLE_REPLY_COUNT = 3;
 
+/** The rest of a thread, offered under the last reply shown. */
+export type MoreRepliesRow = {
+  count: number;
+  rootId: string;
+};
+
 export type VisibleCommentRow = {
   comment: FeedActionComment;
   depth: number;
-  hiddenReplyCount: number;
+  moreReplies: MoreRepliesRow | null;
   replyCount: number;
   repliesExpanded: boolean;
 };
@@ -29,6 +35,11 @@ export function countCommentTree(comments: FeedActionComment[]) {
   return count;
 }
 
+/**
+ * The rows a comment list shows. Replies start hidden behind their comment's
+ * "N yanıt" toggle, as on YouTube, and open a few at a time; the button for
+ * the next few sits under the last reply shown, where the reader already is.
+ */
 export function flattenVisibleComments(
   comments: FeedActionComment[],
   expandedReplies: Record<string, boolean>,
@@ -38,7 +49,7 @@ export function flattenVisibleComments(
 
   const appendComment = (comment: FeedActionComment, depth: number) => {
     const replies = comment.replies ?? [];
-    const repliesExpanded = expandedReplies[comment.id] ?? true;
+    const repliesExpanded = expandedReplies[comment.id] ?? false;
     const visibleReplyCount = Math.max(
       DEFAULT_VISIBLE_REPLY_COUNT,
       visibleReplyCounts[comment.id] ?? DEFAULT_VISIBLE_REPLY_COUNT,
@@ -50,14 +61,17 @@ export function flattenVisibleComments(
     rows.push({
       comment,
       depth,
-      hiddenReplyCount: repliesExpanded
-        ? Math.max(0, replies.length - visibleReplies.length)
-        : replies.length,
+      moreReplies: null,
       replyCount: replies.length,
       repliesExpanded,
     });
 
     visibleReplies.forEach((reply) => appendComment(reply, depth + 1));
+
+    const hiddenReplyCount = replies.length - visibleReplies.length;
+    if (visibleReplies.length > 0 && hiddenReplyCount > 0) {
+      rows[rows.length - 1].moreReplies = { count: hiddenReplyCount, rootId: comment.id };
+    }
   };
 
   comments.forEach((comment) => appendComment(comment, 0));

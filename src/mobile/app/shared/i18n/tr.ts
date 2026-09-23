@@ -1075,6 +1075,7 @@ export const tr = {
     unlikeComment: 'Yorum beğenisini kaldır',
     viewList: (name: string) => `${name} listesini gör`,
     viewReplies: (count: number) => `${count} yanıtı göster`,
+    moreReplies: (count: number) => `${count} yanıt daha`,
     shareMore: 'Daha fazla paylaş',
     shareToInstagramStories: 'Instagram Stories',
     instagramStoryShareFailed: 'Instagram Stories açılamadı',

@@ -387,9 +387,18 @@ export function CommentPanel({
   const toggleReplies = (commentId: string) => {
     setExpandedReplies((current) => ({
       ...current,
-      [commentId]: !(current[commentId] ?? true),
+      [commentId]: !(current[commentId] ?? false),
     }));
   };
+  // Replying opens the thread, so the reply appears where it was written.
+  const handleStartReply = React.useCallback(
+    (comment: FeedActionComment) => {
+      const rootId = comment.parentCommentId || comment.id;
+      setExpandedReplies((current) => (current[rootId] ? current : { ...current, [rootId]: true }));
+      onStartReply(comment);
+    },
+    [onStartReply],
+  );
   const loadMoreReplies = (commentId: string) => {
     setVisibleReplyCounts((current) => ({
       ...current,
@@ -488,14 +497,14 @@ export function CommentPanel({
                       comment={item.comment}
                       depth={item.depth}
                       editingCommentId={editingCommentId}
-                      hiddenReplyCount={item.hiddenReplyCount}
+                      moreReplies={item.moreReplies}
                       repliesExpanded={item.repliesExpanded}
                       replyCount={item.replyCount}
                       onLoadMoreReplies={loadMoreReplies}
                       onMentionPress={onUserPress ? handleMentionPress : undefined}
                       onOpenCommentMenu={setActiveMenuComment}
                       onShowCommentLikers={setActiveLikedComment}
-                      onStartReply={onStartReply}
+                      onStartReply={handleStartReply}
                       onToggleCommentLike={onToggleCommentLike}
                       onToggleReplies={toggleReplies}
                       onUserPress={onUserPress}

@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import {
   avatarSize,
   colors,
+  controlSize,
   fontWeight,
   opacity,
   radius,
@@ -99,19 +100,10 @@ export const commentPanelStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    position: 'relative',
   },
+  // A reply lines up with its comment's text, not with its avatar.
   replyCommentItem: {
-    marginTop: spacing.sm,
-  },
-  // Runs through the centre of the reply's own avatar, which sits on top of it.
-  replyItemRail: {
-    position: 'absolute',
-    left: (avatarSize.xs - 1) / 2,
-    top: -spacing.sm,
-    bottom: 0,
-    width: 1,
-    backgroundColor: colors.cardBorder,
+    marginLeft: avatarSize.sm + spacing.md,
   },
   commentAvatarButton: {
     borderRadius: radius.pill,
@@ -119,178 +111,73 @@ export const commentPanelStyles = StyleSheet.create({
   },
   commentMain: {
     flex: 1,
-    gap: spacing.sm,
-    minWidth: 0,
-  },
-  replyCommentMain: {
-    gap: spacing.sm,
-  },
-  commentBubble: {
-    gap: spacing.sm,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  replyBubble: {
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-    borderColor: colors.cardBorder,
-  },
-  commentTopRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'flex-start',
-  },
-  commentIdentity: {
-    flex: 1,
     gap: spacing.xxs,
     minWidth: 0,
   },
-  commentAuthorRow: {
+  commentHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     minWidth: 0,
   },
-  commentAuthor: {
-    ...typography.labelText,
-    color: colors.text,
+  commentAuthorButton: {
     flexShrink: 1,
-  },
-  commentMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
     minWidth: 0,
   },
+  commentAuthor: textStyle('labelText', colors.text),
   commentMeta: {
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-    flexShrink: 1,
+    ...textStyle('compactBodyText', colors.textSoft),
+    flexShrink: 0,
   },
-  commentMetaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.borderStrong,
-  },
-  commentEdited: {
-    ...typography.metadataText,
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  commentPending: {
-    ...typography.metadataText,
-    color: colors.warning,
-    fontWeight: fontWeight.strong,
-    borderRadius: radius.pill,
-    backgroundColor: colors.warningBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  commentLikeColumn: {
+  commentPending: textStyle('metadataText', colors.warning),
+  commentContent: textStyle('bodyText', colors.text),
+  // Pulled left by the icon's inset, so the heart lines up with the text.
+  commentActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: -spacing.sm,
   },
-  commentLikeAction: {
-    width: 48,
-    height: 48,
+  commentIconAction: {
+    width: controlSize.compact,
+    height: controlSize.compact,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  commentLikersAction: {
-    minWidth: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentLikeButton: {
-    width: 26,
-    height: 26,
     borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
   },
-  commentLikeButtonActive: {
-    backgroundColor: colors.dangerBg,
+  commentCountAction: {
+    minWidth: controlSize.compact,
+    height: controlSize.compact,
+    justifyContent: 'center',
+    paddingRight: spacing.sm,
+  },
+  commentTextAction: {
+    height: controlSize.compact,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  commentMenuAction: {
+    marginLeft: 'auto',
   },
   commentLikeCount: {
-    ...textStyle('metadataText', colors.textSoft, fontWeight.strong),
+    ...textStyle('metadataText', colors.textSoft),
     ...tabularNumbers,
   },
   commentLikeCountActive: {
     color: colors.danger,
   },
-  commentContent: textStyle('captionText', colors.text, fontWeight.regular),
-  replyContent: {
-    ...typography.compactBodyText,
-  },
-  mentionText: {
-    color: colors.primary,
-    fontWeight: fontWeight.strong,
-  },
-  commentActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  commentInlineAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 30,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm,
-  },
-  commentInlineMenuButton: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
-  },
-  commentInlineMenuButtonActive: {
-    backgroundColor: colors.primaryBg,
-  },
-  commentInlineActionText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
-  commentInlineActionTextActive: {
-    color: colors.primary,
-  },
-  commentInlineDangerText: {
-    color: colors.danger,
-  },
-  replySection: {
-    gap: spacing.sm,
-  },
-  replyThread: {
-    marginLeft: spacing.xxs,
-    paddingLeft: spacing.sm,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.cardBorder,
-  },
+  commentActionText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   replyToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     alignSelf: 'flex-start',
-    minHeight: 32,
+    height: controlSize.compact,
+    marginLeft: -spacing.xs,
+    paddingHorizontal: spacing.xs,
     borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm,
   },
-  replyToggleText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
+  replyToggleText: textStyle('metadataText', colors.primary, fontWeight.strong),
   composerDock: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.cardBorder,

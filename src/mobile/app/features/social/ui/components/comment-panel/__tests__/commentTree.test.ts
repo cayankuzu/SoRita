@@ -22,25 +22,30 @@ describe('commentTree', () => {
   const replies = Array.from({ length: 8 }, (_, index) => comment(`reply-${index}`));
   const comments = [comment('root', replies)];
 
-  it('flattens only a progressive reply window into list rows', () => {
-    const initial = flattenVisibleComments(comments, {}, {});
-    expect(initial.map((row) => row.comment.id)).toEqual([
+  it('keeps replies behind their comment until the thread is opened', () => {
+    const rows = flattenVisibleComments(comments, {}, {});
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ moreReplies: null, replyCount: 8, repliesExpanded: false });
+    expect(countCommentTree(comments)).toBe(9);
+  });
+
+  it('opens a thread a few replies at a time, offering the rest under the last one', () => {
+    const opened = flattenVisibleComments(comments, { root: true }, {});
+    expect(opened.map((row) => row.comment.id)).toEqual([
       'root',
       'reply-0',
       'reply-1',
       'reply-2',
     ]);
-    expect(initial[0]?.hiddenReplyCount).toBe(5);
+    expect(opened[0]?.moreReplies).toBeNull();
+    expect(opened[3]?.moreReplies).toEqual({ count: 5, rootId: 'root' });
 
-    const expanded = flattenVisibleComments(comments, {}, { root: 6 });
-    expect(expanded).toHaveLength(7);
-    expect(expanded[0]?.hiddenReplyCount).toBe(2);
-  });
+    const more = flattenVisibleComments(comments, { root: true }, { root: 6 });
+    expect(more).toHaveLength(7);
+    expect(more[6]?.moreReplies).toEqual({ count: 2, rootId: 'root' });
 
-  it('collapses replies without changing the total comment count', () => {
-    const rows = flattenVisibleComments(comments, { root: false }, {});
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.hiddenReplyCount).toBe(8);
-    expect(countCommentTree(comments)).toBe(9);
+    const all = flattenVisibleComments(comments, { root: true }, { root: 9 });
+    expect(all).toHaveLength(9);
+    expect(all.every((row) => row.moreReplies === null)).toBe(true);
   });
 });
