@@ -29,7 +29,7 @@ export function StackScreenHeader({
     <View
       style={[
         styles.header,
-        { paddingHorizontal: screenPadding, paddingTop: insets.top + 8 },
+        { paddingHorizontal: screenPadding, paddingTop: insets.top + spacing.sm },
       ]}
     >
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack}>

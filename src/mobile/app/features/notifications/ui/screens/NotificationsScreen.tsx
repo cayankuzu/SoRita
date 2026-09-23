@@ -133,6 +133,7 @@ export function NotificationsScreen() {
   return (
     <Screen
       padded={false}
+      safeTop={false}
       scroll={false}
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
@@ -148,29 +149,24 @@ export function NotificationsScreen() {
             ? notificationUiConfig.newCount(unreadCount)
             : tr.notifications.resultCount(filteredItems.length)
         }
+        // Offered only while something is unread: a greyed-out tick read as
+        // a broken button.
         rightAction={
-          <IconButton
-            accessibilityLabel={
-              unreadCount > 0
-                ? `${notificationUiConfig.markAllReadLabel}, ${tr.notifications.unreadHint(unreadCount)}`
-                : notificationUiConfig.markAllReadLabel
-            }
-            disabled={unreadCount === 0}
-            loading={isMarkingAllRead}
-            onPress={handleMarkAllRead}
-          >
-            <CheckCheck
-              color={unreadCount === 0 ? colors.textDisabled : colors.primary}
-              size={iconSize.md}
-            />
-          </IconButton>
+          unreadCount > 0 ? (
+            <IconButton
+              accessibilityLabel={`${notificationUiConfig.markAllReadLabel}, ${tr.notifications.unreadHint(unreadCount)}`}
+              loading={isMarkingAllRead}
+              onPress={handleMarkAllRead}
+            >
+              <CheckCheck color={colors.primary} size={iconSize.md} />
+            </IconButton>
+          ) : undefined
         }
       />
 
       <NotificationCategoryTabs
         tabs={categories}
         activeKey={category}
-        resultCount={filteredItems.length}
         onChange={(nextCategory) => setCategory(nextCategory as NotificationCategory)}
       />
 
