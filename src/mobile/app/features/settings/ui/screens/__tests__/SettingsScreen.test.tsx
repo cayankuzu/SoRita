@@ -137,6 +137,7 @@ vi.mock('@/mobile/app/shared/hooks/useAndroidBackHandler', () => ({
 
 vi.mock('lucide-react-native', () => ({
   Ban: () => null,
+  Download: () => null,
   Lock: () => null,
   LogOut: () => null,
   Palette: () => null,

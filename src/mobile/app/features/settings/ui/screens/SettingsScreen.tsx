@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   Ban,
+  Download,
   Lock,
   LogOut,
   Palette,
@@ -72,26 +73,32 @@ type SettingsMenuSectionDescriptor = {
   items: SettingsMenuItemDescriptor[];
 };
 
+// One ink for every row. The menu used to paint five colours across seven
+// rows, and the same shield glyph meant privacy in green and data export in
+// blue. Colour is left to the one row that destroys something.
+const iconInk = colors.textMuted;
+const iconTile = colors.surfaceMuted;
+
 const sections: SettingsMenuSectionDescriptor[] = [
   {
     title: tr.settings.sections.account,
     items: [
       {
-        icon: <UserIcon color={colors.primary} size={iconSize.md} />,
+        icon: <UserIcon color={iconInk} size={iconSize.md} />,
         label: tr.settings.editProfile.title,
-        color: colors.primaryBg,
+        color: iconTile,
         action: 'openEditProfile',
       },
       {
-        icon: <Shield color={colors.secondary} size={iconSize.md} />,
+        icon: <Shield color={iconInk} size={iconSize.md} />,
         label: tr.settings.privacy.title,
-        color: colors.successBg,
+        color: iconTile,
         action: 'openPrivacy',
       },
       {
-        icon: <Lock color={colors.primary} size={iconSize.md} />,
+        icon: <Lock color={iconInk} size={iconSize.md} />,
         label: tr.settings.password.title,
-        color: colors.primaryBg,
+        color: iconTile,
         action: 'openPassword',
       },
     ],
@@ -100,22 +107,22 @@ const sections: SettingsMenuSectionDescriptor[] = [
     title: tr.settings.sections.other,
     items: [
       {
-        icon: <Ban color={colors.textMuted} size={iconSize.md} />,
+        icon: <Ban color={iconInk} size={iconSize.md} />,
         label: tr.settings.blocked.title,
-        color: colors.surfaceMuted,
+        color: iconTile,
         action: 'openBlocked',
       },
       {
-        icon: <Shield color={colors.primary} size={iconSize.md} />,
+        icon: <Download color={iconInk} size={iconSize.md} />,
         label: tr.settings.personalDataExport,
-        color: colors.primaryBg,
+        color: iconTile,
         action: 'exportPersonalData',
         disabledWhenExporting: true,
       },
       {
-        icon: <LogOut color={colors.textMuted} size={iconSize.md} />,
+        icon: <LogOut color={iconInk} size={iconSize.md} />,
         label: tr.settings.logout,
-        color: colors.surfaceMuted,
+        color: iconTile,
         action: 'requestLogout',
       },
       {
@@ -134,9 +141,9 @@ if (__DEV__) {
     title: tr.uiCatalog.developerSection,
     items: [
       {
-        icon: <Palette color={colors.purple} size={iconSize.md} />,
+        icon: <Palette color={iconInk} size={iconSize.md} />,
         label: tr.uiCatalog.title,
-        color: colors.purpleBg,
+        color: iconTile,
         action: 'openDeveloperCatalog',
       },
     ],
