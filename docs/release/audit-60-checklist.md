@@ -62,7 +62,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 0: OTA zemini, PASS 0 envanter | ✅ | |
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
-| Faz 2 sonrası 7 commit | ⚠ **teslim edilmedi** | `6fd59a4` 4pt ölçek, `a292cca` portre kilidi, `4cc497d` kart okuma sırası, `4bad78f` sakin harita + kümeleme, `4e782fd` kapak fallback, `e5cb7ed` bildirim başlığı, `b22ebfc` bildirim metni migration'ı (production'a uygulanmadı). OTA yayını ve cihaz ölçümü Faz 3'te yapılır |
+| 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı production'a **uygulanmadı**: `db push` izin sistemince reddedildi, Cayan'ın adımı |
 
 ---
 
@@ -76,14 +76,14 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ✅ | 0 | OTA zemini, envanter | — | — |
 | 🔶 | 1 | iOS OTA (build TestFlight'ta) | Faz 4'te kapanır | — |
 | ✅ | 2 | Envanter, ekran incelemesi, duplicate | — | — |
-| ⬜ | 3 | Token sistemi kalanı + bekleyen teslimat | B10, B11 | Migration onayı (1 dk) |
+| ✅ | 3 | Token sistemi kalanı + bekleyen teslimat | B10 (cihaz ölçümü bir sonraki OTA'da) | Migration'ı uygulamak (1 dk) |
 | ⬜ | 4 | Native paket #1 + iOS OTA açılışı | B13, Faz 1 | İkon onayı, AAB → Play, TestFlight kurulumu (~30 dk) |
 | ⬜ | 5 | Component sistemi I: primitive'ler, durum bileşenleri, form standardı | — | — |
 | ⬜ | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
 | ⬜ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
 | ⬜ | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
 | ⬜ | 9A | Durum matrisi, motion, cila, "ışık hızı" hissi | A4, B14, B15, B16 | — |
-| ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B12 | Görsel onay (10 dk) |
+| ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
 | ⬜ | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
 | ⬜ | 11 | İşlem matrisi I: hesap yaşam döngüsü (İ01–İ13) | A1, A8 | Doğrulama e-postasındaki linke dokunmak (10 dk) |
 | ⬜ | 12 | İşlem matrisi II: profil ve ayarlar (İ14–İ23) | — | — |
@@ -111,7 +111,7 @@ Kalan: **27 faz** (3–29). Tahmin: 27 oturum. Faz 29 gerekirse tekrarlanır.
 
 ## Faz detayları
 
-### ⬜ Faz 3: Token sistemi kalanı + bekleyen teslimat
+### ✅ Faz 3: Token sistemi kalanı + bekleyen teslimat
 
 Claude:
 1. Faz 2 sonrası 7 commit'i cihaza teslim et: `check:release` → `ota:publish`
@@ -131,6 +131,47 @@ Claude:
 
 Kapanır: **B10, B11**. B9 ve B12'ye katkı sağlar.
 Cayan: migration'a "uygula" onayı. Telefon USB ile bağlı ve kilidi açık olmalı.
+
+### Faz 3 kaydı (2026-09-23)
+
+**Teslim:** OTA grubu `f81614b1` (Android, runtime 1.0.108, update
+`01a0ce5c`). `ota:verify-device`: kurulu binary 1.0.108 gömüyor. İlk soğuk
+başlatma `DownloadComplete`, ikincisi `CheckCompleteUnavailable`; ana akış
+kartı yeni okuma sırasıyla ve sakin haritayla açıldı. Bu, Faz 2'den sonra
+bekleyen 7 commit'in de telefona ilk kez ulaşması demek.
+
+| # | Değişiklik | Ölçüm / kanıt |
+|---|---|---|
+| T1 | Ham palet katmanı: her renk bir kez; `colors` yalnız paletten okur | guard: tekrar eden hex ve `colors` içinde ham renk build'i kırar |
+| T2 | 56 renk adı 42'ye indi (aynı rolü taşıyan 14 kopya birleşti), `semanticColors` katmanı kaldırıldı | 18 dosya, testler yeşil |
+| T3 | Gölgeler: iOS'ta çift alfa yüzünden %2'de çizilen gölgeler düzeldi; 9 elle yazılmış gölge 4 seviyeye bağlandı | yeni test: gölge mürekkebi opak, opacity > 0.04 |
+| T4 | zIndex (5 katman), opacity (disabled 6 farklı değerden 1'e), konum ofsetleri (53 ham değer) token'a | guard: her biri geri konunca build kırıldı (8/8 yakalandı) |
+| T5 | Avatar ölçeği 7 boyuttan 3'e (24/32/40); baş harfler tip ölçeğinden | Keşfet'te "SD" artık okunuyor |
+| T6 | Ayarlar: 5 renk → tek mürekkep; veri dışa aktarma kendi ikonuyla | cihaz ekran görüntüsü |
+| T7 | Profil: takipçi satırı ile sekmeler arası görsel boşluk 54dp → 38dp; hiç görünmeyen `ProfileStatsRow` silindi | uiautomator: sekmeler y=1446 → 1402 |
+| T8 | 12 dosyadaki elle türetilmiş dokunma alanı → `minTouchSize` | guard kuralı |
+| T9 | 11 sayaçta eşit genişlikli rakam | commit `c186db6`, cihaz ölçümü bir sonraki OTA'da |
+
+**Dikey kilit (cihaz):** `user_rotation=1` ile telefon yataya zorlandı. Ana
+sayfa, liste detayı (stack) ve tam ekran kapak (modal) açıkken ekran
+`ROTATION_0` kaldı, uygulama `SCREEN_ORIENTATION_PORTRAIT` istedi. Ayar
+eski haline döndü. Native manifest ve `Info.plist` kilidi Faz 4'te.
+
+**Kapılar:** `check:release` yeşil: 2903 test, satır kapsamı %94.71.
+
+**Açık kalan:**
+- Bildirim migration'ı (`20260923010000`). Production şeması dökülüp
+  karşılaştırıldı: `create_notification` gövdesi aynı, push ayrı bir
+  trigger'da; beş `notify_*` fonksiyonunun mantığı birebir aynı, yalnız
+  metinler değişiyor. `db push --dry-run` yalnız bu dosyayı gösterdi. Gerçek
+  `db push` izin sistemince reddedildi → Cayan'ın adımı.
+- B11'in "her ekranda birincil eylem baskın mı" maddesi ekran bazlı; tik
+  Faz 9B'ye taşındı.
+- Faz 3'te görülüp sonraki fazlara yazılanlar: harita kontrolleri 44dp
+  (Android tabanı 48) ve tutarsız gölge → Faz 6; iki karakter sayacı iki
+  farklı ofset/renkte → Faz 5 form standardı; Keşfet önerilerinde 0 mekânlı
+  liste → Faz 9B; akış kartında beğeni "0" gösteriliyor ama yorum sayısı
+  gösterilmiyor → Faz 9B; yüklenirken boş gri statik harita → Faz 9A.
 
 ### ⬜ Faz 4: Native paket #1 + iOS OTA açılışı
 
@@ -637,7 +678,7 @@ like, list_liked, place_added, place_quote, system_announcement.
 | A8 Hesap yaşam döngüsü | ×3 | 11 | 12 | e-posta linki |
 | B9 Tasarım sistemi & token | ×3 | 6 | 3, 5 | Maps ekran görüntüsü |
 | B10 Tipografi | ×2 | 3 | — | — |
-| B11 Renk & kontrast | ×2 | 3 | — | — |
+| B11 Renk & kontrast | ×2 | 9B | 3 | — |
 | B12 Boşluk & hizalama | ×2 | 9B | 3, 5 | — |
 | B13 İkonografi & varlıklar | ×1 | 4 | 3 | ikon onayı |
 | B14 Motion | ×2 | 9A | — | — |
