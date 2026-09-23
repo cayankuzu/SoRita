@@ -16,6 +16,7 @@ export type MobileNotification = {
   userId: string;
   message: string;
   timestamp: string;
+  createdAt?: string;
   read: boolean;
   followRequest?: {
     id: string;

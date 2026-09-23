@@ -153,6 +153,7 @@ function mapNotification(
     userId: record.actor_user_id || actorProfile?.id || '',
     message: record.message,
     timestamp: formatAbsoluteDateTime(record.created_at),
+    createdAt: record.created_at,
     read: record.read,
     followRequest: followRequest
       ? {
@@ -282,6 +283,7 @@ export async function fetchNotificationsCursorPage(params: {
       message: row.message,
       read: row.read,
       timestamp: formatAbsoluteDateTime(row.created_at),
+      createdAt: row.created_at,
       type: row.type,
       userId: row.actor_user_id || '',
       userName: row.actor_name || 'SoRita',

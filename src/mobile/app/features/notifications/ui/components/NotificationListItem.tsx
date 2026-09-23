@@ -7,6 +7,7 @@ import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { formatRelativeDateTime } from '@/mobile/app/shared/utils/dateTime';
 import {
   avatarSize,
   colors,
@@ -41,10 +42,13 @@ function NotificationListItemComponent({
     notification.type === 'follow_request' &&
     (notification.followRequest?.status === 'accepted' ||
       notification.followRequest?.status === 'rejected');
+  const timeLabel = notification.createdAt
+    ? formatRelativeDateTime(notification.createdAt)
+    : notification.timestamp;
   const accessibilityLabel = [
     notification.userName,
     notification.message,
-    notification.timestamp,
+    timeLabel,
     notification.read ? tr.notifications.read : tr.notifications.unread,
   ]
     .filter(Boolean)
@@ -69,7 +73,7 @@ function NotificationListItemComponent({
             <AppText style={styles.messageStrong}>{notification.userName} </AppText>
             <AppText style={styles.messageMuted}>{notification.message}</AppText>
           </AppText>
-          <AppText style={styles.timestamp}>{notification.timestamp}</AppText>
+          <AppText style={styles.timestamp}>{timeLabel}</AppText>
           {isResolvedFollowRequest ? (
             <Badge
               label={

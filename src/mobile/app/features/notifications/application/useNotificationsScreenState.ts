@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
+import { collapseRepeatedNotifications } from '@/mobile/app/features/notifications/application/collapseRepeatedNotifications';
 import {
   type MobileNotification,
   useMarkAllNotificationsReadMutation,
@@ -93,7 +94,7 @@ export function useNotificationsScreenState({ userId }: UseNotificationsScreenSt
   }, [loadNotifications, userId]);
 
   const items = useMemo(
-    () => notificationsQuery.data || [],
+    () => collapseRepeatedNotifications(notificationsQuery.data || []),
     [notificationsQuery.data],
   );
 
