@@ -408,7 +408,6 @@ export function ProfileScreen() {
         profilePhoto={freshUser.profilePhoto}
         coverPhoto={freshUser.coverPhoto}
         coverBackgroundColor={colors.coverFallback}
-        stats={[]}
         detailsContent={
           <ProfileConnectionsSummary
             interestIds={freshUser.interests}

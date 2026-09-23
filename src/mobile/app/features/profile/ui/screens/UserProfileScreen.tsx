@@ -502,7 +502,6 @@ export function UserProfileScreen() {
         profilePhoto={profileUser.profilePhoto}
         coverPhoto={profileUser.coverPhoto}
         coverBackgroundColor={colors.coverFallback}
-        stats={[]}
         detailsContent={
           <ProfileConnectionsSummary
             interestIds={profileUser.interests}
@@ -603,7 +602,6 @@ export function UserProfileScreen() {
             profilePhoto={profileUser.profilePhoto}
             coverPhoto={profileUser.coverPhoto}
             coverBackgroundColor={colors.coverFallback}
-            stats={[]}
             onBackPress={() => navigation.goBack()}
             onProfilePhotoPress={() =>
               profileUser.profilePhoto &&

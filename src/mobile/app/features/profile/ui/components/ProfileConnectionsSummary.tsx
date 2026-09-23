@@ -1,15 +1,11 @@
 import React from 'react';
-import {
-  Platform,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/components/ProfileInterestChips';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, spacing, textStyle, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileConnectionsSummaryProps = {
   followerCount: number;
@@ -68,8 +64,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   connectionButton: {
-    minWidth: Platform.OS === 'ios' ? touch.ios : touch.android,
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minWidth: minTouchSize,
+    minHeight: minTouchSize,
     flexDirection: 'row',
     gap: spacing.xs,
     alignItems: 'center',

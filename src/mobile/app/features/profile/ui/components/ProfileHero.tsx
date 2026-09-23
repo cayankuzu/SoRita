@@ -8,7 +8,6 @@ import {
 import { ArrowLeft } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ProfileStatsRow } from "@/mobile/app/features/profile/ui/components/ProfileStatsRow";
 import {
   PROFILE_HERO_AVATAR_SIZE,
   PROFILE_HERO_COVER_HEIGHT,
@@ -24,11 +23,6 @@ import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
 
-type ProfileStat = {
-  label: string;
-  value: number;
-};
-
 type ProfileHeroProps = {
   name: string;
   username: string;
@@ -36,7 +30,6 @@ type ProfileHeroProps = {
   profilePhoto?: string;
   coverPhoto?: string;
   coverBackgroundColor: string;
-  stats: ProfileStat[];
   action?: React.ReactNode;
   detailsContent?: React.ReactNode;
   onProfilePhotoPress?: () => void;
@@ -51,7 +44,6 @@ export function ProfileHero({
   profilePhoto,
   coverPhoto,
   coverBackgroundColor,
-  stats,
   action,
   detailsContent,
   onProfilePhotoPress,
@@ -134,7 +126,6 @@ export function ProfileHero({
         ) : null}
 
         {detailsContent}
-        {stats.length > 0 ? <ProfileStatsRow stats={stats} /> : null}
       </View>
     </View>
   );
@@ -164,7 +155,9 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: spacing.screen,
-    paddingBottom: spacing.section,
+    // The follower counts that close the hero carry 48dp targets, so they
+    // already hold half of that as air above the tabs.
+    paddingBottom: spacing.sm,
     marginTop: -26,
   },
   avatarRow: {
