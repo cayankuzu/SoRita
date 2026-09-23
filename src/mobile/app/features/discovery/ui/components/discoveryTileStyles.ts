@@ -10,6 +10,7 @@ import {
   textStyle,
   touch,
   typography,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 
 export const discoveryTileStyles = StyleSheet.create({
@@ -65,8 +66,8 @@ export const discoveryTileStyles = StyleSheet.create({
   },
   visibilityBadge: {
     position: 'absolute',
-    top: 4,
-    left: 4,
+    top: spacing.xs,
+    left: spacing.xs,
     minHeight: 22,
     borderRadius: radius.pill,
     alignItems: 'center',
@@ -87,15 +88,15 @@ export const discoveryTileStyles = StyleSheet.create({
   },
   actionBadgeColumn: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: spacing.xs,
+    right: spacing.xs,
     gap: spacing.xs,
   },
   mediaFooterRow: {
     position: 'absolute',
-    left: 4,
-    right: 4,
-    bottom: 4,
+    left: spacing.xs,
+    right: spacing.xs,
+    bottom: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -121,7 +122,7 @@ export const discoveryTileStyles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: spacing.xs,
     paddingRight: spacing.xs,
-    zIndex: 2,
+    zIndex: zIndex.overlay,
   },
   singleActionBadgeVisual: {
     width: 20,
@@ -173,7 +174,7 @@ export const discoveryTileStyles = StyleSheet.create({
     position: 'absolute',
     top: layout.discoveryTileHeight - 8,
     right: 0,
-    zIndex: 2,
+    zIndex: zIndex.overlay,
   },
   titleActionPlaceholder: {
     width: 20,
@@ -270,11 +271,11 @@ export const discoveryTileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  ratingText: textStyle('metadataText', colors.warningText),
+  ratingText: textStyle('metadataText', colors.warning),
   photoCountBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: spacing.xs,
+    right: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,

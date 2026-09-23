@@ -26,6 +26,7 @@ import {
   spacing,
   textStyle,
   typography,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 import { getAndroidModalWindowProps } from '@/mobile/app/shared/utils/modalLayout';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
@@ -257,14 +258,14 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.cameraBackground,
+    backgroundColor: colors.deepBackground,
   },
   topBar: {
     position: 'absolute',
     top: 0,
     right: 0,
     left: 0,
-    zIndex: 2,
+    zIndex: zIndex.overlay,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
+    zIndex: zIndex.raised,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 2,
+    zIndex: zIndex.overlay,
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.darkOverlay,
     borderWidth: 3,
-    borderColor: colors.cameraBorder,
+    borderColor: colors.controlsDivider,
     marginBottom: spacing.xs,
   },
   recordButtonOuterPressed: {

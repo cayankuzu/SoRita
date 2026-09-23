@@ -1,6 +1,16 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  elevation,
+  fontWeight,
+  opacity,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+  zIndex,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const mapScreenStyles = StyleSheet.create({
   container: {
@@ -10,9 +20,11 @@ export const mapScreenStyles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    zIndex: 10,
+    zIndex: zIndex.floating,
+    // Android stacks siblings by elevation before zIndex; the layer has to
+    // out-rank the shadows of the floating controls around it.
+    elevation: elevation.modal.elevation,
     gap: spacing.sm,
-    elevation: 8,
     paddingHorizontal: spacing.md,
   },
   searchControlsRow: {
@@ -31,11 +43,7 @@ export const mapScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    shadowColor: colors.text,
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...elevation.floating,
   },
   searchInputWrap: {
     flex: 1,
@@ -76,7 +84,7 @@ export const mapScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    elevation: 4,
+    ...elevation.floating,
   },
   refreshButtonActive: {
     backgroundColor: colors.primaryBg,
@@ -93,11 +101,7 @@ export const mapScreenStyles = StyleSheet.create({
     borderColor: colors.cardBorder,
     padding: spacing.sm,
     gap: spacing.xs,
-    shadowColor: colors.text,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...elevation.floating,
   },
   filterMenuTitle: {
     paddingHorizontal: spacing.xs,
@@ -133,10 +137,11 @@ export const mapScreenStyles = StyleSheet.create({
   },
   resultsLayer: {
     position: 'absolute',
-    left: 10,
-    right: 10,
-    zIndex: 9,
-    elevation: 7,
+    left: spacing.md,
+    right: spacing.md,
+    // Just under the search layer, whose suggestions may overlap it.
+    zIndex: zIndex.floating - 1,
+    elevation: elevation.modal.elevation - 1,
   },
   resultsLayerShort: {
     justifyContent: 'flex-end',
@@ -147,7 +152,7 @@ export const mapScreenStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     overflow: 'hidden',
-    elevation: 6,
+    ...elevation.floating,
   },
   resultsScroll: {
     flexGrow: 0,
@@ -204,7 +209,7 @@ export const mapScreenStyles = StyleSheet.create({
   },
   locateButton: {
     position: 'absolute',
-    right: 12,
+    right: spacing.md,
     width: 44,
     height: 44,
     borderRadius: radius.xl,
@@ -213,13 +218,14 @@ export const mapScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    ...elevation.floating,
   },
   locateButtonDisabled: {
-    opacity: 0.72,
+    opacity: opacity.disabled,
   },
   reopenEditorButton: {
     position: 'absolute',
-    left: 12,
+    left: spacing.md,
     right: 60,
     minHeight: 46,
     borderRadius: radius.lg,
@@ -229,16 +235,12 @@ export const mapScreenStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    shadowColor: colors.text,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...elevation.floating,
   },
   reopenEditorBody: {
     flex: 1,
     gap: spacing.xxs,
   },
   reopenEditorTitle: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
-  reopenEditorSubtitle: textStyle('metadataText', colors.onDarkSubtle),
+  reopenEditorSubtitle: textStyle('metadataText', colors.onDarkMuted),
 });

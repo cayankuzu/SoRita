@@ -137,7 +137,7 @@ export function MediaSelectionPreview({
                       cx={metrics.focusFrameStyle.left + metrics.focusFrameStyle.width / 2}
                       cy={metrics.focusFrameStyle.top + metrics.focusFrameStyle.height / 2}
                       r={metrics.focusFrameStyle.width / 2}
-                      fill={colors.cameraBackground}
+                      fill={colors.deepBackground}
                     />
                   ) : (
                     <Rect
@@ -147,7 +147,7 @@ export function MediaSelectionPreview({
                       height={metrics.focusFrameStyle.height}
                       rx={radius.xl}
                       ry={radius.xl}
-                      fill={colors.cameraBackground}
+                      fill={colors.deepBackground}
                     />
                   )}
                 </Mask>
@@ -157,7 +157,7 @@ export function MediaSelectionPreview({
                 y={0}
                 width={metrics.outerFrameStyle.width}
                 height={metrics.outerFrameStyle.height}
-                fill={colors.onDarkSubtle}
+                fill={colors.onDarkMuted}
                 mask={`url(#${maskId})`}
               />
             </Svg>

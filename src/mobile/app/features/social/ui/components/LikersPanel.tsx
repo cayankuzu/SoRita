@@ -17,6 +17,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
+  avatarSize,
   colors,
   fontWeight,
   iconSize,
@@ -94,7 +95,7 @@ export function LikersPanel({
           onPress={() => onUserPress?.(item.id)}
           disabled={!onUserPress}
         >
-          <AvatarView uri={item.profilePhoto} name={item.name} size={28} />
+          <AvatarView uri={item.profilePhoto} name={item.name} size={avatarSize.md} />
           <View style={styles.likerBody}>
             <AppText style={styles.panelTitle}>{item.name}</AppText>
             <AppText style={styles.panelMuted}>@{item.username}</AppText>

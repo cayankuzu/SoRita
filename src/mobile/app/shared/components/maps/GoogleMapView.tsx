@@ -14,7 +14,15 @@ import {
 } from '@/mobile/app/shared/components/maps/mapMarkerClustering';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  elevation,
+  fontWeight,
+  radius,
+  spacing,
+  typography,
+  withAlpha,
+} from '@/mobile/app/shared/theme/tokens';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 import { QUIET_BASEMAP_RULES } from '@/mobile/app/shared/utils/quietBasemap';
 
@@ -31,20 +39,6 @@ const FIT_EDGE_PADDING = {
 
 function clampDelta(value: number) {
   return Math.min(Math.max(value, 0.0045), 80);
-}
-
-function withOpacity(color: string, opacity: number) {
-  const normalized = color.replace('#', '');
-
-  if (normalized.length !== 6) {
-    return color;
-  }
-
-  const alpha = Math.round(Math.min(Math.max(opacity, 0), 1) * 255)
-    .toString(16)
-    .padStart(2, '0');
-
-  return `#${normalized}${alpha}`;
 }
 
 function getPlacesSignature(places: SharedMapProps['places']) {
@@ -146,16 +140,13 @@ function MapMarkerGlyph({
       {/* Keep the marker bounds tight so only the visible pin is tappable. */}
       <View
         pointerEvents="none"
-        style={[
-          styles.markerGraphicWrap,
-          highlighted ? styles.markerGraphicWrapHighlighted : null,
-        ]}
+        style={styles.markerGraphicWrap}
       >
         <Svg width={26} height={36} viewBox="6 6 28 42">
           <Path
             d="M20 48C20 48 7.5 33.85 7.5 21.1C7.5 13.78 13.42 7.85 20.74 7.85C28.06 7.85 33.99 13.78 33.99 21.1C33.99 33.85 20 48 20 48Z"
             fill={color}
-            stroke={withOpacity(colors.text, highlighted ? 0.18 : 0.1)}
+            stroke={withAlpha(colors.text, highlighted ? 0.18 : 0.1)}
             strokeWidth={1.2}
           />
           <Circle cx={20.74} cy={20.9} r={6.6} fill={colors.surface} />
@@ -551,25 +542,7 @@ const styles = StyleSheet.create({
   markerShellHighlighted: {
     transform: [{ scale: 1.08 }],
   },
-  markerGraphicWrap: {
-    shadowColor: colors.text,
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 6,
-  },
-  markerGraphicWrapHighlighted: {
-    shadowColor: colors.text,
-    shadowOpacity: 0.26,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-  },
+  markerGraphicWrap: elevation.marker,
   clusterMarker: {
     alignItems: 'center',
     borderColor: colors.surface,

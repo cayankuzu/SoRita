@@ -11,6 +11,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
+import { avatarSize } from '@/mobile/app/shared/theme/tokens';
 
 import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
@@ -47,7 +48,7 @@ export function ListDetailPlacesSection({
           onPress={onOpenOwnerProfile}
         >
           <View style={styles.ownerAvatarWrap}>
-            <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
+            <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.sm} />
           </View>
           <View style={styles.ownerBody}>
             <AppText style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</AppText>

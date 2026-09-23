@@ -12,7 +12,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 
 type SettingsBlockedUsersViewProps = {
@@ -55,7 +55,7 @@ export function SettingsBlockedUsersView({
             style={styles.blockedUserRow}
             onPress={() => onOpenBlockedUser(item.id)}
           >
-            <AvatarView uri={item.profilePhoto} name={item.name} size={40} />
+            <AvatarView uri={item.profilePhoto} name={item.name} size={avatarSize.md} />
             <View style={styles.blockedUserBody}>
               <AppText style={styles.blockedUserName}>{item.name}</AppText>
               <AppText style={styles.blockedUserUsername}>@{item.username}</AppText>

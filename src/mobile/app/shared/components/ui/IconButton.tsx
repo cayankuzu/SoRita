@@ -9,7 +9,7 @@ import {
 import type { GestureResponderEvent, AccessibilityRole } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, minTouchSize, radius, semanticColors } from '@/mobile/app/shared/theme/tokens';
+import { colors, minTouchSize, opacity, radius } from '@/mobile/app/shared/theme/tokens';
 
 type IconButtonProps = {
   accessibilityHint?: string;
@@ -99,26 +99,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   surface: {
-    backgroundColor: semanticColors.surface.subtle,
+    backgroundColor: colors.surfaceMuted,
   },
   inverse: {
     backgroundColor: colors.darkOverlay,
   },
   inversePressed: {
-    backgroundColor: colors.controlsOverlay,
+    backgroundColor: colors.darkOverlay,
   },
   danger: {
     backgroundColor: colors.dangerBg,
   },
   selected: {
     borderWidth: 1,
-    borderColor: semanticColors.border.focus,
+    borderColor: colors.focus,
     backgroundColor: colors.primaryBg,
   },
   pressed: {
     backgroundColor: colors.surfaceMuted,
   },
   disabled: {
-    opacity: 0.48,
+    opacity: opacity.disabled,
   },
 });

@@ -13,7 +13,7 @@ import {
   parseRichTextSegments,
   type RichTextVariant,
 } from '@/mobile/app/shared/utils/richText';
-import { colors, fontWeight } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, opacity } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type RichTextProps = Omit<TextProps, 'children' | 'style'> & {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   unsafeLink: {
     color: colors.textSoft,
     textDecorationLine: 'line-through',
-    opacity: 0.72,
+    opacity: opacity.muted,
   },
   linkToggle: {
     color: colors.textSoft,

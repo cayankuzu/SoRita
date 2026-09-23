@@ -30,6 +30,7 @@ import {
   radius,
   spacing,
   textStyle,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-    zIndex: 1,
+    zIndex: zIndex.raised,
   },
   listFooter: {
     alignItems: 'center',
@@ -580,7 +581,7 @@ const styles = StyleSheet.create({
   iosRefreshStatus: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     borderColor: colors.cardBorder,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
@@ -589,7 +590,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     position: 'absolute',
-    zIndex: 2,
+    zIndex: zIndex.overlay,
   },
   iosRefreshStatusText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   loadMoreLabel: textStyle('metadataText', colors.primary, fontWeight.strong),

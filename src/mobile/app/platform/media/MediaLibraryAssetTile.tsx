@@ -5,7 +5,14 @@ import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaL
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  radius,
+  spacing,
+  textStyle,
+  zIndex,
+} from '@/mobile/app/shared/theme/tokens';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
 
 type MediaLibraryAssetTileProps = {
@@ -103,8 +110,8 @@ const styles = StyleSheet.create({
   },
   orderBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: spacing.sm,
+    left: spacing.sm,
     minWidth: 20,
     minHeight: 20,
     borderRadius: radius.md,
@@ -118,8 +125,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mediaPickerOverlay,
-    zIndex: 2,
+    backgroundColor: colors.scrim,
+    zIndex: zIndex.overlay,
   },
   disabledLabel: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

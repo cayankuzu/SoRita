@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   colors,
+  elevation,
   iconSize,
   letterSpacing,
   radius,
-  semanticColors,
   spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -45,10 +45,9 @@ function contrastRatio(foreground: string, background: string) {
 // clears AA here clears it wherever the token is actually used, so screens do
 // not have to re-derive the pairing by hand.
 const opaqueSurfaces = {
-  canvas: semanticColors.surface.canvas,
-  card: semanticColors.surface.card,
-  subtle: semanticColors.surface.subtle,
-  raised: semanticColors.surface.raised,
+  canvas: colors.background,
+  card: colors.surface,
+  subtle: colors.surfaceMuted,
 } as const;
 
 const AA_NORMAL_TEXT = 4.5;
@@ -59,9 +58,9 @@ describe('theme contrast tokens', () => {
     // controls, and lifting it to AA would make disabled indistinguishable
     // from enabled. It is pinned separately below.
     const readableContent = {
-      primary: semanticColors.content.primary,
-      secondary: semanticColors.content.secondary,
-      muted: semanticColors.content.muted,
+      primary: colors.text,
+      secondary: colors.textMuted,
+      muted: colors.textSoft,
     } as const;
 
     const failures: string[] = [];
@@ -79,11 +78,11 @@ describe('theme contrast tokens', () => {
 
   it('keeps status text readable on its own status background', () => {
     const statusPairs = [
-      [semanticColors.state.infoText, semanticColors.state.infoBg],
-      [semanticColors.state.successText, semanticColors.state.successBg],
-      [semanticColors.state.warningText, semanticColors.state.warningBg],
-      [semanticColors.state.dangerText, semanticColors.state.dangerBg],
-      [semanticColors.state.purpleText, semanticColors.state.purpleBg],
+      [colors.primaryDark, colors.primaryBg],
+      [colors.secondary, colors.successBg],
+      [colors.warning, colors.warningBg],
+      [colors.danger, colors.dangerBg],
+      [colors.purple, colors.purpleBg],
     ] as const;
 
     for (const [foreground, background] of statusPairs) {
@@ -109,10 +108,19 @@ describe('theme contrast tokens', () => {
   it('keeps disabled content visibly weaker than the readable ramp', () => {
     // The exemption only holds while disabled still *reads* as disabled; if
     // this ever inverts, a disabled control would look enabled.
-    const disabledRatio = contrastRatio(semanticColors.content.disabled, colors.surface);
-    const mutedRatio = contrastRatio(semanticColors.content.muted, colors.surface);
+    const disabledRatio = contrastRatio(colors.textDisabled, colors.surface);
+    const mutedRatio = contrastRatio(colors.textSoft, colors.surface);
 
     expect(disabledRatio).toBeLessThan(mutedRatio);
+  });
+
+  it('sets shadow strength once, with an opaque ink', () => {
+    // A translucent shadowColor multiplied by shadowOpacity left every iOS
+    // shadow at about 2%, invisible. The ink stays opaque; opacity is the dial.
+    for (const level of Object.values(elevation)) {
+      expect(level.shadowColor).toMatch(/^#[0-9a-f]{6}$/);
+      expect(level.shadowOpacity).toBeGreaterThan(0.04);
+    }
   });
 
   it('ships no type token below the 12px readability floor', () => {

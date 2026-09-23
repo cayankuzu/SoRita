@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react-native';
 
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 
 type PasswordToggleProps = {
   visible: boolean;
@@ -27,8 +27,8 @@ export function PasswordToggle({ visible, onPress }: PasswordToggleProps) {
 const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
-    right: 4,
-    top: 20,
+    right: spacing.xs,
+    top: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },

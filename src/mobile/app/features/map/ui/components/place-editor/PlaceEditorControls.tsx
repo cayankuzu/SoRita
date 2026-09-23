@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.warningBg,
-    color: colors.warningText,
+    color: colors.warning,
     ...typography.metadataText,
     fontWeight: fontWeight.strong,
     textAlign: 'center',

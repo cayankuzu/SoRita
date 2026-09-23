@@ -1,6 +1,15 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  avatarSize,
+  colors,
+  fontWeight,
+  opacity,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 export const commentPanelStyles = StyleSheet.create({
   sheetOverlay: {
@@ -106,10 +115,11 @@ export const commentPanelStyles = StyleSheet.create({
   replyCommentItem: {
     marginTop: spacing.sm,
   },
+  // Runs through the centre of the reply's own avatar, which sits on top of it.
   replyItemRail: {
     position: 'absolute',
-    left: 14,
-    top: -8,
+    left: (avatarSize.sm - 1) / 2,
+    top: -spacing.sm,
     bottom: 0,
     width: 1,
     backgroundColor: colors.cardBorder,
@@ -131,7 +141,7 @@ export const commentPanelStyles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -411,6 +421,6 @@ export const commentPanelStyles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   disabledAction: {
-    opacity: 0.55,
+    opacity: opacity.disabled,
   },
 });

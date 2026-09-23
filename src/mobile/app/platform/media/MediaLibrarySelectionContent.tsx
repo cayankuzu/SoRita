@@ -23,6 +23,7 @@ import {
   colors,
   fontWeight,
   iconSize,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     borderColor: colors.text,
   },
   filterChipDisabled: {
-    opacity: 0.45,
+    opacity: opacity.disabled,
   },
   filterChipText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   filterChipTextActive: {

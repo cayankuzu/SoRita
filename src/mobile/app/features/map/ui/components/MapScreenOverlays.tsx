@@ -133,7 +133,7 @@ export function MapAddHint({ bottom, onClose }: { bottom: number; onClose: () =>
 const styles = StyleSheet.create({
   legend: {
     position: 'absolute',
-    right: 12,
+    right: spacing.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   legendText: textStyle('metadataText', colors.textMuted),
   addHint: {
     position: 'absolute',
-    left: 12,
+    left: spacing.md,
     right: 60,
     minHeight: 44,
     borderRadius: radius.lg,

@@ -1,6 +1,15 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { colors, fontWeight, radius, spacing, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  opacity,
+  radius,
+  spacing,
+  textStyle,
+  touch,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
 const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
@@ -253,7 +262,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     gap: spacing.xs,
   },
   disabledButton: {
-    opacity: 0.45,
+    opacity: opacity.disabled,
   },
   nextButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

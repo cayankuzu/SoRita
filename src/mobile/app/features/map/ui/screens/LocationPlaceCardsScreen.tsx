@@ -25,7 +25,15 @@ import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/Sta
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  iconSize,
+  radius,
+  spacing,
+  textStyle,
+  zIndex,
+} from '@/mobile/app/shared/theme/tokens';
 import { formatLocationPlaceCardsCount } from '@/mobile/app/shared/utils/format';
 import { getMarkerColorByVisibility } from '@/mobile/app/shared/utils/markerColors';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -255,9 +263,9 @@ const styles = StyleSheet.create({
   },
   highlightPill: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 2,
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: zIndex.overlay,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,

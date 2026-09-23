@@ -267,7 +267,7 @@ export function ImageLightbox({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: colors.lightboxOverlay,
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: LIGHTBOX_HORIZONTAL_PADDING,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.controlsOverlay,
+    backgroundColor: colors.darkOverlay,
     borderWidth: 1,
     borderColor: colors.controlsBorder,
   },
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   topBarCopy: {
     flex: 1,
     borderRadius: radius.lg,
-    backgroundColor: colors.controlsOverlay,
+    backgroundColor: colors.darkOverlay,
     borderWidth: 1,
     borderColor: colors.controlsBorder,
     paddingHorizontal: spacing.md,

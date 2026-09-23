@@ -155,8 +155,8 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 6,
-    right: 4,
+    top: spacing.sm,
+    right: spacing.xs,
     minWidth: 16,
     // The count sets the badge's size in both directions: a hard height turned
     // a scaled-up numeral into a clipped one.

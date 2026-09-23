@@ -6,6 +6,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { avatarSize } from '@/mobile/app/shared/theme/tokens';
 
 type OwnerHeaderProps = {
   owner: User;
@@ -25,7 +26,7 @@ export function OwnerHeader({ owner, onPress, onPressIn }: OwnerHeaderProps) {
       onPressIn={interactive ? onPressIn : undefined}
       style={styles.ownerHeader}
     >
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={16} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.xs} />
       <View style={styles.ownerBody}>
         <ExpandableText text={owner.name} collapsedLines={1} textStyle={styles.ownerName} showIndicator={false} />
         <ExpandableText

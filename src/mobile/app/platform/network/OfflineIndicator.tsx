@@ -6,12 +6,7 @@ import { useNetworkStatus } from '@/mobile/app/platform/network/useNetworkStatus
 import { useOutboxStatus } from '@/mobile/app/platform/sync/outboxStatus';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
-import {
-  colors,
-  fontWeight,
-  spacing,
-  typography,
-} from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, spacing, typography, zIndex } from '@/mobile/app/shared/theme/tokens';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type NetworkFeedbackState = {
@@ -105,7 +100,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1000,
+    zIndex: zIndex.system,
   },
   content: {
     backgroundColor: colors.warning,

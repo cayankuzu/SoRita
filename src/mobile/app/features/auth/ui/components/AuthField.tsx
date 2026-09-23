@@ -18,7 +18,6 @@ import {
   fontWeight,
   iconSize,
   radius,
-  semanticColors,
   spacing,
   textStyle,
   touch,
@@ -305,7 +304,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inputWrapFocused: {
-    borderColor: semanticColors.border.focus,
+    borderColor: colors.focus,
   },
   inputWrapInvalid: {
     borderColor: colors.danger,
@@ -315,7 +314,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     position: 'absolute',
-    left: 10,
+    left: spacing.md,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
@@ -332,7 +331,7 @@ const styles = StyleSheet.create({
   },
   statusIcon: {
     position: 'absolute',
-    right: 10,
+    right: spacing.md,
     top: 0,
     bottom: 0,
     justifyContent: 'center',

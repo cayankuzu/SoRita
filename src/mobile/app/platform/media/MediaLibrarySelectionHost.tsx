@@ -44,6 +44,7 @@ import {
   colors,
   fontWeight,
   iconSize,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   footerPrimaryButtonDisabled: {
-    opacity: 0.45,
+    opacity: opacity.disabled,
   },
   footerPrimaryButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

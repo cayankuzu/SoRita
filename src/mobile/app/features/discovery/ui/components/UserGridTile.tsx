@@ -10,7 +10,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors } from '@/mobile/app/shared/theme/tokens';
 import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
 
 export type UserGridTileProps = {
@@ -73,7 +73,7 @@ function UserGridTileComponent({
 
         <View style={styles.userAvatarWrap}>
           <View style={styles.userAvatarFrame}>
-            <AvatarView uri={user.profilePhoto} name={user.name} size={38} />
+            <AvatarView uri={user.profilePhoto} name={user.name} size={avatarSize.md} />
           </View>
         </View>
 

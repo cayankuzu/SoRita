@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   optionText: textStyle('bodyText', colors.textMuted, fontWeight.medium),
   optionTextActive: {
-    color: colors.warningText,
+    color: colors.warning,
     fontWeight: fontWeight.strong,
   },
   errorText: {

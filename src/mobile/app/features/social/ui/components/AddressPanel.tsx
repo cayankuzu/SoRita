@@ -19,6 +19,7 @@ import {
   colors,
   fontWeight,
   iconSize,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -190,6 +191,6 @@ const styles = StyleSheet.create({
   },
   secondaryPanelText: textStyle('labelText', colors.textMuted),
   buttonDisabled: {
-    opacity: 0.62,
+    opacity: opacity.disabled,
   },
 });

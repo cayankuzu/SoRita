@@ -3,6 +3,7 @@ import { Platform, StyleSheet } from 'react-native';
 import {
   colors,
   fontWeight,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -173,8 +174,8 @@ export const placeCardStyles = StyleSheet.create({
   },
   mediaCarouselCounter: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
+    right: spacing.sm,
+    bottom: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: spacing.sm,
@@ -270,7 +271,7 @@ export const placeCardStyles = StyleSheet.create({
     gap: spacing.sm,
   },
   menuActionPressed: {
-    opacity: 0.78,
+    opacity: opacity.pressed,
     transform: [{ scale: 0.98 }],
   },
   menuActionIcon: {
@@ -335,7 +336,7 @@ export const placeCardStyles = StyleSheet.create({
     backgroundColor: colors.warningBg,
   },
   ratingBadgeText: {
-    color: colors.warningText,
+    color: colors.warning,
   },
   studentBadge: {
     flexDirection: 'row',

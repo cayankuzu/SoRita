@@ -7,9 +7,11 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
+  avatarSize,
   colors,
   fontWeight,
   minTouchSize,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -58,7 +60,7 @@ function NotificationListItemComponent({
         style={styles.mainAction}
       >
         <View style={styles.avatarWrap}>
-          <AvatarView uri={notification.userPhoto} name={notification.userName} size={38} />
+          <AvatarView uri={notification.userPhoto} name={notification.userName} size={avatarSize.md} />
         </View>
 
         <View style={styles.body}>
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionButtonDisabled: {
-    opacity: 0.62,
+    opacity: opacity.disabled,
   },
   acceptButton: {
     backgroundColor: colors.primary,

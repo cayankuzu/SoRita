@@ -12,7 +12,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
 
 const QUICK_REACTIONS = [
@@ -173,7 +173,7 @@ export function CommentComposer({
         <AvatarView
           uri={currentUserPhoto}
           name={currentUserName || 'SoRita'}
-          size={36}
+          size={avatarSize.sm}
         />
         <View style={[styles.composerInputWrap, composerIsContextual ? styles.composerInputWrapActive : null]}>
           <TextInput

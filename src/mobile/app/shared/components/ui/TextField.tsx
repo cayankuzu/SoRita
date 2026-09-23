@@ -11,7 +11,6 @@ import {
   fontWeight,
   minTouchSize,
   radius,
-  semanticColors,
   spacing,
   textStyle,
   typography,
@@ -165,17 +164,17 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   inputFocused: {
-    borderColor: semanticColors.border.focus,
+    borderColor: colors.focus,
   },
   inputFilled: {
     borderColor: colors.borderStrong,
   },
   inputError: {
-    borderColor: semanticColors.border.danger,
+    borderColor: colors.danger,
     backgroundColor: colors.dangerBg,
   },
   inputSuccess: {
-    borderColor: semanticColors.border.success,
+    borderColor: colors.secondary,
   },
   inputDisabled: {
     backgroundColor: colors.surfaceMuted,

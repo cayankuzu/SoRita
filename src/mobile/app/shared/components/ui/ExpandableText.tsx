@@ -17,7 +17,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, spacing, touch } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing, touch, zIndex } from '@/mobile/app/shared/theme/tokens';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
 
@@ -274,12 +274,12 @@ const styles = StyleSheet.create({
     height: 0,
     opacity: 0,
     overflow: 'hidden',
-    zIndex: -1,
+    zIndex: zIndex.behind,
   },
   iconWrap: {
     position: 'absolute',
     right: 0,
-    top: 2,
+    top: spacing.xxs,
   },
   iconWrapExpanded: {
     transform: [{ rotate: '90deg' }],

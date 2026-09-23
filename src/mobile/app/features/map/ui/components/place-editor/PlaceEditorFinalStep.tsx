@@ -24,7 +24,16 @@ import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaTh
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, iconSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  iconSize,
+  opacity,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import {
   formatPlaceMediaDuration,
   getPlaceMediaCounts,
@@ -436,7 +445,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mediaBusy: {
-    opacity: 0.65,
+    opacity: opacity.disabled,
   },
   mediaEmptyIconWrap: {
     width: 44,
@@ -490,8 +499,8 @@ const styles = StyleSheet.create({
   },
   mediaOrderBadge: {
     position: 'absolute',
-    left: 4,
-    top: 4,
+    left: spacing.xs,
+    top: spacing.xs,
     minWidth: 20,
     height: 20,
     borderRadius: radius.md,

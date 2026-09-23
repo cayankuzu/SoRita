@@ -29,6 +29,7 @@ import {
   colors,
   fontWeight,
   iconSize,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     padding: spacing.card,
   },
   optionCardPressed: {
-    opacity: 0.92,
+    opacity: opacity.pressed,
   },
   optionIconWrap: {
     width: 44,

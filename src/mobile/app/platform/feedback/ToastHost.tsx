@@ -21,6 +21,7 @@ import {
   radius,
   spacing,
   typography,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   subscribeToToasts,
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     paddingHorizontal: spacing.screen,
-    zIndex: 1000,
+    zIndex: zIndex.system,
   },
   toast: {
     ...elevation.floating,

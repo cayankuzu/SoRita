@@ -1,64 +1,98 @@
 import { Platform, type TextStyle } from 'react-native';
 
+/**
+ * The raw palette: every colour the app paints, each declared exactly once.
+ * Screens never read it; they read `colors`, which names what a colour is for.
+ * The neutrals are one slate ramp - a Tailwind gray border once sat beside
+ * slate text, two families that never quite match.
+ */
+const palette = {
+  white: '#ffffff',
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate200: '#e2e8f0',
+  slate300: '#cbd5e1',
+  slate400: '#94a3b8',
+  // Darker than Tailwind's #64748b so it still clears AA on slate100.
+  slate500: '#5a6a80',
+  slate600: '#475569',
+  slate900: '#0f172a',
+  slate950: '#020617',
+  blue50: '#eff6ff',
+  blue100: '#dbeafe',
+  blue200: '#bfdbfe',
+  blue600: '#2563eb',
+  blue700: '#1d4ed8',
+  emerald50: '#ecfdf5',
+  emerald200: '#a7f3d0',
+  emerald700: '#047857',
+  red50: '#fef2f2',
+  red200: '#fecaca',
+  red700: '#b91c1c',
+  amber50: '#fffbeb',
+  amber200: '#fde68a',
+  amber700: '#b45309',
+  yellow400: '#facc15',
+  violet50: '#f5f3ff',
+  violet700: '#6d28d9',
+  sand: '#ebe7de',
+};
+
+export function withAlpha(hex: string, alpha: number) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
 export const colors = {
-  background: '#f8fafc',
-  surface: '#ffffff',
-  surfaceMuted: '#f1f5f9',
-  surfaceRaised: '#ffffff',
-  cardBorder: '#e5e7eb',
-  borderStrong: '#cbd5e1',
-  focus: '#2563eb',
-  text: '#0f172a',
-  textMuted: '#475569',
-  textSoft: '#5a6a80',
-  textDisabled: '#94a3b8',
-  textInverse: '#ffffff',
-  onPrimary: '#ffffff',
-  primary: '#2563eb',
-  primaryDark: '#1d4ed8',
-  secondary: '#047857',
-  danger: '#b91c1c',
-  markerDraft: '#facc15',
-  warning: '#b45309',
-  warningText: '#b45309',
-  purple: '#6d28d9',
-  social: '#047857',
-  rating: '#b45309',
-  quote: '#6d28d9',
-  visibilityPublic: '#047857',
-  visibilityPrivate: '#475569',
-  visibilityMixed: '#2563eb',
-  successBg: '#ecfdf5',
-  primaryBg: '#eff6ff',
-  dangerBg: '#fef2f2',
-  dangerBorder: '#fecaca',
-  warningBg: '#fffbeb',
-  warningBorder: '#fde68a',
-  purpleBg: '#f5f3ff',
-  infoBorder: '#bfdbfe',
-  successBorder: '#a7f3d0',
+  background: palette.slate50,
+  surface: palette.white,
+  surfaceMuted: palette.slate100,
+  cardBorder: palette.slate200,
+  borderStrong: palette.slate300,
+  focus: palette.blue600,
+  text: palette.slate900,
+  textMuted: palette.slate600,
+  textSoft: palette.slate500,
+  textDisabled: palette.slate400,
+  onPrimary: palette.white,
+  primary: palette.blue600,
+  primaryDark: palette.blue700,
+  secondary: palette.emerald700,
+  danger: palette.red700,
+  markerDraft: palette.yellow400,
+  warning: palette.amber700,
+  purple: palette.violet700,
+  rating: palette.amber700,
+  quote: palette.violet700,
+  visibilityPublic: palette.emerald700,
+  visibilityPrivate: palette.slate600,
+  visibilityMixed: palette.blue600,
+  successBg: palette.emerald50,
+  primaryBg: palette.blue50,
+  dangerBg: palette.red50,
+  dangerBorder: palette.red200,
+  warningBg: palette.amber50,
+  warningBorder: palette.amber200,
+  purpleBg: palette.violet50,
+  infoBorder: palette.blue200,
+  successBorder: palette.emerald200,
   // One fallback behind every cover image - profile, public profile and
   // discovery tile all render the same placeholder.
-  coverFallback: '#dbeafe',
-  darkOverlay: 'rgba(15, 23, 42, 0.7)',
-  lightboxOverlay: 'rgba(15, 23, 42, 0.92)',
-  lightboxChrome: 'rgba(5, 10, 19, 0.78)',
-  lightboxDeep: '#040811',
-  overlay: 'rgba(15, 23, 42, 0.4)',
-  controlsOverlay: 'rgba(15, 23, 42, 0.72)',
-  controlsBorder: 'rgba(255, 255, 255, 0.1)',
-  controlsDivider: 'rgba(255, 255, 255, 0.22)',
-  onDarkMuted: 'rgba(255, 255, 255, 0.78)',
-  onDarkFaint: 'rgba(233, 240, 255, 0.72)',
-  deepBackground: '#020617',
-  deepBorder: 'rgba(255, 255, 255, 0.08)',
-  mediaPickerOverlay: 'rgba(15, 23, 42, 0.84)',
-  shadowSubtle: 'rgba(15, 23, 42, 0.12)',
-  cameraBorder: 'rgba(255, 255, 255, 0.18)',
-  cameraBackground: '#000000',
-  glassSurface: 'rgba(255, 255, 255, 0.82)',
-  mapBackground: '#ebe7de',
-  onDarkSubtle: 'rgba(255, 255, 255, 0.72)',
+  coverFallback: palette.blue100,
+  mapBackground: palette.sand,
+  deepBackground: palette.slate950,
+  // Dark glass under controls and badges drawn over photos and video.
+  darkOverlay: withAlpha(palette.slate900, 0.72),
+  // Dims the screen behind a sheet or dialog.
+  overlay: withAlpha(palette.slate900, 0.4),
+  // Nearly opaque: behind fullscreen media, and over media that cannot be picked.
+  scrim: withAlpha(palette.slate900, 0.9),
+  // A light wash that keeps white text legible on a bright cover photo.
+  imageScrim: withAlpha(palette.slate900, 0.12),
+  controlsBorder: withAlpha(palette.white, 0.1),
+  controlsDivider: withAlpha(palette.white, 0.2),
+  onDarkMuted: withAlpha(palette.white, 0.78),
+  glassSurface: withAlpha(palette.white, 0.82),
 };
 
 /**
@@ -191,66 +225,6 @@ export const radius = {
   pill: 999,
 };
 
-export const semanticColors = {
-  content: {
-    primary: colors.text,
-    secondary: colors.textMuted,
-    muted: colors.textSoft,
-    disabled: colors.textDisabled,
-    inverse: colors.textInverse,
-  },
-  action: {
-    primary: colors.primary,
-    primaryPressed: colors.primaryDark,
-    success: colors.secondary,
-    danger: colors.danger,
-    disabled: colors.surfaceMuted,
-  },
-  brand: {
-    primary: colors.primary,
-    secondary: colors.secondary,
-  },
-  social: {
-    primary: colors.social,
-    background: colors.successBg,
-  },
-  visibility: {
-    public: colors.visibilityPublic,
-    private: colors.visibilityPrivate,
-    mixed: colors.visibilityMixed,
-  },
-  accent: {
-    rating: colors.rating,
-    quote: colors.quote,
-  },
-  surface: {
-    canvas: colors.background,
-    card: colors.surface,
-    subtle: colors.surfaceMuted,
-    raised: colors.surfaceRaised,
-    overlay: colors.overlay,
-  },
-  border: {
-    default: colors.cardBorder,
-    strong: colors.borderStrong,
-    focus: colors.focus,
-    danger: colors.danger,
-    success: colors.secondary,
-  },
-  state: {
-    infoBg: colors.primaryBg,
-    infoText: colors.primaryDark,
-    successBg: colors.successBg,
-    successText: colors.secondary,
-    warningBg: colors.warningBg,
-    warningText: colors.warningText,
-    dangerBg: colors.dangerBg,
-    dangerText: colors.danger,
-    purpleBg: colors.purpleBg,
-    purpleText: colors.purple,
-  },
-} as const;
-
 export const touch = {
   ios: 44,
   android: 48,
@@ -282,10 +256,27 @@ export const controlSize = {
   large: 48,
 } as const;
 
+/**
+ * One disabled value. Nine controls had picked their own, from 0.45 to 0.72,
+ * so a disabled button read differently on every screen.
+ */
 export const opacity = {
-  disabled: 0.62,
+  disabled: 0.5,
   pressed: 0.9,
   muted: 0.72,
+} as const;
+
+/**
+ * Stacking layers, lowest to highest. `raised` and `overlay` order siblings
+ * inside one component; `floating` lifts map chrome over the map; `system` is
+ * for the toast and the offline banner, which sit above everything.
+ */
+export const zIndex = {
+  behind: -1,
+  raised: 1,
+  overlay: 2,
+  floating: 10,
+  system: 1000,
 } as const;
 
 /**
@@ -303,6 +294,17 @@ export const iconSize = {
   xxl: 40,
 } as const;
 
+/**
+ * Three avatar sizes. Seven had grown, from 16 to 42, and the 16dp one printed
+ * its initials at 4px. `xs` sits inline with metadata, `sm` heads a card, a
+ * reply or the comment composer, `md` leads a list row or a comment.
+ */
+export const avatarSize = {
+  xs: 24,
+  sm: 32,
+  md: 40,
+} as const;
+
 export const contentWidth = {
   form: 480,
   feed: 620,
@@ -310,28 +312,31 @@ export const contentWidth = {
   sheet: 700,
 } as const;
 
+function shadow(opacity: number, blur: number, offsetY: number, androidElevation: number) {
+  return {
+    shadowColor: palette.slate900,
+    shadowOpacity: opacity,
+    shadowRadius: blur,
+    shadowOffset: { width: 0, height: offsetY },
+    elevation: androidElevation,
+  };
+}
+
+/**
+ * Four levels, and nothing writes its own shadow. The tokens used to put a 12%
+ * alpha in `shadowColor` and multiply it again by `shadowOpacity`, so on iOS
+ * every shadow came out at about 2% and never showed; meanwhile nine styles
+ * hand-rolled their own. The ink is now opaque and `shadowOpacity` alone sets
+ * the strength on iOS; Android draws from `elevation`.
+ */
 export const elevation = {
-  card: {
-    shadowColor: colors.shadowSubtle,
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  floating: {
-    shadowColor: colors.shadowSubtle,
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  modal: {
-    shadowColor: colors.shadowSubtle,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-  },
+  // A surface resting on the canvas.
+  card: shadow(0.06, 12, 4, 2),
+  // Controls floating over content or the map: search bar, buttons, toast.
+  floating: shadow(0.12, 14, 6, 6),
+  modal: shadow(0.18, 18, 10, 8),
+  // A small object on the map that has to lift off busy tiles.
+  marker: shadow(0.2, 6, 4, 6),
 } as const;
 
 export const motion = {

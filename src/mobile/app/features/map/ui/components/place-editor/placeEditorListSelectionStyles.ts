@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import {
   colors,
   fontWeight,
+  opacity,
   radius,
   spacing,
   textStyle,
@@ -31,12 +32,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.warning,
-    shadowColor: colors.warningText,
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderColor: colors.warningBorder,
   },
   listSelectionNoticeIconWrap: {
     width: 20,
@@ -51,8 +47,8 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     minWidth: 0,
     gap: spacing.xxs,
   },
-  listSelectionNoticeTitle: textStyle('metadataText', colors.warningText, fontWeight.strong),
-  listSelectionNoticeText: textStyle('metadataText', colors.warningText, fontWeight.strong),
+  listSelectionNoticeTitle: textStyle('metadataText', colors.warning, fontWeight.strong),
+  listSelectionNoticeText: textStyle('metadataText', colors.warning, fontWeight.strong),
   listWrap: {
     gap: spacing.sm,
   },
@@ -73,7 +69,7 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
     borderColor: colors.primary,
   },
   listCardDisabled: {
-    opacity: 0.58,
+    opacity: opacity.disabled,
   },
   listPreview: {
     width: 66,

@@ -93,6 +93,28 @@ function findScaleViolations(source, relativePath) {
       found.push(`${relativePath}:${index + 1} raw radius ${radiusValue}; use radius.*`);
     }
 
+    const offsetMatch = line.match(/\b(?:top|bottom|left|right|start|end)\s*:\s*(\d+)\s*(?:[,}]|$)/u);
+    const offsetValue = Number(offsetMatch?.[1]);
+    if (offsetValue >= 2 && offsetValue <= 24) {
+      found.push(`${relativePath}:${index + 1} raw offset ${offsetValue}; use spacing.*`);
+    }
+
+    const zIndexMatch = line.match(/\bzIndex\s*:\s*(-?\d+)\s*(?:[,}]|$)/u);
+    if (zIndexMatch && Number(zIndexMatch[1]) !== 0) {
+      found.push(`${relativePath}:${index + 1} raw zIndex ${zIndexMatch[1]}; use zIndex.*`);
+    }
+
+    const opacityMatch = line.match(/\bopacity\s*:\s*(0?\.\d+)\s*(?:[,}]|$)/u);
+    if (opacityMatch) {
+      found.push(`${relativePath}:${index + 1} raw opacity ${opacityMatch[1]}; use opacity.*`);
+    }
+
+    // Nine styles once hand-rolled their own shadow while three tokens sat
+    // almost unused, and the tokens themselves were invisible on iOS.
+    if (/\bshadow(?:Color|Opacity|Radius|Offset)\s*:/u.test(line) || /^\s*elevation\s*:\s*\d/u.test(line)) {
+      found.push(`${relativePath}:${index + 1} hand-written shadow; use elevation.*`);
+    }
+
     for (const match of line.matchAll(/<([A-Z][A-Za-z0-9]*)\b[^>]*?\bsize=\{(\d+)\}/gu)) {
       if (lucideNames.has(match[1])) {
         found.push(`${relativePath}:${index + 1} raw icon size ${match[2]}; use iconSize.*`);
@@ -124,8 +146,8 @@ violations.push(...findTypographyViolations({
 // reads is not a design decision, it is a claim the palette no longer honours.
 const themeRelative = relative(workspace, themeTokens);
 
-// tokens.ts is included on purpose: semanticColors consumes the raw palette
-// from inside the same file, and that counts as a real reference.
+// tokens.ts is included on purpose: `colors` consumes the raw palette from
+// inside the same file, and that counts as a real reference.
 const allSources = await Promise.all(
   [...(await collectFiles(sourceRoot))]
     .filter((file) => ['.ts', '.tsx'].includes(extname(file)))
@@ -135,7 +157,7 @@ const corpus = allSources.join('\n');
 
 function declaredNames(blockName) {
   const block = themeSource.match(
-    new RegExp(`export const ${blockName} = \\{([\\s\\S]*?)\\n\\};`, 'u'),
+    new RegExp(`(?:export )?const ${blockName} = \\{([\\s\\S]*?)\\n\\}(?: as const)?;`, 'u'),
   );
   if (!block) {
     violations.push(`${themeRelative} ${blockName} block could not be parsed`);
@@ -148,9 +170,14 @@ function declaredNames(blockName) {
 // longer honours. Colour rot was already caught here; spacing rotted the same
 // way unseen, and `spacing.none` sat declared with zero readers.
 for (const [blockName, accessor] of [
+  ['palette', 'palette'],
   ['colors', 'colors'],
   ['spacing', 'spacing'],
   ['radius', 'radius'],
+  ['opacity', 'opacity'],
+  ['zIndex', 'zIndex'],
+  ['avatarSize', 'avatarSize'],
+  ['elevation', 'elevation'],
 ]) {
   const declared = declaredNames(blockName);
   if (!declared) continue;
@@ -164,6 +191,30 @@ for (const [blockName, accessor] of [
       );
     }
   }
+}
+
+// The palette is the one place a raw colour may be written, so it may be
+// written only once: five hex values had each picked up two or three names.
+const paletteBlock = themeSource.match(/const palette = \{([\s\S]*?)\n\};/u);
+if (!paletteBlock) {
+  violations.push(`${themeRelative} palette block could not be parsed`);
+} else {
+  const seenHex = new Map();
+  for (const [, name, hex] of paletteBlock[1].matchAll(/^\s*([A-Za-z0-9_]+):\s*'(#[0-9a-fA-F]{6})'/gmu)) {
+    const key = hex.toLowerCase();
+    if (seenHex.has(key)) {
+      violations.push(`${themeRelative} palette "${name}" repeats ${hex} from "${seenHex.get(key)}"`);
+    }
+    seenHex.set(key, name);
+  }
+}
+
+// Outside the palette a colour is a reference, never a literal.
+const colorsBlock = themeSource.match(/export const colors = \{([\s\S]*?)\n\};/u);
+if (!colorsBlock) {
+  violations.push(`${themeRelative} colors block could not be parsed`);
+} else if (/#[0-9a-fA-F]{3,8}|rgba?\s*\(/u.test(colorsBlock[1])) {
+  violations.push(`${themeRelative} colors must reference the palette, not raw values`);
 }
 
 // Two names for one value is how a design system stops being one. The discovery

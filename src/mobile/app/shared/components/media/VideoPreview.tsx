@@ -216,8 +216,8 @@ const styles = StyleSheet.create({
   },
   playOverlay: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: spacing.xs,
+    right: spacing.xs,
   },
   playBadge: {
     width: 18,
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
   },
   durationBadge: {
     position: 'absolute',
-    right: 6,
-    bottom: 6,
+    right: spacing.sm,
+    bottom: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: spacing.sm,

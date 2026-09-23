@@ -31,7 +31,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { getPerformanceContext } from '@/mobile/app/shared/performance/performanceContext';
 import { SoRitaLogo } from '@/mobile/app/shared/components/brand/SoRitaLogo';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, spacing, typography } from '@/mobile/app/shared/theme/tokens';
+import { colors, fontWeight, spacing, typography, zIndex } from '@/mobile/app/shared/theme/tokens';
 import { StartupShellReadyContext } from '@/mobile/app/app-shell/startup/StartupShellReadyContext';
 import { shouldShowStartupSplash } from '@/mobile/app/app-shell/startup/startupSplashState';
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   startupSplash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
-    zIndex: 1,
+    zIndex: zIndex.raised,
   },
   startupBrand: {
     flex: 1,

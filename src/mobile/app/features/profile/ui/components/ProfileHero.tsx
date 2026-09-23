@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    left: 10,
+    left: spacing.md,
     width: minTouchSize,
     height: minTouchSize,
     borderRadius: radius.pill,

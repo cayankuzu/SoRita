@@ -47,7 +47,7 @@ export function PlaceEditorListCards({
       {listSelectionNotice ? (
         <View style={styles.listSelectionNotice}>
           <View style={styles.listSelectionNoticeIconWrap}>
-            <Info color={colors.warningText} size={iconSize.xs} />
+            <Info color={colors.warning} size={iconSize.xs} />
           </View>
           <View style={styles.listSelectionNoticeBody}>
             <AppText style={styles.listSelectionNoticeTitle}>{tr.placeEditor.listHintTitle}</AppText>

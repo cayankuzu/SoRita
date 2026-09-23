@@ -15,7 +15,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
   formatRelativeDateTime,
   hasMeaningfulUpdate,
@@ -109,7 +109,7 @@ export function CommentThread({
         <AvatarView
           uri={comment.userProfilePhoto}
           name={comment.userName}
-          size={isReply ? 34 : 42}
+          size={isReply ? avatarSize.sm : avatarSize.md}
         />
       </CommentAuthorPressable>
 

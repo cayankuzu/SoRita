@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '@/mobile/app/shared/theme/tokens';
+import { colors, zIndex } from '@/mobile/app/shared/theme/tokens';
 
 type ExplorePagerLayoutProps = {
   header: React.ReactElement;
@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: colors.background,
-    zIndex: 1,
+    zIndex: zIndex.raised,
   },
 });

@@ -23,7 +23,16 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  avatarSize,
+  colors,
+  iconSize,
+  minTouchSize,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 import {
@@ -163,7 +172,7 @@ export function ProfileConnectionsModal({
                 style={styles.userRow}
                 onPress={() => onUserPress(item)}
               >
-                <AvatarView uri={item.profilePhoto} name={item.name} size={36} />
+                <AvatarView uri={item.profilePhoto} name={item.name} size={avatarSize.md} />
                 <View style={styles.userBody}>
                   <AppText style={styles.userName}>{item.name}</AppText>
                   <AppText style={styles.userUsername}>@{item.username}</AppText>

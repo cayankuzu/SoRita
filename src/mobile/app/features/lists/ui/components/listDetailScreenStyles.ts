@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import {
   colors,
+  elevation,
   fontWeight,
   minTouchSize,
   radius,
@@ -32,18 +33,14 @@ export const listDetailScreenStyles = StyleSheet.create({
   },
   scrollTopButton: {
     position: 'absolute',
-    right: 12,
+    right: spacing.md,
     width: minTouchSize,
     height: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.text,
-    shadowColor: colors.text,
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...elevation.floating,
   },
   header: {
     paddingHorizontal: spacing.md,
@@ -54,11 +51,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     overflow: 'hidden',
-    shadowColor: colors.text,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    ...elevation.card,
   },
   heroMediaWrap: {
     position: 'relative',
@@ -74,7 +67,7 @@ export const listDetailScreenStyles = StyleSheet.create({
   },
   heroMediaScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.shadowSubtle,
+    backgroundColor: colors.imageScrim,
   },
   heroPlaceholder: {
     minHeight: 144,
@@ -108,8 +101,8 @@ export const listDetailScreenStyles = StyleSheet.create({
   },
   coverHintChip: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: spacing.sm,
+    right: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -290,11 +283,6 @@ export const listDetailScreenStyles = StyleSheet.create({
   placeCardShellHighlighted: {
     borderWidth: 2,
     borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
   },
   highlightPill: {
     alignSelf: 'flex-start',

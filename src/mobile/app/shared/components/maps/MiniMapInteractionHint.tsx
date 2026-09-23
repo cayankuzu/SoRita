@@ -25,9 +25,9 @@ export function MiniMapInteractionHint({ visible }: MiniMapInteractionHintProps)
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
-    left: 8,
+    right: spacing.sm,
+    bottom: spacing.sm,
+    left: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.darkOverlay,
     paddingHorizontal: spacing.md,

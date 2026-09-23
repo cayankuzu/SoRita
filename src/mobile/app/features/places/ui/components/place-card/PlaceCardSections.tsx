@@ -35,7 +35,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { categoryMeta } from '@/mobile/app/shared/utils/format';
 
 export function PlaceOwnerHeader({
@@ -57,7 +57,7 @@ export function PlaceOwnerHeader({
       style={styles.userHeader}
       onPress={onPress}
     >
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={36} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.sm} />
       <View style={styles.userBody}>
         <AppText style={styles.userName}>{owner.name}</AppText>
         <AppText style={styles.userUsername}>@{owner.username}</AppText>

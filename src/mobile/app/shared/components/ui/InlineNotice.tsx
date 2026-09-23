@@ -24,9 +24,9 @@ const tonePalettes = {
   warning: {
     backgroundColor: colors.warningBg,
     borderColor: colors.warningBorder,
-    titleColor: colors.warningText,
+    titleColor: colors.warning,
     descriptionColor: colors.textMuted,
-    actionColor: colors.warningText,
+    actionColor: colors.warning,
   },
   danger: {
     backgroundColor: colors.dangerBg,
