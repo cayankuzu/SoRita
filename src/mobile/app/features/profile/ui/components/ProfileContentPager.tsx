@@ -417,11 +417,14 @@ export function ProfileContentPager({
       return;
     }
 
+    // The list's own scroll event records where it landed. Recording the
+    // request here claimed a position a still-short list had clamped away,
+    // every later sync then saw nothing to do, and the tab sat at its top
+    // under a collapsed header - an empty grey band below the tabs.
     node.scrollToOffset({
       animated: false,
       offset: nextOffset,
     });
-    listOffsetsRef.current.set(tab, nextOffset);
   }, [getCollapseRange]);
   const applySharedHeaderOffset = React.useCallback(
     (nextSharedHeaderOffset: number) => {
