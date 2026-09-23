@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Crosshair, Ellipsis, Flag, ListPlus, MapPin } from 'lucide-react-native';
+import { Crosshair, Flag, ListPlus, MapPin } from 'lucide-react-native';
 
 import { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
 import { FeedActionButtons } from '@/mobile/app/features/social/ui/components/FeedActionButtons';
@@ -43,7 +43,6 @@ export type FeedActionBarProps = {
   onFocusPress?: () => void;
   onLikePress?: () => Promise<void> | void;
   onLikersVisibilityChange?: (visible: boolean) => void;
-  onOverflowPress?: () => void;
   onRefresh?: () => Promise<void> | void;
   onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
   onSharePress?: () => void;
@@ -52,8 +51,10 @@ export type FeedActionBarProps = {
   reportTitle?: string;
   showAddToList?: boolean;
   showCommentAction?: boolean;
-  showOverflowAction?: boolean;
   showReportAction?: boolean;
+  // The card's own actions (edit, delete, report). They join this menu as rows;
+  // they used to sit behind a row that opened a second sheet on top of it.
+  contentActions?: Array<DeferredActionMenuSheetProps['items'][number]>;
   showShareAction?: boolean;
 };
 
@@ -152,14 +153,12 @@ export function FeedActionBar(props: FeedActionBarProps) {
     });
   }
 
-  if (props.showOverflowAction && props.onOverflowPress) {
+  for (const action of props.contentActions ?? []) {
     secondaryActions.push({
-      key: 'content-actions',
-      label: tr.common.contentActionsTitle,
-      renderIcon: (color) => <Ellipsis color={color} size={iconSize.sm} />,
+      ...action,
       onPress: () => {
         closeSecondaryActions();
-        props.onOverflowPress?.();
+        action.onPress();
       },
     });
   }

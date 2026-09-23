@@ -89,7 +89,6 @@ type PlaceCardActions = {
   onFocusLongPress: () => void;
   onLikePress: () => Promise<void> | void;
   onSharePress?: () => void;
-  onOpenActionMenu?: () => void;
   onOwnerPress?: () => void;
   onMediaPress: (index: number) => void;
   onPlaceNamePress?: () => void;
@@ -101,7 +100,7 @@ type PlaceCardActions = {
   onUserPress: (userId: string) => void;
   onCommentsVisibilityChange?: (visible: boolean) => void;
   onLikersVisibilityChange?: (visible: boolean) => void;
-  showActionMenu?: boolean;
+  contentActions?: React.ComponentProps<typeof FeedActionBar>['contentActions'];
 };
 
 type PlaceCardFullProps = {
@@ -172,7 +171,6 @@ export function PlaceCardFull({
     onLikePress,
     onLikersVisibilityChange,
     onMediaPress,
-    onOpenActionMenu,
     onOwnerPress,
     onPlaceNamePress,
     onPress,
@@ -182,7 +180,7 @@ export function PlaceCardFull({
     onSharePress,
     onSourcePress,
     onUserPress,
-    showActionMenu = false,
+    contentActions,
   } = actions;
   const handlePlaceNamePress = () => {
     if (!onPlaceNamePress) {
@@ -359,8 +357,7 @@ export function PlaceCardFull({
         isFetchingNextCommentsPage={isFetchingNextCommentsPage}
         onCommentsVisibilityChange={onCommentsVisibilityChange}
         onLikersVisibilityChange={onLikersVisibilityChange}
-        showOverflowAction={showActionMenu}
-        onOverflowPress={onOpenActionMenu}
+        contentActions={contentActions}
         showReportAction={false}
         reportTitle={tr.cards.reportContentTitle}
         reportDescription={tr.cards.reportContentDescription}

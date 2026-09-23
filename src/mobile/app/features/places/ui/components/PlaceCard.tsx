@@ -72,7 +72,6 @@ type SourcePlaceCardModalProps = React.ComponentProps<
 >;
 type PlaceCardOverlay =
   | { type: 'none' }
-  | { type: 'action-menu' }
   | { type: 'add-to-list' }
   | { type: 'lightbox'; index: number }
   | { type: 'owned-delete' }
@@ -155,7 +154,6 @@ function PlaceCardComponent({
   const [reportReason, setReportReason] = useState('');
   const lightboxIndex = activeOverlay.type === 'lightbox' ? activeOverlay.index : null;
   const showAddToList = activeOverlay.type === 'add-to-list';
-  const showActionMenu = activeOverlay.type === 'action-menu';
   const showOwnedPlaceDeleteConfirm = activeOverlay.type === 'owned-delete';
   const showOwnedPlaceEditor = activeOverlay.type === 'owned-editor';
   const showReportSheet = activeOverlay.type === 'report';
@@ -507,9 +505,6 @@ function PlaceCardComponent({
       onFocusLongPress: hideMapPreview,
       onLikePress: handleLikePress,
       onSharePress: openShareMenu,
-      onOpenActionMenu: actionItems.length > 0
-        ? () => setActiveOverlay({ type: 'action-menu' })
-        : undefined,
       onOwnerPress,
       onMediaPress: (index) => setActiveOverlay({ type: 'lightbox', index }),
       onPlaceNamePress: resolvedPlaceNamePress,
@@ -529,7 +524,7 @@ function PlaceCardComponent({
         }
       },
       onSourcePress: handleSourcePress,
-      showActionMenu: actionItems.length > 0,
+      contentActions: actionItems,
     },
     content: {
       bestTimes,
@@ -575,15 +570,6 @@ function PlaceCardComponent({
   return (
     <>
       <PlaceCardFull {...placeCardFullProps} />
-
-      {renderWhen(showActionMenu && actionItems.length > 0, () => (
-        <DeferredActionMenuSheet
-          visible
-          title={place.name}
-          items={actionItems}
-          onClose={closeOverlay}
-        />
-      ))}
 
       {renderWhen(showShareMenu, () => (
         <DeferredActionMenuSheet
