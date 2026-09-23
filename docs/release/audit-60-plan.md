@@ -9,9 +9,10 @@ sonraki faza geçilmez.
 
 Son güncelleme: 2026-09-23.
 
-**Geçerli olan:** aşağıdaki [Faz haritası v2](#faz-haritası-v2). Onun
-altındaki v1 bölümleri geçmiş kayıt; bulguların ve kanıtların kaynağı olarak
-duruyor.
+**Geçerli olan:** [audit-60-checklist.md](./audit-60-checklist.md) (v3,
+2026-09-23): 30 faz, 84 işlem × 8 kontrol ve 61 birimin kapanış haritası. Bu
+dosyadaki v2 ve v1 faz haritaları geçmiş kayıttır; bulguların ve kanıtların
+kaynağı olarak duruyor.
 
 ---
 
