@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildUsers, mapList } from '@/mobile/app/data/mappers/visibleDataMappers';
+import { buildUsers, mapList, mapPlaceComments } from '@/mobile/app/data/mappers/visibleDataMappers';
 import type {
   FollowRequestRow,
   FollowRow,
@@ -9,6 +9,36 @@ import type {
 } from '@/mobile/app/platform/supabase/databaseTypes';
 
 describe('visibleDataMappers', () => {
+  it('takes a comment author from the page row before any downloaded user', () => {
+    const row = {
+      id: 'comment-1',
+      list_place_id: 'place-1',
+      user_id: 'author-1',
+      parent_comment_id: null,
+      content: 'Kedileri çok güler yüzlü.',
+      created_at: '2026-07-04T18:09:00.000Z',
+      updated_at: '2026-07-04T18:09:00.000Z',
+      like_count: 3,
+      author_name: 'Deniz',
+      author_username: 'deniz',
+      author_profile_photo_url: 'https://cdn.example.com/deniz.jpg',
+    };
+
+    const [fromRow] = mapPlaceComments([row], new Map());
+    expect(fromRow).toMatchObject({
+      likes: 3,
+      author: {
+        userId: 'author-1',
+        name: 'Deniz',
+        username: 'deniz',
+        profilePhoto: 'https://cdn.example.com/deniz.jpg',
+      },
+    });
+
+    const [withoutRowAuthor] = mapPlaceComments([{ ...row, author_name: null }], new Map());
+    expect(withoutRowAuthor?.author).toBeUndefined();
+  });
+
   it('builds users with relationship metadata', () => {
     const profiles: ProfileRow[] = [
       {

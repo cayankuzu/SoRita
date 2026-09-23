@@ -481,7 +481,8 @@ export function CommentPanel({
                 divided
                 onClose={handleClose}
                 style={styles.sheetHeader}
-                subtitle={tr.cards.commentCount(totalComments)}
+                // "0 yorum" over a sheet still loading read as an empty thread.
+                subtitle={initialLoading ? tr.common.loading : tr.cards.commentCount(totalComments)}
                 title={tr.cards.commentsTitle}
               />
 

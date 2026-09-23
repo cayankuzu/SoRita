@@ -181,6 +181,9 @@ function sanitizeCommentTree(comment: PlaceComment, hiddenUserIds: Set<string>):
   }
 
   const likedBy = (comment.likedBy || []).filter((userId) => !hiddenUserIds.has(userId));
+  // The page sends the full count but only the viewer's own like, so the
+  // count cannot be rebuilt from likedBy: every comment read 0 or 1 like.
+  const hiddenLikeCount = (comment.likedBy?.length ?? 0) - likedBy.length;
   const likeDetails = (comment.likeDetails || []).filter((detail) => !hiddenUserIds.has(detail.userId));
   const replies = (comment.replies || [])
     .map((reply) => sanitizeCommentTree(reply, hiddenUserIds))
@@ -188,7 +191,9 @@ function sanitizeCommentTree(comment: PlaceComment, hiddenUserIds: Set<string>):
 
   return {
     ...comment,
-    likes: likedBy.length,
+    likes: comment.likes === undefined
+      ? likedBy.length
+      : Math.max(0, comment.likes - hiddenLikeCount),
     likedBy: likedBy.length ? likedBy : undefined,
     likeDetails: likeDetails.length ? likeDetails : undefined,
     replies: replies.length ? replies : undefined,

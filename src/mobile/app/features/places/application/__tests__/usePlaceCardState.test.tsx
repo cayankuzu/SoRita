@@ -1003,6 +1003,13 @@ describe('usePlaceCardState', () => {
       replies: [{ id: 'reply-visible' }],
     });
     expect(placeCardInternals.sanitizeCommentTree(comment, new Set(['author']))).toBeNull();
+    // The page reports the full count but lists only the viewer's own like.
+    expect(
+      placeCardInternals.sanitizeCommentTree({ ...comment, likes: 12, likedBy: ['viewer'] }, hidden)?.likes,
+    ).toBe(12);
+    expect(
+      placeCardInternals.sanitizeCommentTree({ ...comment, likes: 12 }, hidden)?.likes,
+    ).toBe(11);
 
     const users = new Map([
       ['viewer', viewer],

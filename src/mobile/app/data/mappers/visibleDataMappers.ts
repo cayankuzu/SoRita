@@ -39,7 +39,14 @@ type ListRecord = ListRow & {
   > | null;
 };
 
-type ListPlaceCommentRecord = ListPlaceCommentRow & {
+/** The author fields a comment page carries, so it draws without a user download. */
+export type CommentAuthorColumns = {
+  author_name?: string | null;
+  author_profile_photo_url?: string | null;
+  author_username?: string | null;
+};
+
+type ListPlaceCommentRecord = ListPlaceCommentRow & CommentAuthorColumns & {
   is_pending?: boolean;
   like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
@@ -135,7 +142,22 @@ export function mapPlaceComments(
   const commentsById = new Map<string, PlaceComment>();
 
   for (const comment of orderedCommentRecords) {
-    const author = usersById.get(comment.user_id);
+    const knownAuthor = usersById.get(comment.user_id);
+    const author = comment.author_name
+      ? {
+          userId: comment.user_id,
+          name: comment.author_name,
+          username: comment.author_username || '',
+          profilePhoto: comment.author_profile_photo_url || undefined,
+        }
+      : knownAuthor
+        ? {
+            userId: knownAuthor.id,
+            name: knownAuthor.name,
+            username: knownAuthor.username,
+            profilePhoto: knownAuthor.profilePhoto,
+          }
+        : undefined;
     const commentLikeDetails = (comment.list_place_comment_likes || [])
       .slice()
       .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
@@ -157,14 +179,7 @@ export function mapPlaceComments(
       likedBy: commentLikedBy.length ? commentLikedBy : undefined,
       likeDetails: commentLikeDetails.length ? commentLikeDetails : undefined,
       replies: [],
-      author: author
-        ? {
-            userId: author.id,
-            name: author.name,
-            username: author.username,
-            profilePhoto: author.profilePhoto,
-          }
-        : undefined,
+      author,
     });
   }
 

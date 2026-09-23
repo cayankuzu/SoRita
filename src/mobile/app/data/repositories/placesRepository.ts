@@ -2,6 +2,7 @@ import type {
   ListPlaceCommentLikeRow,
   ListPlaceCommentRow,
 } from '@/mobile/app/platform/supabase/databaseTypes';
+import type { CommentAuthorColumns } from '@/mobile/app/data/mappers/visibleDataMappers';
 import { submitModerationReport } from '@/mobile/app/data/repositories/moderationReports';
 import { deleteStorageAssetsByUrls } from '@/mobile/app/platform/supabase/media';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -13,7 +14,7 @@ import {
   clampTextLength,
 } from '@/mobile/app/shared/validation/contentLimits';
 
-type PlaceCommentRecord = ListPlaceCommentRow & {
+type PlaceCommentRecord = ListPlaceCommentRow & CommentAuthorColumns & {
   like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
   viewer_has_liked?: boolean;
@@ -131,6 +132,9 @@ export async function getPlaceCommentThreadsPage(params: {
 
   const rows = ((data || []) as unknown) as PlaceCommentThreadRow[];
   const items = rows.map<PlaceCommentRecord>((row) => ({
+    author_name: row.author_name,
+    author_profile_photo_url: row.author_profile_photo_url,
+    author_username: row.author_username,
     content: row.content,
     created_at: row.created_at,
     id: row.id,

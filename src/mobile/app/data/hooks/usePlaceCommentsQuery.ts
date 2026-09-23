@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
 } from '@tanstack/react-query';
 
+import type { CommentAuthorColumns } from '@/mobile/app/data/mappers/visibleDataMappers';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 import {
   getPlaceCommentThreadsPage,
@@ -17,7 +18,7 @@ import type {
 const PLACE_COMMENTS_PAGE_SIZE = 20;
 const PLACE_COMMENTS_STALE_TIME_MS = 1000 * 60 * 2;
 
-type PlaceCommentRecord = ListPlaceCommentRow & {
+type PlaceCommentRecord = ListPlaceCommentRow & CommentAuthorColumns & {
   is_pending?: boolean;
   like_count?: number;
   list_place_comment_likes?: ListPlaceCommentLikeRow[] | null;
