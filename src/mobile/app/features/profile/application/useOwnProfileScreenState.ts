@@ -189,6 +189,7 @@ export function useOwnProfileScreenState({ activeTab = 'lists', user }: UseOwnPr
     refreshing,
     retry: loadLists,
     tabTotals: {
+      gallery: profileQuery.summary?.galleryCount,
       lists: profileQuery.summary?.listCount,
       places: profileQuery.summary?.placeCount,
     },

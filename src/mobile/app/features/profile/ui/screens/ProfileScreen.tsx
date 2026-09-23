@@ -162,6 +162,7 @@ export function ProfileScreen() {
         gallery: resolveProfileTabCount({
           complete: isContentComplete.places,
           loaded: filteredPhotos.length,
+          total: visibilityFilter !== 'all' ? undefined : tabTotals.gallery,
         }),
         lists: resolveProfileTabCount({
           complete: isContentComplete.lists,
@@ -180,6 +181,7 @@ export function ProfileScreen() {
       filteredPlaces.length,
       isContentComplete.lists,
       isContentComplete.places,
+      tabTotals.gallery,
       tabTotals.lists,
       tabTotals.places,
       visibilityFilter,

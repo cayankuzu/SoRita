@@ -307,6 +307,7 @@ export function useUserProfileScreenState({
     reportUser,
     retry: loadData,
     tabTotals: {
+      gallery: profileQuery.summary?.galleryCount,
       lists: profileQuery.summary?.listCount,
       places: profileQuery.summary?.placeCount,
     },

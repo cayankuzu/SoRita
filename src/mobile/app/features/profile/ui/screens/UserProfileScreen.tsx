@@ -257,6 +257,7 @@ export function UserProfileScreen() {
         gallery: resolveProfileTabCount({
           complete: isContentComplete.places,
           loaded: filteredPhotos.length,
+          total: tabTotals.gallery,
         }),
         lists: resolveProfileTabCount({
           complete: isContentComplete.lists,
@@ -275,6 +276,7 @@ export function UserProfileScreen() {
       filteredPlaces.length,
       isContentComplete.lists,
       isContentComplete.places,
+      tabTotals.gallery,
       tabTotals.lists,
       tabTotals.places,
     ],

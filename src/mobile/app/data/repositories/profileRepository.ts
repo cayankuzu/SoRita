@@ -14,6 +14,8 @@ export type ProfileSummary = {
   canViewContent: boolean;
   followerCount: number;
   followingCount: number;
+  // Places the viewer may see that carry at least one photo or video: the Gallery tab.
+  galleryCount: number;
   isBlockedByViewer: boolean;
   isBlockingViewer: boolean;
   listCount: number;
@@ -35,6 +37,7 @@ type ProfileSummaryRow = {
   cover_photo_url?: string | null;
   follower_count?: number | string | null;
   following_count?: number | string | null;
+  gallery_count?: number | string | null;
   id: string;
   interests?: string[] | null;
   is_blocked_by_viewer?: boolean | null;
@@ -282,6 +285,7 @@ export async function fetchProfileSummary(
     canViewContent: Boolean(row.can_view_content),
     followerCount: toNumber(row.follower_count) || 0,
     followingCount: toNumber(row.following_count) || 0,
+    galleryCount: toNumber(row.gallery_count) || 0,
     isBlockedByViewer: Boolean(row.is_blocked_by_viewer),
     isBlockingViewer: Boolean(row.is_blocking_viewer),
     listCount: toNumber(row.list_count) || 0,

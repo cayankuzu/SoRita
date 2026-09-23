@@ -642,6 +642,7 @@ describe('read model repositories', () => {
       canViewContent: false,
       followerCount: 0,
       followingCount: 0,
+      galleryCount: 0,
       isBlockedByViewer: true,
       isBlockingViewer: false,
       listCount: 0,
