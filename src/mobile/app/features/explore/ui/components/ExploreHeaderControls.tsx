@@ -16,6 +16,8 @@ type ExploreHeaderControlsProps = {
   activeTab: ExploreTabType;
   resultCount?: number;
   resultsPending?: boolean;
+  // A swipe is between tabs: the count shows the tab being reached, silently.
+  resultsPreviewing?: boolean;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onTabChange: (tab: ExploreTabType) => void;
@@ -54,6 +56,7 @@ export function ExploreHeaderControls({
   activeTab,
   resultCount,
   resultsPending = false,
+  resultsPreviewing = false,
   searchQuery,
   onSearchQueryChange,
   onTabChange,
@@ -120,7 +123,7 @@ export function ExploreHeaderControls({
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel={searchAccessibilityLabel}
-            accessibilityState={{ busy: resultsPending }}
+            accessibilityState={{ busy: resultsPending || resultsPreviewing }}
             returnKeyType="search"
           />
           {searchQuery ? (
@@ -168,7 +171,7 @@ export function ExploreHeaderControls({
 
         {typeof resultCount === 'number' ? (
           <AppText
-            accessibilityLiveRegion="polite"
+            accessibilityLiveRegion={resultsPreviewing ? 'none' : 'polite'}
             accessibilityState={{ busy: resultsPending }}
             style={styles.resultStatus}
           >

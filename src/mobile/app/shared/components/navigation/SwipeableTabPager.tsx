@@ -89,6 +89,7 @@ function SwipeableFillPager<TTab extends string>({
     renderWindowIndex,
     settleTabIndex,
     syncActiveIndex,
+    visitedIndices,
   } = usePagerController({
     activeIndex,
     activeTab,
@@ -207,6 +208,8 @@ function SwipeableFillPager<TTab extends string>({
           renderWindowIndex,
           keepAlive,
           lazy,
+          undefined,
+          visitedIndices,
         );
 
         return (
@@ -252,6 +255,7 @@ function SwipeableContentPager<TTab extends string>(
     renderWindowIndex,
     settleTabIndex,
     syncActiveIndex,
+    visitedIndices,
   } = controller;
 
   const updateHeight = useCallback((nextHeight: number) => {
@@ -408,6 +412,8 @@ function SwipeableContentPager<TTab extends string>(
             renderWindowIndex,
             keepAlive,
             lazy,
+            undefined,
+            visitedIndices,
           );
 
           return (
@@ -451,6 +457,8 @@ function SwipeableContentPager<TTab extends string>(
           renderWindowIndex,
           keepAlive,
           lazy,
+          undefined,
+          visitedIndices,
         );
 
         return (

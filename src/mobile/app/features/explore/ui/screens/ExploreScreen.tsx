@@ -54,6 +54,7 @@ type ExploreBrowseHeaderProps = {
   onTabChange: (tab: ExploreTabType) => void;
   resultCount?: number;
   resultsPending: boolean;
+  resultsPreviewing: boolean;
   screenPadding: number;
   searchQuery: string;
   showPartialDataNotice: boolean;
@@ -66,6 +67,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
   onTabChange,
   resultCount,
   resultsPending,
+  resultsPreviewing,
   screenPadding,
   searchQuery,
   showPartialDataNotice,
@@ -76,6 +78,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
         activeTab={activeTab}
         resultCount={resultCount}
         resultsPending={resultsPending}
+        resultsPreviewing={resultsPreviewing}
         searchQuery={searchQuery}
         onSearchQueryChange={onSearchQueryChange}
         onTabChange={onTabChange}
@@ -306,15 +309,12 @@ export function ExploreScreen() {
             onRetry={handleRetry}
             onSearchQueryChange={setSearchQuery}
             onTabChange={handleTabChange}
-            resultCount={
-              visibleTab === activeTab
-                ? dataByTab[activeTab].length
-                : undefined
-            }
-            resultsPending={
-              visibleTab !== activeTab ||
-              searchQuery.trim() !== debouncedSearchQuery.trim()
-            }
+            // The count follows the tab being swiped to and never leaves: while
+            // a swipe was in flight it used to vanish, the header lost a line,
+            // and the whole pager jumped up and back down.
+            resultCount={dataByTab[visibleTab].length}
+            resultsPending={searchQuery.trim() !== debouncedSearchQuery.trim()}
+            resultsPreviewing={visibleTab !== activeTab}
             screenPadding={screenPadding}
             searchQuery={searchQuery}
             showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
@@ -325,7 +325,7 @@ export function ExploreScreen() {
             activeTab={activeTab}
             enabled={!refreshing && !feedMode}
             getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
-            keepAlive={false}
+            keepAlive
             lazy
             tabs={EXPLORE_PAGER_TABS}
             onChange={handleTabChange}

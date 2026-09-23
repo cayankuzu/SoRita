@@ -42,18 +42,25 @@ export function resolvePagedScrollIndex(
   return safeCurrentIndex;
 }
 
+/**
+ * Which pages hold content. Without `lazy` every page renders. With it, a page
+ * renders once it comes within a page of the one in view; `keepAlive` then
+ * keeps it rendered after the user moves on, so coming back never shows a
+ * blank page while its list rebuilds, and unvisited tabs still cost nothing.
+ */
 export function shouldRenderPagedItem(
   index: number,
   anchorIndex: number,
   keepAlive: boolean,
   lazy: boolean,
   radius = LAZY_RENDER_RADIUS,
+  visited: ReadonlySet<number> = new Set(),
 ) {
-  if (keepAlive || !lazy) {
+  if (!lazy) {
     return true;
   }
 
-  return Math.abs(index - anchorIndex) <= radius;
+  return Math.abs(index - anchorIndex) <= radius || (keepAlive && visited.has(index));
 }
 
 export function useProgrammaticScrollGuard() {
@@ -110,6 +117,20 @@ export function usePagerController<TTab extends string>({
   const currentPageRef = useRef(activeIndex);
   const previewPageRef = useRef(activeIndex);
   const [renderWindowIndex, setRenderWindowIndex] = useState(activeIndex);
+  const [visitedIndices, setVisitedIndices] = useState<ReadonlySet<number>>(
+    () => new Set([activeIndex]),
+  );
+
+  useEffect(() => {
+    setVisitedIndices((current) => {
+      const next = new Set(current);
+      for (let offset = -LAZY_RENDER_RADIUS; offset <= LAZY_RENDER_RADIUS; offset += 1) {
+        const index = renderWindowIndex + offset;
+        if (index >= 0 && index < tabs.length) next.add(index);
+      }
+      return next.size === current.size ? current : next;
+    });
+  }, [renderWindowIndex, tabs.length]);
 
   const announceTabChange = useCallback(
     (tab: TTab, index: number) => {
@@ -183,5 +204,6 @@ export function usePagerController<TTab extends string>({
     renderWindowIndex,
     settleTabIndex,
     syncActiveIndex,
+    visitedIndices,
   };
 }

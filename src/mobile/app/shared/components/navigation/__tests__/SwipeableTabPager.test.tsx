@@ -49,7 +49,10 @@ describe('SwipeableTabPager controller', () => {
   });
 
   it('keeps alive pages or limits a lazy render window', () => {
-    expect(shouldRenderPagedItem(3, 0, true, true)).toBe(true);
+    // A lazy, kept-alive pager renders a far page only once it has been reached.
+    expect(shouldRenderPagedItem(3, 0, true, true)).toBe(false);
+    expect(shouldRenderPagedItem(3, 0, true, true, undefined, new Set([0, 3]))).toBe(true);
+    expect(shouldRenderPagedItem(3, 0, true, false)).toBe(true);
     expect(shouldRenderPagedItem(3, 0, false, false)).toBe(true);
     expect(shouldRenderPagedItem(3, 0, false, true)).toBe(false);
     expect(shouldRenderPagedItem(1, 0, false, true)).toBe(true);
