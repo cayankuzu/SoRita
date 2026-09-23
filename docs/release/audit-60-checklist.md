@@ -63,6 +63,8 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı production'a **uygulanmadı**: `db push` izin sistemince reddedildi, Cayan'ın adımı |
+| 4: Native paket #1 | ⏸ | Atlandı: `android/` altındaki native dosyalar bu oturumun sandbox'ında okumaya ve yazmaya kapalı; yükleme de Cayan'ın adımı. Tek renkli ikon adayı hazır |
+| 5: Component sistemi I | 🔶 | Basma primitive'i, Chip, Badge, SheetHeader, alta yaslı sheet'ler, tek seviyeli menü teslim edildi. **P0 bulundu:** kayıt ve profil kaydı bozuk (aşağıda). Kalan: form standardı, durum bileşenleri, kalan 5 özel sheet |
 
 ---
 
@@ -77,8 +79,8 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | 🔶 | 1 | iOS OTA (build TestFlight'ta) | Faz 4'te kapanır | — |
 | ✅ | 2 | Envanter, ekran incelemesi, duplicate | — | — |
 | ✅ | 3 | Token sistemi kalanı + bekleyen teslimat | B10 (cihaz ölçümü bir sonraki OTA'da) | Migration'ı uygulamak (1 dk) |
-| ⬜ | 4 | Native paket #1 + iOS OTA açılışı | B13, Faz 1 | İkon onayı, AAB → Play, TestFlight kurulumu (~30 dk) |
-| ⬜ | 5 | Component sistemi I: primitive'ler, durum bileşenleri, form standardı | — | — |
+| ⏸ | 4 | Native paket #1 + iOS OTA açılışı | B13, Faz 1 | İkon onayı, AAB → Play, TestFlight kurulumu (~30 dk); native dosyalara izin |
+| 🔶 | 5 | Component sistemi I: primitive'ler, durum bileşenleri, form standardı | — | Supabase `db push` (P0) |
 | ⬜ | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
 | ⬜ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
 | ⬜ | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
@@ -215,6 +217,56 @@ Claude (sayılar Faz 2 ölçümüdür, faz başında yeniden ölçülür):
 
 Kapanır: — (B9, E28, A4 ve A5'e katkı)
 Cayan: —
+
+### Faz 5 kaydı, 1. tur (2026-09-23)
+
+**Teslim:** OTA grupları `91d2198f`, `a4140b77`, `009d531b`, `0e43c6ce`. Her biri
+iki soğuk başlatmayla cihazda doğrulandı (`DownloadComplete`, ardından
+çalışır hâlde).
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| C1 | Tek basma primitive'i: 65 ham `Pressable`'ın 60'ı basılı tepki vermiyordu; hepsi `InstantPressable` | guard: ham `Pressable` import'u build'i kırar (deneme dosyasıyla kanıtlandı) |
+| C2 | `InstantPressable` statik öğeleri artık "buton, pasif" diye duyurmuyor | Keşfet sahip başlığı testi |
+| C3 | `Chip`: 5 ayrı seçilebilir hap → 36dp görünür, 48dp dokunma alanı, iki tür | cihaz: Keşfet sekmesi 99px = 36dp; profil filtresi |
+| C4 | `Badge`: 14 dosyada 20+ elle yazılmış rozet (18–36dp arası 7 yükseklik) → 24dp, 7 ton | 5 test; cihaz: kart etiketleri, ilgi alanı, liste köşe rozeti |
+| C5 | Kapaksız liste detay sayfasında da tasarlanmış kapak; bileşen `shared`'a taşındı | mimari guard |
+| C6 | `SheetHeader`: 7 elle yazılmış sheet başlığı → 1 | 214 test |
+| C7 | Sheet'ler alta yaslı ve kenardan kenara; takipçi sheet'i scaffold'a geçti, satırlar düz | cihaz ekran görüntüsü |
+| C8 | Kart menüsü tek seviye: "İçerik işlemleri" içindeki ikinci "İçerik işlemleri" sheet'i kaldırıldı | cihaz: tek menüde Düzenle/Sil |
+| C9 | Menü satırları gri hap yerine düz satır | cihaz |
+| C10 | Profil düzenleme: ilgi alanı adımında aynı başlık ve açıklama iki kez yazıyordu | cihaz |
+| C11 | Testler: `npm run test` Keşfet klasörünü hiç koşmuyordu; özellik listesi artık diskten okunuyor | 6 gizli kırmızı test bulundu ve düzeltildi |
+
+**🔴 P0: kayıt ve profil kaydı bozuk (production).** `20260830143000`
+kullanıcı adı kontrolünü yalnız `service_role`'e açtı. Ama
+`public.check_account_availability` çağıranın yetkisiyle çalışıyor ve
+içerideki `private` fonksiyona `service_role` ulaşamıyor (production
+kataloğunda `service_role`'ün `private` şemasında kullanım yetkisi yok).
+30 Ağustos'tan beri her kontrol 500 dönüyor. Sonuç: yeni kullanıcı kullanıcı
+adı adımını geçemiyor; mevcut kullanıcı profilini kaydedemiyor.
+- İstemci tarafı: kendi mevcut kullanıcı adı artık sunucuya sorulmuyor. OTA
+  `a4140b77` ile teslim edildi; profil kaydı cihazda tekrar açık.
+- Sunucu tarafı: migration `20260923020000` (sarmalayıcı `SECURITY DEFINER`,
+  yetki yalnız `service_role`'de). Yerel stack'te 76 migration ve 11 SQL test
+  dosyası (317 test) geçti. Yeni pgTAP testi kontrolü `service_role` olarak
+  gerçekten çalıştırıyor. **Production'a uygulanması Cayan'ın adımı.**
+
+**Açık kalan (Faz 5):** form standardı (auth alanı ile `TextField` iki ayrı
+implementasyon), durum bileşenleri, kendi `<Modal>`'ını yazan 5 sheet (yorum
+işlem sheet'i, medya kaynak seçimi, harita önizleme, liste ve mekân
+editörleri), `İptal` başlık aksiyonunun gri dolgusu.
+
+**Faz 7'ye not edilenler:** `FeedActionBar` içindeki hiç tetiklenmeyen ikinci
+"yer şikâyet et" yolu (durum hook'u + overlay + test); liste editörü ile mekân
+editörünün "yeni liste" formu aynı kapak seçiciyi iki kez yazıyor;
+`MediaThumbnailView` ile `VideoPreview` aynı oynat/süre rozetlerini
+tekrarlıyor.
+
+**Faz 11'e not edilen:** edge function hata metinleri Türkçe karakter
+taşımıyor ("Kimlik dogrulama islemi tamamlanamadi", "Giris islemi…").
+Kullanıcıya gösterildikleri yerler taranacak; düzeltme edge function
+deploy'u gerektirir.
 
 ### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
 
