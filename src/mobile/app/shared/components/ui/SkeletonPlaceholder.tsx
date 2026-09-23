@@ -4,12 +4,17 @@ import {
   type DimensionValue,
   StyleSheet,
   type StyleProp,
+  useWindowDimensions,
   View,
   type ViewStyle,
 } from "react-native";
 
 import { colors, radius, spacing } from "@/mobile/app/shared/theme/tokens";
 import { useReduceMotion } from "@/mobile/app/shared/hooks/useReduceMotion";
+import {
+  getResponsiveMosaicColumnCount,
+  MOSAIC_GAP,
+} from "@/mobile/app/shared/utils/layout";
 import { tr } from "@/mobile/app/shared/i18n/tr";
 
 type SkeletonProps = {
@@ -118,14 +123,17 @@ export function PlaceCardSkeleton() {
   );
 }
 
-export function ListGridTileSkeleton() {
+/** An Instagram-style grid still loading: rows of squares, hairlines apart. */
+export function MosaicGridSkeleton({ rows = 4 }: { rows?: number }) {
+  const { width } = useWindowDimensions();
+  const columns = getResponsiveMosaicColumnCount(width);
+  const size = Math.floor((width - MOSAIC_GAP * (columns - 1)) / columns);
+
   return (
-    <SkeletonGroup style={styles.tileSkeleton}>
-      <SkeletonPlaceholder width="100%" height={140} borderRadius={12} />
-      <View style={styles.tileContent}>
-        <SkeletonPlaceholder width="70%" height={14} />
-        <SkeletonPlaceholder width="50%" height={12} />
-      </View>
+    <SkeletonGroup style={styles.mosaicSkeleton}>
+      {Array.from({ length: rows * columns }, (_, index) => (
+        <SkeletonPlaceholder key={index} width={size} height={size} borderRadius={0} />
+      ))}
     </SkeletonGroup>
   );
 }
@@ -241,12 +249,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.cardBorder,
     paddingTop: spacing.sm,
   },
-  tileSkeleton: {
-    gap: spacing.sm,
-  },
-  tileContent: {
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
+  mosaicSkeleton: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: MOSAIC_GAP,
   },
   profileSkeleton: {
     gap: 0,

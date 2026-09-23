@@ -1,6 +1,9 @@
 export type AppWindowClass = 'compact' | 'medium' | 'expanded';
 export type AppHeightClass = 'short' | 'regular' | 'tall';
-export type ResponsiveGridStrategy = 'discovery' | 'gallery';
+export type ResponsiveGridStrategy = 'discovery' | 'gallery' | 'mosaic';
+
+// The hairline between cells of a mosaic grid, as Instagram draws it.
+export const MOSAIC_GAP = 2;
 
 export type AppLayoutMetrics = {
   bottomObstruction: number;
@@ -89,6 +92,15 @@ export function getResponsiveGalleryColumnCount(
   );
 }
 
+/** Instagram's grid: three columns on a phone, more on a tablet or unfolded screen. */
+export function getResponsiveMosaicColumnCount(viewportWidth: number) {
+  if (viewportWidth >= 1040) {
+    return 5;
+  }
+
+  return viewportWidth >= 600 ? 4 : 3;
+}
+
 export function getResponsiveGridLayout(
   viewportWidth: number,
   viewportHeight: number,
@@ -100,6 +112,18 @@ export function getResponsiveGridLayout(
     strategy?: ResponsiveGridStrategy;
   } = {},
 ) {
+  if (strategy === 'mosaic') {
+    // Edge to edge, like a photo wall: no screen gutter, a hairline between cells.
+    const columnCount = getResponsiveMosaicColumnCount(viewportWidth);
+
+    return {
+      columnCount,
+      columnWidth: Math.floor((viewportWidth - MOSAIC_GAP * (columnCount - 1)) / columnCount),
+      gap: MOSAIC_GAP,
+      horizontalPadding: 0,
+    };
+  }
+
   const horizontalPadding = getResponsiveScreenPadding(viewportWidth, viewportHeight);
   const columnCount = strategy === 'gallery'
     ? getResponsiveGalleryColumnCount(viewportWidth, viewportHeight, gap)
@@ -112,6 +136,7 @@ export function getResponsiveGridLayout(
   return {
     columnCount,
     columnWidth: Math.floor(availableWidth / columnCount),
+    gap,
     horizontalPadding,
   };
 }

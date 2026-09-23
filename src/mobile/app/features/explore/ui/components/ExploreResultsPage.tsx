@@ -9,8 +9,8 @@ import type {
 } from '@/mobile/app/data/contracts/entities';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import {
-  ListGridTile,
-  PlaceGridTile,
+  ListMosaicTile,
+  PlaceMosaicTile,
   UserGridTile,
 } from '@/mobile/app/features/discovery/public/components';
 import type { ExploreTabType } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
@@ -35,7 +35,6 @@ type ExploreResultsPageProps = {
   following: string[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
-  listMarkerLists: PlaceList[];
   listRef: React.Ref<FlatList<ExploreGridItem>>;
   onContentReady: () => void;
   onClearSearch: () => void;
@@ -142,7 +141,6 @@ function ExplorePageEmptyState({
 
 type ExploreResultCellProps = Pick<
   ExploreResultsPageProps,
-  | 'listMarkerLists'
   | 'onFollowUser'
   | 'onListIntent'
   | 'onListPress'
@@ -164,7 +162,6 @@ const ExploreResultCell = React.memo(function ExploreResultCell({
   following,
   index,
   item,
-  listMarkerLists,
   onFollowUser,
   onListIntent,
   onListPress,
@@ -177,21 +174,12 @@ const ExploreResultCell = React.memo(function ExploreResultCell({
 }: ExploreResultCellProps) {
   if (tab === 'lists') {
     const listItem = item as ExploreListItem;
-    const ownerId = listItem.owner?.id;
 
     return (
-      <ListGridTile
-        compact={compact}
+      <ListMosaicTile
         list={listItem.list}
-        owner={listItem.owner}
-        fillWidth
-        showOwner={Boolean(listItem.owner)}
-        allListsForMarkerColor={listMarkerLists}
-        onOwnerPress={ownerId ? () => onOwnerPress(ownerId) : undefined}
-        onOwnerPressIn={ownerId ? () => onOwnerIntent(ownerId) : undefined}
         onPress={() => onListPress(listItem.list.id)}
         onPressIn={() => onListIntent(listItem.list.id)}
-        searchQuery={searchQuery}
       />
     );
   }
@@ -215,28 +203,15 @@ const ExploreResultCell = React.memo(function ExploreResultCell({
   }
 
   const placeItem = item as PlaceFeedCardItem;
-  const ownerId = placeItem.owner?.id;
 
   return (
-    <PlaceGridTile
-      compact={compact}
+    <PlaceMosaicTile
       place={placeItem.place}
-      fillWidth
-      owner={placeItem.owner}
-      showOwner={Boolean(placeItem.owner)}
-      mode={tab === 'photos' ? 'photo' : 'place'}
-      listCoverImage={placeItem.listCoverImage}
-      listEmoji={placeItem.listEmoji}
-      listIsPublic={placeItem.listIsPublic}
-      listName={placeItem.listName}
       markerColor={getMarkerColorForMemberships(
         placeItem.memberships,
         placeItem.listIsPublic,
       )}
-      onOwnerPress={ownerId ? () => onOwnerPress(ownerId) : undefined}
-      onOwnerPressIn={ownerId ? () => onOwnerIntent(ownerId) : undefined}
       onPress={() => onPlacePress(tab, index)}
-      searchQuery={searchQuery}
     />
   );
 });
@@ -248,7 +223,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   following,
   hasNextPage,
   isFetchingNextPage,
-  listMarkerLists,
   listRef,
   onContentReady,
   onClearSearch,
@@ -310,7 +284,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
         following={followingSet}
         index={index}
         item={item}
-        listMarkerLists={listMarkerLists}
         onFollowUser={onFollowUser}
         onListIntent={onListIntent}
         onListPress={onListPress}
@@ -324,7 +297,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     ),
     [
       followingSet,
-      listMarkerLists,
       onFollowUser,
       onListIntent,
       onListPress,
@@ -341,7 +313,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     <VirtualizedDiscoveryGrid<ExploreGridItem>
       listRef={listRef}
       listKey={`explore:${tab}`}
-      columnStrategy={tab === 'photos' ? 'gallery' : 'discovery'}
+      // People stay a list of rows; everything else is an Instagram-style grid.
+      columnStrategy={tab === 'people' ? 'discovery' : 'mosaic'}
       data={errorMessage ? [] : data}
       extraData={listState}
       containsNativeMaps={tab !== 'people'}

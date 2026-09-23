@@ -572,7 +572,6 @@ export function UserProfileScreen() {
                 dataByTab={dataByTab}
                 emptyStateForTab={renderEmptyState}
                 enabled={pagerSwipeEnabled}
-                filteredLists={filteredLists}
                 header={renderProfileHero()}
                 stickyHeader={renderProfileStickyHeader()}
                 hasNextPage={hasNextPage}

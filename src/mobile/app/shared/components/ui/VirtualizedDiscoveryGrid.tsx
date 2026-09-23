@@ -13,7 +13,11 @@ import {
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { spacing } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import { getResponsiveGridLayout } from '@/mobile/app/shared/utils/layout';
+import {
+  getResponsiveGridLayout,
+  MOSAIC_GAP,
+  type ResponsiveGridStrategy,
+} from '@/mobile/app/shared/utils/layout';
 
 type VirtualizedDiscoveryGridRenderInfo<ItemT> = {
   columnCount: number;
@@ -28,7 +32,7 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
     info: VirtualizedDiscoveryGridRenderInfo<ItemT>,
   ) => React.ReactElement | null;
   listKey?: string;
-  columnStrategy?: 'discovery' | 'gallery';
+  columnStrategy?: ResponsiveGridStrategy;
   listRef?: React.Ref<FlatList<ItemT>>;
   ListEmptyComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
@@ -74,11 +78,17 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   scrollEnabled = true,
 }: VirtualizedDiscoveryGridProps<ItemT>) {
   const appLayout = useAppLayout();
-  const { columnGap, height, screenPadding, width } = appLayout;
-  const { columnCount, columnWidth } = getResponsiveGridLayout(width, height, {
+  const { columnGap: layoutColumnGap, height, width } = appLayout;
+  const {
+    columnCount,
+    columnWidth,
     gap: columnGap,
+    horizontalPadding: screenPadding,
+  } = getResponsiveGridLayout(width, height, {
+    gap: layoutColumnGap,
     strategy: columnStrategy,
   });
+  const isMosaic = columnStrategy === 'mosaic';
   const visibleAnchorIndexRef = React.useRef(0);
   const pendingAnchorIndexRef = React.useRef<number | null>(null);
   const previousColumnCountRef = React.useRef(columnCount);
@@ -129,11 +139,17 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   );
   const renderCell = React.useCallback(
     ({ item, index }: { item: ItemT; index: number }) => (
-      <View style={[styles.cell, cellWidthStyle, singleColumnCellStyle]}>
+      <View
+        style={[
+          isMosaic ? styles.mosaicCell : styles.cell,
+          cellWidthStyle,
+          singleColumnCellStyle,
+        ]}
+      >
         {renderItem({ columnCount, item, index })}
       </View>
     ),
-    [cellWidthStyle, columnCount, renderItem, singleColumnCellStyle],
+    [cellWidthStyle, columnCount, isMosaic, renderItem, singleColumnCellStyle],
   );
   const handleListRef = React.useCallback(
     (node: FlatList<ItemT> | null) => {
@@ -234,5 +250,8 @@ const styles = StyleSheet.create({
   },
   cell: {
     marginBottom: spacing.sm,
+  },
+  mosaicCell: {
+    marginBottom: MOSAIC_GAP,
   },
 });

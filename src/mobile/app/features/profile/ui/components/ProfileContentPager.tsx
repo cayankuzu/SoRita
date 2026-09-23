@@ -14,8 +14,8 @@ import {
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import {
-  ListGridTile,
-  PlaceGridTile,
+  ListMosaicTile,
+  PlaceMosaicTile,
 } from '@/mobile/app/features/discovery/public/components';
 import {
   SwipeableTabPager,
@@ -90,7 +90,6 @@ type ProfileContentPagerProps = {
   dataByTab: Record<ProfileContentTab, ProfileGridItem[]>;
   emptyStateForTab: (tab: ProfileContentTab) => React.ReactElement;
   enabled?: boolean;
-  filteredLists: PlaceList[];
   // Collapses as the active list scrolls.
   header: React.ReactElement;
   // Sits under the header and never scrolls away: the tab bar.
@@ -116,7 +115,6 @@ type ProfileContentPageProps = {
   collapseRange: number;
   data: ProfileGridItem[];
   emptyState: React.ReactElement;
-  filteredLists: PlaceList[];
   footerClearance: number;
   hasNextPage: boolean;
   headerSpacerHeight: number;
@@ -138,7 +136,6 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
   collapseRange,
   data,
   emptyState,
-  filteredLists,
   footerClearance,
   hasNextPage,
   headerSpacerHeight,
@@ -167,11 +164,9 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
         const list = item as PlaceList;
 
         return (
-          <ListGridTile
+          <ListMosaicTile
             list={list}
-            fillWidth
             showPrivacyBadge={showPrivacyBadge}
-            allListsForMarkerColor={filteredLists}
             onPress={() => onListPress(list)}
           />
         );
@@ -180,14 +175,8 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
       const placeItem = item as PlaceFeedCardItem;
 
       return (
-        <PlaceGridTile
+        <PlaceMosaicTile
           place={placeItem.place}
-          fillWidth
-          mode={tab === 'gallery' ? 'photo' : 'place'}
-          listCoverImage={placeItem.listCoverImage}
-          listEmoji={placeItem.listEmoji}
-          listIsPublic={placeItem.listIsPublic}
-          listName={placeItem.listName}
           markerColor={getMarkerColorForMemberships(
             placeItem.memberships,
             placeItem.listIsPublic,
@@ -196,7 +185,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
         />
       );
     },
-    [filteredLists, onListPress, onPlacePress, showPrivacyBadge, tab],
+    [onListPress, onPlacePress, showPrivacyBadge, tab],
   );
   const showLoadMoreStatus = active && hasNextPage && isFetchingNextPage;
   const showIOSRefreshStatus = Platform.OS === 'ios' && active && refreshing;
@@ -288,6 +277,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
       <VirtualizedDiscoveryGrid<ProfileGridItem>
         data={data}
         keyExtractor={keyExtractor}
+        columnStrategy="mosaic"
         listKey={`profile:${tab}`}
         listRef={setListRef}
         ListEmptyComponent={emptyState}
@@ -340,7 +330,6 @@ export function ProfileContentPager({
   dataByTab,
   emptyStateForTab,
   enabled = true,
-  filteredLists,
   header,
   stickyHeader,
   hasNextPage,
@@ -598,7 +587,6 @@ export function ProfileContentPager({
               collapseRange={collapseRange}
               data={shouldShowErrorState ? [] : dataByTab[tab]}
               emptyState={emptyStateForTab(tab)}
-              filteredLists={filteredLists}
               footerClearance={footerClearance}
               hasNextPage={!shouldShowErrorState && hasNextPage}
               headerSpacerHeight={headerHeight}

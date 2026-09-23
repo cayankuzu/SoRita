@@ -30,8 +30,7 @@ import { SwipeableTabPager } from '@/mobile/app/shared/components/navigation/Swi
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import {
-  ListGridTileSkeleton,
-  SkeletonGroup,
+  MosaicGridSkeleton,
 } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
@@ -156,10 +155,6 @@ export function ExploreScreen() {
     activeListRef.current = getTabScrollRef(activeTab) as FlatList<ExploreGridItem> | null;
     restoreTabScrollOffset(activeTab);
   }, [activeTab, getTabScrollRef, restoreTabScrollOffset]);
-  const listMarkerLists = useMemo(
-    () => filteredListItems.map(({ list }) => list),
-    [filteredListItems],
-  );
   const dataByTab = useMemo(
     () => ({
       lists: filteredListItems,
@@ -272,14 +267,7 @@ export function ExploreScreen() {
             onSearchQueryChange={setSearchQuery}
             onTabChange={handleTabChange}
           />
-          <SkeletonGroup style={loadMoreStyles.skeletonGrid}>
-            <View style={{ paddingHorizontal: screenPadding, gap: spacing.md }}>
-              <ListGridTileSkeleton />
-              <ListGridTileSkeleton />
-              <ListGridTileSkeleton />
-              <ListGridTileSkeleton />
-            </View>
-          </SkeletonGroup>
+          <MosaicGridSkeleton />
         </View>
       </Screen>
     );
@@ -345,7 +333,6 @@ export function ExploreScreen() {
                   following={following}
                   hasNextPage={tabQuery.hasNextPage}
                   isFetchingNextPage={tabQuery.isFetchingNextPage}
-                  listMarkerLists={listMarkerLists}
                   listRef={getTabScrollRefCallback(tab)}
                   onContentReady={() => notifyTabContentReady(tab)}
                   onClearSearch={() => setSearchQuery('')}
@@ -386,8 +373,5 @@ const loadMoreStyles = StyleSheet.create({
   },
   content: {
     paddingBottom: spacing.lg,
-  },
-  skeletonGrid: {
-    gap: spacing.md,
   },
 });

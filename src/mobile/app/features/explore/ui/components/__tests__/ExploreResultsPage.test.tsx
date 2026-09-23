@@ -7,8 +7,8 @@ vi.mock('lucide-react-native', () => ({
 }));
 
 vi.mock('@/mobile/app/features/discovery/public/components', () => ({
-  ListGridTile: (props: Record<string, unknown>) => React.createElement('ListGridTile', props),
-  PlaceGridTile: (props: Record<string, unknown>) => React.createElement('PlaceGridTile', props),
+  ListMosaicTile: (props: Record<string, unknown>) => React.createElement('ListMosaicTile', props),
+  PlaceMosaicTile: (props: Record<string, unknown>) => React.createElement('PlaceMosaicTile', props),
   UserGridTile: (props: Record<string, unknown>) => React.createElement('UserGridTile', props),
 }));
 

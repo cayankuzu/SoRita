@@ -8,8 +8,8 @@ vi.mock('@react-navigation/bottom-tabs', () => ({
 }));
 
 vi.mock('@/mobile/app/features/discovery/public/components', () => ({
-  ListGridTile: (props: Record<string, unknown>) => React.createElement('ListGridTile', props),
-  PlaceGridTile: (props: Record<string, unknown>) => React.createElement('PlaceGridTile', props),
+  ListMosaicTile: (props: Record<string, unknown>) => React.createElement('ListMosaicTile', props),
+  PlaceMosaicTile: (props: Record<string, unknown>) => React.createElement('PlaceMosaicTile', props),
 }));
 
 vi.mock('@/mobile/app/shared/components/navigation/SwipeableTabPager', () => ({
@@ -62,7 +62,6 @@ describe('ProfileContentPager', () => {
         activeTab="lists"
         dataByTab={{ gallery: [], lists: [], places: [] }}
         emptyStateForTab={() => <></>}
-        filteredLists={[]}
         header={<></>}
         hasNextPage={false}
         isFetchingNextPage={false}
@@ -144,7 +143,6 @@ describe('ProfileContentPager', () => {
           activeTab="lists"
           dataByTab={{ gallery: [], lists: [list], places: [] }}
           emptyStateForTab={() => <></>}
-          filteredLists={[list]}
           header={header}
           hasNextPage
           isFetchingNextPage
@@ -180,7 +178,7 @@ describe('ProfileContentPager', () => {
       stationaryHeader.props.onLayout({ nativeEvent: { layout: { height: 236 } } });
     });
 
-    const tile = renderer.root.find((node) => String(node.type) === 'ListGridTile');
+    const tile = renderer.root.find((node) => String(node.type) === 'ListMosaicTile');
     const measuredGrid = renderer.root.find(
       (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
     );
@@ -240,7 +238,6 @@ describe('ProfileContentPager', () => {
             activeTab="lists"
             dataByTab={{ gallery: [], lists: [], places: [] }}
             emptyStateForTab={() => <></>}
-            filteredLists={[]}
             header={React.createElement('ProfileHeader')}
             hasNextPage={false}
             isFetchingNextPage={false}
@@ -302,7 +299,6 @@ describe('ProfileContentPager', () => {
           activeTab="lists"
           dataByTab={{ gallery: [], lists: [], places: [] }}
           emptyStateForTab={() => <></>}
-          filteredLists={[]}
           header={React.createElement('ProfileHeader')}
           hasNextPage={false}
           isFetchingNextPage={false}
@@ -352,7 +348,6 @@ describe('ProfileContentPager', () => {
         activeTab={activeTab}
         dataByTab={{ gallery: [], lists: [], places: [] }}
         emptyStateForTab={() => <></>}
-        filteredLists={[]}
         header={React.createElement('ProfileHeader')}
         hasNextPage={false}
         isFetchingNextPage={false}
@@ -480,7 +475,6 @@ describe('ProfileContentPager', () => {
           activeTab="lists"
           dataByTab={{ gallery: [], lists, places: [] }}
           emptyStateForTab={() => <></>}
-          filteredLists={lists}
           header={<></>}
           hasNextPage
           isFetchingNextPage={false}
@@ -512,7 +506,7 @@ describe('ProfileContentPager', () => {
       (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
     );
     const mountedTiles = renderer.root.findAll(
-      (node) => String(node.type) === 'ListGridTile',
+      (node) => String(node.type) === 'ListMosaicTile',
     );
 
     expect(grid.props.data).toHaveLength(500);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MOSAIC_GAP,
   calculateAppLayout,
   getResponsiveDiscoveryColumnCount,
   getResponsiveGalleryColumnCount,
@@ -10,6 +11,18 @@ import {
 } from '@/mobile/app/shared/utils/layout';
 
 describe('responsive layout helpers', () => {
+  it('lays a mosaic out edge to edge, three across on a phone and more on a tablet', () => {
+    expect(getResponsiveGridLayout(390, 844, { strategy: 'mosaic' })).toEqual({
+      columnCount: 3,
+      columnWidth: Math.floor((390 - 2 * MOSAIC_GAP) / 3),
+      gap: MOSAIC_GAP,
+      horizontalPadding: 0,
+    });
+    expect(getResponsiveGridLayout(360, 740, { strategy: 'mosaic' }).columnCount).toBe(3);
+    expect(getResponsiveGridLayout(700, 1000, { strategy: 'mosaic' }).columnCount).toBe(4);
+    expect(getResponsiveGridLayout(1100, 800, { strategy: 'mosaic' }).columnCount).toBe(5);
+  });
+
   it('uses compact padding and a single discovery column for very narrow split windows', () => {
     expect(getResponsiveScreenPadding(320, 720)).toBe(16);
     expect(getResponsiveDiscoveryColumnCount(320, 720)).toBe(1);

@@ -89,6 +89,9 @@ export const colors = {
   scrim: withAlpha(palette.slate900, 0.9),
   // A light wash that keeps white text legible on a bright cover photo.
   imageScrim: withAlpha(palette.slate900, 0.12),
+  // Opaque ink a gradient fades toward under a caption on a photo; the
+  // gradient's stops set how much of it shows.
+  imageInk: palette.slate900,
   controlsBorder: withAlpha(palette.white, 0.1),
   controlsDivider: withAlpha(palette.white, 0.2),
   onDarkMuted: withAlpha(palette.white, 0.78),
