@@ -13,6 +13,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from "@/mobile/app/shared/theme/tokens";
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
   countBadgeActive: {
     backgroundColor: colors.primaryBg,
   },
-  countText: textStyle('metadataText', colors.textSoft, fontWeight.strong),
+  countText: { ...textStyle('metadataText', colors.textSoft, fontWeight.strong), ...tabularNumbers },
   countTextActive: {
     color: colors.primary,
   },

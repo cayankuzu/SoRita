@@ -21,6 +21,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  tabularNumbers,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
@@ -173,5 +174,6 @@ const styles = StyleSheet.create({
     fontSize: typography.metadataText.fontSize,
     fontWeight: fontWeight.strong,
     color: colors.onPrimary,
+    ...tabularNumbers,
   },
 });

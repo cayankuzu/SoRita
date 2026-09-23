@@ -31,6 +31,7 @@ import {
   opacity,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -428,14 +429,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  counterBadgeText: textStyle('metadataText', colors.primary, fontWeight.strong),
+  counterBadgeText: { ...textStyle('metadataText', colors.primary, fontWeight.strong), ...tabularNumbers },
   counterBadgeStrong: {
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  counterBadgeStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
+  counterBadgeStrongText: { ...textStyle('metadataText', colors.text, fontWeight.strong), ...tabularNumbers },
   mediaEmptyCard: {
     borderRadius: radius.xl,
     borderWidth: 1,

@@ -7,6 +7,7 @@ import {
   opacity,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -234,7 +235,10 @@ export const commentPanelStyles = StyleSheet.create({
   commentLikeButtonActive: {
     backgroundColor: colors.dangerBg,
   },
-  commentLikeCount: textStyle('metadataText', colors.textSoft, fontWeight.strong),
+  commentLikeCount: {
+    ...textStyle('metadataText', colors.textSoft, fontWeight.strong),
+    ...tabularNumbers,
+  },
   commentLikeCountActive: {
     color: colors.danger,
   },

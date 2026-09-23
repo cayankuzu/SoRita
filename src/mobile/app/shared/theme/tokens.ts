@@ -209,6 +209,12 @@ export function textStyle(
   };
 }
 
+/**
+ * Equal-width digits for numbers that change in place - like counts, badges,
+ * character counters - so a 9 turning into 10 does not nudge its neighbours.
+ */
+export const tabularNumbers: TextStyle = { fontVariant: ['tabular-nums'] };
+
 export const letterSpacing = {
   brandTitle: -0.8,
   brandTagline: 0.4,

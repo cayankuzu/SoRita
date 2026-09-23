@@ -5,7 +5,14 @@ import { ProfileInterestChips } from '@/mobile/app/features/profile/ui/component
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  minTouchSize,
+  spacing,
+  tabularNumbers,
+  textStyle,
+} from '@/mobile/app/shared/theme/tokens';
 
 type ProfileConnectionsSummaryProps = {
   followerCount: number;
@@ -72,6 +79,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xxs,
   },
-  connectionValue: textStyle('bodyText', colors.text, fontWeight.strong),
+  connectionValue: { ...textStyle('bodyText', colors.text, fontWeight.strong), ...tabularNumbers },
   connectionLabel: textStyle('metadataText', colors.textSoft),
 });

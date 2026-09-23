@@ -7,6 +7,7 @@ import {
   opacity,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -181,7 +182,10 @@ export const placeCardStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  mediaCarouselCounterText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
+  mediaCarouselCounterText: {
+    ...textStyle('metadataText', colors.onPrimary, fontWeight.strong),
+    ...tabularNumbers,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',

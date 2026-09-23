@@ -6,6 +6,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -191,6 +192,7 @@ export const listEditorModalStyles = StyleSheet.create({
     marginTop: -4,
     alignSelf: 'flex-end',
     ...typography.metadataText,
+    ...tabularNumbers,
     color: colors.textSoft,
   },
   privacyRow: {

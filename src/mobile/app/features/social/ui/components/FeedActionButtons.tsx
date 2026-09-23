@@ -17,6 +17,7 @@ import {
   iconSize,
   minTouchSize,
   spacing,
+  tabularNumbers,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  count: textStyle('labelText', colors.text),
+  count: { ...textStyle('labelText', colors.text), ...tabularNumbers },
   trailing: {
     marginLeft: 'auto',
   },

@@ -7,6 +7,7 @@ import {
   minTouchSize,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   touch,
   typography,
@@ -297,7 +298,7 @@ export const discoveryTileStyles = StyleSheet.create({
     alignSelf: 'stretch',
     backgroundColor: colors.controlsDivider,
   },
-  photoCountText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
+  photoCountText: { ...textStyle('metadataText', colors.onPrimary, fontWeight.strong), ...tabularNumbers },
   userCover: {
     height: 50,
     backgroundColor: colors.coverFallback,

@@ -5,6 +5,7 @@ import {
   fontWeight,
   radius,
   spacing,
+  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -166,6 +167,7 @@ export const authScreenStyles = StyleSheet.create({
     marginTop: -6,
     textAlign: 'right',
     ...typography.metadataText,
+    ...tabularNumbers,
     color: colors.textMuted,
   },
   bottomActions: {
