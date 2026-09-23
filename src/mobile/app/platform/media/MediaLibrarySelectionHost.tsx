@@ -44,11 +44,11 @@ import {
   colors,
   fontWeight,
   iconSize,
+  minTouchSize,
   opacity,
   radius,
   spacing,
   textStyle,
-  touch,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -56,8 +56,6 @@ import {
 } from '@/mobile/app/shared/utils/modalLayout';
 
 const PAGE_SIZE = 33;
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
-
 export function MediaLibrarySelectionHost() {
   const animationType = useModalAnimationType('slide');
   const { options, requestId, visible } = useMediaLibrarySelectionState();
@@ -479,7 +477,7 @@ const styles = StyleSheet.create({
   },
   footerSecondaryButton: {
     flex: 1,
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -488,7 +486,7 @@ const styles = StyleSheet.create({
   footerSecondaryButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   footerPrimaryButton: {
     flex: 1.3,
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

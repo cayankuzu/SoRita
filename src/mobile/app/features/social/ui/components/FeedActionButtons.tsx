@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import {
   Ellipsis,
   Heart,
@@ -15,9 +15,9 @@ import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import {
   colors,
   iconSize,
+  minTouchSize,
   spacing,
   textStyle,
-  touch,
 } from '@/mobile/app/shared/theme/tokens';
 
 type FeedActionButtonsProps = {
@@ -37,7 +37,7 @@ type FeedActionButtonsProps = {
   showShareAction: boolean;
 };
 
-const TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
+const TOUCH_SIZE = minTouchSize;
 
 // A like answers with a short pop, the one bit of motion a feed earns: it
 // confirms the tap before the network does. Reduce Motion skips it.

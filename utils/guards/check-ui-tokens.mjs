@@ -109,6 +109,11 @@ function findScaleViolations(source, relativePath) {
       found.push(`${relativePath}:${index + 1} raw opacity ${opacityMatch[1]}; use opacity.*`);
     }
 
+    // Twelve files re-derived the platform touch floor by hand.
+    if (/touch\.ios\s*:\s*touch\.android/u.test(line)) {
+      found.push(`${relativePath}:${index + 1} hand-derived touch floor; use minTouchSize`);
+    }
+
     // Nine styles once hand-rolled their own shadow while three tokens sat
     // almost unused, and the tokens themselves were invisible on iOS.
     if (/\bshadow(?:Color|Opacity|Radius|Offset)\s*:/u.test(line) || /^\s*elevation\s*:\s*\d/u.test(line)) {

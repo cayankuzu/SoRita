@@ -1,18 +1,21 @@
 import React, { useMemo } from 'react';
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Star, StarHalf } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, fontWeight, iconSize, radius, spacing, textStyle, touch, typography } from '@/mobile/app/shared/theme/tokens';
+import {
+  colors,
+  fontWeight,
+  iconSize,
+  minTouchSize,
+  radius,
+  spacing,
+  textStyle,
+  typography,
+} from '@/mobile/app/shared/theme/tokens';
 
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 import { compareLocalizedText } from '@/mobile/app/shared/utils/textSort';
 
 type OptionRailProps = {
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   railChip: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -158,8 +161,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   starButton: {
-    minWidth: MIN_TOUCH_SIZE,
-    minHeight: MIN_TOUCH_SIZE,
+    minWidth: minTouchSize,
+    minHeight: minTouchSize,
     alignItems: 'center',
     justifyContent: 'center',
   },

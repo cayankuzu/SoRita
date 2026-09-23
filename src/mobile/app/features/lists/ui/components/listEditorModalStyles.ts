@@ -1,16 +1,14 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import {
   colors,
   fontWeight,
+  minTouchSize,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 export const listEditorModalStyles = StyleSheet.create({
   overlay: {
@@ -65,8 +63,8 @@ export const listEditorModalStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   closeButton: {
-    width: MIN_TOUCH_SIZE,
-    height: MIN_TOUCH_SIZE,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',

@@ -3,7 +3,6 @@ import {
   LayoutChangeEvent,
   LayoutAnimation,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -17,7 +16,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, spacing, touch, zIndex } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, minTouchSize, spacing, zIndex } from '@/mobile/app/shared/theme/tokens';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import type { RichTextVariant } from '@/mobile/app/shared/utils/richText';
 
@@ -38,7 +37,7 @@ type ExpandableTextProps = {
 };
 
 const EXPAND_ICON_HIT_SLOP =
-  (Platform.OS === 'ios' ? touch.ios : touch.android) / 2 - 7;
+  (minTouchSize) / 2 - 7;
 
 export function ExpandableText({
   text,

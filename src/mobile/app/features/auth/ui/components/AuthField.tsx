@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardTypeOptions,
-  Platform,
   StyleSheet,
   TextInput,
   TextInputProps,
@@ -17,10 +16,10 @@ import {
   colors,
   fontWeight,
   iconSize,
+  minTouchSize,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { buildCharacterLimitLabel } from '@/mobile/app/shared/validation/contentLimits';
@@ -50,8 +49,6 @@ type AuthFieldProps = Omit<
 };
 
 type HelperTone = NonNullable<AuthFieldProps['helperTone']>;
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 function AuthFieldStatusAccessory({
   checking,
@@ -295,7 +292,7 @@ const styles = StyleSheet.create({
   },
   label: textStyle('captionText', colors.textMuted, fontWeight.medium),
   inputWrap: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -322,7 +319,7 @@ const styles = StyleSheet.create({
   input: {
     color: colors.text,
     ...typography.inputText,
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     paddingVertical: spacing.sm,
     paddingRight: spacing['3xl'],
   },

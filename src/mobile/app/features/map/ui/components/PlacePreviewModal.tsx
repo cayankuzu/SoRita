@@ -19,10 +19,10 @@ import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimati
 import {
   colors,
   iconSize,
+  minTouchSize,
   radius,
   spacing,
   textStyle,
-  touch,
 } from '@/mobile/app/shared/theme/tokens';
 import {
   getAndroidModalWindowProps,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   handleWrap: {
     alignItems: 'center',
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxs,
   },
@@ -243,8 +243,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   headerButton: {
-    width: Platform.OS === 'ios' ? touch.ios : touch.android,
-    height: Platform.OS === 'ios' ? touch.ios : touch.android,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

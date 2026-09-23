@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image as ImageIcon, RefreshCcw, Settings } from 'lucide-react-native';
 
 import { MediaLibraryAssetTile } from '@/mobile/app/platform/media/MediaLibraryAssetTile';
@@ -23,18 +15,16 @@ import {
   colors,
   fontWeight,
   iconSize,
+  minTouchSize,
   opacity,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
 export const MEDIA_LIBRARY_GRID_GAP = 10;
 const PAGE_SIZE = 33;
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
-
 type SelectionCounts = {
   photos: number;
   total: number;
@@ -305,7 +295,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   filterChip: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
@@ -359,7 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg,

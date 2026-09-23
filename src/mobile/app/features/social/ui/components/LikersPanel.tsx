@@ -21,10 +21,10 @@ import {
   colors,
   fontWeight,
   iconSize,
+  minTouchSize,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { formatRelativeDateTime } from '@/mobile/app/shared/utils/dateTime';
@@ -39,8 +39,6 @@ type LikersPanelProps = {
   onRefresh?: () => void;
   onUserPress?: (userId: string) => void;
 };
-
-const MIN_TOUCH_SIZE = Platform.OS === 'ios' ? touch.ios : touch.android;
 
 function matchesLiker(liker: FeedActionLiker, query: string) {
   return (
@@ -207,7 +205,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   searchWrap: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
@@ -235,7 +233,7 @@ const styles = StyleSheet.create({
     height: 8,
   },
   likerRow: {
-    minHeight: MIN_TOUCH_SIZE,
+    minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

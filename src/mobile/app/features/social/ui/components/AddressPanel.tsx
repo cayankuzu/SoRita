@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
   ChevronRight,
@@ -19,11 +14,11 @@ import {
   colors,
   fontWeight,
   iconSize,
+  minTouchSize,
   opacity,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { openMapLocationInApp } from '@/mobile/app/shared/utils/mapLinks';
@@ -149,7 +144,7 @@ const styles = StyleSheet.create({
   addressLinkButton: {
     flex: 1,
     minWidth: 0,
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     gap: spacing.xs,
   },
   addressLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
@@ -160,8 +155,8 @@ const styles = StyleSheet.create({
     textDecorationColor: colors.primary,
   },
   addressToggleButton: {
-    width: Platform.OS === 'ios' ? touch.ios : touch.android,
-    height: Platform.OS === 'ios' ? touch.ios : touch.android,
+    width: minTouchSize,
+    height: minTouchSize,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -185,7 +180,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },

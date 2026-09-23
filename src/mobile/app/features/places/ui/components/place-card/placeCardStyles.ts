@@ -1,13 +1,13 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import {
   colors,
   fontWeight,
+  minTouchSize,
   opacity,
   radius,
   spacing,
   textStyle,
-  touch,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -26,7 +26,7 @@ export const placeCardStyles = StyleSheet.create({
     position: 'relative',
   },
   userHeader: {
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -45,7 +45,7 @@ export const placeCardStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   sourceBar: {
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     borderRadius: radius.lg,
@@ -101,7 +101,7 @@ export const placeCardStyles = StyleSheet.create({
   // The list is the post's context line, not a card inside the card: no fill,
   // no border, aligned to the content edge.
   linkBar: {
-    minHeight: Platform.OS === 'ios' ? touch.ios : touch.android,
+    minHeight: minTouchSize,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
