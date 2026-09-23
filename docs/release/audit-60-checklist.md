@@ -62,9 +62,9 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 0: OTA zemini, PASS 0 envanter | ✅ | |
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
-| 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı production'a **uygulanmadı**: `db push` izin sistemince reddedildi, Cayan'ın adımı |
+| 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
 | 4: Native paket #1 | ⏸ | Atlandı: `android/` altındaki native dosyalar bu oturumun sandbox'ında okumaya ve yazmaya kapalı; yükleme de Cayan'ın adımı. Tek renkli ikon adayı hazır |
-| 5: Component sistemi I | 🔶 | Basma primitive'i, Chip, Badge, SheetHeader, alta yaslı sheet'ler, tek seviyeli menü teslim edildi. **P0 bulundu:** kayıt ve profil kaydı bozuk (aşağıda). Kalan: form standardı, durum bileşenleri, kalan 5 özel sheet |
+| 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet |
 
 ---
 
@@ -250,7 +250,7 @@ adı adımını geçemiyor; mevcut kullanıcı profilini kaydedemiyor.
 - Sunucu tarafı: migration `20260923020000` (sarmalayıcı `SECURITY DEFINER`,
   yetki yalnız `service_role`'de). Yerel stack'te 76 migration ve 11 SQL test
   dosyası (317 test) geçti. Yeni pgTAP testi kontrolü `service_role` olarak
-  gerçekten çalıştırıyor. **Production'a uygulanması Cayan'ın adımı.**
+  gerçekten çalıştırıyor. Production'a uygulandı (`supabase migration list --linked`).
 
 **Açık kalan (Faz 5):** form standardı (auth alanı ile `TextField` iki ayrı
 implementasyon), durum bileşenleri, kendi `<Modal>`'ını yazan 5 sheet (yorum
@@ -267,6 +267,35 @@ tekrarlıyor.
 taşımıyor ("Kimlik dogrulama islemi tamamlanamadi", "Giris islemi…").
 Kullanıcıya gösterildikleri yerler taranacak; düzeltme edge function
 deploy'u gerektirir.
+
+### Faz 5 kaydı, 2. tur (2026-09-23)
+
+**Teslim:** OTA grupları `00ca5701`, `2b1b5730`, `dc6b3800`, `4c7090e8`; her biri iki soğuk
+başlatmayla cihazda doğrulandı (ilkinde indirildi, ikincisinde güncelleme
+kalmadı).
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| D1 | Profil: Mekânlar'da aşağı kaydırıp Galeri'ye geçince sekmeler ile ilk öğe arasında ~1300px gri bant. İki kök neden: Android'de bir listeye yenileme kontrolü eklenip kaldırılınca kaydırma görünümü baştan kuruluyor (her sekme geçişinde oluyordu); grid'in ref callback'i her sayfa yüklemesinde yeniden kurulduğu için pager sekmenin konumunu unutuyordu | cihaz: Galeri ilk öğesi sabit sekmelerin hemen altında; geri kaydırmada Mekânlar ve Listeler yerinde. Regresyon testi eski kodla kırmızı |
+| D2 | Keşfet: sekme geçişinde boş kare. Kök neden D1 ile aynı | cihaz: geçişten 0,3 sn sonra sekme tam çizili |
+| D3 | Profil düzenleme: Kaydet'e basınca form başa atlıyor, klavye kapanıyordu. Kök neden D1 ile aynı | birim testi |
+| D4 | Yorumlar YouTube/Reddit düzeninde: kutu yok; ad ve zaman tek satır, metin, sade işlem satırı; yanıtlar "N yanıtı göster" arkasında, 3'erli açılır, "N yanıt daha" son yanıtın altında; yanıt yazmak konuyu açar | cihaz, Cayan'ın kendi gönderisinde: yorum, beğeni, yanıt, gizle/göster, silme (yanıt da gitti). Test içeriği silindi |
+| D5 | Yorum menüsü ortak işlem sheet'ine geçti (kutulu satırlar ve kırmızı çerçeveli Sil kalktı) | birim testi |
+| D6 | Bildirimler: başlığın üstünde durum çubuğu kadar boşluk (iki kez safe-area); kırpılan kategori hapları ortak `Chip`; "tümünü okundu yap" yalnız okunmamış varken görünür | cihaz |
+| D7 | Bildirimler: zaman göreli ("3 sa", "2 gün"); dedupe öncesi iki kez kaydedilmiş beğeni ve takipler listede bir kez (kayıtlar silinmedi) | birim testi; cihaz: liste 20'den 16 bildirime indi, her beğeni bir kez |
+| D8 | Paylaşım: `sorita://` bağlantısı WhatsApp ve Instagram'da tıklanamaz düz metindi. Artık web sitesindeki yönlendirme sayfasının HTTPS bağlantısı ve üstünde mekân adı ile şehir paylaşılıyor. Adres tek sabit; bir test onu Supabase `site_url` ile eşit tutuyor | birim testi; cihazda paylaşım sayfası açıldı, gönderilmedi; canlı yönlendirme sayfası 200 dönüyor ve `listId`'yi uygulama bağlantısına çeviriyor |
+| D9 | Profil düzenleme başlığındaki `İptal` gri dolgulu kutu yerine düz metin | birim testi |
+
+**Paylaşım önizlemesi (Cayan'ın kararı):** WhatsApp kartı için web sitesine
+`og:` etiketleri ve 1200×630 görsel, Android'de uygulamayı doğrudan açan
+intent bağlantısı hazırlandı; site repo'suna yazmak izin sisteminde durdu.
+İçeriğe özel önizleme (mekân fotoğrafı ve adı, Instagram reels gibi) sunucu
+tarafında HTML üretmeyi gerektirir: GitHub Pages bunu yapamaz, Supabase
+varsayılan alan adında HTML servis etmez. Bunun için bir Cloudflare Worker ve
+bir alan adı gerekir.
+
+**Faz 7'ye not:** `SettingsHeader` ile `StackScreenHeader` iki ayrı başlık
+bileşeni.
 
 ### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
 
