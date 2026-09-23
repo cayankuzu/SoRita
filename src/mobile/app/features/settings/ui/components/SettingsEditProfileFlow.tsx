@@ -107,7 +107,6 @@ export function SettingsEditProfileFlow({
         onBack={onBack}
         actionLabel={tr.common.cancel}
         onAction={onCancel}
-        actionVariant="ghost"
       />
 
       <View style={styles.stepHeader}>

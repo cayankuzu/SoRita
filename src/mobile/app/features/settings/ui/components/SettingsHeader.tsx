@@ -13,7 +13,6 @@ type SettingsHeaderProps = {
   onBack: () => void;
   actionLabel?: string;
   onAction?: () => void;
-  actionVariant?: 'primary' | 'ghost';
 };
 
 export function SettingsHeader({
@@ -21,7 +20,6 @@ export function SettingsHeader({
   onBack,
   actionLabel,
   onAction,
-  actionVariant = 'primary',
 }: SettingsHeaderProps) {
   return (
     <View style={styles.header}>
@@ -33,20 +31,10 @@ export function SettingsHeader({
         <InstantPressable
           accessibilityLabel={actionLabel}
           accessibilityRole="button"
-          style={[
-            styles.headerAction,
-            actionVariant === 'ghost' ? styles.headerActionGhost : null,
-          ]}
+          style={styles.headerAction}
           onPress={onAction}
         >
-          <AppText
-            style={[
-              styles.headerActionText,
-              actionVariant === 'ghost' ? styles.headerActionTextGhost : null,
-            ]}
-          >
-            {actionLabel}
-          </AppText>
+          <AppText style={styles.headerActionText}>{actionLabel}</AppText>
         </InstantPressable>
       ) : (
         <View style={styles.headerSpacer} />
@@ -75,19 +63,13 @@ const styles = StyleSheet.create({
   },
   headerAction: {
     minHeight: minTouchSize,
+    minWidth: minTouchSize,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
-  headerActionGhost: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  headerActionText: textStyle('labelText', colors.onPrimary),
-  headerActionTextGhost: {
-    color: colors.textMuted,
-  },
+  headerActionText: textStyle('labelText', colors.textMuted),
   headerSpacer: {
     width: minTouchSize,
   },
