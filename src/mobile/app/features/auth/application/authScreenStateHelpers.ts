@@ -3,6 +3,10 @@ import type {
   AvailabilityState,
   AvailabilityStatus,
 } from '@/mobile/app/data/hooks/useAccountAvailabilityQuery';
+import {
+  availabilityHelperText,
+  availabilityHelperTone,
+} from '@/mobile/app/data/hooks/accountAvailabilityState';
 import type { AuthPasswordRequirementId } from '@/mobile/app/features/auth/application/authPasswordRequirements';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { PASSWORD_MIN_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
@@ -61,30 +65,9 @@ export function isAvailabilityUsable(status: AvailabilityStatus) {
   return status === 'available';
 }
 
-export function getAvailabilityHelper(
-  availability: AvailabilityState,
-  idleMessage?: string,
-) {
-  return availability.status === 'idle' ? idleMessage : availability.message;
-}
-
-export function getAvailabilityHelperTone(
-  availability: AvailabilityState,
-): AuthHelperTone {
-  if (availability.status === 'available') {
-    return 'success';
-  }
-
-  if (
-    availability.status === 'invalid' ||
-    availability.status === 'unavailable' ||
-    availability.status === 'error'
-  ) {
-    return 'danger';
-  }
-
-  return 'muted';
-}
+export const getAvailabilityHelper = availabilityHelperText;
+export const getAvailabilityHelperTone: (availability: AvailabilityState) => AuthHelperTone =
+  availabilityHelperTone;
 
 export function isWeakPasswordMessage(message?: string | null) {
   const normalized = message?.toLowerCase() ?? '';

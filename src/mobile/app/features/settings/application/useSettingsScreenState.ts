@@ -10,10 +10,10 @@ import {
 
 import type { AuthContextType } from '@/mobile/app/app-shell/auth/authTypes';
 import type { User } from '@/mobile/app/data/contracts/entities';
-import { useUsernameAvailabilityQuery } from '@/mobile/app/data/hooks/useAccountAvailabilityQuery';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { pickSingleImageFromPrompt } from '@/mobile/app/platform/media/images';
+import { useEditProfileUsername } from '@/mobile/app/features/settings/application/useEditProfileUsername';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   normalizeUserBioInput,
@@ -23,7 +23,6 @@ import {
 
 export type SettingsView = 'main' | 'editProfile' | 'privacy' | 'password' | 'blocked';
 
-type HelperTone = 'muted' | 'danger' | 'success';
 const PASSWORD_RESET_COOLDOWN_MS = 30_000;
 
 type UseSettingsScreenStateParams = {
@@ -186,24 +185,13 @@ export function useSettingsScreenState({
   const passwordResetPendingRef = useRef(false);
   const passwordResetCooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const normalizedEditName = normalizeUserNameInput(editName).trim();
-  const normalizedEditUsername = normalizeUsernameInput(editUsername).trim();
   const normalizedEditBio = normalizeUserBioInput(editBio).trim();
-  const currentUsername = freshUser?.username.trim().toLowerCase() || '';
-  const { availability: usernameAvailability } = useUsernameAvailabilityQuery({
-    active: Boolean(freshUser && view === 'editProfile'),
-    availableMessage:
-      normalizedEditUsername === currentUsername
-        ? tr.settings.editProfile.helperSameUsername
-        : tr.settings.editProfile.helperUsernameUsable,
-    checkingMessage: tr.settings.editProfile.helperUsernameChecking,
-    errorMessage: tr.settings.editProfile.helperUsernameError,
-    excludeUserId: freshUser?.id,
-    ownValue: currentUsername,
-    invalidMessage: (value) =>
-      value.length < 3 ? tr.settings.editProfile.helperUsernameTooShort : null,
-    unavailableMessage: tr.settings.editProfile.helperUsernameTaken,
-    value: editUsername,
-  });
+  const { normalizedEditUsername, usernameAvailability, usernameHelper, usernameHelperTone } =
+    useEditProfileUsername({
+      active: view === 'editProfile',
+      currentUser: freshUser,
+      editUsername,
+    });
 
   useEffect(() => {
     if (!freshUser || view === 'editProfile') {
@@ -403,30 +391,6 @@ export function useSettingsScreenState({
         : [...current, value],
     );
   }, []);
-
-  const usernameHelper = useMemo(
-    () =>
-      usernameAvailability.status === 'idle'
-        ? tr.settings.editProfile.helperUsernameIdle
-        : usernameAvailability.message,
-    [usernameAvailability],
-  );
-
-  const usernameHelperTone = useMemo<HelperTone>(() => {
-    if (usernameAvailability.status === 'available') {
-      return 'success';
-    }
-
-    if (
-      usernameAvailability.status === 'invalid' ||
-      usernameAvailability.status === 'unavailable' ||
-      usernameAvailability.status === 'error'
-    ) {
-      return 'danger';
-    }
-
-    return 'muted';
-  }, [usernameAvailability.status]);
 
   const canContinueEdit = useMemo(
     () =>

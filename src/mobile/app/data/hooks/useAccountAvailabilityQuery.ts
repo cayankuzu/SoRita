@@ -2,23 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
 
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
+import type { AvailabilityState } from '@/mobile/app/data/hooks/accountAvailabilityState';
 import { checkAccountAvailability } from '@/mobile/app/data/repositories/accountAvailability';
+
+export type { AvailabilityState, AvailabilityStatus } from '@/mobile/app/data/hooks/accountAvailabilityState';
 
 const AVAILABILITY_STALE_TIME_MS = 1000 * 60;
 const AVAILABILITY_DEBOUNCE_MS = 400;
-
-export type AvailabilityStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'unavailable'
-  | 'invalid'
-  | 'error';
-
-export type AvailabilityState = {
-  status: AvailabilityStatus;
-  message?: string;
-};
 
 type AvailabilityQueryParams = {
   active: boolean;
