@@ -36,6 +36,33 @@ describe('useAccountAvailabilityQuery', () => {
     expect(checkAccountAvailabilityMock).not.toHaveBeenCalled();
   });
 
+  it('treats the username the user already holds as available without asking', async () => {
+    const queryClient = createTestQueryClient();
+    const wrapper = createQueryClientWrapper(queryClient);
+    checkAccountAvailabilityMock.mockRejectedValue(new Error('gateway down'));
+    const hooks = await import('@/mobile/app/data/hooks/useAccountAvailabilityQuery');
+
+    const hook = renderHook(
+      () =>
+        hooks.useUsernameAvailabilityQuery({
+          active: true,
+          excludeUserId: 'user-1',
+          ownValue: 'cyn',
+          value: ' CYN ',
+          availableMessage: 'yours',
+          checkingMessage: 'checking',
+          errorMessage: 'error',
+          unavailableMessage: 'taken',
+        }),
+      { wrapper },
+    );
+
+    expect(hook.result.current.availability).toEqual({ status: 'available', message: 'yours' });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    expect(hook.result.current.availability).toEqual({ status: 'available', message: 'yours' });
+    expect(checkAccountAvailabilityMock).not.toHaveBeenCalled();
+  });
+
   it('returns invalid for a username that fails client validation', async () => {
     const queryClient = createTestQueryClient();
     const wrapper = createQueryClientWrapper(queryClient);

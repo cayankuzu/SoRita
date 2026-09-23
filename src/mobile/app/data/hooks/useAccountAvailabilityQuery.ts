@@ -32,6 +32,10 @@ type AvailabilityQueryParams = {
 
 type UsernameAvailabilityQueryParams = AvailabilityQueryParams & {
   excludeUserId?: string | null;
+  // The username the signed-in user already holds. It is theirs, so it is
+  // available without a round trip - and a failing check cannot lock them out
+  // of saving the rest of their profile.
+  ownValue?: string | null;
 };
 
 function buildAvailabilityState(
@@ -63,6 +67,7 @@ function useFieldAvailabilityQuery(opts: {
   checkingMessage: string;
   errorMessage: string;
   invalidMessage?: (value: string) => string | null;
+  ownValue?: string | null;
   queryFn: (value: string) => Promise<boolean>;
   queryKey: (value: string) => QueryKey;
   unavailableMessage: string;
@@ -79,9 +84,12 @@ function useFieldAvailabilityQuery(opts: {
     return () => clearTimeout(timer);
   }, [normalizedValue]);
 
+  const ownValue = opts.ownValue?.trim().toLowerCase() || null;
+  const isOwnValue = ownValue !== null && normalizedValue === ownValue;
   const invalid = normalizedValue ? opts.invalidMessage?.(normalizedValue) ?? null : null;
   const waitingForDebounce = normalizedValue !== debouncedValue;
-  const enabled = opts.active && Boolean(debouncedValue) && !invalid && !waitingForDebounce;
+  const enabled =
+    opts.active && Boolean(debouncedValue) && !invalid && !waitingForDebounce && !isOwnValue;
 
   const query = useQuery({
     queryKey: opts.queryKey(debouncedValue),
@@ -92,6 +100,7 @@ function useFieldAvailabilityQuery(opts: {
 
   const availability = useMemo<AvailabilityState>(() => {
     if (!normalizedValue) return { status: 'idle' };
+    if (isOwnValue) return { status: 'available', message: opts.availableMessage };
     if (invalid) return { status: 'invalid', message: invalid };
     if (waitingForDebounce) {
       return { status: 'checking', message: opts.checkingMessage };
@@ -105,6 +114,7 @@ function useFieldAvailabilityQuery(opts: {
   }, [
     enabled,
     invalid,
+    isOwnValue,
     waitingForDebounce,
     normalizedValue,
     opts.availableMessage,
@@ -121,11 +131,13 @@ function useFieldAvailabilityQuery(opts: {
 
 export function useUsernameAvailabilityQuery({
   excludeUserId,
+  ownValue,
   value,
   ...params
 }: UsernameAvailabilityQueryParams) {
   return useFieldAvailabilityQuery({
     ...params,
+    ownValue,
     value,
     queryKey: (debouncedValue) =>
       queryKeys.accountAvailability.username(debouncedValue, excludeUserId),

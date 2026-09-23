@@ -198,6 +198,7 @@ export function useSettingsScreenState({
     checkingMessage: tr.settings.editProfile.helperUsernameChecking,
     errorMessage: tr.settings.editProfile.helperUsernameError,
     excludeUserId: freshUser?.id,
+    ownValue: currentUsername,
     invalidMessage: (value) =>
       value.length < 3 ? tr.settings.editProfile.helperUsernameTooShort : null,
     unavailableMessage: tr.settings.editProfile.helperUsernameTaken,
