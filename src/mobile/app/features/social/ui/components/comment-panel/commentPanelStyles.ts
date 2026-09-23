@@ -54,19 +54,7 @@ export const commentPanelStyles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.cardBorder,
-  },
-  sheetTitle: textStyle('compactTitleText', colors.text),
-  sheetSubtitle: {
-    marginTop: spacing.xs,
-    ...typography.compactBodyText,
-    color: colors.textSoft,
+    paddingHorizontal: spacing.screen,
   },
   sheetBody: {
     flex: 1,

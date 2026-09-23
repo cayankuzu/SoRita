@@ -1,13 +1,12 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { X } from 'lucide-react-native';
+import { StyleSheet } from 'react-native';
 
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+
 import { PlaceCardSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { spacing } from '@/mobile/app/shared/theme/tokens';
 
 type SourcePlaceCardModalProps = {
   children?: React.ReactNode;
@@ -30,12 +29,7 @@ export function SourcePlaceCardModal({
       variant="sheet"
       visible={visible}
     >
-      <View style={styles.header}>
-        <AppText accessibilityRole="header" style={styles.title}>{tr.cards.quotedPlace}</AppText>
-        <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={iconSize.md} />
-        </IconButton>
-      </View>
+      <SheetHeader onClose={onClose} title={tr.cards.quotedPlace} />
       {children ?? <PlaceCardSkeleton />}
     </ModalScaffold>
   );
@@ -46,13 +40,4 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.xl,
   },
-  header: {
-    alignItems: 'center',
-    borderBottomColor: colors.cardBorder,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.sm,
-  },
-  title: textStyle('section', colors.text),
 });

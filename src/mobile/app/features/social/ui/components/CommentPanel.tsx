@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
 
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { CommentComposer } from '@/mobile/app/features/social/ui/components/comment-panel/CommentComposer';
@@ -33,13 +32,14 @@ import {
 } from '@/mobile/app/features/social/ui/components/comment-panel/commentTree';
 import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPanel';
 import type { FeedActionComment } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
+import { colors, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   getAndroidModalWindowProps,
@@ -468,21 +468,13 @@ export function CommentPanel({
             >
               <View style={styles.handle} />
 
-              <View style={styles.sheetHeader}>
-                <View>
-                  <AppText accessibilityRole="header" style={styles.sheetTitle}>
-                    {tr.cards.commentsTitle}
-                  </AppText>
-                  <AppText style={styles.sheetSubtitle}>{tr.cards.commentCount(totalComments)}</AppText>
-                </View>
-                <IconButton
-                  accessibilityLabel={tr.common.close}
-                  onPress={handleClose}
-                  variant="surface"
-                >
-                  <X color={colors.textSoft} size={iconSize.sm} />
-                </IconButton>
-              </View>
+              <SheetHeader
+                divided
+                onClose={handleClose}
+                style={styles.sheetHeader}
+                subtitle={tr.cards.commentCount(totalComments)}
+                title={tr.cards.commentsTitle}
+              />
 
               <View style={styles.sheetBody}>
                 <FlatList

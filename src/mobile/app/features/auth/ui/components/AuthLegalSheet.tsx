@@ -3,24 +3,19 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import {
-  FileText,
-  Scale,
-  ShieldCheck,
-  Users,
-  X,
-} from 'lucide-react-native';
+import { FileText, Scale, ShieldCheck, Users } from 'lucide-react-native';
 
 import {
   getLegalDocument,
   type LegalDocumentId,
 } from '@/mobile/app/features/auth/ui/content/legalDocuments';
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type AuthLegalSheetProps = {
   documentId: LegalDocumentId | null;
@@ -64,19 +59,12 @@ export function AuthLegalSheet({
       dismissOnBackdropPress
       footer={<PrimaryButton title={tr.common.close} onPress={onClose} />}
     >
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View style={styles.iconWrap}>{renderDocumentIcon(document.id)}</View>
-          <View style={styles.headerCopy}>
-            <AppText accessibilityRole="header" style={styles.title}>{document.title}</AppText>
-            <AppText style={styles.summary}>{document.summary}</AppText>
-          </View>
-        </View>
-
-        <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={iconSize.sm} />
-        </IconButton>
-      </View>
+      <SheetHeader
+        leading={{ background: colors.primaryBg, icon: renderDocumentIcon(document.id) }}
+        onClose={onClose}
+        subtitle={document.summary}
+        title={document.title}
+      />
 
       <View style={styles.scrollContent}>
         {document.sections.map((section) => (
@@ -95,32 +83,6 @@ export function AuthLegalSheet({
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerTitleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  headerCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  title: textStyle('compactTitleText', colors.text),
-  summary: textStyle('bodyText', colors.textSoft),
   scrollContent: {
     gap: spacing.md,
     paddingBottom: spacing.xs,

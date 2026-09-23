@@ -3,22 +3,20 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { X } from 'lucide-react-native';
 
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
   colors,
   fontWeight,
-  iconSize,
   minTouchSize,
   radius,
   spacing,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
-import { tr } from '@/mobile/app/shared/i18n/tr';
 
 export type ActionMenuSheetItem = {
   key: string;
@@ -57,12 +55,7 @@ export function ActionMenuSheet({
       style={styles.sheet}
       contentContainerStyle={styles.sheetContent}
     >
-      <View style={styles.header}>
-        <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
-        <IconButton accessibilityLabel={tr.common.close} onPress={onClose} variant="surface">
-          <X color={colors.textMuted} size={iconSize.sm} />
-        </IconButton>
-      </View>
+      <SheetHeader onClose={onClose} title={title} titleRef={titleRef} />
 
       <View style={styles.actions}>
         {items.map((item) => {
@@ -101,17 +94,6 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     gap: spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  title: {
-    flex: 1,
-    ...typography.section,
-    color: colors.text,
   },
   actions: {
     gap: spacing.sm,

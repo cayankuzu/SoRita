@@ -5,17 +5,18 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Flag, X } from 'lucide-react-native';
+import { Flag } from 'lucide-react-native';
 
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
 import {
   getReportReasonsForTarget,
   type ReportTargetType,
 } from '@/mobile/app/shared/components/feedback/reportReasonOptions';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -131,25 +132,17 @@ export function ReportActionSheet({
         </View>
       }
     >
-      <View style={styles.header}>
-        <View style={styles.titleWrap}>
-          <View style={styles.iconWrap}>
-            <Flag color={colors.warning} size={iconSize.sm} />
-          </View>
-          <View style={styles.headerTextWrap}>
-            <AppText ref={titleRef} accessibilityRole="header" style={styles.title}>{title}</AppText>
-            {description ? <AppText style={styles.description}>{description}</AppText> : null}
-          </View>
-        </View>
-        <IconButton
-          accessibilityLabel={tr.common.close}
-          disabled={isSubmitting}
-          onPress={handleClose}
-          variant="surface"
-        >
-          <X color={colors.textMuted} size={iconSize.sm} />
-        </IconButton>
-      </View>
+      <SheetHeader
+        closeDisabled={isSubmitting}
+        leading={{
+          background: colors.warningBg,
+          icon: <Flag color={colors.warning} size={iconSize.sm} />,
+        }}
+        onClose={handleClose}
+        subtitle={description}
+        title={title}
+        titleRef={titleRef}
+      />
 
       <View accessibilityRole="radiogroup" style={styles.options}>
         {reportReasons.map((reason) => {
@@ -220,32 +213,6 @@ const styles = StyleSheet.create({
   sheetContent: {
     paddingTop: spacing.sm,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  titleWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.warningBg,
-  },
-  headerTextWrap: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  title: textStyle('section', colors.text),
-  description: textStyle('bodyText', colors.textMuted),
   options: {
     gap: spacing.sm,
   },

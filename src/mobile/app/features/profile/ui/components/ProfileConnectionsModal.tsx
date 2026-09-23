@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AccessibilityInfo,
   FlatList,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -12,9 +9,10 @@ import {
   View,
 } from 'react-native';
 import { Search, Users, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
+import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
@@ -22,7 +20,6 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   avatarSize,
   colors,
@@ -35,11 +32,6 @@ import {
 } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
-import {
-  getAndroidModalWindowProps,
-  getModalContentMaxHeight,
-  getModalSafeAreaPadding,
-} from '@/mobile/app/shared/utils/modalLayout';
 
 type ProfileConnectionsModalProps = {
   visible: boolean;
@@ -70,23 +62,7 @@ export function ProfileConnectionsModal({
   onClose,
   onUserPress,
 }: ProfileConnectionsModalProps) {
-  const animationType = useModalAnimationType('slide');
-  const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
-  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
-    topInset: insets.top,
-    bottomInset: insets.bottom,
-    topSpacing: 20,
-    bottomSpacing: 20,
-    minBottomPadding: Platform.OS === 'android' ? 24 : 20,
-  });
-  const cardMaxHeight = getModalContentMaxHeight({
-    viewportHeight: height,
-    paddingTop,
-    paddingBottom,
-    maxHeightRatio: 0.72,
-    minHeight: 240,
-  });
   const [searchQuery, setSearchQuery] = useState('');
   const q = normalizeSearchText(searchQuery);
   const filteredUsers = useMemo(
@@ -104,204 +80,138 @@ export function ProfileConnectionsModal({
   );
 
   useEffect(() => {
-    if (visible) {
-      const announceTimer = setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(title);
-      }, 120);
-
-      return () => clearTimeout(announceTimer);
-    } else {
-      setSearchQuery('');
-    }
-
-    return undefined;
-  }, [title, visible]);
+    if (!visible) setSearchQuery('');
+  }, [visible]);
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
+    <ModalScaffold
+      accessibilityLabel={title}
+      contentContainerStyle={styles.content}
+      dismissOnBackdropPress
+      onClose={onClose}
+      variant="sheet"
       visible={visible}
-      transparent
-      animationType={animationType}
-      hardwareAccelerated
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
     >
-      <KeyboardAvoidingView
-        accessibilityViewIsModal
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        importantForAccessibility="yes"
-        onAccessibilityEscape={onClose}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
-      >
-        <InstantPressable
-          disableFeedback
-          accessible={false}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          onPress={onClose}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
-          <View accessibilityElementsHidden style={styles.handle} />
-          <View style={styles.header}>
-            <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
-            <IconButton
-              accessibilityLabel={tr.common.close}
-              onPress={onClose}
-              style={styles.closeButton}
-              variant="surface"
-            >
-              <X color={colors.textSoft} size={iconSize.sm} />
-            </IconButton>
-          </View>
+      <SheetHeader divided onClose={onClose} style={styles.header} title={title} />
 
-          <FlatList
-            {...listProps}
-            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-            data={filteredUsers}
-            keyExtractor={(item) => item.id}
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <InstantPressable
-                accessibilityLabel={`${item.name}, @${item.username}`}
-                accessibilityRole="button"
-                style={styles.userRow}
-                onPress={() => onUserPress(item)}
-              >
-                <AvatarView uri={item.profilePhoto} name={item.name} size={avatarSize.md} />
-                <View style={styles.userBody}>
-                  <AppText style={styles.userName}>{item.name}</AppText>
-                  <AppText style={styles.userUsername}>@{item.username}</AppText>
-                  {item.bio ? (
-                    <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.userBio} />
-                  ) : null}
-                </View>
-              </InstantPressable>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            ListHeaderComponent={
-              users.length > 0 ? (
-                <View>
-                  <View style={styles.searchWrap}>
-                    <Search color={colors.textSoft} size={iconSize.sm} />
-                    <TextInput
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      autoCapitalize="none"
-                      autoComplete="off"
-                      autoCorrect={false}
-                      clearButtonMode="while-editing"
-                      cursorColor={colors.primary}
-                      keyboardAppearance="light"
-                      placeholder={tr.profile.connections.searchPlaceholder}
-                      placeholderTextColor={colors.textMuted}
-                      selectionColor={colors.primary}
-                      spellCheck={false}
-                      style={styles.searchInput}
-                      textContentType="none"
-                      returnKeyType="search"
-                      underlineColorAndroid="transparent"
-                      accessibilityLabel={tr.profile.connections.searchPlaceholder}
-                    />
-                    {searchQuery && Platform.OS !== 'ios' ? (
-                      <IconButton
-                        accessibilityLabel={tr.common.clear}
-                        onPress={() => setSearchQuery('')}
-                        size="sm"
-                      >
-                        <X color={colors.textSoft} size={iconSize.sm} />
-                      </IconButton>
-                    ) : null}
-                  </View>
-                  {q ? (
-                    <AppText accessibilityLiveRegion="polite" style={styles.resultCount}>
-                      {tr.profile.connections.resultCount(filteredUsers.length)}
-                    </AppText>
-                  ) : null}
-                </View>
-              ) : null
-            }
-            ListEmptyComponent={
-              <EmptyState
-                icon={<Users color={colors.textSoft} size={iconSize.lg} />}
-                title={q ? tr.profile.connections.searchNoResult : emptyTitle}
-                description={q ? tr.profile.connections.searchTryDifferent : ''}
-              />
-            }
-            contentContainerStyle={[
-              styles.list,
-              filteredUsers.length === 0 ? styles.listEmpty : null,
-            ]}
-            refreshControl={
-              onRefresh ? (
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={colors.primary}
-                  colors={[colors.primary]}
+      <FlatList
+        {...listProps}
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        data={filteredUsers}
+        keyExtractor={(item) => item.id}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => (
+          <InstantPressable
+            accessibilityLabel={`${item.name}, @${item.username}`}
+            accessibilityRole="button"
+            style={styles.userRow}
+            onPress={() => onUserPress(item)}
+          >
+            <AvatarView uri={item.profilePhoto} name={item.name} size={avatarSize.md} />
+            <View style={styles.userBody}>
+              <AppText numberOfLines={1} style={styles.userName}>{item.name}</AppText>
+              <AppText numberOfLines={1} style={styles.userUsername}>@{item.username}</AppText>
+              {item.bio ? (
+                <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.userBio} />
+              ) : null}
+            </View>
+          </InstantPressable>
+        )}
+        ListHeaderComponent={
+          users.length > 0 ? (
+            <View>
+              <View style={styles.searchWrap}>
+                <Search color={colors.textSoft} size={iconSize.sm} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  clearButtonMode="while-editing"
+                  cursorColor={colors.primary}
+                  keyboardAppearance="light"
+                  placeholder={tr.profile.connections.searchPlaceholder}
+                  placeholderTextColor={colors.textMuted}
+                  selectionColor={colors.primary}
+                  spellCheck={false}
+                  style={styles.searchInput}
+                  textContentType="none"
+                  returnKeyType="search"
+                  underlineColorAndroid="transparent"
+                  accessibilityLabel={tr.profile.connections.searchPlaceholder}
                 />
-              ) : undefined
-            }
-            showsVerticalScrollIndicator={false}
+                {searchQuery && Platform.OS !== 'ios' ? (
+                  <IconButton
+                    accessibilityLabel={tr.common.clear}
+                    onPress={() => setSearchQuery('')}
+                    size="sm"
+                  >
+                    <X color={colors.textSoft} size={iconSize.sm} />
+                  </IconButton>
+                ) : null}
+              </View>
+              {q ? (
+                <AppText accessibilityLiveRegion="polite" style={styles.resultCount}>
+                  {tr.profile.connections.resultCount(filteredUsers.length)}
+                </AppText>
+              ) : null}
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon={<Users color={colors.textSoft} size={iconSize.lg} />}
+            title={q ? tr.profile.connections.searchNoResult : emptyTitle}
+            description={q ? tr.profile.connections.searchTryDifferent : ''}
           />
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        }
+        contentContainerStyle={[styles.list, filteredUsers.length === 0 ? styles.listEmpty : null]}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
+        showsVerticalScrollIndicator={false}
+        style={styles.listFrame}
+      />
+    </ModalScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.md,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 648,
-    alignSelf: 'center',
-    maxHeight: '90%',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
-  handle: {
-    width: 34,
-    height: 4,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xxs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.borderStrong,
-    alignSelf: 'center',
+  // The list owns its insets so it can scroll edge to edge under the header.
+  content: {
+    flexShrink: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    gap: 0,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    paddingHorizontal: spacing.screen,
   },
-  title: textStyle('compactTitleText', colors.text),
-  closeButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+  listFrame: {
+    flexShrink: 1,
+  },
+  list: {
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.md,
+  },
+  listEmpty: {
+    flexGrow: 1,
   },
   searchWrap: {
     minHeight: minTouchSize,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,43 +223,29 @@ const styles = StyleSheet.create({
     ...typography.bodyText,
     paddingVertical: 0,
   },
-  list: {
-    padding: spacing.md,
-    paddingTop: spacing.md,
-  },
-  listEmpty: {
-    flexGrow: 1,
-  },
-  separator: {
-    height: 10,
-  },
+  // A plain row, as in every people list: the avatar and name carry it, not a card.
   userRow: {
-    minHeight: 56,
+    minHeight: minTouchSize + spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.md,
+    paddingVertical: spacing.sm,
   },
   userBody: {
     flex: 1,
+    minWidth: 0,
   },
   userName: textStyle('labelText', colors.text),
-  userUsername: {
-    marginTop: 1,
-    ...typography.compactBodyText,
-    color: colors.textSoft,
-  },
+  userUsername: textStyle('compactBodyText', colors.textSoft),
   userBio: {
-    marginTop: spacing.xs,
+    marginTop: spacing.xxs,
     ...typography.captionText,
     color: colors.textMuted,
   },
   resultCount: {
     ...typography.captionText,
     color: colors.textSoft,
-    paddingTop: spacing.md,
+    paddingVertical: spacing.sm,
     textAlign: 'center',
   },
 });

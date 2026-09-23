@@ -70,11 +70,15 @@ export function ModalScaffold({
     bottomSpacing: variant === 'sheet' ? 12 : 16,
     minBottomPadding: Platform.OS === 'android' ? 24 : 16,
   });
+  const isSheet = variant === 'sheet';
+  // A sheet sits on the bottom edge, like every platform sheet; the home
+  // indicator's inset goes inside it rather than under it as empty overlay.
+  const sheetBottomPadding = Math.max(insets.bottom, spacing.md);
   const maxHeight = getModalContentMaxHeight({
     viewportHeight: height,
     paddingTop,
-    paddingBottom,
-    maxHeightRatio: variant === 'sheet' ? 0.9 : 0.82,
+    paddingBottom: isSheet ? 0 : paddingBottom,
+    maxHeightRatio: isSheet ? 0.9 : 0.82,
     minHeight: 224,
   });
 
@@ -103,8 +107,8 @@ export function ModalScaffold({
         onAccessibilityEscape={onClose}
         style={[
           styles.overlay,
-          variant === 'sheet' ? styles.sheetOverlay : styles.dialogOverlay,
-          { paddingTop, paddingBottom },
+          isSheet ? styles.sheetOverlay : styles.dialogOverlay,
+          isSheet ? { paddingTop } : { paddingTop, paddingBottom },
         ]}
         accessibilityViewIsModal
         importantForAccessibility="yes"
@@ -122,12 +126,13 @@ export function ModalScaffold({
           accessible={false}
           style={[
             styles.container,
-            variant === 'sheet' ? styles.sheet : styles.dialog,
+            isSheet ? styles.sheet : styles.dialog,
             { maxHeight },
+            isSheet ? { paddingBottom: sheetBottomPadding } : null,
             style,
           ]}
         >
-          {variant === 'sheet' && showHandle !== false ? (
+          {isSheet && showHandle !== false ? (
             <View accessibilityElementsHidden style={styles.handleWrap}>
               <View style={styles.handle} />
             </View>
@@ -135,7 +140,11 @@ export function ModalScaffold({
           {scroll ? (
             <ScrollView
               automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-              contentContainerStyle={[styles.content, contentContainerStyle]}
+              contentContainerStyle={[
+                styles.content,
+                isSheet ? styles.sheetContent : null,
+                contentContainerStyle,
+              ]}
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
@@ -143,7 +152,11 @@ export function ModalScaffold({
               {children}
             </ScrollView>
           ) : (
-            <View style={[styles.content, contentContainerStyle]}>{children}</View>
+            <View
+              style={[styles.content, isSheet ? styles.sheetContent : null, contentContainerStyle]}
+            >
+              {children}
+            </View>
           )}
           {footer ? <View style={styles.footer}>{footer}</View> : null}
         </View>
@@ -155,12 +168,12 @@ export function ModalScaffold({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    paddingHorizontal: spacing.screen,
     backgroundColor: colors.overlay,
   },
   dialogOverlay: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing.screen,
   },
   sheetOverlay: {
     justifyContent: 'flex-end',
@@ -195,6 +208,12 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.section,
     gap: spacing.lg,
+  },
+  // Sheets use the screen gutter, and the handle already gives the top its air.
+  sheetContent: {
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
