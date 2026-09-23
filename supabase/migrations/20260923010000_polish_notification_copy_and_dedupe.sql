@@ -251,6 +251,13 @@ $function$;
 -- Stored rows keep the old copy until corrected. Only each template's fixed
 -- part is rewritten, anchored where the template puts it, so a place name or
 -- comment that happens to contain the same words is left alone.
+--
+-- The update guard lets clients change nothing but read state, and it rightly
+-- has no exception for anyone else. It is switched off for these statements
+-- only, inside this migration's transaction, and switched back on below.
+alter table public.notifications
+  disable trigger notifications_enforce_client_update_invariants;
+
 update public.notifications
 set message = regexp_replace(message, '" mekanini begendi$', '" mekânını beğendi')
 where type = 'like' and message ~ '" mekanini begendi$';
@@ -274,3 +281,6 @@ where type = 'comment_like' and message like 'yorumunu begendi: "%';
 update public.notifications
 set message = 'seni takip etmeye başladı'
 where type = 'follow' and message = 'seni takip etmeye basladi';
+
+alter table public.notifications
+  enable trigger notifications_enforce_client_update_invariants;
