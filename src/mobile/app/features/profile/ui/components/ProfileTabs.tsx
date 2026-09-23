@@ -268,9 +268,11 @@ const styles = StyleSheet.create({
   countTextActive: {
     color: colors.primary,
   },
+  // Same gutter as the cards below, and room above so the chips do not sit on
+  // the tab underline.
   filterWrap: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     backgroundColor: colors.surface,
