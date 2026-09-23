@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Star, StarHalf } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Chip } from '@/mobile/app/shared/components/ui/Chip';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -12,7 +13,6 @@ import {
   minTouchSize,
   radius,
   spacing,
-  textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 
@@ -45,25 +45,14 @@ export function OptionRail({ options, selectedValues, onToggle }: OptionRailProp
     >
       {optionColumns.map((column, columnIndex) => (
         <View key={`column-${columnIndex}`} style={styles.optionColumn}>
-          {column.map((item) => {
-            const selected = selectedValues.includes(item);
-
-            return (
-              <InstantPressable
-                accessibilityLabel={item}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
-                hapticFeedback="selection"
-                key={item}
-                onPress={() => onToggle(item)}
-                style={[styles.railChip, selected ? styles.railChipSelected : null]}
-              >
-                <AppText style={[styles.railChipText, selected ? styles.railChipTextSelected : null]}>
-                  {item}
-                </AppText>
-              </InstantPressable>
-            );
-          })}
+          {column.map((item) => (
+            <Chip
+              key={item}
+              label={item}
+              onPress={() => onToggle(item)}
+              selected={selectedValues.includes(item)}
+            />
+          ))}
         </View>
       ))}
     </ScrollView>
@@ -122,32 +111,15 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
 }
 
 const styles = StyleSheet.create({
+  // Chips reach 48dp through slop; a 12dp gap keeps neighbours' targets apart.
   optionRail: {
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
     paddingRight: spacing.md,
     alignItems: 'flex-start',
   },
   optionColumn: {
-    gap: spacing.sm,
-  },
-  railChip: {
-    minHeight: minTouchSize,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  railChipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  railChipText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
-  railChipTextSelected: {
-    color: colors.primaryDark,
+    gap: spacing.md,
   },
   ratingSelector: {
     flexDirection: 'row',

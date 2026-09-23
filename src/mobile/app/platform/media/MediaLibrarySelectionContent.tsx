@@ -10,6 +10,7 @@ import type {
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Chip } from '@/mobile/app/shared/components/ui/Chip';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -17,7 +18,6 @@ import {
   fontWeight,
   iconSize,
   minTouchSize,
-  opacity,
   radius,
   spacing,
   textStyle,
@@ -132,32 +132,16 @@ export const MediaLibrarySelectionContent = React.memo(
               : key === 'photo'
                 ? tr.placeEditor.photos
                 : tr.mediaPicker.videos;
-            const active = filter === key;
-            const disabled = disabledFilters.has(key) || isLoading || isLoadingMore;
 
             return (
-              <InstantPressable
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active, disabled }}
+              <Chip
+                disabled={disabledFilters.has(key) || isLoading || isLoadingMore}
                 key={key}
-                disabled={disabled}
+                kind="filter"
+                label={label}
                 onPress={() => onFilterChange(key)}
-                style={[
-                  styles.filterChip,
-                  active ? styles.filterChipActive : null,
-                  disabled ? styles.filterChipDisabled : null,
-                ]}
-              >
-                <AppText
-                  style={[
-                    styles.filterChipText,
-                    active ? styles.filterChipTextActive : null,
-                    disabled ? styles.filterChipTextDisabled : null,
-                  ]}
-                >
-                  {label}
-                </AppText>
-              </InstantPressable>
+                selected={filter === key}
+              />
             );
           })}
         </View>
@@ -292,32 +276,8 @@ const styles = StyleSheet.create({
   counterChipStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
   filterRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.md,
-  },
-  filterChip: {
-    minHeight: minTouchSize,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  filterChipActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
-  },
-  filterChipDisabled: {
-    opacity: opacity.disabled,
-  },
-  filterChipText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
-  filterChipTextActive: {
-    color: colors.onPrimary,
-  },
-  filterChipTextDisabled: {
-    color: colors.textSoft,
   },
   gridContent: {
     paddingBottom: spacing.xl,

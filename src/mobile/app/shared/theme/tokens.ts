@@ -258,6 +258,9 @@ export const hitSlopFor = (renderedSize: number, minimum: number = touch.android
 
 export const controlSize = {
   compact: 32,
+  // A selectable chip: painted at 36 so a row of them stays light, reaching
+  // the 48dp floor through hit slop.
+  chip: 36,
   default: 44,
   large: 48,
 } as const;

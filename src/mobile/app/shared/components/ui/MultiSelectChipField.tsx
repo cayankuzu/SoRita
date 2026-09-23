@@ -1,19 +1,8 @@
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import {
-  colors,
-  minTouchSize,
-  opacity,
-  radius,
-  spacing,
-  textStyle,
-} from '@/mobile/app/shared/theme/tokens';
+import { Chip } from '@/mobile/app/shared/components/ui/Chip';
+import { spacing } from '@/mobile/app/shared/theme/tokens';
 
 export type MultiSelectChipOption = {
   value: string;
@@ -35,30 +24,15 @@ export function MultiSelectChipField({
 }: MultiSelectChipFieldProps) {
   return (
     <View style={styles.wrap}>
-      {options.map((option) => {
-        const selected = selectedValues.includes(option.value);
-
-        return (
-          <InstantPressable
-            accessibilityLabel={option.label}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: selected, disabled }}
-            disabled={disabled}
-            hapticFeedback="selection"
-            key={option.value}
-            onPress={() => onToggle(option.value)}
-            style={[
-              styles.chip,
-              selected ? styles.chipSelected : null,
-              disabled ? styles.chipDisabled : null,
-            ]}
-          >
-            <AppText style={[styles.chipText, selected ? styles.chipTextSelected : null]}>
-              {option.label}
-            </AppText>
-          </InstantPressable>
-        );
-      })}
+      {options.map((option) => (
+        <Chip
+          disabled={disabled}
+          key={option.value}
+          label={option.label}
+          onPress={() => onToggle(option.value)}
+          selected={selectedValues.includes(option.value)}
+        />
+      ))}
     </View>
   );
 }
@@ -68,25 +42,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chip: {
-    minHeight: minTouchSize,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  chipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
-  },
-  chipText: textStyle('metadataText', colors.textMuted),
-  chipTextSelected: {
-    color: colors.primaryDark,
-  },
-  chipDisabled: {
-    opacity: opacity.disabled,
   },
 });

@@ -30,6 +30,7 @@ const SIZE_TOKENS = new Map([
   ['controlSize.large', 48],
   ['controlSize.default', 44],
   ['controlSize.compact', 32],
+  ['controlSize.chip', 36],
 ]);
 
 const PRESSABLE_NAMES = new Set([
@@ -165,11 +166,14 @@ export function readHitSlop(attribute) {
     expression.arguments[0]
   ) {
     const [size, minimum] = expression.arguments;
-    if (!ts.isNumericLiteral(size)) return null;
+    const paintedSize = ts.isNumericLiteral(size)
+      ? Number(size.text)
+      : SIZE_TOKENS.get(size.getText());
+    if (paintedSize === undefined) return null;
     const floor = minimum && ts.isNumericLiteral(minimum)
       ? Number(minimum.text)
       : ANDROID_MINIMUM_DP;
-    return Math.max(0, Math.ceil((floor - Number(size.text)) / 2));
+    return Math.max(0, Math.ceil((floor - paintedSize) / 2));
   }
 
   if (ts.isObjectLiteralExpression(expression)) {

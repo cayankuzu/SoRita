@@ -1,12 +1,13 @@
 import React from 'react';
-import { Camera, List, MapPin, Search, Users, X } from 'lucide-react-native';
+import { Camera, List, MapPin, Search, Users, X, type LucideIcon } from 'lucide-react-native';
 import { ScrollView, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Chip, chipContentColor } from '@/mobile/app/shared/components/ui/Chip';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 import { exploreScreenStyles as styles } from './exploreScreenStyles';
 import type { ExploreTabType } from './exploreScreenTypes';
@@ -25,27 +26,27 @@ const MAX_SEARCH_QUERY_LENGTH = 120;
 const tabs: Array<{
   key: ExploreTabType;
   label: string;
-  renderIcon: (active: boolean) => React.ReactNode;
+  Icon: LucideIcon;
 }> = [
   {
     key: 'lists',
     label: tr.explore.tabs.lists,
-    renderIcon: (active) => <List color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
+    Icon: List,
   },
   {
     key: 'places',
     label: tr.explore.tabs.places,
-    renderIcon: (active) => <MapPin color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
+    Icon: MapPin,
   },
   {
     key: 'photos',
     label: tr.explore.tabs.photos,
-    renderIcon: (active) => <Camera color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
+    Icon: Camera,
   },
   {
     key: 'people',
     label: tr.explore.tabs.people,
-    renderIcon: (active) => <Users color={active ? colors.onPrimary : colors.textMuted} size={iconSize.xs} />,
+    Icon: Users,
   },
 ];
 
@@ -147,26 +148,19 @@ export function ExploreHeaderControls({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabRow}
           >
-            {tabs.map((tab) => {
-              const active = activeTab === tab.key;
+            {tabs.map(({ Icon, key, label }) => {
+              const active = activeTab === key;
 
               return (
-                <InstantPressable
-                  accessibilityLabel={tab.label}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  hitSlop={hitSlopFor(44)}
-                  key={tab.key}
-                  onLayout={(event) => handleTabLayout(tab.key, event)}
-                  onPress={() => onTabChange(tab.key)}
-                  hapticFeedback="selection"
-                  style={[styles.tabButton, active ? styles.tabButtonActive : null]}
-                >
-                  {tab.renderIcon(active)}
-                  <AppText style={[styles.tabText, active ? styles.tabTextActive : null]}>
-                    {tab.label}
-                  </AppText>
-                </InstantPressable>
+                <Chip
+                  key={key}
+                  kind="filter"
+                  label={label}
+                  leading={<Icon color={chipContentColor('filter', active)} size={iconSize.sm} />}
+                  onLayout={(event) => handleTabLayout(key, event)}
+                  onPress={() => onTabChange(key)}
+                  selected={active}
+                />
               );
             })}
           </ScrollView>

@@ -3,6 +3,7 @@ import { Animated, StyleSheet, View } from "react-native";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react-native";
 
 import { AppText } from "@/mobile/app/shared/components/ui/AppText";
+import { Chip } from "@/mobile/app/shared/components/ui/Chip";
 import { InstantPressable } from "@/mobile/app/shared/components/ui/InstantPressable";
 import { shouldUseCompactProfileTabs } from "@/mobile/app/features/profile/ui/components/profileTabsLayout";
 import { tr } from "@/mobile/app/shared/i18n/tr";
@@ -188,33 +189,16 @@ export function ProfileTabs({
       {showFilterControls && filterOpen ? (
         <View style={styles.filterWrap}>
           <View accessibilityRole="radiogroup" style={styles.filterRow}>
-            {filterOptions?.map((option) => {
-              const active = option.key === activeFilter;
-
-              return (
-                <InstantPressable
-                  accessibilityLabel={option.label}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  key={option.key}
-                  onPress={() => onFilterChange?.(option.key)}
-                  hapticFeedback="selection"
-                  style={[
-                    styles.filterChip,
-                    active ? styles.filterChipActive : null,
-                  ]}
-                >
-                  <AppText
-                    style={[
-                      styles.filterChipText,
-                      active ? styles.filterChipTextActive : null,
-                    ]}
-                  >
-                    {option.label}
-                  </AppText>
-                </InstantPressable>
-              );
-            })}
+            {filterOptions?.map((option) => (
+              <Chip
+                accessibilityRole="radio"
+                key={option.key}
+                kind="filter"
+                label={option.label}
+                onPress={() => onFilterChange?.(option.key)}
+                selected={option.key === activeFilter}
+              />
+            ))}
           </View>
         </View>
       ) : null}
@@ -324,25 +308,6 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  filterChip: {
-    minHeight: minTouchSize,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  filterChipText: textStyle('labelText', colors.textMuted),
-  filterChipTextActive: {
-    color: colors.primary,
+    gap: spacing.md,
   },
 });

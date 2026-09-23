@@ -44,32 +44,12 @@ export const exploreScreenStyles = StyleSheet.create({
   tabRail: {
     minHeight: 44,
   },
+  // A horizontal scroll view clips hit slop at its edges, so the row carries
+  // the room a 36dp chip needs to reach 48dp.
   tabRow: {
-    gap: spacing.sm,
-    paddingVertical: spacing.xxs,
-    alignItems: 'center',
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    minHeight: 44,
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
+    gap: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  tabButtonActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
-  },
-  tabText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
-  tabTextActive: {
-    color: colors.onPrimary,
+    alignItems: 'center',
   },
   resultStatus: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   grid: {
