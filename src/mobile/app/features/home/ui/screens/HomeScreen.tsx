@@ -304,38 +304,6 @@ export function HomeScreen() {
     );
   }
 
-  const renderEmptyState = () => {
-    if (followingCount === 0 && feedItems.length === 0) {
-      return (
-        <View style={styles.centeredState}>
-          <EmptyState
-            icon={<Users color={colors.primary} size={iconSize.xl} />}
-            title={tr.home.noFollowingTitle}
-            description={tr.home.noFollowingDescription}
-          />
-          <InstantPressable style={styles.primaryCta} onPress={() => navigation.navigate('Explore')}>
-            <MapPin color={colors.onPrimary} size={iconSize.sm} />
-            <AppText style={styles.primaryCtaText}>{tr.home.exploreCta}</AppText>
-          </InstantPressable>
-        </View>
-      );
-    }
-
-    if (followingCount > 0 && feedItems.length === 0) {
-      return (
-        <View style={styles.emptyStateWrap}>
-          <EmptyState
-            icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-            title={tr.home.noFeedTitle}
-            description={tr.home.noFeedDescription}
-          />
-        </View>
-      );
-    }
-
-    return null;
-  };
-
   return (
     <Screen safeTop={false} scroll={false} variant="feed">
       <FlatList
@@ -370,7 +338,12 @@ export function HomeScreen() {
         onScroll={handleFeedScroll}
         scrollEventThrottle={16}
         progressViewOffset={topBar.height}
-        ListEmptyComponent={renderEmptyState}
+        ListEmptyComponent={
+          <HomeFeedEmptyState
+            followingCount={followingCount}
+            onExplore={() => navigation.navigate('Explore')}
+          />
+        }
         contentContainerStyle={[
           styles.feedListContent,
           feedItems.length === 0 ? styles.feedListContentEmpty : null,
@@ -401,6 +374,41 @@ export function HomeScreen() {
         <AppHeader />
       </ScrollAwayHeader>
     </Screen>
+  );
+}
+
+/** What an empty feed says: follow someone first, or wait for them to post. */
+function HomeFeedEmptyState({
+  followingCount,
+  onExplore,
+}: {
+  followingCount: number;
+  onExplore: () => void;
+}) {
+  if (followingCount === 0) {
+    return (
+      <View style={styles.centeredState}>
+        <EmptyState
+          icon={<Users color={colors.primary} size={iconSize.xl} />}
+          title={tr.home.noFollowingTitle}
+          description={tr.home.noFollowingDescription}
+        />
+        <InstantPressable style={styles.primaryCta} onPress={onExplore}>
+          <MapPin color={colors.onPrimary} size={iconSize.sm} />
+          <AppText style={styles.primaryCtaText}>{tr.home.exploreCta}</AppText>
+        </InstantPressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.emptyStateWrap}>
+      <EmptyState
+        icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
+        title={tr.home.noFeedTitle}
+        description={tr.home.noFeedDescription}
+      />
+    </View>
   );
 }
 
