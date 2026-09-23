@@ -153,13 +153,6 @@ export function SettingsEditProfileFlow({
 
       {editStep === 1 ? (
         <View style={styles.form}>
-          <View style={styles.helperCard}>
-            <AppText style={styles.helperCardTitle}>{tr.settings.editProfile.interestsTitle}</AppText>
-            <AppText style={styles.helperCardText}>
-              {tr.settings.editProfile.interestsDescription}
-            </AppText>
-          </View>
-
           <MultiSelectChipField
             options={PROFILE_INTEREST_OPTIONS}
             selectedValues={editInterests}

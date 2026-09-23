@@ -34,14 +34,6 @@ export const settingsScreenStyles = StyleSheet.create({
   },
   stepTitle: textStyle('title', colors.text),
   stepDescription: textStyle('bodyText', colors.textMuted),
-  helperCard: {
-    gap: spacing.xs,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.card,
-  },
-  helperCardTitle: textStyle('labelText', colors.text),
-  helperCardText: textStyle('captionText', colors.textMuted),
   selectionMeta: textStyle('metadataText', colors.textSoft),
   photoSection: {
     alignItems: 'center',
