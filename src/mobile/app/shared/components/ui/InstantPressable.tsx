@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable } from 'react-native';
 
+import { opacity } from '@/mobile/app/shared/theme/tokens';
 import { isPromiseLike } from '@/mobile/app/shared/utils/interaction';
 
 type InstantPressableRenderState = {
@@ -49,7 +50,7 @@ function triggerHapticFeedback(feedback: InstantPressableProps['hapticFeedback']
 }
 
 export function InstantPressable({
-  accessibilityRole = 'button',
+  accessibilityRole,
   accessibilityState,
   onPress,
   style,
@@ -57,8 +58,8 @@ export function InstantPressable({
   disabled = false,
   hitSlop = 8,
   pressedScale = 0.985,
-  pressedOpacity = 0.9,
-  busyOpacity = 0.72,
+  pressedOpacity = opacity.pressed,
+  busyOpacity = opacity.muted,
   disableFeedback = false,
   preventRepeatWhileBusy = true,
   hapticFeedback = false,
@@ -67,6 +68,9 @@ export function InstantPressable({
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const isDisabled = disabled || (preventRepeatWhileBusy && busy);
+  // Without a handler the element is a static wrapper: a screen reader should
+  // hear its content, not a button, and not a disabled one either.
+  const actionable = Boolean(onPress);
 
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
@@ -127,12 +131,16 @@ export function InstantPressable({
   return (
     <Pressable
       {...rest}
-      accessibilityRole={accessibilityRole}
-      accessibilityState={{
-        ...accessibilityState,
-        busy: busy || accessibilityState?.busy,
-        disabled: Boolean(isDisabled || accessibilityState?.disabled),
-      }}
+      accessibilityRole={accessibilityRole ?? (actionable ? 'button' : undefined)}
+      accessibilityState={
+        actionable
+          ? {
+              ...accessibilityState,
+              busy: busy || accessibilityState?.busy,
+              disabled: Boolean(isDisabled || accessibilityState?.disabled),
+            }
+          : accessibilityState
+      }
       disabled={isDisabled}
       hitSlop={hitSlop}
       onPress={handlePress}

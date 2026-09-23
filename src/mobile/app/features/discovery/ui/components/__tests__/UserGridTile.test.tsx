@@ -56,10 +56,12 @@ describe('UserGridTile follow feedback', () => {
     });
 
     const followButton = renderer.root.find(
-      (node) => String(node.type) === 'InstantPressable',
+      (node) =>
+        String(node.type) === 'InstantPressable' &&
+        String(node.props.accessibilityLabel).includes(': '),
     );
     const profileButton = renderer.root
-      .findAllByType('Pressable' as unknown as React.ElementType)
+      .findAll((node) => String(node.type) === 'InstantPressable')
       .find((node) => node.props.accessibilityLabel === 'Ada, @ada');
     expect(followButton.props.accessibilityLabel).toContain('Ada');
     expect(followButton.props.accessibilityRole).toBe('button');
@@ -102,7 +104,9 @@ describe('UserGridTile follow feedback', () => {
     });
 
     const followButton = renderer.root.find(
-      (node) => String(node.type) === 'InstantPressable',
+      (node) =>
+        String(node.type) === 'InstantPressable' &&
+        String(node.props.accessibilityLabel).includes(': '),
     );
     expect(followButton.props.accessibilityLabel).toBe(
       `${tr.profile.actions.requestSent}: Ada`,
@@ -134,7 +138,9 @@ describe('UserGridTile follow feedback', () => {
     });
 
     const followButton = renderer.root.find(
-      (node) => String(node.type) === 'InstantPressable',
+      (node) =>
+        String(node.type) === 'InstantPressable' &&
+        String(node.props.accessibilityLabel).includes(': '),
     );
     expect(followButton.props.accessibilityLabel).toBe(
       `${tr.profile.actions.unfollow}: Ada`,

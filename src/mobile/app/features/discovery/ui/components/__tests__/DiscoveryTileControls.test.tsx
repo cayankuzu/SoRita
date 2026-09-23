@@ -112,6 +112,16 @@ function isDescendantOf(
   return false;
 }
 
+// Controls go through InstantPressable, whose style is a function of the
+// press state and may nest arrays.
+function resolveStyle(style: unknown): Record<string, unknown> {
+  const value = typeof style === 'function' ? style({ pressed: false }) : style;
+  if (Array.isArray(value)) {
+    return Object.assign({}, ...value.map((entry) => resolveStyle(entry)));
+  }
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function verifyMapToggle(renderer: TestRenderer.ReactTestRenderer, mainLabelPrefix: string) {
   const getMapAction = (label: string) => renderer.root
     .findAllByType('Pressable' as unknown as React.ElementType)
@@ -128,9 +138,9 @@ function verifyMapToggle(renderer: TestRenderer.ReactTestRenderer, mainLabelPref
   expect(focusAction).toBeDefined();
   expect(menuAction).toBeDefined();
   expect(focusAction?.props.onLongPress).toBeUndefined();
-  expect(focusAction?.props.accessibilityState).toEqual({ selected: false });
-  expect(StyleSheet.flatten(focusAction?.props.style)).toMatchObject({ width: 48, height: 48 });
-  expect(StyleSheet.flatten(menuAction?.props.style)).toMatchObject({ width: 48, height: 48 });
+  expect(focusAction?.props.accessibilityState).toMatchObject({ selected: false });
+  expect(resolveStyle(focusAction?.props.style)).toMatchObject({ width: 48, height: 48 });
+  expect(resolveStyle(menuAction?.props.style)).toMatchObject({ width: 48, height: 48 });
   expect(isDescendantOf(focusAction!, mainAction!)).toBe(false);
   expect(isDescendantOf(menuAction!, mainAction!)).toBe(false);
 
@@ -139,12 +149,12 @@ function verifyMapToggle(renderer: TestRenderer.ReactTestRenderer, mainLabelPref
   });
 
   const hideAction = getMapAction(tr.cards.hideMiniMap);
-  expect(hideAction?.props.accessibilityState).toEqual({ selected: true });
+  expect(hideAction?.props.accessibilityState).toMatchObject({ selected: true });
 
   act(() => {
     hideAction?.props.onPress({ stopPropagation: vi.fn() });
   });
-  expect(getMapAction(tr.cards.focusMiniMap)?.props.accessibilityState).toEqual({ selected: false });
+  expect(getMapAction(tr.cards.focusMiniMap)?.props.accessibilityState).toMatchObject({ selected: false });
 }
 
 describe('discovery tile controls', () => {
