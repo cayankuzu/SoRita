@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Globe,
   Heart,
@@ -11,6 +11,7 @@ import {
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -60,7 +61,7 @@ export function ListDetailHeader({
     <View style={styles.header}>
       <View style={styles.heroCard}>
         <View style={styles.heroMediaWrap}>
-          <Pressable
+          <InstantPressable
             accessibilityLabel={
               list.coverImage ? `${list.name}, ${tr.listDetail.openCover}` : undefined
             }
@@ -84,7 +85,7 @@ export function ListDetailHeader({
                 </View>
               </View>
             )}
-          </Pressable>
+          </InstantPressable>
 
           {list.coverImage ? (
             <View style={styles.coverHintChip}>

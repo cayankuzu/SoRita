@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Globe, ImagePlus, Lock, X } from 'lucide-react-native';
 
 import { listEditorModalStyles as styles } from '@/mobile/app/features/lists/ui/components/listEditorModalStyles';
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { t } from '@/mobile/app/shared/i18n';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -72,7 +73,7 @@ export function ListEditorForm({
           <AppText style={styles.sectionHint}>{t.listEditor.privacyHint}</AppText>
         </View>
         <View accessibilityRole="radiogroup" style={styles.privacyRow}>
-          <Pressable
+          <InstantPressable
             accessibilityLabel={t.listEditor.privacyPublic}
             accessibilityHint={t.listEditor.privacyPublicDescription}
             accessibilityRole="radio"
@@ -95,9 +96,9 @@ export function ListEditorForm({
                 {t.listEditor.privacyPublicDescription}
               </AppText>
             </View>
-          </Pressable>
+          </InstantPressable>
 
-          <Pressable
+          <InstantPressable
             accessibilityLabel={t.listEditor.privacyPrivate}
             accessibilityHint={t.listEditor.privacyPrivateDescription}
             accessibilityRole="radio"
@@ -120,7 +121,7 @@ export function ListEditorForm({
                 {t.listEditor.privacyPrivateDescription}
               </AppText>
             </View>
-          </Pressable>
+          </InstantPressable>
         </View>
       </View>
 
@@ -131,7 +132,7 @@ export function ListEditorForm({
         </View>
 
         <View style={styles.coverPickerRow}>
-          <Pressable
+          <InstantPressable
             accessibilityLabel={coverImage ? t.listEditor.changeCover : t.listEditor.chooseCover}
             accessibilityRole="button"
             accessibilityState={{ disabled: loading }}
@@ -157,7 +158,7 @@ export function ListEditorForm({
               </View>
 
               {coverImage ? (
-                <Pressable
+                <InstantPressable
                   accessibilityLabel={t.listEditor.coverPreviewExpand}
                   hitSlop={hitSlopFor(30)}
                   accessibilityRole="imagebutton"
@@ -169,7 +170,7 @@ export function ListEditorForm({
                   style={styles.selectionBadge}
                 >
                   <AppText style={styles.selectionBadgeText}>{t.common.previewTitle}</AppText>
-                </Pressable>
+                </InstantPressable>
               ) : null}
             </View>
 
@@ -178,10 +179,10 @@ export function ListEditorForm({
               uri={coverImage}
               variant="list-cover"
             />
-          </Pressable>
+          </InstantPressable>
 
           {coverImage ? (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={t.listEditor.removeCover}
               accessibilityRole="button"
               accessibilityState={{ disabled: loading }}
@@ -191,7 +192,7 @@ export function ListEditorForm({
               style={styles.coverClearButton}
             >
               <X color={colors.onPrimary} size={iconSize.sm} />
-            </Pressable>
+            </InstantPressable>
           ) : null}
         </View>
       </View>

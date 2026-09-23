@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Platform,
-  Pressable,
   RefreshControl,
   StyleSheet,
   TextInput,
@@ -15,6 +14,7 @@ import type { FeedActionLiker } from '@/mobile/app/features/social/ui/components
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   avatarSize,
@@ -86,7 +86,7 @@ export function LikersPanel({
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       keyboardShouldPersistTaps="handled"
       renderItem={({ item }) => (
-        <Pressable
+        <InstantPressable
           accessibilityLabel={`${item.name}, @${item.username}`}
           accessibilityRole={onUserPress ? 'button' : undefined}
           style={styles.likerRow}
@@ -103,7 +103,7 @@ export function LikersPanel({
               </AppText>
             ) : null}
           </View>
-        </Pressable>
+        </InstantPressable>
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       ListHeaderComponent={

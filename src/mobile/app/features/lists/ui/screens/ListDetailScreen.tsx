@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, useWindowDimensions, View } from 'react-native';
 import {
   ChevronUp,
   Ellipsis,
@@ -50,6 +44,7 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { ListDetailSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -563,14 +558,14 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
         />
 
         {showScrollTopButton ? (
-          <Pressable
+          <InstantPressable
             accessibilityLabel={tr.common.scrollToTop}
             accessibilityRole="button"
             onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
             style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom, 18) + 16 }]}
           >
             <ChevronUp color={colors.onPrimary} size={iconSize.md} />
-          </Pressable>
+          </InstantPressable>
         ) : null}
       </View>
 

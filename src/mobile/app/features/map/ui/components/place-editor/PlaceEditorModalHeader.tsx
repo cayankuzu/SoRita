@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Minus, X } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
@@ -39,7 +40,7 @@ export function PlaceEditorModalHeader({
           ) : null}
         </View>
         <View style={styles.headerActions}>
-          <Pressable
+          <InstantPressable
             accessibilityRole="button"
             accessibilityState={{ disabled: isLocked }}
             disabled={isLocked}
@@ -47,7 +48,7 @@ export function PlaceEditorModalHeader({
             style={styles.cancelButton}
           >
             <AppText style={styles.cancelButtonText}>{tr.common.cancel}</AppText>
-          </Pressable>
+          </InstantPressable>
           {onMinimize ? (
             <IconButton
               accessibilityLabel={tr.common.minimize}

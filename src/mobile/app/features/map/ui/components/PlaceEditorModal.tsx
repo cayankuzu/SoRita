@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   useWindowDimensions,
   View,
@@ -34,6 +33,7 @@ import { PlaceEditorWizardHeader } from '@/mobile/app/features/map/ui/components
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { MediaLightbox } from '@/mobile/app/shared/components/feedback/MediaLightbox';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
@@ -489,7 +489,8 @@ export function PlaceEditorModal({
         onAccessibilityEscape={handleDismissEditor}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable
+        <InstantPressable
+          disableFeedback
           accessible={false}
           disabled={isCloseLocked}
           style={styles.backdrop}

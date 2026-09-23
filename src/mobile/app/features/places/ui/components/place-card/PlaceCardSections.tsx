@@ -1,6 +1,5 @@
 import React, { type ReactNode } from 'react';
 import {
-  Pressable,
   ScrollView,
   View,
   type LayoutChangeEvent,
@@ -50,7 +49,7 @@ export function PlaceOwnerHeader({
   }
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={`${owner.name}, @${owner.username}`}
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
@@ -62,7 +61,7 @@ export function PlaceOwnerHeader({
         <AppText style={styles.userName}>{owner.name}</AppText>
         <AppText style={styles.userUsername}>@{owner.username}</AppText>
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -82,7 +81,7 @@ export function PlaceSourceBar({
   const name = sourceUser?.name || attribution.userName;
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={`${name}, ${tr.cards.quotedFromPlaceCard}`}
       accessibilityRole={onPress ? 'button' : undefined}
       style={styles.sourceBar}
@@ -113,7 +112,7 @@ export function PlaceSourceBar({
         </AppText>
       </View>
       <ChevronRight color={colors.quote} size={iconSize.sm} />
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -137,7 +136,7 @@ export function PlaceListBar({
   }
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={`${name}, ${isPublic ? tr.listDetail.public : tr.listDetail.private}`}
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
@@ -183,7 +182,7 @@ export function PlaceListBar({
         </View>
       </View>
       <ChevronRight color={colors.primary} size={iconSize.sm} />
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -238,7 +237,7 @@ export function PlacePrimaryMedia({
           style={styles.mediaCarousel}
         >
           {media.map((item, index) => (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
               accessibilityRole="button"
               key={item.id ?? `${item.url}:${index}`}
@@ -253,7 +252,7 @@ export function PlacePrimaryMedia({
                 fallbackToVideoPreview={false}
                 showDuration
               />
-            </Pressable>
+            </InstantPressable>
           ))}
         </ScrollView>
         {media.length > 1 ? (

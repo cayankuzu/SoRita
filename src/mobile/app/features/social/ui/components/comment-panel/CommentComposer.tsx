@@ -1,16 +1,12 @@
 import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 import { Send } from 'lucide-react-native';
 
 import type { ReplyTarget } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelTypes';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { COMMENT_MAX_LENGTH } from '@/mobile/app/shared/validation/contentLimits';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { avatarSize, colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { commentPanelStyles as styles } from '@/mobile/app/features/social/ui/components/comment-panel/commentPanelStyles';
@@ -108,14 +104,14 @@ export function CommentComposer({
             <AppText style={styles.composerBannerText}>{tr.cards.editingComment}</AppText>
             <AppText style={styles.composerBannerSubtext}>{tr.cards.editComment}</AppText>
           </View>
-          <Pressable
+          <InstantPressable
             onPress={onCancelEdit}
             accessibilityLabel={tr.common.cancel}
             accessibilityRole="button"
             style={styles.composerBannerActionButton}
           >
             <AppText style={styles.composerBannerAction}>{tr.cards.cancelEditComment}</AppText>
-          </Pressable>
+          </InstantPressable>
         </View>
       ) : null}
 
@@ -127,14 +123,14 @@ export function CommentComposer({
               <AppText style={styles.composerBannerSubtext}>@{replyingTo.username}</AppText>
             ) : null}
           </View>
-          <Pressable
+          <InstantPressable
             onPress={onCancelReply}
             accessibilityLabel={tr.common.cancel}
             accessibilityRole="button"
             style={styles.composerBannerActionButton}
           >
             <AppText style={styles.composerBannerAction}>{tr.cards.cancelReply}</AppText>
-          </Pressable>
+          </InstantPressable>
         </View>
       ) : null}
 
@@ -151,7 +147,8 @@ export function CommentComposer({
         keyboardShouldPersistTaps="handled"
       >
         {QUICK_REACTIONS.map((reaction) => (
-          <Pressable
+          <InstantPressable
+            disableFeedback
             key={reaction}
             disabled={submitting}
             accessibilityLabel={tr.cards.quickReactionLabel(reaction)}
@@ -165,7 +162,7 @@ export function CommentComposer({
             onPress={() => appendReaction(reaction)}
           >
             <AppText style={styles.reactionEmoji}>{reaction}</AppText>
-          </Pressable>
+          </InstantPressable>
         ))}
       </ScrollView>
 
@@ -201,7 +198,8 @@ export function CommentComposer({
             </AppText>
           ) : null}
         </View>
-        <Pressable
+        <InstantPressable
+          disableFeedback
           style={({ pressed }) => [
             styles.sendButton,
             !canSubmit ? styles.sendButtonDisabled : null,
@@ -214,7 +212,7 @@ export function CommentComposer({
           accessibilityRole="button"
         >
           <Send color={canSubmit ? colors.onPrimary : colors.textDisabled} size={iconSize.sm} />
-        </Pressable>
+        </InstantPressable>
       </View>
     </View>
   );

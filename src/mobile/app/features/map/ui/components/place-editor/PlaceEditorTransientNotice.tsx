@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorTransientNoticeProps = {
@@ -17,7 +18,7 @@ export function PlaceEditorTransientNotice({
   onClose,
 }: PlaceEditorTransientNoticeProps) {
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={`${title}. ${description}`}
       accessibilityLiveRegion="assertive"
       accessibilityRole="button"
@@ -35,7 +36,7 @@ export function PlaceEditorTransientNotice({
           <AppText style={styles.description}>{description}</AppText>
         </View>
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 

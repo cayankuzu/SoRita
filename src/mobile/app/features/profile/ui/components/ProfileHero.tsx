@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -19,6 +18,7 @@ import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
 import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
 const PROFILE_HERO_MAX_COVER_VIEWPORT_RATIO = 0.22;
@@ -69,7 +69,7 @@ export function ProfileHero({
         ]}
       >
         {coverPhoto ? (
-          <Pressable
+          <InstantPressable
             accessibilityLabel={tr.profile.coverPhoto}
             accessibilityRole={onCoverPhotoPress ? "imagebutton" : "image"}
             disabled={!onCoverPhotoPress}
@@ -81,7 +81,7 @@ export function ProfileHero({
               style={styles.coverImage}
               accessibilityLabel={`${name} ${tr.profile.coverPhoto.toLowerCase()}`}
             />
-          </Pressable>
+          </InstantPressable>
         ) : null}
 
         {onBackPress ? (
@@ -98,7 +98,7 @@ export function ProfileHero({
 
       <View style={styles.body}>
         <View style={styles.avatarRow}>
-          <Pressable
+          <InstantPressable
             accessibilityLabel={tr.profile.profilePhoto}
             accessibilityRole={onProfilePhotoPress ? "imagebutton" : "image"}
             disabled={!onProfilePhotoPress}
@@ -110,7 +110,7 @@ export function ProfileHero({
               name={name}
               size={PROFILE_HERO_AVATAR_SIZE}
             />
-          </Pressable>
+          </InstantPressable>
 
           {action ? <View style={styles.actionSlot}>{action}</View> : null}
         </View>

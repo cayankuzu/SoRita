@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, StyleSheet, View } from 'react-native';
 import { Image as ImageIcon, RefreshCcw, Settings } from 'lucide-react-native';
 
 import { MediaLibraryAssetTile } from '@/mobile/app/platform/media/MediaLibraryAssetTile';
@@ -10,6 +10,7 @@ import type {
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -135,7 +136,7 @@ export const MediaLibrarySelectionContent = React.memo(
             const disabled = disabledFilters.has(key) || isLoading || isLoadingMore;
 
             return (
-              <Pressable
+              <InstantPressable
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active, disabled }}
                 key={key}
@@ -156,7 +157,7 @@ export const MediaLibrarySelectionContent = React.memo(
                 >
                   {label}
                 </AppText>
-              </Pressable>
+              </InstantPressable>
             );
           })}
         </View>
@@ -178,14 +179,14 @@ export const MediaLibrarySelectionContent = React.memo(
             <ImageIcon color={colors.textSoft} size={iconSize.md} />
             <AppText style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</AppText>
             <AppText style={styles.stateText}>{tr.system.connectionUnavailable}</AppText>
-            <Pressable
+            <InstantPressable
               accessibilityRole="button"
               style={styles.retryButton}
               onPress={() => void loadAssetsPage(true)}
             >
               <RefreshCcw color={colors.primary} size={iconSize.xs} />
               <AppText style={styles.retryButtonText}>{tr.common.retry}</AppText>
-            </Pressable>
+            </InstantPressable>
           </View>
         ) : permissionDenied ? (
           <View style={styles.stateWrap}>
@@ -196,7 +197,7 @@ export const MediaLibrarySelectionContent = React.memo(
                 ? tr.mediaPicker.permissionDescription
                 : tr.mediaPicker.permissionBlockedDescription}
             </AppText>
-            <Pressable
+            <InstantPressable
               accessibilityLabel={
                 permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings
               }
@@ -219,7 +220,7 @@ export const MediaLibrarySelectionContent = React.memo(
               <AppText style={styles.retryButtonText}>
                 {permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings}
               </AppText>
-            </Pressable>
+            </InstantPressable>
           </View>
         ) : (
           <FlatList

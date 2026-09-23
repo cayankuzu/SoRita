@@ -1,14 +1,12 @@
 import React from 'react';
-import {
-  Pressable,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
 
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 import { avatarSize } from '@/mobile/app/shared/theme/tokens';
@@ -40,7 +38,7 @@ export function ListDetailPlacesSection({
   return (
     <View style={styles.sectionStack}>
       {owner ? (
-        <Pressable
+        <InstantPressable
           accessibilityLabel={`${owner.name}, @${owner.username}`}
           accessibilityHint={tr.listDetail.openOwnerProfile}
           accessibilityRole="button"
@@ -67,7 +65,7 @@ export function ListDetailPlacesSection({
               {isOwner ? tr.listDetail.ownedByViewer : tr.listDetail.openOwnerProfile}
             </AppText>
           </View>
-        </Pressable>
+        </InstantPressable>
       ) : null}
 
       {list.description ? (

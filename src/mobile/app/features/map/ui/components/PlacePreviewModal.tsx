@@ -1,19 +1,12 @@
 import React from 'react';
-import {
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { FlatList, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Minus, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
@@ -105,17 +98,17 @@ export function PlacePreviewModal({
         onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
+        <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
-          <Pressable
+          <InstantPressable
             accessibilityLabel={onMinimize ? tr.common.minimize : tr.common.close}
             accessibilityRole="button"
             style={styles.handleWrap}
             onPress={onMinimize ?? onClose}
           >
             <View style={styles.handle} />
-          </Pressable>
+          </InstantPressable>
 
           <View style={styles.header}>
             <View style={styles.headerCopy}>
@@ -128,33 +121,33 @@ export function PlacePreviewModal({
             </View>
             <View style={styles.headerActions}>
               {onCreatePlaceCard ? (
-                <Pressable
+                <InstantPressable
                   accessibilityLabel={tr.map.newPlaceCard}
                   accessibilityRole="button"
                   onPress={onCreatePlaceCard}
                   style={styles.headerButton}
                 >
                   <Plus color={colors.primary} size={iconSize.md} />
-                </Pressable>
+                </InstantPressable>
               ) : null}
               {onMinimize ? (
-                <Pressable
+                <InstantPressable
                   accessibilityLabel={tr.common.minimize}
                   accessibilityRole="button"
                   onPress={onMinimize}
                   style={styles.headerButton}
                 >
                   <Minus color={colors.textMuted} size={iconSize.md} />
-                </Pressable>
+                </InstantPressable>
               ) : null}
-              <Pressable
+              <InstantPressable
                 accessibilityLabel={tr.common.close}
                 accessibilityRole="button"
                 onPress={onClose}
                 style={styles.headerButton}
               >
                 <X color={colors.textMuted} size={iconSize.md} />
-              </Pressable>
+              </InstantPressable>
             </View>
           </View>
 

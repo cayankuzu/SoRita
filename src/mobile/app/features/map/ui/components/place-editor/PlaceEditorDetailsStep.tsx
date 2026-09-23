@@ -1,15 +1,12 @@
 import React from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { PLACE_BEST_TIME_OPTIONS, PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import { PLACE_EDITOR_COPY } from '@/mobile/app/features/map/catalog/placeEditor';
 import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorControls';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -57,7 +54,7 @@ export function PlaceEditorDetailsStep({
           accessibilityRole="radiogroup"
           style={styles.segmentedRow}
         >
-          <Pressable
+          <InstantPressable
             accessibilityRole="radio"
             accessibilityState={{ checked: studentFriendly }}
             style={[styles.segmentButton, studentFriendly ? styles.segmentButtonActive : null]}
@@ -66,8 +63,8 @@ export function PlaceEditorDetailsStep({
             <AppText style={[styles.segmentText, studentFriendly ? styles.segmentTextPrimaryActive : null]}>
               {tr.common.yes}
             </AppText>
-          </Pressable>
-          <Pressable
+          </InstantPressable>
+          <InstantPressable
             accessibilityRole="radio"
             accessibilityState={{ checked: !studentFriendly }}
             style={[styles.segmentButton, !studentFriendly ? styles.segmentButtonDark : null]}
@@ -76,7 +73,7 @@ export function PlaceEditorDetailsStep({
             <AppText style={[styles.segmentText, !studentFriendly ? styles.segmentTextDarkActive : null]}>
               {tr.common.no}
             </AppText>
-          </Pressable>
+          </InstantPressable>
         </View>
       </View>
 

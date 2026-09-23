@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Ellipsis } from 'lucide-react-native';
 
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 
@@ -38,7 +39,7 @@ export function PlaceEditorSaveProgressBanner({
             {`%${nextProgress}`}
           </AppText>
           {onMenuPress ? (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={tr.common.contentActionsTitle}
               accessibilityRole="button"
               onPress={onMenuPress}
@@ -46,7 +47,7 @@ export function PlaceEditorSaveProgressBanner({
               style={styles.saveProgressMenuButton}
             >
               <Ellipsis color={isFailed ? colors.danger : colors.textMuted} size={iconSize.sm} />
-            </Pressable>
+            </InstantPressable>
           ) : null}
         </View>
       </View>

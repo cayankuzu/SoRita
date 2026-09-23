@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   ChevronDown,
   ChevronUp,
@@ -45,7 +45,7 @@ type CommentAuthorPressableProps = {
   children: React.ReactNode;
   comment: FeedActionComment;
   onUserPress?: (userId: string) => void;
-  style: React.ComponentProps<typeof Pressable>['style'];
+  style: StyleProp<ViewStyle>;
 };
 
 function CommentAuthorPressable({
@@ -57,15 +57,17 @@ function CommentAuthorPressable({
   const disabled = !comment.userId || !onUserPress;
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={comment.userName}
-      accessibilityRole={disabled ? undefined : 'button'}
+      accessibilityRole={disabled ? 'text' : 'button'}
       disabled={disabled}
-      onPress={() => comment.userId && onUserPress?.(comment.userId)}
+      onPress={() => {
+        if (comment.userId) onUserPress?.(comment.userId);
+      }}
       style={style}
     >
       {children}
-    </Pressable>
+    </InstantPressable>
   );
 }
 

@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { Camera, RefreshCcw, Square, Video, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +11,7 @@ import {
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -216,7 +211,8 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
             {captureError || tr.mediaPicker.videoRecorderHint}
           </AppText>
 
-          <Pressable
+          <InstantPressable
+            disableFeedback
             accessibilityLabel={
               isRecording
                 ? tr.mediaPicker.videoRecorderStop
@@ -248,7 +244,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
                 <Video color={colors.onPrimary} size={iconSize.md} />
               )}
             </View>
-          </Pressable>
+          </InstantPressable>
         </View>
       </View>
     </Modal>

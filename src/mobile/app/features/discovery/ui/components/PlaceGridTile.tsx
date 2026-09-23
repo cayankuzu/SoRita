@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Camera,
   Crosshair,
@@ -23,6 +23,7 @@ import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaTh
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, layout } from '@/mobile/app/shared/theme/tokens';
@@ -174,7 +175,7 @@ function PlaceMiniMapToggle({
   }
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={isMapInteractive ? tr.cards.hideMiniMap : tr.cards.focusMiniMap}
       accessibilityRole="button"
       accessibilityState={{ selected: isMapInteractive }}
@@ -195,7 +196,7 @@ function PlaceMiniMapToggle({
       >
         <Crosshair color={colors.primary} size={iconSize.xs} />
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -279,7 +280,7 @@ function PlaceGridTileComponent({
         <OwnerHeader owner={owner} onPress={onOwnerPress} onPressIn={onOwnerPressIn} />
       ) : null}
       <View style={styles.tileActionShell}>
-        <Pressable
+        <InstantPressable
           accessible={!isMapInteractive}
           accessibilityLabel={
             isMapInteractive
@@ -376,10 +377,10 @@ function PlaceGridTileComponent({
               ) : null}
             </View>
           </View>
-        </Pressable>
+        </InstantPressable>
 
         {menuActions?.length ? (
-          <Pressable
+          <InstantPressable
             accessibilityLabel={tr.common.contentActionsTitle}
             accessibilityRole="button"
             onPress={() => setMenuVisible(true)}
@@ -388,7 +389,7 @@ function PlaceGridTileComponent({
             <View style={styles.singleActionBadgeVisual}>
               <Ellipsis color={colors.onPrimary} size={iconSize.xs} />
             </View>
-          </Pressable>
+          </InstantPressable>
         ) : null}
 
         <PlaceMiniMapToggle

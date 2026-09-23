@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Modal, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Globe, Lock, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,6 +18,7 @@ import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLigh
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { t } from '@/mobile/app/shared/i18n';
@@ -286,7 +280,8 @@ export function ListEditorModal({
         onAccessibilityEscape={handleRequestClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable
+        <InstantPressable
+          disableFeedback
           accessible={false}
           disabled={loading}
           style={styles.backdrop}
@@ -324,7 +319,7 @@ export function ListEditorModal({
               </View>
             </View>
 
-            <Pressable
+            <InstantPressable
               accessibilityLabel={t.common.close}
               accessibilityRole="button"
               accessibilityState={{ disabled: loading }}
@@ -334,7 +329,7 @@ export function ListEditorModal({
               style={styles.closeButton}
             >
               <X color={colors.textMuted} size={iconSize.sm} />
-            </Pressable>
+            </InstantPressable>
           </View>
 
           <ScrollView

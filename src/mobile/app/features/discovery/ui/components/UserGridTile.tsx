@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
@@ -54,7 +54,7 @@ function UserGridTileComponent({
         fillWidth ? styles.tileFullWidth : { width: tileWidth },
       ]}
     >
-      <Pressable
+      <InstantPressable
         accessibilityLabel={`${user.name}, @${user.username}`}
         accessibilityRole="button"
         onPress={onPress}
@@ -90,7 +90,7 @@ function UserGridTileComponent({
             </AppText>
           ) : null}
         </View>
-      </Pressable>
+      </InstantPressable>
 
       <InstantPressable
         accessibilityLabel={`${followActionLabel}: ${user.name}`}

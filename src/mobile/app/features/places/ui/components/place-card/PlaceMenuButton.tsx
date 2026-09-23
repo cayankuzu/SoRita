@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { ExternalLink, UtensilsCrossed } from 'lucide-react-native';
 
 import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { openSafeExternalUrl } from '@/mobile/app/shared/utils/safeLinks';
@@ -38,7 +39,8 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
   };
 
   return (
-    <Pressable
+    <InstantPressable
+      disableFeedback
       accessibilityHint={tr.cards.menuLinkOpenHint}
       accessibilityLabel={tr.cards.menuLinkLabel}
       accessibilityRole="link"
@@ -61,6 +63,6 @@ export function PlaceMenuButton({ menuUrl }: PlaceMenuButtonProps) {
         <AppText style={styles.menuActionLabel}>{tr.cards.menuLinkLabel}</AppText>
         <ExternalLink color={colors.primary} size={iconSize.xs} />
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }

@@ -61,6 +61,17 @@ for (const path of await collectFiles(sourceRoot)) {
     source,
   }));
   violations.push(...findScaleViolations(source, relativePath));
+
+  // One press primitive. 60 of 65 raw Pressables drew no pressed state at all,
+  // so half the app's controls gave no sign they had been touched.
+  const reactNativeImport = source.match(/import\s*\{([^}]*)\}\s*from\s*['"]react-native['"]/u);
+  if (
+    reactNativeImport &&
+    /(?:^|,)\s*Pressable\s*(?:,|$)/u.test(reactNativeImport[1]) &&
+    !normalizedPath.endsWith('/shared/components/ui/InstantPressable.tsx')
+  ) {
+    violations.push(`${relativePath} imports Pressable; use InstantPressable`);
+  }
 }
 
 // 807 hand-typed spacing values in 33 sizes, 280 icons in 17 sizes and 51

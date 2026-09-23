@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -38,6 +37,7 @@ import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/Repor
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
@@ -108,7 +108,7 @@ function CommentLikersModal({
         onAccessibilityEscape={onClose}
         style={[styles.sheetOverlay, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
       >
-        <Pressable accessible={false} style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View
           style={[
             styles.innerSheetCard,
@@ -446,7 +446,7 @@ export function CommentPanel({
             { paddingTop: overlayTopPadding, paddingBottom: modalBottomInset },
           ]}
         >
-          <Pressable accessible={false} style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+          <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFillObject} onPress={handleClose} />
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={[
@@ -546,7 +546,7 @@ export function CommentPanel({
                   }
                   ListFooterComponent={
                     hasNextPage ? (
-                        <Pressable
+                        <InstantPressable
                           accessibilityLabel={
                             isFetchingNextPage ? tr.common.loadingMore : tr.cards.loadMoreComments
                           }
@@ -563,7 +563,7 @@ export function CommentPanel({
                           <AppText style={styles.loadMoreLabel}>
                             {isFetchingNextPage ? tr.common.loadingMore : tr.cards.loadMoreComments}
                           </AppText>
-                        </Pressable>
+                        </InstantPressable>
                       ) : null
                   }
                 />

@@ -74,7 +74,8 @@ export function InstantPressable({
         return;
       }
 
-      event.persist?.();
+      // Programmatic presses (accessibility actions, tests) may carry no event.
+      event?.persist?.();
       triggerHapticFeedback(hapticFeedback);
       const result = onPress(event);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { ChevronRight, MapPin } from 'lucide-react-native';
 
 import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
@@ -20,6 +20,7 @@ import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/Mini
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { formatPlaceCardLocation } from '@/mobile/app/shared/utils/format';
@@ -231,7 +232,8 @@ export function PlaceCardFull({
 
       <View style={styles.content}>
         <View style={styles.contentTitleRow}>
-          <Pressable
+          <InstantPressable
+            disableFeedback
             accessibilityRole={onPlaceNamePress ? 'button' : undefined}
             disabled={!onPlaceNamePress}
             hitSlop={6}
@@ -270,7 +272,7 @@ export function PlaceCardFull({
                 </AppText>
               ) : null}
             </View>
-          </Pressable>
+          </InstantPressable>
         </View>
         {/* The address is the place name's own metadata, so it reads as a
             line under the name rather than a boxed bar above the map. */}

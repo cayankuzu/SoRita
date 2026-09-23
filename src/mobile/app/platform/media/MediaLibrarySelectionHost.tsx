@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  AppState,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { AppState, Modal, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
   resolveMediaLibrarySelection,
   useMediaLibrarySelectionState,
@@ -417,14 +410,14 @@ export function MediaLibrarySelectionHost() {
               },
             ]}
           >
-            <Pressable
+            <InstantPressable
               accessibilityRole="button"
               style={styles.footerSecondaryButton}
               onPress={() => resolveMediaLibrarySelection(null)}
             >
               <AppText style={styles.footerSecondaryButtonText}>{tr.common.cancel}</AppText>
-            </Pressable>
-            <Pressable
+            </InstantPressable>
+            <InstantPressable
               accessibilityRole="button"
               accessibilityState={{ disabled: selectedIds.length === 0 }}
               disabled={selectedIds.length === 0}
@@ -439,7 +432,7 @@ export function MediaLibrarySelectionHost() {
                   ? `${tr.placeEditor.add} (${selectedIds.length})`
                   : tr.placeEditor.add}
               </AppText>
-            </Pressable>
+            </InstantPressable>
           </View>
         </View>
       </View>

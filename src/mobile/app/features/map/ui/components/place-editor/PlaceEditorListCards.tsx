@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Globe, Info, Lock } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
@@ -12,6 +7,7 @@ import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { getCoverPhoto } from '@/mobile/app/shared/utils/format';
@@ -62,7 +58,7 @@ export function PlaceEditorListCards({
           const coverPhoto = getCoverPhoto(list);
 
           return (
-            <Pressable
+            <InstantPressable
               accessibilityLabel={`${list.name}. ${
                 list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList
               }`}
@@ -136,7 +132,7 @@ export function PlaceEditorListCards({
                   </View>
                 </View>
               </View>
-            </Pressable>
+            </InstantPressable>
           );
         })}
       </View>

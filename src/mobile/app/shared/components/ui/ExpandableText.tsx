@@ -3,7 +3,6 @@ import {
   LayoutChangeEvent,
   LayoutAnimation,
   NativeSyntheticEvent,
-  Pressable,
   StyleProp,
   StyleSheet,
   TextLayoutEventData,
@@ -15,6 +14,7 @@ import { ChevronRight } from 'lucide-react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { RichText } from '@/mobile/app/shared/components/ui/RichText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, minTouchSize, spacing, zIndex } from '@/mobile/app/shared/theme/tokens';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
@@ -163,7 +163,7 @@ export function ExpandableText({
         )
       ) : null}
 
-      <Pressable
+      <InstantPressable
         accessibilityRole={isExpandable && !usesRichText ? 'button' : undefined}
         accessibilityState={
           isExpandable && !usesRichText ? { expanded: resolvedExpanded } : undefined
@@ -218,7 +218,7 @@ export function ExpandableText({
 
           {isExpandable && showIndicator ? (
             usesRichText ? (
-              <Pressable
+              <InstantPressable
                 accessibilityLabel={
                   contentExpanded ? tr.common.collapseLink : tr.common.expandLink
                 }
@@ -232,7 +232,7 @@ export function ExpandableText({
                 style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
               >
                 <ChevronRight color={iconColor} size={iconSize.sm} />
-              </Pressable>
+              </InstantPressable>
             ) : (
               <View
                 accessible={false}
@@ -243,7 +243,7 @@ export function ExpandableText({
             )
           ) : null}
         </View>
-      </Pressable>
+      </InstantPressable>
     </View>
   );
 }

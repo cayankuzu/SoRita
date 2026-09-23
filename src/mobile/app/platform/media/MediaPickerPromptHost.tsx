@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Camera, Images, Video, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -173,7 +166,8 @@ export function MediaPickerPromptHost() {
         onAccessibilityEscape={() => resolveMediaPickerPrompt(null)}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable
+        <InstantPressable
+          disableFeedback
           accessible={false}
           style={StyleSheet.absoluteFillObject}
           onPress={() => resolveMediaPickerPrompt(null)}

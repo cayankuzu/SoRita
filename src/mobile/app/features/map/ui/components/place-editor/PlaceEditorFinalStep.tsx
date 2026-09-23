@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Camera,
   ImagePlus,
@@ -23,6 +18,7 @@ import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/co
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -108,7 +104,7 @@ function MediaThumb({
   const ignoreNextPressRef = React.useRef(false);
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityActions={[
         ...(onMoveEarlier
           ? [{ name: 'decrement' as const, label: tr.placeEditor.mediaMoveEarlier }]
@@ -160,7 +156,7 @@ function MediaThumb({
           <AppText style={styles.mediaOrderBadgeText}>{index + 1}</AppText>
         </View>
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -312,7 +308,7 @@ export function PlaceEditorFinalStep({
         </View>
 
         {media.length === 0 ? (
-          <Pressable
+          <InstantPressable
             accessibilityRole="button"
             style={[styles.mediaEmptyCard, isAddingMedia ? styles.mediaBusy : null]}
             onPress={() => {
@@ -335,7 +331,7 @@ export function PlaceEditorFinalStep({
                 {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.mediaAddAction}
               </AppText>
             </View>
-          </Pressable>
+          </InstantPressable>
         ) : (
           <View style={styles.mediaRail}>
             <ScrollView
@@ -368,7 +364,7 @@ export function PlaceEditorFinalStep({
               ))}
 
               {mediaCounts.total < MAX_PLACE_MEDIA_ITEMS ? (
-                <Pressable
+                <InstantPressable
                   accessibilityRole="button"
                   style={[styles.mediaAddTile, isAddingMedia ? styles.mediaBusy : null]}
                   onPress={() => {
@@ -383,7 +379,7 @@ export function PlaceEditorFinalStep({
                     {isAddingMedia ? tr.placeEditor.photoAddInProgress : tr.placeEditor.add}
                   </AppText>
                   <AppText style={styles.addMediaSubtext}>{tr.placeEditor.mediaAddTileSubtitle}</AppText>
-                </Pressable>
+                </InstantPressable>
               ) : null}
             </ScrollView>
           </View>

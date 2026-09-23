@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -43,11 +44,13 @@ export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
   );
 
   return (
-    <Pressable
+    <InstantPressable
       accessibilityLabel={isVideo ? tr.common.mediaVideo : tr.common.mediaPhoto}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: isSelected, disabled }}
       disabled={disabled}
+      // Tiles sit a few dp apart; slop would let a tap near an edge pick the neighbour.
+      hitSlop={0}
       onPress={handlePress}
       style={[
         styles.assetTile,
@@ -84,7 +87,7 @@ export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
           <AppText style={styles.disabledLabel}>{tr.mediaPicker.videoTooLongBadge}</AppText>
         </View>
       ) : null}
-    </Pressable>
+    </InstantPressable>
   );
 });
 

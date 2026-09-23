@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   RefreshControl,
   StyleSheet,
   TextInput,
@@ -21,6 +20,7 @@ import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
@@ -137,7 +137,8 @@ export function ProfileConnectionsModal({
         onAccessibilityEscape={onClose}
         style={[styles.overlay, { paddingTop, paddingBottom }]}
       >
-        <Pressable
+        <InstantPressable
+          disableFeedback
           accessible={false}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -166,7 +167,7 @@ export function ProfileConnectionsModal({
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
-              <Pressable
+              <InstantPressable
                 accessibilityLabel={`${item.name}, @${item.username}`}
                 accessibilityRole="button"
                 style={styles.userRow}
@@ -180,7 +181,7 @@ export function ProfileConnectionsModal({
                     <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.userBio} />
                   ) : null}
                 </View>
-              </Pressable>
+              </InstantPressable>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListHeaderComponent={

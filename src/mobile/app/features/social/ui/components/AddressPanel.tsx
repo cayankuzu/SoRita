@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
   ChevronRight,
@@ -9,6 +9,7 @@ import {
 import type { FeedActionLocation } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
@@ -70,7 +71,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
     <View style={styles.panel}>
       <AppText accessibilityRole="header" style={styles.panelTitle}>{location.name}</AppText>
       <View style={styles.addressCard}>
-        <Pressable
+        <InstantPressable
           accessibilityLabel={`${location.name}, ${addressText}`}
           accessibilityHint={tr.cards.openInMaps}
           accessibilityRole="link"
@@ -81,8 +82,8 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           <AppText numberOfLines={isAddressExpanded ? undefined : 1} style={styles.addressLinkText}>
             {addressText}
           </AppText>
-        </Pressable>
-        <Pressable
+        </InstantPressable>
+        <InstantPressable
           accessibilityRole="button"
           accessibilityLabel={
             isAddressExpanded
@@ -103,10 +104,10 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
           >
             <ChevronRight color={colors.primary} size={iconSize.sm} />
           </View>
-        </Pressable>
+        </InstantPressable>
       </View>
       <View style={styles.panelActions}>
-        <Pressable
+        <InstantPressable
           accessibilityLabel={tr.cards.copy}
           accessibilityRole="button"
           accessibilityState={{ busy: isCopying, disabled: isCopying }}
@@ -116,7 +117,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
         >
           <Copy color={colors.textMuted} size={iconSize.xs} />
           <AppText style={styles.secondaryPanelText}>{tr.cards.copy}</AppText>
-        </Pressable>
+        </InstantPressable>
       </View>
     </View>
   );
