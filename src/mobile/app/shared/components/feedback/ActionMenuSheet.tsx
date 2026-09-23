@@ -4,18 +4,17 @@ import {
   View,
 } from 'react-native';
 
-import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaffold';
+import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
-
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import {
   colors,
   fontWeight,
+  iconSize,
   minTouchSize,
-  radius,
   spacing,
-  typography,
+  textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 
 export type ActionMenuSheetItem = {
@@ -52,12 +51,11 @@ export function ActionMenuSheet({
       returnFocusRef={returnFocusRef}
       variant="sheet"
       dismissOnBackdropPress
-      style={styles.sheet}
       contentContainerStyle={styles.sheetContent}
     >
       <SheetHeader onClose={onClose} title={title} titleRef={titleRef} />
 
-      <View style={styles.actions}>
+      <View>
         {items.map((item) => {
           const toneColor = item.tone === 'danger' ? colors.danger : colors.text;
 
@@ -89,35 +87,26 @@ export function ActionMenuSheet({
 }
 
 const styles = StyleSheet.create({
-  sheet: {
-    maxWidth: 468,
-  },
   sheetContent: {
-    gap: spacing.md,
-  },
-  actions: {
     gap: spacing.sm,
   },
+  // Plain rows, like the people lists: the icon and label carry the row, and
+  // the press state marks it. Grey pill rows read as buttons stacked in a box.
   action: {
     minHeight: minTouchSize,
-    borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   actionIcon: {
-    width: 16,
+    width: iconSize.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionLabel: {
     flex: 1,
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
+    ...textStyle('bodyText', colors.text, fontWeight.medium),
   },
   actionLabelDanger: {
     color: colors.danger,
