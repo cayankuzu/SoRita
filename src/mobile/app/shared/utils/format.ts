@@ -146,6 +146,15 @@ function normalizeAddressSegment(segment: string) {
   return segment.trim().replace(/^\d{5}\s+/, '').replace(/\s+/g, ' ');
 }
 
+// A district or city name: letters, no digits, and not a street. Door numbers
+// such as "No:2/27" or "285/3H" carry a slash too, and once read as
+// "district/city" they printed "27 · Gençlik Mrk. Sk. No:2" on a card.
+const STREET_WORD = /(^|\s)(sk|sok|sokak|sokağı|cd|cad|cadde|caddesi|blv|bulvar|bulvarı|yolu)\.?(\s|$)/iu;
+
+function isPlaceName(value: string) {
+  return /\p{L}/u.test(value) && !/\d/u.test(value) && !STREET_WORD.test(value);
+}
+
 function parseDistrictCitySegment(segment: string) {
   const [locationPart] = segment.split(/\s*·\s*/, 1);
   const parts = locationPart
@@ -153,7 +162,7 @@ function parseDistrictCitySegment(segment: string) {
     .map(normalizeAddressSegment)
     .filter(Boolean);
 
-  if (parts.length !== 2) {
+  if (parts.length !== 2 || !parts.every(isPlaceName)) {
     return null;
   }
 
@@ -161,6 +170,11 @@ function parseDistrictCitySegment(segment: string) {
   return { city, district };
 }
 
+/**
+ * "City · District" from an address, e.g. "İstanbul · Kadıköy". Google writes
+ * the pair as "34710 Kadıköy/İstanbul" near the end, so it is looked for from
+ * the end; without it, the last place names in the address stand in.
+ */
 export function formatPlaceCardLocation(address?: string) {
   const segments = (address || '')
     .split(',')
@@ -174,20 +188,20 @@ export function formatPlaceCardLocation(address?: string) {
     segments.pop();
   }
 
-  if (segments.length === 0) {
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const districtCity = parseDistrictCitySegment(segments[index]);
+    if (districtCity) {
+      return `${districtCity.city} · ${districtCity.district}`;
+    }
+  }
+
+  const names = segments.filter(isPlaceName);
+  if (names.length === 0) {
     return null;
   }
 
-  const districtCity = segments
-    .map(parseDistrictCitySegment)
-    .find((location) => location !== null);
-
-  if (districtCity) {
-    return `${districtCity.city} · ${districtCity.district}`;
-  }
-
-  const city = segments[segments.length - 1];
-  const district = segments.length > 1 ? segments[segments.length - 2] : undefined;
+  const city = names[names.length - 1];
+  const district = names.length > 1 ? names[names.length - 2] : undefined;
 
   if (!district || district.toLocaleLowerCase('tr-TR') === city.toLocaleLowerCase('tr-TR')) {
     return city;

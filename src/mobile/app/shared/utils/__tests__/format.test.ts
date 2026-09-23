@@ -29,6 +29,26 @@ describe('place card location formatter', () => {
     ).toBe('İstanbul · Kadıköy');
   });
 
+  it('does not mistake a door number with a slash for district and city', () => {
+    expect(
+      formatPlaceCardLocation('Eskibağlar, Gençlik Mrk. Sk. No:2/27, 26000 Tepebaşı/Eskişehir, Türkiye'),
+    ).toBe('Eskişehir · Tepebaşı');
+    expect(
+      formatPlaceCardLocation('Karacaoğlan, Kemalpaşa Cd. 285/3H, 35070 Bornova/İzmir, Türkiye'),
+    ).toBe('İzmir · Bornova');
+    expect(
+      formatPlaceCardLocation(
+        'Caferağa, Nail Bey Sk. No: 15/A, 34710 Kadıköy, Caferağa, 34710 Kadıköy/İstanbul, Türkiye',
+      ),
+    ).toBe('İstanbul · Kadıköy');
+  });
+
+  it('shows the neighbourhood, never the street, when an address has no city', () => {
+    expect(formatPlaceCardLocation('Kadife Sokak No:18, Caferağa')).toBe('Caferağa');
+    expect(formatPlaceCardLocation('Bağdat Caddesi, Kadıköy')).toBe('Kadıköy');
+    expect(formatPlaceCardLocation('Lara Cd. No:78')).toBeNull();
+  });
+
   it('returns a single available location and hides empty values', () => {
     expect(formatPlaceCardLocation('Ankara')).toBe('Ankara');
     expect(formatPlaceCardLocation()).toBeNull();
