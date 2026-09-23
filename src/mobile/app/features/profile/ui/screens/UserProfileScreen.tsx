@@ -495,8 +495,7 @@ export function UserProfileScreen() {
     );
   };
 
-  const renderProfileHeader = () => (
-    <View>
+  const renderProfileHero = () => (
       <ProfileHero
         name={profileUser.name}
         username={profileUser.username}
@@ -532,7 +531,11 @@ export function UserProfileScreen() {
           />
         )}
       />
+  );
 
+  // Stays on screen when the hero scrolls away, so the tabs are always there.
+  const renderProfileStickyHeader = () => (
+    <View style={styles.stickyHeader}>
       <ProfileTabs
         activeTab={visibleTab}
         progressIndex={pagerProgress}
@@ -570,7 +573,8 @@ export function UserProfileScreen() {
                 emptyStateForTab={renderEmptyState}
                 enabled={pagerSwipeEnabled}
                 filteredLists={filteredLists}
-                header={renderProfileHeader()}
+                header={renderProfileHero()}
+                stickyHeader={renderProfileStickyHeader()}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 listRef={profileListRef}
@@ -763,6 +767,9 @@ export function UserProfileScreen() {
 const styles = StyleSheet.create({
   headerContent: {
     paddingTop: spacing.md,
+  },
+  stickyHeader: {
+    backgroundColor: colors.surface,
   },
   privateStateContent: {
     paddingTop: spacing.md,

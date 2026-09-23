@@ -91,7 +91,10 @@ type ProfileContentPagerProps = {
   emptyStateForTab: (tab: ProfileContentTab) => React.ReactElement;
   enabled?: boolean;
   filteredLists: PlaceList[];
+  // Collapses as the active list scrolls.
   header: React.ReactElement;
+  // Sits under the header and never scrolls away: the tab bar.
+  stickyHeader?: React.ReactElement;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   listRef?: React.RefObject<FlatList<ProfileGridItem> | null>;
@@ -110,6 +113,7 @@ type ProfileContentPagerProps = {
 
 type ProfileContentPageProps = {
   active: boolean;
+  collapseRange: number;
   data: ProfileGridItem[];
   emptyState: React.ReactElement;
   filteredLists: PlaceList[];
@@ -131,6 +135,7 @@ type ProfileContentPageProps = {
 
 const ProfileContentPage = React.memo(function ProfileContentPage({
   active,
+  collapseRange,
   data,
   emptyState,
   filteredLists,
@@ -237,6 +242,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
   );
   const contentHeightRef = React.useRef(0);
   const viewportHeightRef = React.useRef(0);
+  const [viewportHeight, setViewportHeight] = React.useState(0);
   const emitScrollBounds = React.useCallback(() => {
     if (contentHeightRef.current <= 0 || viewportHeightRef.current <= 0) {
       return;
@@ -257,6 +263,7 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
   const handlePageLayout = React.useCallback(
     (event: LayoutChangeEvent) => {
       viewportHeightRef.current = normalizeScrollMetric(event.nativeEvent.layout.height);
+      setViewportHeight(viewportHeightRef.current);
       emitScrollBounds();
     },
     [emitScrollBounds],
@@ -283,7 +290,13 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
         ListEmptyComponent={emptyState}
         ListFooterComponent={footer}
         ListHeaderComponent={headerSpacer}
-        contentContainerStyle={styles.gridContent}
+        // Tall enough to scroll the header fully away even when the tab holds
+        // a few items; otherwise switching to a short tab dragged the header
+        // back down and the screen jumped.
+        contentContainerStyle={[
+          styles.gridContent,
+          viewportHeight > 0 ? { minHeight: viewportHeight + collapseRange } : null,
+        ]}
         onContentSizeChange={handleContentSizeChange}
         onEndReached={active ? onEndReached : undefined}
         onRefresh={active ? onRefresh : undefined}
@@ -326,6 +339,7 @@ export function ProfileContentPager({
   enabled = true,
   filteredLists,
   header,
+  stickyHeader,
   hasNextPage,
   isFetchingNextPage,
   listRef,
@@ -349,6 +363,8 @@ export function ProfileContentPager({
   const listMaxOffsetsRef = React.useRef(new Map<ProfileContentTab, number>());
   const activeTabRef = React.useRef(activeTab);
   const headerHeightRef = React.useRef(0);
+  const collapsibleHeightRef = React.useRef(0);
+  const [collapsibleHeight, setCollapsibleHeight] = React.useState(0);
   const sharedHeaderOffsetRef = React.useRef(0);
   const sharedHeaderTranslateY = React.useRef(new Animated.Value(0)).current;
   const [headerHeight, setHeaderHeight] = React.useState(0);
@@ -375,6 +391,13 @@ export function ProfileContentPager({
       spacing['2xl'],
   );
   activeTabRef.current = activeTab;
+  const hasStickyHeader = Boolean(stickyHeader);
+  // How far the header may travel: all of it, or everything above the tabs.
+  const getCollapseRange = React.useCallback(
+    () => (hasStickyHeader ? collapsibleHeightRef.current : headerHeightRef.current),
+    [hasStickyHeader],
+  );
+  const collapseRange = hasStickyHeader ? collapsibleHeight : headerHeight;
 
   const syncListOffset = React.useCallback((tab: ProfileContentTab) => {
     const node = listNodesRef.current.get(tab);
@@ -384,7 +407,7 @@ export function ProfileContentPager({
 
     const targetOffset = listOffsetsRef.current.get(tab) ?? 0;
     const nextOffset = resolveProfileTabScrollSyncOffset({
-      headerHeight: headerHeightRef.current,
+      headerHeight: getCollapseRange(),
       sharedHeaderOffset: sharedHeaderOffsetRef.current,
       targetMaxOffset: listMaxOffsetsRef.current.get(tab),
       targetOffset,
@@ -399,7 +422,36 @@ export function ProfileContentPager({
       offset: nextOffset,
     });
     listOffsetsRef.current.set(tab, nextOffset);
-  }, []);
+  }, [getCollapseRange]);
+  const applySharedHeaderOffset = React.useCallback(
+    (nextSharedHeaderOffset: number) => {
+      if (Math.abs(nextSharedHeaderOffset - sharedHeaderOffsetRef.current) < 1) {
+        return;
+      }
+      sharedHeaderOffsetRef.current = nextSharedHeaderOffset;
+      sharedHeaderTranslateY.setValue(-nextSharedHeaderOffset);
+      // Move the other tabs with the header now, not when a swipe reaches
+      // them: a neighbour left behind showed its empty header spacer, grey,
+      // for the first frames of every swipe.
+      listNodesRef.current.forEach((_node, tab) => {
+        if (tab !== activeTabRef.current) {
+          syncListOffset(tab);
+        }
+      });
+    },
+    [sharedHeaderTranslateY, syncListOffset],
+  );
+  const handleCollapsibleLayout = React.useCallback(
+    (event: LayoutChangeEvent) => {
+      const nextHeight = normalizeScrollMetric(event.nativeEvent.layout.height);
+      if (nextHeight === 0 || Math.abs(nextHeight - collapsibleHeightRef.current) < 1) {
+        return;
+      }
+      collapsibleHeightRef.current = nextHeight;
+      setCollapsibleHeight(nextHeight);
+    },
+    [],
+  );
   const handleHeaderLayout = React.useCallback(
     (event: LayoutChangeEvent) => {
       const nextHeaderHeight = normalizeScrollMetric(event.nativeEvent.layout.height);
@@ -411,7 +463,7 @@ export function ProfileContentPager({
       setHeaderHeight(nextHeaderHeight);
       const nextSharedHeaderOffset = getProfileHeaderCollapseOffset(
         listOffsetsRef.current.get(activeTabRef.current) ?? 0,
-        nextHeaderHeight,
+        getCollapseRange(),
       );
       sharedHeaderOffsetRef.current = nextSharedHeaderOffset;
       sharedHeaderTranslateY.setValue(-nextSharedHeaderOffset);
@@ -422,7 +474,7 @@ export function ProfileContentPager({
         }
       });
     },
-    [sharedHeaderTranslateY, syncListOffset, tabKeys],
+    [getCollapseRange, sharedHeaderTranslateY, syncListOffset, tabKeys],
   );
   const handleListRef = React.useCallback(
     (tab: ProfileContentTab, node: FlatList<ProfileGridItem> | null) => {
@@ -445,15 +497,10 @@ export function ProfileContentPager({
       listOffsetsRef.current.set(tab, nextOffset);
 
       if (activeTabRef.current === tab) {
-        const nextSharedHeaderOffset = getProfileHeaderCollapseOffset(
-          nextOffset,
-          headerHeightRef.current,
-        );
-        sharedHeaderOffsetRef.current = nextSharedHeaderOffset;
-        sharedHeaderTranslateY.setValue(-nextSharedHeaderOffset);
+        applySharedHeaderOffset(getProfileHeaderCollapseOffset(nextOffset, getCollapseRange()));
       }
     },
-    [sharedHeaderTranslateY],
+    [applySharedHeaderOffset, getCollapseRange],
   );
   const handleScrollBoundsChange = React.useCallback(
     (tab: ProfileContentTab, maxOffset: number) => {
@@ -480,11 +527,11 @@ export function ProfileContentPager({
     syncListOffset(activeTab);
     const nextSharedHeaderOffset = getProfileHeaderCollapseOffset(
       listOffsetsRef.current.get(activeTab) ?? 0,
-      headerHeightRef.current,
+      getCollapseRange(),
     );
     sharedHeaderOffsetRef.current = nextSharedHeaderOffset;
     sharedHeaderTranslateY.setValue(-nextSharedHeaderOffset);
-  }, [activeTab, listRef, sharedHeaderTranslateY, syncListOffset]);
+  }, [activeTab, getCollapseRange, listRef, sharedHeaderTranslateY, syncListOffset]);
 
   React.useEffect(
     () => () => {
@@ -509,14 +556,17 @@ export function ProfileContentPager({
         ]}
         testID="profile-stationary-header"
       >
-        {header}
+        <View collapsable={false} onLayout={handleCollapsibleLayout}>
+          {header}
+        </View>
+        {stickyHeader}
       </Animated.View>
       {headerHeight > 0 ? (
         <SwipeableTabPager
           activeTab={activeTab}
           enabled={enabled && tabKeys.length > 1}
           getTabLabel={getTabLabel}
-          keepAlive={false}
+          keepAlive
           layoutMode="fill"
           lazy
           tabs={tabKeys}
@@ -526,6 +576,7 @@ export function ProfileContentPager({
           renderPage={(tab, _preview, active) => (
             <ProfileContentPage
               active={active}
+              collapseRange={collapseRange}
               data={shouldShowErrorState ? [] : dataByTab[tab]}
               emptyState={emptyStateForTab(tab)}
               filteredLists={filteredLists}
