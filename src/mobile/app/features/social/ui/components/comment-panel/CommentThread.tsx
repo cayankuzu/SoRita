@@ -111,7 +111,7 @@ export function CommentThread({
         <AvatarView
           uri={comment.userProfilePhoto}
           name={comment.userName}
-          size={isReply ? avatarSize.sm : avatarSize.md}
+          size={isReply ? avatarSize.xs : avatarSize.sm}
         />
       </CommentAuthorPressable>
 

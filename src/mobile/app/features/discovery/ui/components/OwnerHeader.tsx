@@ -27,7 +27,7 @@ export function OwnerHeader({ owner, onPress, onPressIn }: OwnerHeaderProps) {
       onPressIn={interactive ? onPressIn : undefined}
       style={styles.ownerHeader}
     >
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.xs} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.md} />
       <View style={styles.ownerBody}>
         <ExpandableText text={owner.name} collapsedLines={1} textStyle={styles.ownerName} showIndicator={false} />
         <ExpandableText

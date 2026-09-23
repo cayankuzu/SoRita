@@ -107,7 +107,7 @@ export const commentPanelStyles = StyleSheet.create({
   // Runs through the centre of the reply's own avatar, which sits on top of it.
   replyItemRail: {
     position: 'absolute',
-    left: (avatarSize.sm - 1) / 2,
+    left: (avatarSize.xs - 1) / 2,
     top: -spacing.sm,
     bottom: 0,
     width: 1,

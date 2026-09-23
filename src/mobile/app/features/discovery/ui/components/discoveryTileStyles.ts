@@ -46,7 +46,7 @@ export const discoveryTileStyles = StyleSheet.create({
     minHeight: minTouchSize,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.xs,
     paddingBottom: spacing.xs,

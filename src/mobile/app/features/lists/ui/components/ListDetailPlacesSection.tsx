@@ -47,7 +47,7 @@ export function ListDetailPlacesSection({
           onPress={onOpenOwnerProfile}
         >
           <View style={styles.ownerAvatarWrap}>
-            <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.sm} />
+            <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.md} />
           </View>
           <View style={styles.ownerBody}>
             <AppText style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</AppText>

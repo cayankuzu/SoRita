@@ -54,7 +54,7 @@ export function PlaceOwnerHeader({
       style={styles.userHeader}
       onPress={onPress}
     >
-      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.sm} />
+      <AvatarView uri={owner.profilePhoto} name={owner.name} size={avatarSize.md} />
       <View style={styles.userBody}>
         <AppText style={styles.userName}>{owner.name}</AppText>
         <AppText style={styles.userUsername}>@{owner.username}</AppText>
