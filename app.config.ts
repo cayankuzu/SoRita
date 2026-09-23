@@ -219,6 +219,33 @@ if (rawPosthogHost) {
   }
 }
 
+// The public website, which hosts the share handoff page and the auth
+// callbacks. Shared links point there, so they open as ordinary HTTPS links in
+// WhatsApp or Instagram even before the app has a verified app-link domain.
+const rawPublicWebUrl = process.env.EXPO_PUBLIC_AUTH_WEB_ORIGIN?.trim() ?? '';
+let publicWebUrl = '';
+
+if (rawPublicWebUrl) {
+  try {
+    const parsedPublicWebUrl = new URL(rawPublicWebUrl);
+    if (
+      parsedPublicWebUrl.protocol !== 'https:' ||
+      parsedPublicWebUrl.username ||
+      parsedPublicWebUrl.password ||
+      parsedPublicWebUrl.search ||
+      parsedPublicWebUrl.hash
+    ) {
+      throw new Error('unsafe_url');
+    }
+
+    publicWebUrl = `${parsedPublicWebUrl.origin}${parsedPublicWebUrl.pathname.replace(/\/+$/, '')}`;
+  } catch {
+    throw new Error(
+      'Invalid public website configuration: EXPO_PUBLIC_AUTH_WEB_ORIGIN must be an HTTPS URL without credentials, query, or fragment.',
+    );
+  }
+}
+
 const publicRuntimeConfig = {
   appLinkDomain,
   edgeApiUrl,
@@ -226,6 +253,7 @@ const publicRuntimeConfig = {
   releaseEnvironment,
   posthogHost,
   productAnalyticsEnabled,
+  publicWebUrl,
 };
 
 // Every shipped binary embeds this string, and an update reaches only the
@@ -488,6 +516,7 @@ const config: SoRitaExpoConfig = {
     posthogProjectApiKey,
     posthogHost: publicRuntimeConfig.posthogHost,
     productAnalyticsEnabled: publicRuntimeConfig.productAnalyticsEnabled,
+    publicWebUrl: publicRuntimeConfig.publicWebUrl,
     authRedirectPath: 'auth/callback',
     edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
     edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,

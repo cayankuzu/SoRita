@@ -1069,6 +1069,7 @@ export const tr = {
     reportSent: 'Bildiriminiz alındı',
     savedPlaceFallback: 'Kaydedilen mekân',
     share: 'Paylaş',
+    shareDescription: (title: string) => `${title} — SoRita'da keşfet`,
     showAddressAction: 'Adresi göster',
     studentDiscount: 'Öğrenci dostu',
     unlikeAction: 'Beğeniyi kaldır',

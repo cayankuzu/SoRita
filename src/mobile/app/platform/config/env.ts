@@ -34,6 +34,7 @@ type ExpoExtraConfig = {
   edgeApiUrl?: string;
   edgeCutoverMode?: string;
   releaseEnvironment?: string;
+  publicWebUrl?: string;
 };
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as ExpoExtraConfig;
@@ -45,6 +46,7 @@ const publicRuntimeConfigResult = publicRuntimeConfigSchema.safeParse({
   releaseEnvironment: expoExtra.releaseEnvironment,
   posthogHost: expoExtra.posthogHost,
   productAnalyticsEnabled: expoExtra.productAnalyticsEnabled,
+  publicWebUrl: expoExtra.publicWebUrl,
 });
 const publicRuntimeConfig = publicRuntimeConfigResult.success
   ? publicRuntimeConfigResult.data
@@ -55,6 +57,7 @@ const publicRuntimeConfig = publicRuntimeConfigResult.success
       releaseEnvironment: 'development' as const,
       posthogHost: '',
       productAnalyticsEnabled: false,
+      publicWebUrl: '',
     };
 const missingRequiredStartupEnvVars = [
   !expoExtra.supabaseUrl ? 'EXPO_PUBLIC_SUPABASE_URL' : null,
@@ -123,6 +126,7 @@ export const env = {
   posthogProjectApiKey: expoExtra.posthogProjectApiKey?.trim() ?? '',
   posthogHost: publicRuntimeConfig.posthogHost,
   productAnalyticsEnabled: publicRuntimeConfig.productAnalyticsEnabled,
+  publicWebUrl: publicRuntimeConfig.publicWebUrl,
   edgeApiUrl: publicRuntimeConfig.edgeApiUrl,
   edgeConfigValid: publicRuntimeConfigResult.success,
   edgeCutoverMode: publicRuntimeConfig.edgeCutoverMode,

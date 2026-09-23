@@ -14,6 +14,7 @@ describe('publicRuntimeConfigSchema', () => {
       releaseEnvironment: 'development',
       posthogHost: '',
       productAnalyticsEnabled: false,
+      publicWebUrl: '',
     });
   });
 
@@ -30,7 +31,30 @@ describe('publicRuntimeConfigSchema', () => {
       releaseEnvironment: 'preview',
       posthogHost: '',
       productAnalyticsEnabled: false,
+      publicWebUrl: '',
     });
+  });
+
+  it('keeps the public website path, as a GitHub Pages site needs', () => {
+    expect(publicRuntimeConfigSchema.parse({
+      publicWebUrl: ' https://cayankuzu.github.io/SoRita_web/ ',
+    }).publicWebUrl).toBe('https://cayankuzu.github.io/SoRita_web');
+  });
+
+  it.each([
+    'http://cayankuzu.github.io/SoRita_web',
+    'https://user:password@cayankuzu.github.io/SoRita_web',
+    'https://cayankuzu.github.io/SoRita_web?ref=app',
+    'https://cayankuzu.github.io/SoRita_web#top',
+    'not-a-url',
+  ])('rejects an unsafe public website URL: %s', (publicWebUrl) => {
+    const result = publicRuntimeConfigSchema.safeParse({ publicWebUrl });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(getPublicRuntimeConfigIssueEnvNames(result.error)).toEqual([
+        'EXPO_PUBLIC_AUTH_WEB_ORIGIN',
+      ]);
+    }
   });
 
   it('accepts the explicit product analytics runtime settings', () => {

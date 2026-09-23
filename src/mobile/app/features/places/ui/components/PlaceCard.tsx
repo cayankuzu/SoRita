@@ -26,7 +26,7 @@ import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMi
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
 import { buildListContentUrl } from '@/mobile/app/shared/utils/contentLinks';
-import { formatPrice } from '@/mobile/app/shared/utils/format';
+import { formatPlaceCardLocation, formatPrice } from '@/mobile/app/shared/utils/format';
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -182,6 +182,13 @@ function PlaceCardComponent({
 
   const priceLabel = formatPrice(place) ?? undefined;
   const shareUrl = useMemo(() => buildListContentUrl(listId, place.id), [listId, place.id]);
+  const shareDescription = useMemo(
+    () =>
+      tr.cards.shareDescription(
+        [place.name, formatPlaceCardLocation(place.address)].filter(Boolean).join(' · '),
+      ),
+    [place.address, place.name],
+  );
 
   const mapMarkers = useMemo(
     () => [
@@ -431,7 +438,7 @@ function PlaceCardComponent({
 
     try {
       const { shareExternalUrl } = await import('@/mobile/app/platform/sharing/shareExternalUrl');
-      const result = await shareExternalUrl(shareUrl);
+      const result = await shareExternalUrl(shareUrl, shareDescription);
 
       if (!result.ok) {
         showToast(result.message || tr.map.savePlaceUnexpected, 'error');

@@ -40,6 +40,30 @@ const optionalHttpsBaseUrl = trimmedString
   }, 'Edge API URL must be an HTTPS origin without credentials, path, query, or fragment.')
   .transform((value) => (value ? new URL(value).origin : value));
 
+// A page address, so unlike the origins above it may carry a path, as a
+// GitHub Pages site does. Stored without a trailing slash.
+const optionalHttpsPageUrl = trimmedString
+  .refine((value) => {
+    if (!value) {
+      return true;
+    }
+
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash;
+    } catch {
+      return false;
+    }
+  }, 'Public website URL must be an HTTPS URL without credentials, query, or fragment.')
+  .transform((value) => {
+    if (!value) {
+      return value;
+    }
+
+    const url = new URL(value);
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+  });
+
 const optionalAppLinkDomain = z.preprocess(
   (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value),
   z
@@ -93,6 +117,7 @@ export const publicRuntimeConfigSchema = z
     ),
     productAnalyticsEnabled: optionalBoolean,
     posthogHost: optionalHttpsBaseUrl.default(''),
+    publicWebUrl: optionalHttpsPageUrl.default(''),
   })
   .superRefine((value, context) => {
     if (value.edgeCutoverMode === 'gateway' && !value.edgeApiUrl) {
@@ -126,6 +151,9 @@ export function getPublicRuntimeConfigIssueEnvNames(error: z.ZodError) {
         break;
       case 'posthogHost':
         names.add('EXPO_PUBLIC_POSTHOG_HOST');
+        break;
+      case 'publicWebUrl':
+        names.add('EXPO_PUBLIC_AUTH_WEB_ORIGIN');
         break;
       default:
         names.add('EXPO_PUBLIC_RUNTIME_CONFIG');

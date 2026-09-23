@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const envMock = vi.hoisted(() => ({
   appLinkDomain: '',
   appScheme: 'sorita',
+  publicWebUrl: '',
 }));
 
 vi.mock('@/mobile/app/platform/config/env', () => ({
@@ -15,6 +16,7 @@ describe('contentLinks', () => {
   beforeEach(() => {
     envMock.appLinkDomain = '';
     envMock.appScheme = 'sorita';
+    envMock.publicWebUrl = '';
   });
 
   it('builds the app root url from the configured mobile scheme', () => {
@@ -37,7 +39,20 @@ describe('contentLinks', () => {
     );
   });
 
+  it('shares a clickable link to the website handoff page before app links exist', () => {
+    envMock.publicWebUrl = 'https://cayankuzu.github.io/SoRita_web';
+
+    expect(buildDownloadUrl()).toBe('https://cayankuzu.github.io/SoRita_web/download/');
+    expect(buildListContentUrl('list-42', 'place-7')).toBe(
+      'https://cayankuzu.github.io/SoRita_web/lists/?listId=list-42&placeId=place-7',
+    );
+    expect(buildListContentUrl('list 42')).toBe(
+      'https://cayankuzu.github.io/SoRita_web/lists/?listId=list%2042',
+    );
+  });
+
   it('prefers the configured canonical HTTPS host for shared content', () => {
+    envMock.publicWebUrl = 'https://cayankuzu.github.io/SoRita_web';
     envMock.appLinkDomain = 'links.example.com';
 
     expect(buildDownloadUrl()).toBe('https://links.example.com');
