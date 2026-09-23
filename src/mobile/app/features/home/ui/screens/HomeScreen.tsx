@@ -4,17 +4,22 @@ import { MapPin, Users } from 'lucide-react-native';
 import {
   ActivityIndicator,
   FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import { AppHeader } from '@/mobile/app/app-shell/chrome/AppHeader';
 import { useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useHomeFeedScreenState } from '@/mobile/app/features/home/application/useHomeFeedScreenState';
 import { createFeedVisibilityStore } from '@/mobile/app/features/home/application/feedVisibilityStore';
 import { HomeFeedCardRow } from '@/mobile/app/features/home/ui/components/HomeFeedCardRow';
 import { trackEvent } from '@/mobile/app/platform/analytics/analyticsEvents';
+import { ScrollAwayHeader } from '@/mobile/app/shared/components/navigation/ScrollAwayHeader';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
@@ -41,6 +46,7 @@ import {
 } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
+import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
 
 function getFeedMediaPreviewUris(item: PlaceFeedCardItem) {
@@ -79,6 +85,17 @@ function requestNextPage(pagination: PaginationState) {
 export function HomeScreen() {
   const navigation = useAppNavigation();
   const { height, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // The brand bar slides away while reading down the feed and returns on the
+  // first scroll up; the status bar strip under it stays.
+  const topBar = useScrollAwayHeader({ pinnedHeight: insets.top });
+  const trackTopBarScroll = topBar.onScrollOffset;
+  const handleFeedScroll = React.useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      trackTopBarScroll(event.nativeEvent.contentOffset.y);
+    },
+    [trackTopBarScroll],
+  );
   const { user } = useAuth();
   const userId = user?.id;
   const listRef = React.useRef<FlatList<PlaceFeedCardItem> | null>(null);
@@ -261,6 +278,7 @@ export function HomeScreen() {
   if (!user || isInitialLoading) {
     return (
       <Screen safeTop={false} scroll={false} variant="feed">
+        <AppHeader />
         <SkeletonGroup style={styles.skeletonWrap}>
           <PlaceCardSkeleton />
           <PlaceCardSkeleton />
@@ -273,6 +291,7 @@ export function HomeScreen() {
   if (errorMessage && feedItems.length === 0) {
     return (
       <Screen safeTop={false} variant="feed">
+        <AppHeader />
         <EmptyState
           icon={<MapPin color={colors.danger} size={iconSize.xl} />}
           title={tr.home.errorTitle}
@@ -333,18 +352,24 @@ export function HomeScreen() {
         keyExtractor={(item) => item.key}
         renderItem={renderFeedItem}
         ListHeaderComponent={
-          hasPartialDataError && feedItems.length > 0 ? (
-            <View style={styles.partialDataNotice}>
-              <InlineNotice
-                tone="warning"
-                title={tr.home.partialDataTitle}
-                description={tr.home.partialDataDescription}
-                actionLabel={tr.home.partialDataRetry}
-                onAction={retry}
-              />
-            </View>
-          ) : null
+          <>
+            <View pointerEvents="none" style={{ height: topBar.height }} />
+            {hasPartialDataError && feedItems.length > 0 ? (
+              <View style={styles.partialDataNotice}>
+                <InlineNotice
+                  tone="warning"
+                  title={tr.home.partialDataTitle}
+                  description={tr.home.partialDataDescription}
+                  actionLabel={tr.home.partialDataRetry}
+                  onAction={retry}
+                />
+              </View>
+            ) : null}
+          </>
         }
+        onScroll={handleFeedScroll}
+        scrollEventThrottle={16}
+        progressViewOffset={topBar.height}
         ListEmptyComponent={renderEmptyState}
         contentContainerStyle={[
           styles.feedListContent,
@@ -372,6 +397,9 @@ export function HomeScreen() {
           ) : null
         }
       />
+      <ScrollAwayHeader controller={topBar} testID="home-top-bar">
+        <AppHeader />
+      </ScrollAwayHeader>
     </Screen>
   );
 }

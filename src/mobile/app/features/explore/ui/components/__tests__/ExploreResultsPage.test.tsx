@@ -27,7 +27,6 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     following: [],
     hasNextPage: true,
     isFetchingNextPage: false,
-    listMarkerLists: [],
     listRef,
     onClearSearch: vi.fn(),
     onContentReady: vi.fn(),
@@ -45,6 +44,7 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     refreshing: false,
     searchQuery: '',
     tab: 'lists' as const,
+    topInset: 148,
   };
 }
 
@@ -70,7 +70,9 @@ describe('ExploreResultsPage', () => {
     );
     expect(lists[0]?.props.listRef).toBe(activeRef);
     expect(lists[1]?.props.listRef).toBe(backgroundRef);
-    expect(lists[0]?.props.ListHeaderComponent).toBeUndefined();
+    // The first rows start below the browse header that floats over them.
+    expect(lists[0]?.props.ListHeaderComponent.props.style).toEqual({ height: 148 });
+    expect(lists[0]?.props.progressViewOffset).toBe(148);
     expect(lists[0]?.props.onEndReached).toBe(activeProps.onEndReached);
     expect(lists[1]?.props.onEndReached).toBeUndefined();
     // A background page keeps its refresh handler, so the swipe that brings it

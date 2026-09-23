@@ -33,6 +33,7 @@ import {
   MosaicGridSkeleton,
 } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -111,6 +112,10 @@ export function ExploreScreen() {
   const [visibleTab, setVisibleTab] = useState<ExploreTabType>('lists');
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<ExploreFeedMode | null>(null);
+  const browseHeader = useScrollAwayHeader();
+  const revealBrowseHeader = browseHeader.reveal;
+  const activeTabRef = React.useRef(activeTab);
+  activeTabRef.current = activeTab;
   const {
     getTabScrollRef,
     getTabScrollRefCallback,
@@ -154,7 +159,9 @@ export function ExploreScreen() {
   useEffect(() => {
     activeListRef.current = getTabScrollRef(activeTab) as FlatList<ExploreGridItem> | null;
     restoreTabScrollOffset(activeTab);
-  }, [activeTab, getTabScrollRef, restoreTabScrollOffset]);
+    // A new tab starts with the search and tabs in view.
+    revealBrowseHeader();
+  }, [activeTab, getTabScrollRef, restoreTabScrollOffset, revealBrowseHeader]);
   const dataByTab = useMemo(
     () => ({
       lists: filteredListItems,
@@ -291,6 +298,7 @@ export function ExploreScreen() {
   return (
     <Screen safeTop={false} padded={false} scroll={false}>
       <ExplorePagerLayout
+        headerController={browseHeader}
         header={
           <ExploreBrowseHeader
             activeTab={visibleTab}
@@ -350,13 +358,17 @@ export function ExploreScreen() {
                   }
                   onRefresh={onRefresh}
                   onRetry={retry}
-                  onScrollOffsetChange={(offset) =>
-                    recordTabScrollOffset(tab, offset)
-                  }
+                  onScrollOffsetChange={(offset) => {
+                    recordTabScrollOffset(tab, offset);
+                    if (tab === activeTabRef.current) {
+                      browseHeader.onScrollOffset(offset);
+                    }
+                  }}
                   pendingFollowRequests={pendingFollowRequests}
                   refreshing={refreshing}
                   searchQuery={debouncedSearchQuery}
                   tab={tab}
+                  topInset={browseHeader.height}
                 />
               );
             }}

@@ -211,7 +211,8 @@ export function MainTabs() {
         name="Home"
         component={HomeRouteScreen}
         listeners={tabListeners.Home}
-        options={{ header: renderAppHeader }}
+        // The feed draws its own bar so it can slide away while scrolling.
+        options={{ headerShown: false }}
       />
       <Tabs.Screen
         name="Map"

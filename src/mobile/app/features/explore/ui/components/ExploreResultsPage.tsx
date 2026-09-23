@@ -52,6 +52,8 @@ type ExploreResultsPageProps = {
   refreshing: boolean;
   searchQuery: string;
   tab: ExploreTabType;
+  // Room kept at the top for the header that floats over the results.
+  topInset: number;
 };
 
 function ExplorePageEmptyState({
@@ -240,7 +242,12 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   refreshing,
   searchQuery,
   tab,
+  topInset,
 }: ExploreResultsPageProps) {
+  const topSpacer = React.useMemo(
+    () => <View pointerEvents="none" style={{ height: topInset }} />,
+    [topInset],
+  );
   const followingSet = React.useMemo(() => new Set(following), [following]);
   const pendingFollowRequestSet = React.useMemo(
     () => new Set(pendingFollowRequests),
@@ -319,6 +326,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
       extraData={listState}
       containsNativeMaps={tab !== 'people'}
       refreshing={active && refreshing}
+      progressViewOffset={topInset}
+      ListHeaderComponent={topSpacer}
       scrollEnabled={active}
       // Set on every page: toggling it with the active tab rebuilt the list on
       // Android, blanking the page for a frame on every swipe.

@@ -27,6 +27,14 @@ vi.mock('lucide-react-native', () => ({
   Users: () => null,
 }));
 
+vi.mock('@/mobile/app/app-shell/chrome/AppHeader', () => ({
+  AppHeader: () => React.createElement('AppHeader'),
+}));
+
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ bottom: 0, left: 0, right: 0, top: 24 }),
+}));
+
 vi.mock('@/mobile/app/app-shell/auth/AuthSessionProvider', () => ({
   useAuth: useAuthMock,
 }));
@@ -236,8 +244,14 @@ describe('HomeScreen', () => {
     const list = renderer.root.find(
       (node) => String(node.type) === 'FlatList',
     );
-    const notice = list.props.ListHeaderComponent.props.children;
+    // The header holds the floating bar's spacer, then the notice.
+    let listHeader!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      listHeader = TestRenderer.create(list.props.ListHeaderComponent);
+    });
+    const notice = listHeader.root.find((node) => String(node.type) === 'InlineNotice');
     expect(notice.props.onAction).toBe(retryMock);
+    expect(list.props.onScroll).toEqual(expect.any(Function));
     expect(list.props.accessibilityState).toEqual({ busy: true });
     expect(list.props.ListFooterComponent.props.accessibilityLiveRegion).toBe('polite');
     expect(list.props.ListFooterComponent.props.accessibilityState).toEqual({ busy: true });
