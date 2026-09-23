@@ -83,6 +83,13 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   const pendingAnchorIndexRef = React.useRef<number | null>(null);
   const previousColumnCountRef = React.useRef(columnCount);
   const internalListRef = React.useRef<FlatList<ItemT> | null>(null);
+  // Read through refs so the list's ref callback keeps one identity. A new
+  // callback on every page of results made React detach and reattach the
+  // same list each time, and owners read that as a new list.
+  const columnCountRef = React.useRef(columnCount);
+  const dataLengthRef = React.useRef(data.length);
+  columnCountRef.current = columnCount;
+  dataLengthRef.current = data.length;
   const viewabilityConfig = React.useRef({ itemVisiblePercentThreshold: 20 }).current;
 
   if (previousColumnCountRef.current !== columnCount) {
@@ -142,16 +149,17 @@ export function VirtualizedDiscoveryGrid<ItemT>({
         return;
       }
 
-      const anchorIndex = Math.floor(pendingAnchorIndexRef.current / columnCount) * columnCount;
+      const anchorIndex =
+        Math.floor(pendingAnchorIndexRef.current / columnCountRef.current) * columnCountRef.current;
       pendingAnchorIndexRef.current = null;
       requestAnimationFrame(() => {
         node.scrollToIndex({
           animated: false,
-          index: Math.min(anchorIndex, Math.max(data.length - 1, 0)),
+          index: Math.min(anchorIndex, Math.max(dataLengthRef.current - 1, 0)),
         });
       });
     },
-    [columnCount, data.length, listRef],
+    [listRef],
   );
   const handleScrollToIndexFailed = React.useCallback(
     ({ averageItemLength, index }: { averageItemLength: number; index: number }) => {

@@ -362,6 +362,11 @@ export function ProfileContentPager({
   const listNodesRef = React.useRef(
     new Map<ProfileContentTab, FlatList<ProfileGridItem>>(),
   );
+  // The last list each tab attached, kept across a detach so reattaching the
+  // same list is not mistaken for a new one.
+  const lastListNodesRef = React.useRef(
+    new Map<ProfileContentTab, FlatList<ProfileGridItem>>(),
+  );
   const listOffsetsRef = React.useRef(new Map<ProfileContentTab, number>());
   const listMaxOffsetsRef = React.useRef(new Map<ProfileContentTab, number>());
   const activeTabRef = React.useRef(activeTab);
@@ -485,10 +490,13 @@ export function ProfileContentPager({
   const handleListRef = React.useCallback(
     (tab: ProfileContentTab, node: FlatList<ProfileGridItem> | null) => {
       if (node) {
-        // A new list instance starts at the top. The grid remounts when its
-        // column count settles, and the old instance's offset left behind
-        // here made every sync believe the new one was already in place.
-        listOffsetsRef.current.set(tab, 0);
+        // A new list starts at the top: the grid remounts when its column
+        // count changes, as when a foldable opens, and the old list's offset
+        // left behind made every sync believe the new one was in place.
+        if (lastListNodesRef.current.get(tab) !== node) {
+          listOffsetsRef.current.set(tab, 0);
+          lastListNodesRef.current.set(tab, node);
+        }
         listNodesRef.current.set(tab, node);
         syncListOffset(tab);
       } else {
@@ -549,6 +557,7 @@ export function ProfileContentPager({
         listRef.current = null;
       }
       listNodesRef.current.clear();
+      lastListNodesRef.current.clear();
       listOffsetsRef.current.clear();
       listMaxOffsetsRef.current.clear();
     },

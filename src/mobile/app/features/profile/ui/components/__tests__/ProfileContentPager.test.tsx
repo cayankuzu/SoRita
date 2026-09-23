@@ -346,6 +346,75 @@ describe('ProfileContentPager', () => {
     });
   });
 
+  it('keeps a tab scrolled when its list is reattached, and resets it for a new list', () => {
+    const renderPager = (activeTab: 'lists' | 'places') => (
+      <ProfileContentPager
+        activeTab={activeTab}
+        dataByTab={{ gallery: [], lists: [], places: [] }}
+        emptyStateForTab={() => <></>}
+        filteredLists={[]}
+        header={React.createElement('ProfileHeader')}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        onListPress={vi.fn()}
+        onPageProgressChange={vi.fn()}
+        onPlacePress={vi.fn()}
+        onTabChange={vi.fn()}
+        onTabPreviewChange={vi.fn()}
+        shouldShowErrorState={false}
+        tabs={[
+          { key: 'lists', label: 'Listeler' },
+          { key: 'places', label: 'Mekânlar' },
+        ]}
+      />
+    );
+    const headerOffset = () =>
+      Number(
+        renderer.root.findByProps({ testID: 'profile-stationary-header' }).props.style[1]
+          .transform[0].translateY,
+      );
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderPager('lists'));
+    });
+    act(() => {
+      renderer.root.findByProps({ testID: 'profile-stationary-header' }).props.onLayout({
+        nativeEvent: { layout: { height: 236 } },
+      });
+    });
+    const grid = renderer.root.find((node) => String(node.type) === 'VirtualizedDiscoveryGrid');
+    const listNode = { scrollToOffset: vi.fn() };
+
+    act(() => {
+      grid.props.listRef(listNode);
+      grid.props.onScrollOffsetChange(500);
+    });
+    expect(headerOffset()).toBe(-236);
+
+    // React detaches and reattaches the same list when its ref callback
+    // changes; the tab is still scrolled, so its header stays collapsed.
+    act(() => {
+      grid.props.listRef(null);
+      grid.props.listRef(listNode);
+    });
+    act(() => renderer.update(renderPager('places')));
+    act(() => renderer.update(renderPager('lists')));
+    expect(headerOffset()).toBe(-236);
+
+    // A different list is a fresh one, at its top.
+    act(() => {
+      renderer.root
+        .find((node) => String(node.type) === 'VirtualizedDiscoveryGrid')
+        .props.listRef({ scrollToOffset: vi.fn() });
+    });
+    act(() => renderer.update(renderPager('places')));
+    act(() => renderer.update(renderPager('lists')));
+    expect(headerOffset()).toBe(-0);
+
+    act(() => renderer.unmount());
+  });
+
   it('syncs only the shared header collapse without copying a deep content offset', () => {
     const headerHeight = 236;
     const sourceOffset = 1_480;
