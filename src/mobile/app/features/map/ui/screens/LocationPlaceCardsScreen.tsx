@@ -18,7 +18,7 @@ import {
 import { useLocationPlaceCardsQuery } from '@/mobile/app/data/hooks/useLocationPlaceCardsQuery';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
@@ -27,11 +27,9 @@ import { PlaceCardSkeleton, SkeletonGroup } from '@/mobile/app/shared/components
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
-  fontWeight,
   iconSize,
   radius,
   spacing,
-  textStyle,
   zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 import { formatLocationPlaceCardsCount } from '@/mobile/app/shared/utils/format';
@@ -185,9 +183,9 @@ export function LocationPlaceCardsScreen() {
                     accessibilityLabel={tr.map.selectedPlaceCard}
                     accessibilityLiveRegion="polite"
                     accessibilityState={{ selected: true }}
-                    style={styles.highlightPill}
+                    style={styles.highlightBadge}
                   >
-                    <AppText style={styles.highlightPillText}>{tr.map.selectedPlaceCard}</AppText>
+                    <Badge label={tr.map.selectedPlaceCard} tone="primary" />
                   </View>
                 ) : null}
 
@@ -261,15 +259,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
   },
-  highlightPill: {
+  highlightBadge: {
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
     zIndex: zIndex.overlay,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   },
-  highlightPillText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

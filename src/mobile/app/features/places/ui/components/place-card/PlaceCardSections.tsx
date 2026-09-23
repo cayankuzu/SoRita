@@ -23,18 +23,16 @@ import {
 } from 'lucide-react-native';
 
 import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
-import {
-  TAG_CHIP_HEIGHT,
-  placeCardStyles as styles,
-} from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
+import { placeCardStyles as styles } from '@/mobile/app/features/places/ui/components/place-card/placeCardStyles';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { avatarSize, colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, colors, controlSize, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { categoryMeta } from '@/mobile/app/shared/utils/format';
 
 export function PlaceOwnerHeader({
@@ -300,25 +298,17 @@ export function PlaceCardTags({
 
   if (place.rating) {
     summaryItems.push(
-      <View key="rating" style={[styles.badge, styles.ratingBadge]}>
-        <Star size={iconSize.xs} color={colors.rating} fill={colors.rating} />
-        <AppText style={[styles.badgeText, styles.ratingBadgeText]}>{place.rating}/5</AppText>
-      </View>,
+      <Badge key="rating" icon={Star} iconFilled label={`${place.rating}/5`} numeric tone="warning" />,
     );
   }
   if (place.studentDiscount) {
     summaryItems.push(
-      <View key="student" style={[styles.badge, styles.studentBadge]}>
-        <GraduationCap size={iconSize.xs} color={colors.primary} />
-        <AppText style={[styles.badgeText, styles.studentBadgeText]}>
-          {tr.cards.studentDiscount}
-        </AppText>
-      </View>,
+      <Badge key="student" icon={GraduationCap} label={tr.cards.studentDiscount} tone="primary" />,
     );
   }
   if (priceLabel) {
     summaryItems.push(
-      <View key="price" style={styles.badge}><AppText style={styles.badgeText}>{priceLabel}</AppText></View>,
+      <Badge key="price" label={priceLabel} numeric />,
     );
   }
 
@@ -326,11 +316,10 @@ export function PlaceCardTags({
   if (summaryCategory) {
     const meta = categoryMeta[summaryCategory] || categoryMeta.other;
     summaryItems.push(
-      <View key={`category-${summaryCategory}`} style={styles.badge}>
-        <AppText style={styles.badgeText}>
-          {meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
-        </AppText>
-      </View>,
+      <Badge
+        key={`category-${summaryCategory}`}
+        label={meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
+      />,
     );
   }
 
@@ -352,7 +341,7 @@ export function PlaceCardTags({
         <InstantPressable
           accessibilityRole="button"
           accessibilityState={{ expanded: showDetails }}
-          hitSlop={hitSlopFor(TAG_CHIP_HEIGHT)}
+          hitSlop={hitSlopFor(controlSize.badge)}
           onPress={() => setShowDetails((current) => !current)}
           style={styles.moreFeaturesButton}
         >
@@ -373,11 +362,7 @@ export function PlaceCardTags({
           {detailCategories.map((category) => {
             const meta = categoryMeta[category] || categoryMeta.other;
             return (
-              <View key={category} style={styles.badge}>
-                <AppText style={styles.badgeText}>
-                  {meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label}
-                </AppText>
-              </View>
+              <Badge key={category} label={meta.emoji ? `${meta.emoji} ${meta.label}` : meta.label} />
             );
           })}
         </BadgeRow>
@@ -387,9 +372,7 @@ export function PlaceCardTags({
         <BadgeRow>
           <View style={styles.inlineIcon}><Leaf size={iconSize.xs} color={colors.secondary} /></View>
           {dietaryOptions.map((item) => (
-            <View key={item} style={[styles.badge, styles.greenBadge]}>
-              <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>
-            </View>
+            <Badge key={item} label={item} tone="success" />
           ))}
         </BadgeRow>
       ) : null}
@@ -398,7 +381,7 @@ export function PlaceCardTags({
         <BadgeRow>
           <View style={styles.inlineIcon}><Clock size={iconSize.xs} color={colors.textSoft} /></View>
           {bestTimes.map((item) => (
-            <View key={item} style={styles.badge}><AppText style={styles.badgeText}>{item}</AppText></View>
+            <Badge key={item} label={item} />
           ))}
         </BadgeRow>
       ) : null}
@@ -407,9 +390,7 @@ export function PlaceCardTags({
         <BadgeRow>
           <View style={styles.inlineIcon}><Sparkles size={iconSize.xs} color={colors.purple} /></View>
           {place.atmosphere.map((item) => (
-            <View key={item} style={[styles.badge, styles.purpleBadge]}>
-              <AppText style={[styles.badgeText, styles.purpleBadgeText]}>{item}</AppText>
-            </View>
+            <Badge key={item} label={item} tone="quote" />
           ))}
         </BadgeRow>
       ) : null}
@@ -418,9 +399,7 @@ export function PlaceCardTags({
         <BadgeRow>
           <View style={styles.inlineIcon}><Star size={iconSize.xs} color={colors.secondary} /></View>
           {specialFeatures.map((item) => (
-            <View key={item} style={[styles.badge, styles.greenBadge]}>
-              <AppText style={[styles.badgeText, styles.greenBadgeText]}>{item}</AppText>
-            </View>
+            <Badge key={item} label={item} tone="success" />
           ))}
         </BadgeRow>
       ) : null}

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Crosshair, Ellipsis, Globe, Heart, Lock } from 'lucide-react-native';
 
 import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
-import { ListCoverFallback } from '@/mobile/app/features/discovery/ui/components/ListCoverFallback';
+import { ListCoverFallback } from '@/mobile/app/shared/components/media/ListCoverFallback';
 import { OwnerHeader } from '@/mobile/app/features/discovery/ui/components/OwnerHeader';
 import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
 import type { ActionMenuSheetItem } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
@@ -13,6 +13,7 @@ import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPrevi
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
@@ -74,6 +75,10 @@ function ListTileMedia({
   showInteractionHint,
   showPrivacyBadge,
 }: ListTileMediaProps) {
+  const visibilityLabel = list.isPublic
+    ? tr.listEditor.privacyPublicShort
+    : tr.listEditor.privacyPrivate;
+
   return (
     <View style={styles.mediaSquare}>
       {coverPhoto && !coverLoadFailed ? (
@@ -99,26 +104,18 @@ function ListTileMedia({
       {hasMiniMap ? <MiniMapInteractionHint visible={showInteractionHint} /> : null}
 
       {showPrivacyBadge ? (
-        <View style={styles.visibilityBadge}>
-          {list.isPublic ? (
-            <Globe color={colors.onPrimary} size={iconSize.xs} />
-          ) : (
-            <Lock color={colors.onPrimary} size={iconSize.xs} />
-          )}
-          {!compact ? (
-            <AppText style={styles.visibilityBadgeText}>
-              {list.isPublic ? tr.listEditor.privacyPublicShort : tr.listEditor.privacyPrivate}
-            </AppText>
-          ) : null}
-        </View>
+        <Badge
+          accessibilityLabel={compact ? visibilityLabel : undefined}
+          icon={list.isPublic ? Globe : Lock}
+          label={compact ? undefined : visibilityLabel}
+          style={styles.visibilityBadge}
+          tone="overlay"
+        />
       ) : null}
 
       {(list.likes || 0) > 0 ? (
         <View style={styles.mediaFooterRow}>
-          <View style={styles.mediaFooterBadge}>
-            <Heart color={colors.onPrimary} size={iconSize.xs} fill={colors.onPrimary} />
-            <AppText style={styles.mediaFooterBadgeText}>{list.likes}</AppText>
-          </View>
+          <Badge icon={Heart} iconFilled label={String(list.likes)} numeric tone="overlay" />
         </View>
       ) : null}
     </View>

@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { MobileNotification } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -70,13 +71,15 @@ function NotificationListItemComponent({
           </AppText>
           <AppText style={styles.timestamp}>{notification.timestamp}</AppText>
           {isResolvedFollowRequest ? (
-            <View style={styles.statusBadge}>
-              <AppText style={styles.statusLabel}>
-                {notification.followRequest?.status === 'accepted'
+            <Badge
+              label={
+                notification.followRequest?.status === 'accepted'
                   ? tr.notifications.status.accepted
-                  : tr.notifications.status.rejected}
-              </AppText>
-            </View>
+                  : tr.notifications.status.rejected
+              }
+              style={styles.statusBadge}
+              tone={notification.followRequest?.status === 'accepted' ? 'success' : 'neutral'}
+            />
           ) : null}
         </View>
 
@@ -214,14 +217,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   statusBadge: {
-    alignSelf: 'flex-start',
     marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
   },
-  statusLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
   unreadDot: {
     width: 8,
     height: 8,

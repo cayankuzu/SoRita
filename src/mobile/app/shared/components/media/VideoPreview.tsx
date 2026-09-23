@@ -22,8 +22,9 @@ import {
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
+import { colors, iconSize, radius, spacing } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
   autoPlay?: boolean;
@@ -200,7 +201,7 @@ export function VideoPreview({
       ) : null}
       {durationLabel ? (
         <View pointerEvents="none" style={styles.durationBadge}>
-          <AppText style={styles.durationText}>{durationLabel}</AppText>
+          <Badge label={durationLabel} numeric tone="overlay" />
         </View>
       ) : null}
     </View>
@@ -229,12 +230,7 @@ const styles = StyleSheet.create({
   },
   durationBadge: {
     position: 'absolute',
-    right: spacing.sm,
     bottom: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    right: spacing.sm,
   },
-  durationText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

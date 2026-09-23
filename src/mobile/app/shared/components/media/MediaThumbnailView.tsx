@@ -9,8 +9,9 @@ import { Image as ImageIcon, Play } from 'lucide-react-native';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { colors, fontWeight, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
+import { colors, iconSize, radius, spacing } from '@/mobile/app/shared/theme/tokens';
 
 type MediaThumbnailViewProps = {
   accessibilityLabel?: string;
@@ -171,7 +172,7 @@ export function MediaThumbnailView(props: MediaThumbnailViewProps) {
 
       {props.item.type === 'video' && showDuration && props.durationLabel ? (
         <View pointerEvents="none" style={styles.durationBadge}>
-          <AppText style={styles.durationText}>{props.durationLabel}</AppText>
+          <Badge label={props.durationLabel} numeric tone="overlay" />
         </View>
       ) : null}
     </View>
@@ -203,12 +204,7 @@ const styles = StyleSheet.create({
   },
   durationBadge: {
     position: 'absolute',
-    right: spacing.sm,
     bottom: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    right: spacing.sm,
   },
-  durationText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
 });

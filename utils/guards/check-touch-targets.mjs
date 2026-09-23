@@ -29,6 +29,7 @@ const SIZE_TOKENS = new Map([
   ['touch.ios', 44],
   ['controlSize.large', 48],
   ['controlSize.default', 44],
+  ['controlSize.badge', 24],
   ['controlSize.compact', 32],
   ['controlSize.chip', 36],
 ]);

@@ -3,8 +3,9 @@ import { StyleSheet, View } from 'react-native';
 
 import { PROFILE_INTEREST_META } from '@/mobile/app/catalog/profileInterests';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { t } from '@/mobile/app/shared/i18n';
-import { colors, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type ProfileInterestChipsProps = {
   interestIds?: string[];
@@ -36,15 +37,9 @@ export function ProfileInterestChips({
 
       <View style={styles.row}>
         {visibleLabels.map((label) => (
-          <View key={label} style={styles.chip}>
-            <AppText style={styles.chipText}>{label}</AppText>
-          </View>
+          <Badge key={label} label={label} tone="primary" />
         ))}
-        {remainingCount > 0 ? (
-          <View style={[styles.chip, styles.moreChip]}>
-            <AppText style={[styles.chipText, styles.moreChipText]}>+{remainingCount}</AppText>
-          </View>
-        ) : null}
+        {remainingCount > 0 ? <Badge label={`+${remainingCount}`} numeric /> : null}
       </View>
     </View>
   );
@@ -60,18 +55,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     paddingRight: spacing.md,
-  },
-  chip: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  chipText: textStyle('labelText', colors.primaryDark),
-  moreChip: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  moreChipText: {
-    color: colors.textMuted,
   },
 });

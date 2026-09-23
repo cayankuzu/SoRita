@@ -9,6 +9,7 @@ import {
   spacing,
   textStyle,
   typography,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 
 export const listDetailScreenStyles = StyleSheet.create({
@@ -69,49 +70,11 @@ export const listDetailScreenStyles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.imageScrim,
   },
-  heroPlaceholder: {
-    minHeight: 144,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg,
-  },
-  heroPlaceholderBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  heroPlaceholderLabel: textStyle('labelText', colors.primaryDark),
-  heroPlaceholderEmojiWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  heroPlaceholderEmoji: {
-    ...typography.title,
-  },
-  coverHintChip: {
+  coverHint: {
     position: 'absolute',
     bottom: spacing.sm,
     right: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   },
-  coverHintText: textStyle('labelText', colors.onPrimary),
   heroBody: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
@@ -124,34 +87,6 @@ export const listDetailScreenStyles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  heroMetaChip: {
-    minHeight: 28,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-  },
-  heroMetaChipNeutral: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.cardBorder,
-  },
-  heroMetaChipAccent: {
-    backgroundColor: colors.successBg,
-    borderColor: colors.successBorder,
-  },
-  heroMetaChipDanger: {
-    backgroundColor: colors.dangerBg,
-    borderColor: colors.dangerBorder,
-  },
-  heroMetaChipText: textStyle('labelText', colors.text),
-  heroMetaChipTextAccent: {
-    color: colors.secondary,
-  },
-  heroMetaChipTextDanger: {
-    color: colors.danger,
   },
   heroTimestamp: {
     ...typography.captionText,
@@ -197,13 +132,6 @@ export const listDetailScreenStyles = StyleSheet.create({
     ...typography.metadataText,
     color: colors.textMuted,
   },
-  ownerBadge: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  ownerBadgeText: textStyle('labelText', colors.primaryDark),
   descriptionCard: {
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
@@ -284,15 +212,13 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
   },
-  highlightPill: {
-    alignSelf: 'flex-start',
-    marginBottom: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+  // Drawn over the card's corner so selecting a place never shifts the card.
+  highlightBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: zIndex.overlay,
   },
-  highlightPillText: textStyle('labelText', colors.primaryDark),
   emptyWrap: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,

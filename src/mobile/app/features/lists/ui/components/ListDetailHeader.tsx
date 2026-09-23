@@ -9,12 +9,13 @@ import {
 } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
+import { ListCoverFallback } from '@/mobile/app/shared/components/media/ListCoverFallback';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { formatCreatedUpdatedInline } from '@/mobile/app/shared/utils/dateTime';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
@@ -22,34 +23,6 @@ type ListDetailHeaderProps = {
   list: PlaceList;
   onOpenCover: () => void;
 };
-
-type MetaChipProps = {
-  icon: React.ReactNode;
-  label: string;
-  tone?: 'accent' | 'danger' | 'neutral';
-};
-
-function MetaChip({ icon, label, tone = 'neutral' }: MetaChipProps) {
-  const toneStyle =
-    tone === 'accent'
-      ? [styles.heroMetaChip, styles.heroMetaChipAccent]
-      : tone === 'danger'
-        ? [styles.heroMetaChip, styles.heroMetaChipDanger]
-        : [styles.heroMetaChip, styles.heroMetaChipNeutral];
-  const textToneStyle =
-    tone === 'accent'
-      ? styles.heroMetaChipTextAccent
-      : tone === 'danger'
-        ? styles.heroMetaChipTextDanger
-        : null;
-
-  return (
-    <View style={toneStyle}>
-      {icon}
-      <AppText style={[styles.heroMetaChipText, textToneStyle]}>{label}</AppText>
-    </View>
-  );
-}
 
 export function ListDetailHeader({
   list,
@@ -76,22 +49,20 @@ export function ListDetailHeader({
                 <View style={styles.heroMediaScrim} />
               </>
             ) : (
-              <View style={styles.heroPlaceholder}>
-                <View style={styles.heroPlaceholderBadge}>
-                  <AppText style={styles.heroPlaceholderLabel}>{tr.common.list}</AppText>
-                </View>
-                <View style={styles.heroPlaceholderEmojiWrap}>
-                  <AppText style={styles.heroPlaceholderEmoji}>{list.emoji || '📍'}</AppText>
-                </View>
+              // The same designed cover the list shows on Explore and on profiles.
+              <View style={styles.heroMedia}>
+                <ListCoverFallback emoji={list.emoji || tr.placeEditor.defaultEmoji} seed={list.id} />
               </View>
             )}
           </InstantPressable>
 
           {list.coverImage ? (
-            <View style={styles.coverHintChip}>
-              <ImageIcon color={colors.onPrimary} size={iconSize.xs} />
-              <AppText style={styles.coverHintText}>{tr.listDetail.openCover}</AppText>
-            </View>
+            <Badge
+              icon={ImageIcon}
+              label={tr.listDetail.openCover}
+              style={styles.coverHint}
+              tone="overlay"
+            />
           ) : null}
         </View>
 
@@ -101,26 +72,14 @@ export function ListDetailHeader({
           </AppText>
 
           <View style={styles.heroMetaRow}>
-            <MetaChip
-              icon={
-                list.isPublic ? (
-                  <Globe color={colors.secondary} size={iconSize.xs} />
-                ) : (
-                  <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
-                )
-              }
+            <Badge
+              icon={list.isPublic ? Globe : Lock}
               label={list.isPublic ? tr.listDetail.public : tr.listDetail.private}
-              tone={list.isPublic ? 'accent' : 'neutral'}
+              tone={list.isPublic ? 'success' : 'neutral'}
             />
-            <MetaChip
-              icon={<MapPin color={colors.textMuted} size={iconSize.xs} />}
-              label={tr.cards.placesCount(list.places.length)}
-            />
+            <Badge icon={MapPin} label={tr.cards.placesCount(list.places.length)} numeric />
             {(list.likes || 0) > 0 ? (
-              <MetaChip
-                icon={<Heart color={colors.danger} fill={colors.danger} size={iconSize.xs} />}
-                label={`${list.likes}`}
-              />
+              <Badge icon={Heart} iconFilled label={`${list.likes}`} numeric tone="danger" />
             ) : null}
           </View>
 

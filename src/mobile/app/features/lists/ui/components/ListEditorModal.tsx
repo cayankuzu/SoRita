@@ -16,6 +16,7 @@ import {
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -296,26 +297,11 @@ export function ListEditorModal({
               <AppText accessibilityRole="header" style={styles.title}>{t.listEditor.title}</AppText>
               <AppText style={styles.subtitle}>{t.listEditor.subtitle}</AppText>
               <View style={styles.headerMetaRow}>
-                <View
-                  style={[
-                    styles.visibilityChip,
-                    isPublic ? styles.visibilityChipPublic : styles.visibilityChipPrivate,
-                  ]}
-                >
-                  {isPublic ? (
-                    <Globe color={colors.secondary} size={iconSize.xs} />
-                  ) : (
-                    <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
-                  )}
-                  <AppText
-                    style={[
-                      styles.visibilityChipText,
-                      isPublic ? styles.visibilityChipTextPublic : styles.visibilityChipTextPrivate,
-                    ]}
-                  >
-                    {isPublic ? t.listEditor.privacyPublic : t.listEditor.privacyPrivate}
-                  </AppText>
-                </View>
+                <Badge
+                  icon={isPublic ? Globe : Lock}
+                  label={isPublic ? t.listEditor.privacyPublic : t.listEditor.privacyPrivate}
+                  tone={isPublic ? 'success' : 'neutral'}
+                />
               </View>
             </View>
 

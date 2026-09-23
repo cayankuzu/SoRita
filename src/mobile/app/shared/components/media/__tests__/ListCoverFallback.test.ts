@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { pickListCoverWash } from '@/mobile/app/features/discovery/ui/components/ListCoverFallback';
+import { pickListCoverWash } from '@/mobile/app/shared/components/media/ListCoverFallback';
 
 describe('pickListCoverWash', () => {
   it('gives one list the same wash every time', () => {

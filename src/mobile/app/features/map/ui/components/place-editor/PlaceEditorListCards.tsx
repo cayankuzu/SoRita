@@ -6,6 +6,7 @@ import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorListSelectionStyles';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -120,16 +121,11 @@ export function PlaceEditorListCards({
                   <AppText style={[styles.listMeta, blocked ? styles.listMetaDisabled : null]}>
                     {tr.cards.placesCount(list.places.length)}
                   </AppText>
-                  <View style={styles.listPrivacyBadge}>
-                    {list.isPublic ? (
-                      <Globe color={colors.primary} size={iconSize.xs} />
-                    ) : (
-                      <Lock color={colors.visibilityPrivate} size={iconSize.xs} />
-                    )}
-                    <AppText style={styles.listPrivacyText}>
-                      {list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList}
-                    </AppText>
-                  </View>
+                  <Badge
+                    icon={list.isPublic ? Globe : Lock}
+                    label={list.isPublic ? tr.placeEditor.publicList : tr.placeEditor.privateList}
+                    tone={list.isPublic ? 'success' : 'neutral'}
+                  />
                 </View>
               </View>
             </InstantPressable>

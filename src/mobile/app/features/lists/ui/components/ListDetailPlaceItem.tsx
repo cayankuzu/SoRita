@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { PlaceCard } from '@/mobile/app/features/places/public/components';
-import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getMarkerAggregationKey, type LocationPlaceStat } from '@/mobile/app/shared/utils/format';
 
@@ -56,8 +56,13 @@ export function ListDetailPlaceItem({
       ]}
     >
       {highlighted ? (
-        <View style={styles.highlightPill}>
-          <AppText style={styles.highlightPillText}>{tr.listDetail.mapSelectedPlace}</AppText>
+        <View
+          accessible
+          accessibilityLabel={tr.listDetail.mapSelectedPlace}
+          accessibilityLiveRegion="polite"
+          style={styles.highlightBadge}
+        >
+          <Badge label={tr.listDetail.mapSelectedPlace} tone="primary" />
         </View>
       ) : null}
 

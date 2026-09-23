@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -60,11 +61,10 @@ export function ListDetailPlacesSection({
               @{owner.username}
             </AppText>
           </View>
-          <View style={styles.ownerBadge}>
-            <AppText style={styles.ownerBadgeText}>
-              {isOwner ? tr.listDetail.ownedByViewer : tr.listDetail.openOwnerProfile}
-            </AppText>
-          </View>
+          <Badge
+            label={isOwner ? tr.listDetail.ownedByViewer : tr.listDetail.openOwnerProfile}
+            tone="primary"
+          />
         </InstantPressable>
       ) : null}
 

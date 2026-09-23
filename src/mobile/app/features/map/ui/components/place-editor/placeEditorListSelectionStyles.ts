@@ -139,18 +139,6 @@ export const placeEditorListSelectionStyles = StyleSheet.create({
   listMetaDisabled: {
     color: colors.textMuted,
   },
-  listPrivacyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 24,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  listPrivacyText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   createListTrigger: {
     minHeight: 44,
     borderRadius: radius.lg,

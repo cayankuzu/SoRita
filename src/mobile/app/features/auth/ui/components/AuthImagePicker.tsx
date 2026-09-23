@@ -7,6 +7,7 @@ import { Check, X } from 'lucide-react-native';
 
 import { MediaSelectionPreview } from '@/mobile/app/shared/components/media/MediaSelectionPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -72,10 +73,7 @@ export function AuthImagePicker({
 
           {hasSelection ? (
             <View style={styles.headerActions}>
-              <View style={styles.selectionBadge}>
-                <Check color={colors.secondary} size={iconSize.xs} />
-                <AppText style={styles.selectionBadgeText}>{tr.common.ready}</AppText>
-              </View>
+              <Badge icon={Check} label={tr.common.ready} tone="success" />
 
               <InstantPressable
                 accessibilityLabel={tr.mediaPicker.clearSelection(placeholderText)}
@@ -158,16 +156,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  selectionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  selectionBadgeText: textStyle('metadataText', colors.secondary, fontWeight.strong),
   clearButton: {
     width: 24,
     height: 24,

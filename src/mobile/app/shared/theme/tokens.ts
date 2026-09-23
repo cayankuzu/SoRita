@@ -257,6 +257,8 @@ export const hitSlopFor = (renderedSize: number, minimum: number = touch.android
   Math.max(0, Math.ceil((minimum - renderedSize) / 2));
 
 export const controlSize = {
+  // A static badge; never a touch target on its own.
+  badge: 24,
   compact: 32,
   // A selectable chip: painted at 36 so a row of them stays light, reaching
   // the 48dp floor through hit slop.

@@ -17,6 +17,7 @@ import { OptionRail } from '@/mobile/app/features/map/ui/components/place-editor
 import { PlaceEditorListSelectionSection } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorListSelectionSection';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { TextField } from '@/mobile/app/shared/components/ui/TextField';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -27,7 +28,6 @@ import {
   opacity,
   radius,
   spacing,
-  tabularNumbers,
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
@@ -152,8 +152,8 @@ function MediaThumb({
             style={styles.mediaThumbPreview}
           />
         </View>
-        <View style={styles.mediaOrderBadge}>
-          <AppText style={styles.mediaOrderBadgeText}>{index + 1}</AppText>
+        <View pointerEvents="none" style={styles.mediaOrderBadge}>
+          <Badge label={String(index + 1)} numeric tone="overlay" />
         </View>
       </View>
     </InstantPressable>
@@ -296,15 +296,9 @@ export function PlaceEditorFinalStep({
         </View>
 
         <View style={styles.counterRow}>
-          <View style={styles.counterBadge}>
-            <AppText style={styles.counterBadgeText}>{photoCounterLabel}</AppText>
-          </View>
-          <View style={styles.counterBadge}>
-            <AppText style={styles.counterBadgeText}>{videoCounterLabel}</AppText>
-          </View>
-          <View style={styles.counterBadgeStrong}>
-            <AppText style={styles.counterBadgeStrongText}>{mediaCounterLabel}</AppText>
-          </View>
+          <Badge label={photoCounterLabel} numeric tone="primary" />
+          <Badge label={videoCounterLabel} numeric tone="primary" />
+          <Badge label={mediaCounterLabel} numeric />
         </View>
 
         {media.length === 0 ? (
@@ -419,20 +413,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  counterBadge: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  counterBadgeText: { ...textStyle('metadataText', colors.primary, fontWeight.strong), ...tabularNumbers },
-  counterBadgeStrong: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  counterBadgeStrongText: { ...textStyle('metadataText', colors.text, fontWeight.strong), ...tabularNumbers },
   mediaEmptyCard: {
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -496,17 +476,9 @@ const styles = StyleSheet.create({
   },
   mediaOrderBadge: {
     position: 'absolute',
-    left: spacing.xs,
-    top: spacing.xs,
-    minWidth: 20,
-    height: 20,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: spacing.xs,
+    top: spacing.sm,
+    left: spacing.sm,
   },
-  mediaOrderBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   mediaAddTile: {
     width: 80,
     height: 80,

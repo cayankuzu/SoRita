@@ -10,6 +10,7 @@ import type {
   MediaLibrarySelectionFilter,
 } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { Chip } from '@/mobile/app/shared/components/ui/Chip';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -106,23 +107,19 @@ export const MediaLibrarySelectionContent = React.memo(
     return (
       <>
         <View style={styles.counterRow}>
-          <View style={styles.counterChip}>
-            <AppText style={styles.counterChipText}>
-              {tr.placeEditor.photoCounterLabel(selectedCounts.photos, remainingPhotos)}
-            </AppText>
-          </View>
+          <Badge
+            label={tr.placeEditor.photoCounterLabel(selectedCounts.photos, remainingPhotos)}
+            numeric
+            tone="primary"
+          />
           {allowVideos ? (
-            <View style={styles.counterChip}>
-              <AppText style={styles.counterChipText}>
-                {tr.placeEditor.videoCounterLabel(selectedCounts.videos, remainingVideos)}
-              </AppText>
-            </View>
+            <Badge
+              label={tr.placeEditor.videoCounterLabel(selectedCounts.videos, remainingVideos)}
+              numeric
+              tone="primary"
+            />
           ) : null}
-          <View style={styles.counterChipStrong}>
-            <AppText style={styles.counterChipStrongText}>
-              {tr.placeEditor.mediaCounterLabel(selectedCounts.total, maxSelection)}
-            </AppText>
-          </View>
+          <Badge label={tr.placeEditor.mediaCounterLabel(selectedCounts.total, maxSelection)} numeric />
         </View>
 
         <View style={styles.filterRow}>
@@ -260,20 +257,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.md,
   },
-  counterChip: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  counterChipText: textStyle('metadataText', colors.primary, fontWeight.strong),
-  counterChipStrong: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  counterChipStrongText: textStyle('metadataText', colors.text, fontWeight.strong),
   filterRow: {
     flexDirection: 'row',
     gap: spacing.md,

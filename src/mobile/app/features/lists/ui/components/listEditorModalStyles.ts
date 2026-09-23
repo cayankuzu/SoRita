@@ -98,33 +98,6 @@ export const listEditorModalStyles = StyleSheet.create({
     ...typography.metadataText,
     color: colors.textSoft,
   },
-  visibilityChip: {
-    minHeight: 28,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-  },
-  visibilityChipPublic: {
-    backgroundColor: colors.successBg,
-    borderColor: colors.successBorder,
-  },
-  visibilityChipPrivate: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.borderStrong,
-  },
-  visibilityChipText: {
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-  },
-  visibilityChipTextPublic: {
-    color: colors.secondary,
-  },
-  visibilityChipTextPrivate: {
-    color: colors.visibilityPrivate,
-  },
   coverPickerRow: {
     width: '100%',
     gap: spacing.sm,

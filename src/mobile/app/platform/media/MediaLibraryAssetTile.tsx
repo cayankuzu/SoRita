@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import type { MediaLibraryPickerAsset } from '@/mobile/app/platform/media/mediaLibrarySelectionTypes';
 import { MediaThumbnailView } from '@/mobile/app/shared/components/media/MediaThumbnailView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -75,10 +76,8 @@ export const MediaLibraryAssetTile = React.memo(function MediaLibraryAssetTile({
       />
 
       {isSelected ? (
-        <View style={styles.orderBadge}>
-          <AppText scaleLimit="chrome" style={styles.orderBadgeText}>
-            {orderIndex + 1}
-          </AppText>
+        <View pointerEvents="none" style={styles.orderBadge}>
+          <Badge label={String(orderIndex + 1)} numeric tone="overlay" />
         </View>
       ) : null}
 
@@ -115,15 +114,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    minWidth: 20,
-    minHeight: 20,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-    paddingHorizontal: spacing.xs,
   },
-  orderBadgeText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

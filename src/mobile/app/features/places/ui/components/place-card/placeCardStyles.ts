@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import {
   colors,
+  controlSize,
   fontWeight,
   minTouchSize,
   opacity,
@@ -11,11 +12,6 @@ import {
   textStyle,
   typography,
 } from '@/mobile/app/shared/theme/tokens';
-
-// Painted height of a tag chip: one metadata line plus 4dp above and below.
-// The expand toggle sits among the chips, so it is painted at the same height
-// and takes the rest of its touch target from hitSlop.
-export const TAG_CHIP_HEIGHT = 24;
 
 export const placeCardStyles = StyleSheet.create({
   feedCard: {
@@ -311,8 +307,10 @@ export const placeCardStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
+  // Painted at a badge's height because it sits among them; the rest of its
+  // target comes from hit slop.
   moreFeaturesButton: {
-    minHeight: TAG_CHIP_HEIGHT,
+    minHeight: controlSize.badge,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,43 +323,6 @@ export const placeCardStyles = StyleSheet.create({
   badgeRow: {
     gap: spacing.sm,
     alignItems: 'center',
-  },
-  badge: {
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-  },
-  badgeText: textStyle('metadataText', colors.textMuted),
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.warningBg,
-  },
-  ratingBadgeText: {
-    color: colors.warning,
-  },
-  studentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryBg,
-  },
-  studentBadgeText: {
-    color: colors.primary,
-  },
-  purpleBadge: {
-    backgroundColor: colors.purpleBg,
-  },
-  purpleBadgeText: {
-    color: colors.purple,
-  },
-  greenBadge: {
-    backgroundColor: colors.successBg,
-  },
-  greenBadgeText: {
-    color: colors.secondary,
   },
   inlineIcon: {
     justifyContent: 'center',
