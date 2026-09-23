@@ -61,10 +61,13 @@ describe('FeedActionButtons hierarchy', () => {
       tr.common.contentActionsTitle,
     ]);
 
+    // The glyphs are painted small; the target is the painted box plus hit slop.
     actions.forEach((action) => {
       const style = StyleSheet.flatten(action.props.style);
-      expect(style.minHeight).toBeGreaterThanOrEqual(44);
-      expect(style.minWidth).toBeGreaterThanOrEqual(44);
+      const slop = typeof action.props.hitSlop === 'number' ? action.props.hitSlop : 0;
+      const width = Number(style.width ?? style.minWidth);
+      expect(Number(style.minHeight) + 2 * slop).toBeGreaterThanOrEqual(48);
+      expect(width + 2 * slop).toBeGreaterThanOrEqual(48);
     });
 
     let likeResult: unknown;

@@ -14,6 +14,8 @@ import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
 import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import {
   colors,
+  controlSize,
+  hitSlopFor,
   iconSize,
   minTouchSize,
   spacing,
@@ -38,7 +40,9 @@ type FeedActionButtonsProps = {
   showShareAction: boolean;
 };
 
-const TOUCH_SIZE = minTouchSize;
+// 20dp glyphs sit beside 14px counts; 24dp ones read as louder than the card.
+const ACTION_ICON = iconSize.md;
+const ICON_ACTION_WIDTH = controlSize.icon;
 
 // A like answers with a short pop, the one bit of motion a feed earns: it
 // confirms the tap before the network does. Reduce Motion skips it.
@@ -74,6 +78,7 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
         accessibilityLabel={props.liked ? tr.cards.unlikeAction : tr.cards.likeAction}
         accessibilityRole="button"
         accessibilityState={{ selected: props.liked }}
+        hitSlop={hitSlopFor(controlSize.icon)}
         style={styles.iconButton}
         onPress={() => {
           triggerHaptic('light');
@@ -82,26 +87,28 @@ function LikeAction(props: Pick<FeedActionButtonsProps, 'liked' | 'likeCount' | 
       >
         <Animated.View style={{ transform: [{ scale }] }}>
           <Heart
-            size={iconSize.lg}
+            size={ACTION_ICON}
             color={props.liked ? colors.danger : colors.text}
             fill={props.liked ? colors.danger : 'transparent'}
           />
         </Animated.View>
       </InstantPressable>
 
-      <InstantPressable
-        accessibilityHint={tr.cards.likedBy}
-        accessibilityLabel={`${tr.cards.likedBy}: ${props.likeCount}`}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: props.likeCount === 0 }}
-        disabled={props.likeCount === 0}
-        style={styles.countButton}
-        onPress={props.onLikersPress}
-      >
-        <AppText accessible={false} style={styles.count}>
-          {props.likeCount}
-        </AppText>
-      </InstantPressable>
+      {/* Hidden at zero, like the comment count: a "0" is noise, not information. */}
+      {props.likeCount > 0 ? (
+        <InstantPressable
+          accessibilityHint={tr.cards.likedBy}
+          accessibilityLabel={`${tr.cards.likedBy}: ${props.likeCount}`}
+          accessibilityRole="button"
+          hitSlop={hitSlopFor(controlSize.icon)}
+          style={styles.countButton}
+          onPress={props.onLikersPress}
+        >
+          <AppText accessible={false} style={styles.count}>
+            {props.likeCount}
+          </AppText>
+        </InstantPressable>
+      ) : null}
     </View>
   );
 }
@@ -115,11 +122,12 @@ function CommentAction(props: Pick<
       accessibilityLabel={tr.cards.commentAction}
       accessibilityRole="button"
       accessibilityState={{ expanded: props.showComments }}
+      hitSlop={hitSlopFor(controlSize.icon)}
       style={styles.iconWithCountButton}
       onPressIn={props.onCommentsIntent}
       onPress={props.onCommentPress}
     >
-      <MessageCircle size={iconSize.lg} color={props.showComments ? colors.primary : colors.text} />
+      <MessageCircle size={ACTION_ICON} color={props.showComments ? colors.primary : colors.text} />
       {props.commentCount > 0 ? (
         <AppText accessible={false} style={styles.count}>
           {props.commentCount}
@@ -148,10 +156,11 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
         <InstantPressable
           accessibilityLabel={tr.cards.share}
           accessibilityRole="button"
+          hitSlop={hitSlopFor(controlSize.icon)}
           style={styles.iconButton}
           onPress={props.onSharePress}
         >
-          <Share2 size={iconSize.lg} color={colors.text} />
+          <Share2 size={ACTION_ICON} color={colors.text} />
         </InstantPressable>
       ) : null}
 
@@ -159,54 +168,57 @@ export function FeedActionButtons(props: FeedActionButtonsProps) {
         <InstantPressable
           accessibilityLabel={props.overflowActionLabel}
           accessibilityRole="button"
+          hitSlop={hitSlopFor(controlSize.icon)}
           style={[styles.iconButton, styles.trailing]}
           onPress={props.onOverflowPress}
         >
-          <Ellipsis size={iconSize.lg} color={colors.textMuted} />
+          <Ellipsis size={ACTION_ICON} color={colors.textMuted} />
         </InstantPressable>
       ) : null}
     </View>
   );
 }
 
+// Every action pads its glyph by 8dp and the row adds 8dp between actions, so
+// any icon or count sits 24dp from the next glyph, and a count sits 8dp from
+// its own icon. The row's 4dp inset puts the first and last glyph on the
+// card's 12dp content edge.
 const styles = StyleSheet.create({
-  // The first icon's glyph lines up with the card's 12dp content edge: a 48dp
-  // button centres a 24dp icon 12dp in from its own left edge.
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.xs,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   group: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconButton: {
-    minWidth: TOUCH_SIZE,
-    minHeight: TOUCH_SIZE,
+    width: ICON_ACTION_WIDTH,
+    minHeight: minTouchSize,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWithCountButton: {
-    minWidth: TOUCH_SIZE,
-    minHeight: TOUCH_SIZE,
-    paddingHorizontal: spacing.md,
+    minWidth: ICON_ACTION_WIDTH,
+    minHeight: minTouchSize,
+    paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  // The count's own target tucks 4dp under the heart's, so the number sits
-  // 8dp from the glyph instead of floating in a cell of its own, and still
-  // offers a full 48dp to open the likers.
+  // Opens the likers. It tucks up against the heart so the pair reads as one.
   countButton: {
-    minWidth: TOUCH_SIZE,
-    minHeight: TOUCH_SIZE,
-    marginLeft: -spacing.xs,
+    minWidth: ICON_ACTION_WIDTH,
+    minHeight: minTouchSize,
+    marginLeft: -spacing.sm,
+    paddingRight: spacing.sm,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  count: { ...textStyle('labelText', colors.text), ...tabularNumbers },
+  count: { ...textStyle('supportingLabelText', colors.text), ...tabularNumbers },
   trailing: {
     marginLeft: 'auto',
   },

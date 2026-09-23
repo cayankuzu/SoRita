@@ -32,6 +32,7 @@ const SIZE_TOKENS = new Map([
   ['controlSize.badge', 24],
   ['controlSize.compact', 32],
   ['controlSize.chip', 36],
+  ['controlSize.icon', 36],
 ]);
 
 const PRESSABLE_NAMES = new Set([

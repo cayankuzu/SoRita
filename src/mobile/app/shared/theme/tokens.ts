@@ -260,6 +260,9 @@ export const controlSize = {
   // A static badge; never a touch target on its own.
   badge: 24,
   compact: 32,
+  // An icon-only action in a row of them: a 20dp glyph with 8dp either side,
+  // reaching the 48dp floor through hit slop.
+  icon: 36,
   // A selectable chip: painted at 36 so a row of them stays light, reaching
   // the 48dp floor through hit slop.
   chip: 36,
