@@ -347,7 +347,9 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
       containsNativeMaps={tab !== 'people'}
       refreshing={active && refreshing}
       scrollEnabled={active}
-      onRefresh={active ? onRefresh : undefined}
+      // Set on every page: toggling it with the active tab rebuilt the list on
+      // Android, blanking the page for a frame on every swipe.
+      onRefresh={onRefresh}
       onEndReached={active ? onEndReached : undefined}
       onContentSizeChange={onContentReady}
       onScrollOffsetChange={onScrollOffsetChange}

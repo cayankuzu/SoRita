@@ -60,7 +60,7 @@ describe('ExploreResultsPage', () => {
       renderer = TestRenderer.create(
         <>
           <ExploreResultsPage {...activeProps} />
-          <ExploreResultsPage {...backgroundProps} tab="places" />
+          <ExploreResultsPage {...backgroundProps} refreshing tab="places" />
         </>,
       );
     });
@@ -73,7 +73,10 @@ describe('ExploreResultsPage', () => {
     expect(lists[0]?.props.ListHeaderComponent).toBeUndefined();
     expect(lists[0]?.props.onEndReached).toBe(activeProps.onEndReached);
     expect(lists[1]?.props.onEndReached).toBeUndefined();
-    expect(lists[1]?.props.onRefresh).toBeUndefined();
+    // A background page keeps its refresh handler, so the swipe that brings it
+    // into view does not rebuild its scroll view, but it never shows as busy.
+    expect(lists[1]?.props.onRefresh).toBe(backgroundProps.onRefresh);
+    expect(lists[1]?.props.refreshing).toBe(false);
     expect(lists[0]?.props.scrollEnabled).toBe(true);
     expect(lists[1]?.props.scrollEnabled).toBe(false);
   });

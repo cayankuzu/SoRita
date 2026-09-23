@@ -200,13 +200,16 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
   );
   const showLoadMoreStatus = active && hasNextPage && isFetchingNextPage;
   const showIOSRefreshStatus = Platform.OS === 'ios' && active && refreshing;
+  // Every page keeps its refresh control whether or not it is in view. On
+  // Android a page that gained or lost it on a tab switch rebuilt its list at
+  // the top, under a collapsed header: a grey band where the grid should be.
   const iosRefreshControl = React.useMemo(
     () =>
-      Platform.OS === 'ios' && active && onRefresh ? (
+      Platform.OS === 'ios' && onRefresh ? (
         <RefreshControl
           onRefresh={onRefresh}
           progressViewOffset={headerSpacerHeight}
-          refreshing={refreshing}
+          refreshing={active && refreshing}
           tintColor="transparent"
         />
       ) : undefined,
@@ -299,10 +302,10 @@ const ProfileContentPage = React.memo(function ProfileContentPage({
         ]}
         onContentSizeChange={handleContentSizeChange}
         onEndReached={active ? onEndReached : undefined}
-        onRefresh={active ? onRefresh : undefined}
+        onRefresh={onRefresh}
         onScrollOffsetChange={handleScrollOffsetChange}
         progressViewOffset={
-          Platform.OS === 'android' && active && onRefresh ? headerSpacerHeight : undefined
+          Platform.OS === 'android' && onRefresh ? headerSpacerHeight : undefined
         }
         refreshControl={iosRefreshControl}
         refreshing={active && refreshing}
@@ -482,6 +485,10 @@ export function ProfileContentPager({
   const handleListRef = React.useCallback(
     (tab: ProfileContentTab, node: FlatList<ProfileGridItem> | null) => {
       if (node) {
+        // A new list instance starts at the top. The grid remounts when its
+        // column count settles, and the old instance's offset left behind
+        // here made every sync believe the new one was already in place.
+        listOffsetsRef.current.set(tab, 0);
         listNodesRef.current.set(tab, node);
         syncListOffset(tab);
       } else {

@@ -37,6 +37,9 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
   containsNativeMaps?: boolean;
   extraData?: unknown;
   onContentSizeChange?: (width: number, height: number) => void;
+  // Keep this set, or unset, for the life of the list. On Android, adding or
+  // removing it wraps the scroll view in a different parent, which rebuilds
+  // the list at its top without a scroll event.
   onRefresh?: () => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;

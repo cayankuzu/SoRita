@@ -292,6 +292,60 @@ describe('ProfileContentPager', () => {
     }
   });
 
+  it('keeps a background tab refreshable so a swipe never rebuilds its list', () => {
+    const onRefresh = vi.fn();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <ProfileContentPager
+          activeTab="lists"
+          dataByTab={{ gallery: [], lists: [], places: [] }}
+          emptyStateForTab={() => <></>}
+          filteredLists={[]}
+          header={React.createElement('ProfileHeader')}
+          hasNextPage={false}
+          isFetchingNextPage={false}
+          onListPress={vi.fn()}
+          onPageProgressChange={vi.fn()}
+          onPlacePress={vi.fn()}
+          onRefresh={onRefresh}
+          onTabChange={vi.fn()}
+          onTabPreviewChange={vi.fn()}
+          refreshing
+          shouldShowErrorState={false}
+          tabs={[
+            { key: 'lists', label: 'Listeler' },
+            { key: 'places', label: 'Mekânlar' },
+          ]}
+        />,
+      );
+    });
+    act(() => {
+      renderer.root.findByProps({ testID: 'profile-stationary-header' }).props.onLayout({
+        nativeEvent: { layout: { height: 236 } },
+      });
+    });
+
+    const pager = renderer.root.find((node) => String(node.type) === 'SwipeableTabPager');
+    let background!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      background = TestRenderer.create(pager.props.renderPage('places', true, false));
+    });
+    const grid = background.root.find(
+      (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
+    );
+
+    expect(grid.props.onRefresh).toBe(onRefresh);
+    expect(grid.props.refreshing).toBe(false);
+    expect(grid.props.onEndReached).toBeUndefined();
+
+    act(() => {
+      background.unmount();
+      renderer.unmount();
+    });
+  });
+
   it('syncs only the shared header collapse without copying a deep content offset', () => {
     const headerHeight = 236;
     const sourceOffset = 1_480;

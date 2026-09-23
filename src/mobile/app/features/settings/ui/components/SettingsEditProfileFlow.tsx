@@ -87,11 +87,19 @@ export function SettingsEditProfileFlow({
   const isLastEditStep = editStep === steps.length - 1;
   const usernameInputRef = React.useRef<TextInput>(null);
   const bioInputRef = React.useRef<TextInput>(null);
+  // The pull-to-refresh stays attached while saving and ignores the pull:
+  // removing it rebuilt the form's scroll view on Android, dropping focus
+  // and jumping to the top the moment Save was tapped.
+  const handleRefresh = React.useCallback(() => {
+    if (!isSavingProfile) {
+      onRefresh();
+    }
+  }, [isSavingProfile, onRefresh]);
 
   return (
     <Screen
       refreshing={!isSavingProfile && refreshing}
-      onRefresh={isSavingProfile ? undefined : onRefresh}
+      onRefresh={handleRefresh}
       variant="settings"
     >
       <SettingsHeader
