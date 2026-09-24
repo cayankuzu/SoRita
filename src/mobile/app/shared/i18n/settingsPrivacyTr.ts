@@ -28,4 +28,5 @@ export const settingsPrivacyTr = {
   publicSaved: 'Hesap herkese açık yapıldı',
   saving: 'Gizlilik tercihin kaydediliyor',
   title: 'Gizlilik',
+  visibilityTitle: 'Profil görünürlüğü',
 } as const;
