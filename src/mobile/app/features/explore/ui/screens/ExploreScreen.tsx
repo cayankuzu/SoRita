@@ -55,6 +55,7 @@ type ExploreBrowseHeaderProps = {
   onSearchQueryChange: (value: string) => void;
   onTabChange: (tab: ExploreTabType) => void;
   resultCount?: number;
+  resultsHidden: boolean;
   resultsPending: boolean;
   resultsPreviewing: boolean;
   screenPadding: number;
@@ -68,6 +69,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
   onSearchQueryChange,
   onTabChange,
   resultCount,
+  resultsHidden,
   resultsPending,
   resultsPreviewing,
   screenPadding,
@@ -79,6 +81,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
       <ExploreHeaderControls
         activeTab={activeTab}
         resultCount={resultCount}
+        resultsHidden={resultsHidden}
         resultsPending={resultsPending}
         resultsPreviewing={resultsPreviewing}
         searchQuery={searchQuery}
@@ -323,7 +326,12 @@ export function ExploreScreen() {
               // a swipe was in flight it used to vanish, the header lost a line,
               // and the whole pager jumped up and back down.
               resultCount={dataByTab[visibleTab].length}
-              resultsPending={searchQuery.trim() !== debouncedSearchQuery.trim()}
+              resultsHidden={searchTooShort}
+              // Typing, or the tab's first page still loading: not yet a count.
+              resultsPending={
+                searchQuery.trim() !== debouncedSearchQuery.trim() ||
+                queryStateByTab[visibleTab].isLoading
+              }
               resultsPreviewing={visibleTab !== activeTab}
               screenPadding={screenPadding}
               searchQuery={searchQuery}

@@ -15,6 +15,9 @@ import type { ExploreTabType } from './exploreScreenTypes';
 type ExploreHeaderControlsProps = {
   activeTab: ExploreTabType;
   resultCount?: number;
+  // Too few letters to search: the line keeps its height but shows no count,
+  // since "0 results" would read as nothing found.
+  resultsHidden?: boolean;
   resultsPending?: boolean;
   // A swipe is between tabs: the count shows the tab being reached, silently.
   resultsPreviewing?: boolean;
@@ -24,6 +27,7 @@ type ExploreHeaderControlsProps = {
 };
 
 const MAX_SEARCH_QUERY_LENGTH = 120;
+const BLANK_LINE = '\u00A0';
 
 const tabs: Array<{
   key: ExploreTabType;
@@ -55,6 +59,7 @@ const tabs: Array<{
 export function ExploreHeaderControls({
   activeTab,
   resultCount,
+  resultsHidden = false,
   resultsPending = false,
   resultsPreviewing = false,
   searchQuery,
@@ -173,9 +178,11 @@ export function ExploreHeaderControls({
             accessibilityState={{ busy: resultsPending }}
             style={styles.resultStatus}
           >
-            {resultsPending
-              ? tr.common.loading
-              : tr.explore.resultCount(resultCount, searchQuery.trim().length > 0)}
+            {resultsHidden
+              ? BLANK_LINE
+              : resultsPending
+                ? tr.common.loading
+                : tr.explore.resultCount(resultCount, searchQuery.trim().length > 0)}
           </AppText>
         ) : null}
       </View>

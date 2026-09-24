@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { colors, radius } from '@/mobile/app/shared/theme/tokens';
+import { foldSearchText, normalizeSearchQuery } from '@/mobile/app/shared/utils/textSort';
 
 type HighlightedTextProps = {
   query?: string;
@@ -10,10 +11,13 @@ type HighlightedTextProps = {
 };
 
 export function splitHighlightedText(text: string, query?: string) {
-  const normalizedQuery = query?.trim().toLocaleLowerCase('tr-TR') ?? '';
+  // Matches the way search does: "sukru" marks "Şükrü", "@ayse" marks "ayse".
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) return [{ highlighted: false, text }];
 
-  const normalizedText = text.toLocaleLowerCase('tr-TR');
+  const normalizedText = foldSearchText(text);
+  // A rare letter whose lower case is longer would shift the marks.
+  if (normalizedText.length !== text.length) return [{ highlighted: false, text }];
   const segments: Array<{ highlighted: boolean; text: string }> = [];
   let cursor = 0;
 

@@ -10,7 +10,7 @@ import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorM
 import { useFocusRefresh } from '@/mobile/app/shared/hooks/useFocusRefresh';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
-import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
+import { normalizeSearchQuery } from '@/mobile/app/shared/utils/textSort';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 
 export type ExploreTabKey = 'lists' | 'places' | 'photos' | 'people';
@@ -40,7 +40,7 @@ const EXPLORE_TABS: ExploreTabKey[] = ['lists', 'places', 'photos', 'people'];
 export const EXPLORE_MIN_QUERY_LENGTH = 3;
 
 export function isExploreQueryTooShort(query: string) {
-  const length = normalizeSearchText(query).length;
+  const length = normalizeSearchQuery(query).length;
   return length > 0 && length < EXPLORE_MIN_QUERY_LENGTH;
 }
 function useDebouncedValue(value: string, delayMs: number) {
@@ -85,8 +85,8 @@ export function useExploreScreenState({
   // While searching, the server decides what matches and in which order:
   // re-filtering here dropped its category and owner matches, and re-sorting
   // by date undid its relevance order.
-  const searching = normalizeSearchText(deferredSearchQuery).length > 0;
-  const hasSearchQuery = normalizeSearchText(debouncedSearchQuery).length > 0;
+  const searching = normalizeSearchQuery(deferredSearchQuery).length > 0;
+  const hasSearchQuery = normalizeSearchQuery(debouncedSearchQuery).length > 0;
   const searchTooShort = isExploreQueryTooShort(debouncedSearchQuery);
   const listExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
     enabled: Boolean(userId) && !searchTooShort && shouldLoadExploreTab(selectedTab, 'lists', hasSearchQuery),
