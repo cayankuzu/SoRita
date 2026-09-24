@@ -1,43 +1,7 @@
 import React from 'react';
-import {
-  FlatList,
-  Platform,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { Download, MoreHorizontal, X } from 'lucide-react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  ActionMenuSheet,
-  type ActionMenuSheetItem,
-} from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
-import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
-import { useLightboxAnnouncements } from '@/mobile/app/shared/components/feedback/useLightboxAnnouncements';
-import { ZoomableView } from '@/mobile/app/shared/components/media/ZoomableView';
-import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
-import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
-import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
-import { useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
-import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { saveUriToGallery } from '@/mobile/app/platform/media/gallery';
-import { tr } from '@/mobile/app/shared/i18n/tr';
-import {
-  colors,
-  fontWeight,
-  iconSize,
-  minTouchSize,
-  radius,
-  spacing,
-  typography,
-} from '@/mobile/app/shared/theme/tokens';
-import {
-  getModalSafeAreaPadding,
-} from '@/mobile/app/shared/utils/modalLayout';
-import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
+import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
+import { MediaLightbox } from '@/mobile/app/shared/components/feedback/MediaLightbox';
 
 type ImageLightboxProps = {
   allowDownload?: boolean;
@@ -47,9 +11,10 @@ type ImageLightboxProps = {
   uris?: string[];
 };
 
-const LIGHTBOX_HORIZONTAL_PADDING = 16;
-const LIGHTBOX_TOP_BAR_HEIGHT = 84;
-
+// Photos that are not a place's media (profile, cover, list cover) open in
+// the same viewer as a place's: pinch and double-tap zoom, panning while
+// zoomed, paging, saving. It used to be a second, 330-line viewer without
+// zoom.
 export function ImageLightbox({
   allowDownload = false,
   initialIndex = 0,
@@ -57,282 +22,18 @@ export function ImageLightbox({
   uri = null,
   uris,
 }: ImageLightboxProps) {
-  const animationType = useModalAnimationType('fade');
-  const insets = useSafeAreaInsets();
-  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const titleRef = React.useRef<AppTextRef | null>(null);
-  const imageUris = React.useMemo(() => {
-    const nextUris = (uris || []).filter(Boolean);
-
-    if (nextUris.length > 0) {
-      return nextUris;
-    }
-
-    return uri ? [uri] : [];
+  const items = React.useMemo<PlaceMedia[]>(() => {
+    const listed = (uris || []).filter(Boolean);
+    const photos = listed.length > 0 ? listed : uri ? [uri] : [];
+    return photos.map((url) => ({ type: 'photo', url }));
   }, [uri, uris]);
 
-  // Fullscreen media sits on a near-black backdrop. Without this the system
-  // bars keep their light-surface treatment and the clock and battery icons
-  // are drawn dark-on-dark.
-  useSystemBarMode('media', imageUris.length > 0);
-
-  const startIndex = imageUris.length
-    ? Math.min(Math.max(initialIndex, 0), imageUris.length - 1)
-    : 0;
-  const [currentIndex, setCurrentIndex] = React.useState(startIndex);
-  const [menuVisible, setMenuVisible] = React.useState(false);
-  // While a photo is zoomed, one finger moves around it instead of paging.
-  const [photoZoomed, setPhotoZoomed] = React.useState(false);
-  const flatListKey = React.useMemo(
-    () => `${imageUris.length}:${startIndex}:${imageUris[startIndex] || 'empty'}`,
-    [imageUris, startIndex],
-  );
-  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
-    topInset: insets.top,
-    bottomInset: insets.bottom,
-    topSpacing: 16,
-    bottomSpacing: 16,
-    minBottomPadding: Platform.OS === 'android' ? 24 : 16,
-  });
-  const pageWidth = Math.max(windowWidth - LIGHTBOX_HORIZONTAL_PADDING * 2, 1);
-  const pageHeight = Math.max(
-    windowHeight - paddingTop - paddingBottom - LIGHTBOX_TOP_BAR_HEIGHT,
-    1,
-  );
-  const currentUri = imageUris[currentIndex] ?? imageUris[startIndex] ?? null;
-  const positionLabel = getLightboxPositionLabel(
-    tr.placeEditor.photo,
-    currentIndex,
-    imageUris.length,
-  );
-
-  const handleDownloadCurrent = React.useCallback(async () => {
-    if (!currentUri) {
-      return;
-    }
-
-    const saved = await saveUriToGallery({ uri: currentUri });
-
-    showToast(saved ? tr.common.gallerySaved : tr.common.gallerySaveFailed, saved ? 'success' : 'error');
-  }, [currentUri]);
-
-  const menuItems = React.useMemo<readonly ActionMenuSheetItem[]>(
-    () =>
-      allowDownload && currentUri
-        ? [
-            {
-              key: 'download-image',
-              label: tr.common.download,
-              renderIcon: (color) => <Download color={color} size={iconSize.sm} />,
-              onPress: () => {
-                setMenuVisible(false);
-                void handleDownloadCurrent();
-              },
-            },
-          ]
-        : [],
-    [allowDownload, currentUri, handleDownloadCurrent],
-  );
-
-  useLightboxAnnouncements({
-    currentIndex,
-    flatListKey,
-    itemCount: imageUris.length,
-    positionLabel,
-    setCurrentIndex,
-    startIndex,
-    suppressFocus: menuVisible,
-    titleRef,
-  });
-
-  React.useEffect(() => {
-    if (menuItems.length === 0) {
-      setMenuVisible(false);
-    }
-  }, [menuItems.length]);
-
   return (
-    <AppModal
-      animationType={animationType}
-      onRequestClose={onClose}
-      visible={imageUris.length > 0}
-    >
-      <GestureHandlerRootView style={styles.gestureRoot}>
-      <View
-        accessibilityViewIsModal
-        importantForAccessibility="yes"
-        onAccessibilityEscape={onClose}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
-      >
-        <View style={[styles.topBar, { width: pageWidth }]}>
-          <IconButton
-            accessibilityLabel={tr.common.close}
-            onPress={onClose}
-            style={styles.topActionButton}
-            variant="inverse"
-          >
-            <X color={colors.onPrimary} size={iconSize.md} />
-          </IconButton>
-
-          <View style={styles.topBarCopy}>
-            <AppText
-              ref={titleRef}
-              accessibilityLabel={`${tr.common.previewTitle}. ${positionLabel}`}
-              accessibilityRole="header"
-              style={styles.topBarTitle}
-            >
-              {tr.common.previewTitle}
-            </AppText>
-            <AppText accessibilityLiveRegion="polite" style={styles.topBarSubtitle}>
-              {positionLabel}
-            </AppText>
-          </View>
-
-          {menuItems.length > 0 ? (
-            <IconButton
-              accessibilityLabel={tr.common.contentActionsTitle}
-              onPress={() => setMenuVisible(true)}
-              style={styles.topActionButton}
-              variant="inverse"
-            >
-              <MoreHorizontal color={colors.onPrimary} size={iconSize.md} />
-            </IconButton>
-          ) : (
-            <View style={styles.topActionSpacer} />
-          )}
-        </View>
-
-        {imageUris.length > 0 ? (
-          <View style={[styles.carouselViewport, { height: pageHeight, width: pageWidth }]}>
-            <FlatList
-              key={flatListKey}
-              data={imageUris}
-              horizontal
-              scrollEnabled={!photoZoomed}
-              pagingEnabled
-              disableIntervalMomentum
-              directionalLockEnabled
-              nestedScrollEnabled
-              decelerationRate="fast"
-              initialScrollIndex={startIndex}
-              getItemLayout={(_, index) => ({
-                index,
-                length: pageWidth,
-                offset: pageWidth * index,
-              })}
-              keyExtractor={(item, index) => `${item}-${index}`}
-              onMomentumScrollEnd={(event) => {
-                const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
-                setCurrentIndex(Math.min(Math.max(nextIndex, 0), imageUris.length - 1));
-              }}
-              renderItem={({ item, index }) => (
-                <View style={[styles.imagePage, { width: pageWidth }]}>
-                  <ZoomableView
-                    active={index === currentIndex}
-                    onZoomChange={index === currentIndex ? setPhotoZoomed : undefined}
-                  >
-                    <AppImage
-                      uri={item}
-                      style={styles.image}
-                      resizeMode="contain"
-                      accessibilityLabel={`${tr.common.enlargedPhotoLabel(index + 1)}. ${getLightboxPositionLabel(
-                        tr.placeEditor.photo,
-                        index,
-                        imageUris.length,
-                      )}`}
-                      backgroundColor="transparent"
-                    />
-                  </ZoomableView>
-                </View>
-              )}
-              showsHorizontalScrollIndicator={false}
-              scrollEventThrottle={16}
-              style={styles.carousel}
-              onScrollToIndexFailed={() => {
-                setCurrentIndex(startIndex);
-              }}
-            />
-          </View>
-        ) : null}
-
-        <ActionMenuSheet
-          visible={menuVisible && menuItems.length > 0}
-          title={tr.common.contentActionsTitle}
-          items={menuItems}
-          onClose={() => setMenuVisible(false)}
-          returnFocusRef={titleRef}
-        />
-      </View>
-      </GestureHandlerRootView>
-    </AppModal>
+    <MediaLightbox
+      allowDownload={allowDownload}
+      initialIndex={initialIndex}
+      items={items}
+      onClose={onClose}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  gestureRoot: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: LIGHTBOX_HORIZONTAL_PADDING,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  topActionButton: {
-    width: minTouchSize,
-    height: minTouchSize,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-    borderWidth: 1,
-    borderColor: colors.controlsBorder,
-  },
-  topActionSpacer: {
-    width: minTouchSize,
-    height: minTouchSize,
-  },
-  topBarCopy: {
-    flex: 1,
-    borderRadius: radius.lg,
-    backgroundColor: colors.darkOverlay,
-    borderWidth: 1,
-    borderColor: colors.controlsBorder,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.xxs,
-  },
-  topBarTitle: {
-    color: colors.onPrimary,
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-  },
-  topBarSubtitle: {
-    color: colors.onDarkMuted,
-    ...typography.metadataText,
-    fontWeight: fontWeight.strong,
-  },
-  carouselViewport: {
-    alignSelf: 'center',
-    overflow: 'hidden',
-  },
-  carousel: {
-    flex: 1,
-  },
-  imagePage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-});
