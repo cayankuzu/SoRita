@@ -107,6 +107,9 @@ function MapFilterMenu({
   );
 }
 
+// Google's logo sits in the map's bottom-left corner, about 28dp tall.
+const GOOGLE_LOGO_CLEARANCE = 36;
+
 function MapSecondaryOverlays({
   bottom,
   hasEditor,
@@ -130,17 +133,15 @@ function MapSecondaryOverlays({
     return null;
   }
 
-  return (
-    <>
-      <MapVisibilityLegend bottom={bottom + 58} />
-      {showHint &&
-      !hasPriorityNotice &&
-      !hasEditor &&
-      !hasMinimizedEditor &&
-      !hasMinimizedExistingPlace ? (
-        <MapAddHint bottom={bottom + 8} onClose={onDismissHint} />
-      ) : null}
-    </>
+  const hintVisible =
+    showHint && !hasPriorityNotice && !hasEditor && !hasMinimizedEditor && !hasMinimizedExistingPlace;
+
+  // The first-run hint sits above Google's logo, which the map's terms keep in
+  // view; while it shows, the colour legend it would run into steps aside.
+  return hintVisible ? (
+    <MapAddHint bottom={bottom + GOOGLE_LOGO_CLEARANCE} onClose={onDismissHint} />
+  ) : (
+    <MapVisibilityLegend bottom={bottom + 58} />
   );
 }
 
