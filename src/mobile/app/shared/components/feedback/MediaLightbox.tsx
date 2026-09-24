@@ -66,6 +66,16 @@ const DELETE_MEDIA_CONFIRMATION = {
   title: tr.common.mediaRemoveTitle,
 } as const;
 
+// The card already shows the thumbnail, so the viewer shows it at once and
+// swaps in the full photo when it arrives, instead of five seconds of black.
+// Private media resolves through AppImage and cannot be a placeholder.
+function getThumbnailPlaceholder(item: PlaceMedia) {
+  const { thumbnailUrl, url } = item;
+  return thumbnailUrl && thumbnailUrl !== url && /^https?:///.test(thumbnailUrl)
+    ? { uri: thumbnailUrl }
+    : undefined;
+}
+
 function MediaLightboxPage({
   isActive,
   item,
@@ -114,6 +124,8 @@ function MediaLightboxPage({
           <ZoomableView active={isActive} onZoomChange={onZoomChange}>
             <AppImage
               uri={item.url}
+              placeholder={getThumbnailPlaceholder(item)}
+              showLoader={!getThumbnailPlaceholder(item)}
               style={styles.image}
               resizeMode="contain"
               accessibilityLabel={`${tr.common.enlargedMedia}. ${positionLabel}`}
