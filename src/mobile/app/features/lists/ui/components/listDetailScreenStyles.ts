@@ -164,9 +164,14 @@ export const listDetailScreenStyles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
+  // Solid, like the Map tab's controls: a translucent pill blurred into the
+  // streets underneath it.
   mapDoneButton: {
+    ...elevation.floating,
     alignItems: 'center',
-    backgroundColor: colors.glassSurface,
+    backgroundColor: colors.surface,
+    borderColor: colors.cardBorder,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.pill,
     justifyContent: 'center',
     minHeight: minTouchSize,
@@ -175,7 +180,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     right: spacing.sm,
     top: spacing.sm,
   },
-  mapDoneLabel: textStyle('labelText', colors.text),
+  mapDoneLabel: textStyle('labelText', colors.primary, fontWeight.strong),
   mapFrame: {
     overflow: 'hidden',
     borderRadius: radius.lg,

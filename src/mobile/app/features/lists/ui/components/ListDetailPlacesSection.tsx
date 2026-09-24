@@ -116,7 +116,11 @@ export function ListDetailPlacesSection({
             />
             {isMapInteractive ? (
               <>
-                <MiniMapInteractionHint visible={showInteractionHint} />
+                <MiniMapInteractionHint
+                  // This map locks with its Done button; it has no Focus button.
+                  description={tr.listDetail.mapInteractiveHint}
+                  visible={showInteractionHint}
+                />
                 <InstantPressable
                   accessibilityLabel={tr.listDetail.mapDone}
                   accessibilityRole="button"

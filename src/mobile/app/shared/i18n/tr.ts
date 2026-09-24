@@ -379,6 +379,7 @@ export const tr = {
     mapHelper: 'Haritadaki işarete dokunarak mekâna git',
     mapActivateHint: 'Haritayı gezmek için dokun',
     mapDone: 'Bitti',
+    mapInteractiveHint: "Kaydırıp yakınlaştırabilirsin. Bitince Bitti'ye dokun.",
     mapPlacesTitle: 'Mekân konumları',
     mapSelectedPlace: 'Haritada seçili mekân',
     ownerLabel: 'Liste sahibi',
