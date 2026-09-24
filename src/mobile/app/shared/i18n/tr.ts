@@ -386,7 +386,8 @@ export const tr = {
     mapDone: 'Bitti',
     mapInteractiveHint: "Kaydırıp yakınlaştırabilirsin. Bitince Bitti'ye dokun.",
     mapPlacesTitle: 'Mekân konumları',
-    mapSelectedPlace: 'Haritada seçili mekân',
+    // Shown for a map pin or a notification's place alike.
+    mapSelectedPlace: 'Seçili mekân',
     ownerLabel: 'Liste sahibi',
     openOwnerProfile: 'Profili aç',
     ownedByViewer: 'Senin listen',
