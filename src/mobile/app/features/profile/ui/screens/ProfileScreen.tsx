@@ -27,7 +27,7 @@ import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/Conf
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
-import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
@@ -359,6 +359,13 @@ export function ProfileScreen() {
   }
 
   const renderEmptyState = (tab: ProfileTab) => {
+    // The summary already counted this tab's content: an empty list means it
+    // has not arrived yet, not that there is none. "Henüz fotoğraf yok" under
+    // a Galeri tab reading 31 was the result.
+    if (!shouldShowErrorState && visibilityFilter === 'all' && (tabTotals[tab] ?? 0) > 0) {
+      return <MosaicGridSkeleton rows={3} />;
+    }
+
     if (shouldShowErrorState) {
       return (
         <EmptyState

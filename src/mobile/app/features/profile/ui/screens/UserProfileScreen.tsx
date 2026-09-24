@@ -30,7 +30,7 @@ import { PublicProfileActionBar } from '@/mobile/app/features/profile/ui/compone
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
-import { ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import {
@@ -453,6 +453,11 @@ export function UserProfileScreen() {
   }
 
   const renderEmptyState = (tab: ProfileTab) => {
+    // Counted content that has not arrived yet is loading, not missing.
+    if (!shouldShowErrorState && (tabTotals[tab] ?? 0) > 0) {
+      return <MosaicGridSkeleton rows={3} />;
+    }
+
     if (shouldShowErrorState) {
       return (
         <EmptyState
