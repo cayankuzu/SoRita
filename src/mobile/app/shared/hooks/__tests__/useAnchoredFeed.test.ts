@@ -5,61 +5,49 @@ import { act, renderHook } from '@/mobile/app/test/hookTestUtils';
 
 const items = ['a', 'b', 'c', 'd', 'e', 'f'];
 
-describe('useAnchoredFeed', () => {
-  let frames: FrameRequestCallback[];
+function scrollEvent(y: number) {
+  return { nativeEvent: { contentOffset: { x: 0, y } } } as never;
+}
 
+describe('useAnchoredFeed', () => {
   beforeEach(() => {
-    frames = [];
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-      frames.push(callback);
-      return frames.length;
-    });
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
-  const runFrames = () => {
-    const pending = frames;
-    frames = [];
-    act(() => {
-      pending.forEach((callback) => callback(0));
-    });
-  };
+  function openOn(startIndex: number) {
+    const hook = renderHook(() => useAnchoredFeed({ items, startIndex, viewOffset: 12 }));
+    const list = { scrollToIndex: vi.fn() };
+    hook.result.current.listRef.current = list as never;
+    return { hook, list };
+  }
 
-  it('opens on the tapped card, then puts the earlier cards back above it', () => {
-    const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 4 }));
+  it('opens on the tapped card, then puts the earlier cards back above it once it settles', () => {
+    const { hook } = openOn(4);
 
     expect(hook.result.current.data).toEqual(['e', 'f']);
     expect(hook.result.current.maintainVisibleContentPosition).toEqual({ minIndexForVisible: 0 });
 
     act(() => {
-      hook.result.current.onContentSizeChange(390, 1200);
+      hook.result.current.onContentSizeChange(390, 0);
+      vi.advanceTimersByTime(1000);
     });
     expect(hook.result.current.data).toEqual(['e', 'f']);
 
-    runFrames();
+    act(() => {
+      hook.result.current.onContentSizeChange(390, 1200);
+      hook.result.current.onContentSizeChange(390, 1300);
+      vi.advanceTimersByTime(499);
+    });
+    expect(hook.result.current.data).toEqual(['e', 'f']);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
     expect(hook.result.current.data).toBe(items);
-
-    hook.unmount();
-  });
-
-  it('waits for the tapped card to have a size before adding cards above it', () => {
-    const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 2 }));
-
-    act(() => {
-      hook.result.current.onContentSizeChange(390, 0);
-    });
-    expect(frames).toHaveLength(0);
-    expect(hook.result.current.data).toEqual(['c', 'd', 'e', 'f']);
-
-    act(() => {
-      hook.result.current.onContentSizeChange(390, 800);
-      hook.result.current.onContentSizeChange(390, 900);
-    });
-    expect(frames).toHaveLength(1);
 
     hook.unmount();
   });
@@ -75,90 +63,80 @@ describe('useAnchoredFeed', () => {
 
     const empty = renderHook(() => useAnchoredFeed({ items: [] as string[], startIndex: 3 }));
     expect(empty.result.current.data).toEqual([]);
-    act(() => {
-      empty.result.current.onContentSizeChange(390, 24);
-    });
-    expect(frames).toHaveLength(0);
     empty.unmount();
   });
 
-  it('goes back to the tapped card when Android showed the first one instead', () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 4, viewOffset: 12 }));
-    const list = { scrollToIndex: vi.fn() };
-    hook.result.current.listRef.current = list as never;
-
+  it('takes the list back to the tapped card when Android left it at the top', () => {
+    const { hook, list } = openOn(4);
     act(() => {
       hook.result.current.onContentSizeChange(390, 1200);
+      vi.advanceTimersByTime(500);
     });
-    runFrames();
-    // The cards above went in, but the list did not hold the tapped card.
+
+    // The earlier cards went in, and the list stayed scrolled to zero.
     act(() => {
-      hook.result.current.onViewableItemsChanged({
-        viewableItems: [{ index: 0, isViewable: true, item: 'a', key: 'a' }],
-      } as never);
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     expect(list.scrollToIndex).toHaveBeenCalledWith({ animated: false, index: 4, viewOffset: 12 });
 
-    // Not measured yet: try again shortly, a bounded number of times.
+    // Not measured yet: step to the furthest measured card, then aim again.
     list.scrollToIndex.mockClear();
     act(() => {
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        hook.result.current.onScrollToIndexFailed();
+      hook.result.current.onScrollToIndexFailed({ highestMeasuredFrameIndex: 2 } as never);
+    });
+    expect(list.scrollToIndex).toHaveBeenLastCalledWith({ animated: false, index: 2 });
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+    expect(list.scrollToIndex).toHaveBeenLastCalledWith({ animated: false, index: 4, viewOffset: 12 });
+
+    // A bounded number of steps.
+    list.scrollToIndex.mockClear();
+    act(() => {
+      for (let step = 0; step < 10; step += 1) {
+        hook.result.current.onScrollToIndexFailed({ highestMeasuredFrameIndex: 2 } as never);
         vi.advanceTimersByTime(120);
       }
     });
-    expect(list.scrollToIndex).toHaveBeenCalledTimes(3);
+    expect(list.scrollToIndex.mock.calls.filter(([params]) => params.index === 4)).toHaveLength(5);
 
     hook.unmount();
-    vi.useRealTimers();
   });
 
-  it('leaves the list alone when the tapped card held, or once the person scrolls', () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const held = renderHook(() => useAnchoredFeed({ items, startIndex: 4 }));
-    const heldList = { scrollToIndex: vi.fn() };
-    held.result.current.listRef.current = heldList as never;
+  it('leaves the list alone when the card held, or once the person scrolls', () => {
+    const held = openOn(4);
     act(() => {
-      held.result.current.onContentSizeChange(390, 1200);
+      held.hook.result.current.onContentSizeChange(390, 1200);
+      vi.advanceTimersByTime(500);
+      held.hook.result.current.onScroll(scrollEvent(2400));
+      vi.advanceTimersByTime(300);
     });
-    runFrames();
-    act(() => {
-      held.result.current.onViewableItemsChanged({
-        viewableItems: [{ index: 4, isViewable: true, item: 'e', key: 'e' }],
-      } as never);
-      vi.advanceTimersByTime(250);
-    });
-    expect(heldList.scrollToIndex).not.toHaveBeenCalled();
-    held.unmount();
+    expect(held.list.scrollToIndex).not.toHaveBeenCalled();
+    held.hook.unmount();
 
-    const scrolled = renderHook(() => useAnchoredFeed({ items, startIndex: 4 }));
-    const scrolledList = { scrollToIndex: vi.fn() };
-    scrolled.result.current.listRef.current = scrolledList as never;
+    const scrolled = openOn(4);
     act(() => {
-      scrolled.result.current.onContentSizeChange(390, 1200);
+      scrolled.hook.result.current.onContentSizeChange(390, 1200);
+      vi.advanceTimersByTime(500);
+      scrolled.hook.result.current.onScrollBeginDrag();
+      vi.advanceTimersByTime(300);
+      scrolled.hook.result.current.onScrollToIndexFailed({ highestMeasuredFrameIndex: 2 } as never);
+      vi.advanceTimersByTime(120);
     });
-    runFrames();
-    act(() => {
-      scrolled.result.current.onScrollBeginDrag();
-      scrolled.result.current.onViewableItemsChanged({
-        viewableItems: [{ index: 1, isViewable: true, item: 'b', key: 'b' }],
-      } as never);
-      vi.advanceTimersByTime(250);
-    });
-    expect(scrolledList.scrollToIndex).not.toHaveBeenCalled();
-    scrolled.unmount();
-    vi.useRealTimers();
+    expect(scrolled.list.scrollToIndex).not.toHaveBeenCalled();
+    scrolled.hook.unmount();
   });
 
-  it('drops the pending frame when the feed closes first', () => {
-    const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 3 }));
+  it('does nothing after the feed closes', () => {
+    const { hook, list } = openOn(3);
     act(() => {
       hook.result.current.onContentSizeChange(390, 700);
     });
 
     hook.unmount();
-    expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(list.scrollToIndex).not.toHaveBeenCalled();
   });
 });

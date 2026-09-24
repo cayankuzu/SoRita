@@ -100,10 +100,10 @@ export function PlaceFeedScreen({
         keyExtractor={(item) => item.key}
         maintainVisibleContentPosition={feed.maintainVisibleContentPosition}
         onContentSizeChange={feed.onContentSizeChange}
+        onScroll={feed.onScroll}
         onScrollBeginDrag={feed.onScrollBeginDrag}
         onScrollToIndexFailed={feed.onScrollToIndexFailed}
-        onViewableItemsChanged={feed.onViewableItemsChanged}
-        viewabilityConfig={feed.viewabilityConfig}
+        scrollEventThrottle={16}
         renderItem={({ item }) => (
           <PlaceCard
             place={item.place}

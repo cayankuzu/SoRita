@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { FlatList, ViewToken } from 'react-native';
+import type { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 // Holds the first card on screen still while cards are added above it.
 const KEEP_FIRST_VISIBLE_CARD = { minIndexForVisible: 0 } as const;
-// Counts a card as on screen once any of it shows.
-const FIRST_CARD_VIEWABILITY = { itemVisiblePercentThreshold: 1 } as const;
-// Long enough for the cards added above to be laid out and measured.
-const ANCHOR_CHECK_DELAY_MS = 250;
+// How long the tapped card settles before the earlier cards go in above it.
+const REVEAL_DELAY_MS = 500;
+// Long enough for the list to have been moved down past the earlier cards.
+const ANCHOR_CHECK_DELAY_MS = 300;
 const ANCHOR_RETRY_DELAY_MS = 120;
-const MAX_ANCHOR_RETRIES = 3;
+const MAX_ANCHOR_STEPS = 6;
 
 type UseAnchoredFeedParams<ItemT> = {
   items: readonly ItemT[];
@@ -22,15 +22,14 @@ type UseAnchoredFeedParams<ItemT> = {
  * the way Instagram's profile and explore feeds do. Scrolling to an index
  * needs every card above it measured, so it landed on the wrong card or on
  * the first one. Instead the feed first renders from the tapped card, which
- * puts it at the top with no scroll at all. Once it is on screen the cards
+ * puts it at the top with no scroll at all. Once it has settled the cards
  * before it are put back above, and the list keeps the tapped card in place
  * while they arrive, so scrolling up reaches them.
  *
- * Android does not always hold the card: now and then the cards went in
- * above before the tapped one was mounted, and the feed showed the first
- * card. So once they are laid out, if the first card on screen is
- * not the tapped one and nobody has scrolled, the list goes back to it; by
- * then the tapped card is measured and the scroll is exact.
+ * Android does not always hold the card: in two openings of four the list
+ * stayed at the top, now showing the first card. The list is then still
+ * scrolled to zero, where a held card never leaves it, so it is taken back
+ * to the tapped card, stepping through unmeasured cards if it must.
  */
 export function useAnchoredFeed<ItemT>({
   items,
@@ -40,13 +39,11 @@ export function useAnchoredFeed<ItemT>({
   const listRef = useRef<FlatList<ItemT>>(null);
   const anchorIndex = Math.max(0, Math.min(startIndex, items.length - 1));
   const [earlierCardsShown, setEarlierCardsShown] = useState(anchorIndex === 0);
-  const frameRef = useRef<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firstVisibleItemRef = useRef<ItemT | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offsetRef = useRef(0);
   const userScrolledRef = useRef(false);
-  const retriesRef = useRef(0);
-  const anchorItemRef = useRef<ItemT | undefined>(items[anchorIndex]);
-  anchorItemRef.current = items[anchorIndex];
+  const stepsRef = useRef(0);
 
   const data = useMemo(
     () => (earlierCardsShown ? items : items.slice(anchorIndex)),
@@ -55,89 +52,90 @@ export function useAnchoredFeed<ItemT>({
 
   const onContentSizeChange = useCallback(
     (_width: number, height: number) => {
-      if (earlierCardsShown || height <= 0 || data.length === 0 || frameRef.current != null) {
+      if (earlierCardsShown || height <= 0 || data.length === 0 || revealTimerRef.current != null) {
         return;
       }
 
-      // One frame for the tapped card to reach the screen, so the list has a
-      // card to hold on to when the earlier ones go in above it.
-      frameRef.current = requestAnimationFrame(() => {
-        frameRef.current = null;
+      revealTimerRef.current = setTimeout(() => {
+        revealTimerRef.current = null;
         setEarlierCardsShown(true);
-      });
+      }, REVEAL_DELAY_MS);
     },
     [data.length, earlierCardsShown],
   );
 
-  const returnToAnchor = useCallback(() => {
-    timerRef.current = null;
-    const anchorItem = anchorItemRef.current;
-    if (userScrolledRef.current || anchorItem === undefined || firstVisibleItemRef.current === anchorItem) {
-      return;
+  const scrollToAnchor = useCallback(() => {
+    checkTimerRef.current = null;
+    if (!userScrolledRef.current) {
+      listRef.current?.scrollToIndex({ animated: false, index: anchorIndex, viewOffset });
     }
-
-    listRef.current?.scrollToIndex({ animated: false, index: anchorIndex, viewOffset });
   }, [anchorIndex, viewOffset]);
 
-  const scheduleReturn = useCallback(
-    (delay: number) => {
-      if (timerRef.current != null) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(returnToAnchor, delay);
-    },
-    [returnToAnchor],
-  );
+  const schedule = useCallback((callback: () => void, delay: number) => {
+    if (checkTimerRef.current != null) {
+      clearTimeout(checkTimerRef.current);
+    }
+    checkTimerRef.current = setTimeout(callback, delay);
+  }, []);
 
   useEffect(() => {
     if (!earlierCardsShown || anchorIndex === 0) {
-      return undefined;
+      return;
     }
 
-    scheduleReturn(ANCHOR_CHECK_DELAY_MS);
-    return undefined;
-  }, [anchorIndex, earlierCardsShown, scheduleReturn]);
+    // A held card leaves the list scrolled down past the cards above it.
+    schedule(() => {
+      checkTimerRef.current = null;
+      if (offsetRef.current < 1) {
+        scrollToAnchor();
+      }
+    }, ANCHOR_CHECK_DELAY_MS);
+  }, [anchorIndex, earlierCardsShown, schedule, scrollToAnchor]);
 
   useEffect(
     () => () => {
-      if (frameRef.current != null) {
-        cancelAnimationFrame(frameRef.current);
+      if (revealTimerRef.current != null) {
+        clearTimeout(revealTimerRef.current);
       }
-      if (timerRef.current != null) {
-        clearTimeout(timerRef.current);
+      if (checkTimerRef.current != null) {
+        clearTimeout(checkTimerRef.current);
       }
     },
     [],
   );
 
-  // FlatList refuses a new viewability callback after mount, so it reads refs.
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken<ItemT>[] }) => {
-      firstVisibleItemRef.current = viewableItems.find((token) => token.isViewable)?.item ?? null;
-    },
-  ).current;
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    offsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
 
   const onScrollBeginDrag = useCallback(() => {
     userScrolledRef.current = true;
   }, []);
 
-  const onScrollToIndexFailed = useCallback(() => {
-    if (retriesRef.current >= MAX_ANCHOR_RETRIES) {
-      return;
-    }
+  // The tapped card is not measured yet: step to the furthest measured card,
+  // which renders the next ones, then aim for it again.
+  const onScrollToIndexFailed = useCallback(
+    ({ highestMeasuredFrameIndex }: { highestMeasuredFrameIndex: number }) => {
+      if (userScrolledRef.current || stepsRef.current >= MAX_ANCHOR_STEPS) {
+        return;
+      }
 
-    retriesRef.current += 1;
-    scheduleReturn(ANCHOR_RETRY_DELAY_MS);
-  }, [scheduleReturn]);
+      stepsRef.current += 1;
+      if (highestMeasuredFrameIndex >= 0 && highestMeasuredFrameIndex < anchorIndex) {
+        listRef.current?.scrollToIndex({ animated: false, index: highestMeasuredFrameIndex });
+      }
+      schedule(scrollToAnchor, ANCHOR_RETRY_DELAY_MS);
+    },
+    [anchorIndex, schedule, scrollToAnchor],
+  );
 
   return {
     data,
     listRef,
     maintainVisibleContentPosition: KEEP_FIRST_VISIBLE_CARD,
     onContentSizeChange,
+    onScroll,
     onScrollBeginDrag,
     onScrollToIndexFailed,
-    onViewableItemsChanged,
-    viewabilityConfig: FIRST_CARD_VIEWABILITY,
   };
 }
