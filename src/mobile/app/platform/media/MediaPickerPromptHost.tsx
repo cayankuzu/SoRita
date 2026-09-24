@@ -14,7 +14,6 @@ import type {
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
-import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -231,12 +230,8 @@ export function MediaPickerPromptHost() {
               />
             ) : null}
           </View>
-
-          <PrimaryButton
-            title={tr.common.cancel}
-            variant="secondary"
-            onPress={() => resolveMediaPickerPrompt(null)}
-          />
+          {/* Closed by the X, the back button or a tap outside, like every
+              other sheet; a second "İptal" under the choices did the same. */}
         </View>
       </View>
     </AppModal>
