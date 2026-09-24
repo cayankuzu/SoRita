@@ -19,6 +19,12 @@ import {
   type ResponsiveGridStrategy,
 } from '@/mobile/app/shared/utils/layout';
 
+// Keeps the tiles in view still when a refetch adds rows above them. Only
+// while there are tiles: when every tile left at once (a search replacing
+// suggestions), Android kept the old offset and the empty message sat out of
+// sight until something relaid the list.
+const KEEP_VISIBLE_TILES_IN_PLACE = { minIndexForVisible: 0 };
+
 type VirtualizedDiscoveryGridRenderInfo<ItemT> = {
   columnCount: number;
   item: ItemT;
@@ -99,6 +105,13 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   columnCountRef.current = columnCount;
   dataLengthRef.current = data.length;
   const viewabilityConfig = React.useRef({ itemVisiblePercentThreshold: 20 }).current;
+  const isEmpty = data.length === 0;
+
+  React.useEffect(() => {
+    if (isEmpty) {
+      internalListRef.current?.scrollToOffset({ animated: false, offset: 0 });
+    }
+  }, [isEmpty]);
 
   if (previousColumnCountRef.current !== columnCount) {
     pendingAnchorIndexRef.current = visibleAnchorIndexRef.current;
@@ -229,7 +242,7 @@ export function VirtualizedDiscoveryGrid<ItemT>({
       onScrollToIndexFailed={handleScrollToIndexFailed}
       onViewableItemsChanged={handleViewableItemsChanged}
       viewabilityConfig={viewabilityConfig}
-      maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+      maintainVisibleContentPosition={isEmpty ? undefined : KEEP_VISIBLE_TILES_IN_PLACE}
       scrollEnabled={scrollEnabled}
       scrollEventThrottle={onScrollOffsetChange ? 16 : undefined}
       ListHeaderComponent={ListHeaderComponent}
