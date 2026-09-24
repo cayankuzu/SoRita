@@ -322,7 +322,13 @@ const config: SoRitaExpoConfig = {
         },
       },
     ],
-    '@react-native-firebase/app',
+    // react-native-firebase 26 resolves Firebase through Swift Package Manager
+    // by default, and refuses SPM under the static frameworks set above: each
+    // pod would embed its own Firebase copy and collide at link time. CocoaPods
+    // is how every iOS build before 26 resolved it, so this restores that path
+    // rather than changing linkage. Android is unaffected; it builds from the
+    // tracked android/ project and never reads this plugin option.
+    ['@react-native-firebase/app', { ios: { disableSPM: true } }],
     '@react-native-firebase/messaging',
     [
       'expo-location',
