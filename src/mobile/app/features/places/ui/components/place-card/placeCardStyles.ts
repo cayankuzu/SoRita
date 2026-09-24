@@ -129,6 +129,9 @@ export const placeCardStyles = StyleSheet.create({
     gap: spacing.xs,
   },
   linkBarTitle: textStyle('supportingLabelText', colors.text),
+  linkBarTitleText: {
+    flexShrink: 1,
+  },
   linkBarMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',

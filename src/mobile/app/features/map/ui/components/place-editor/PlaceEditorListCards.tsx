@@ -7,7 +7,6 @@ import { placeEditorListSelectionStyles as styles } from '@/mobile/app/features/
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Badge } from '@/mobile/app/shared/components/ui/Badge';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -110,12 +109,12 @@ export function PlaceEditorListCards({
               </View>
               <View style={styles.listBody}>
                 <View style={styles.listTitleRow}>
-                  <ExpandableText
-                    text={`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
-                    collapsedLines={1}
-                    textStyle={[styles.listName, blocked ? styles.listNameDisabled : null]}
-                    showIndicator={false}
-                  />
+                  <AppText
+                    numberOfLines={1}
+                    style={[styles.listName, blocked ? styles.listNameDisabled : null]}
+                  >
+                    {`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
+                  </AppText>
                 </View>
                 <View style={styles.listMetaRow}>
                   <AppText style={[styles.listMeta, blocked ? styles.listMetaDisabled : null]}>

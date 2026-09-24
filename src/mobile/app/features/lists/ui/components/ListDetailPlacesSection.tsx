@@ -65,12 +65,9 @@ export function ListDetailPlacesSection({
           </View>
           <View style={styles.ownerBody}>
             <AppText style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</AppText>
-            <ExpandableText
-              text={owner.name}
-              collapsedLines={1}
-              textStyle={styles.ownerName}
-              showIndicator={false}
-            />
+            <AppText numberOfLines={1} style={styles.ownerName}>
+              {owner.name}
+            </AppText>
             <AppText numberOfLines={1} style={styles.ownerUsername}>
               @{owner.username}
             </AppText>

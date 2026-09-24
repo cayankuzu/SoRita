@@ -8,7 +8,6 @@ import { settingsScreenStyles as styles } from '@/mobile/app/features/settings/u
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -60,7 +59,7 @@ export function SettingsBlockedUsersView({
               <AppText style={styles.blockedUserName}>{item.name}</AppText>
               <AppText style={styles.blockedUserUsername}>@{item.username}</AppText>
               {item.bio ? (
-                <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.blockedUserBio} />
+                <AppText numberOfLines={1} style={styles.blockedUserBio}>{item.bio}</AppText>
               ) : null}
             </View>
             <AppText style={styles.blockedUserAction}>{tr.settings.blocked.viewProfile}</AppText>
