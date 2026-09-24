@@ -112,16 +112,20 @@ function PublicUserAction({
   hasPendingFollowRequest,
   isBlockedByCurrent,
   isFollowing,
+  isPrivateAccount,
   onMorePress,
   onUnblockPress,
+  username,
 }: {
   canShow: boolean;
   followUser: () => Promise<'following' | 'requested' | 'unfollowed'>;
   hasPendingFollowRequest: boolean;
   isBlockedByCurrent: boolean;
   isFollowing: boolean;
+  isPrivateAccount: boolean;
   onMorePress: () => void;
   onUnblockPress: () => void;
+  username: string;
 }) {
   if (!canShow) {
     return null;
@@ -149,9 +153,11 @@ function PublicUserAction({
       hasPendingFollowRequest={hasPendingFollowRequest}
       isBlockedByCurrent={isBlockedByCurrent}
       isFollowing={isFollowing}
+      isPrivateAccount={isPrivateAccount}
       onFollowPress={handleFollowPress}
       onMorePress={onMorePress}
       onUnblockPress={onUnblockPress}
+      username={username}
     />
   );
 }
@@ -527,8 +533,10 @@ export function UserProfileScreen() {
             hasPendingFollowRequest={hasPendingFollowRequest}
             isBlockedByCurrent={isBlockedByCurrent}
             isFollowing={isFollowing}
+            isPrivateAccount={profileUser.isPublicAccount === false}
             onMorePress={() => setActionMenuVisible(true)}
             onUnblockPress={() => setUnblockConfirmVisible(true)}
+            username={profileUser.username}
           />
         )}
       />
@@ -625,8 +633,10 @@ export function UserProfileScreen() {
                 hasPendingFollowRequest={hasPendingFollowRequest}
                 isBlockedByCurrent={isBlockedByCurrent}
                 isFollowing={isFollowing}
+                isPrivateAccount={profileUser.isPublicAccount === false}
                 onMorePress={() => setActionMenuVisible(true)}
                 onUnblockPress={() => setUnblockConfirmVisible(true)}
+                username={profileUser.username}
               />
             )}
           />

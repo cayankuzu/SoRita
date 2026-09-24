@@ -11,6 +11,10 @@ export const profileTr = {
     report: 'Şikâyet et',
     settings: 'Ayarlar',
     unfollow: 'Takibi bırak',
+    unfollowConfirmTitle: (username: string) => `@${username} takibini bırak?`,
+    unfollowConfirmPublic: 'Paylaşımları artık akışında görünmez. İstediğin zaman yeniden takip edebilirsin.',
+    unfollowConfirmPrivate: 'Gizli hesap: içeriklerini yeniden görmek için takip isteği göndermen gerekir.',
+    unfollowHint: 'Takibi bırakmak için dokun',
     unblock: 'Engeli kaldır',
   },
   connections: {
