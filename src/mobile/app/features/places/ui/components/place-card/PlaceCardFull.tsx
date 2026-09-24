@@ -64,6 +64,7 @@ type PlaceCardMap = {
 
 type PlaceCardSocial = {
   allowAddToList: boolean;
+  autoOpenComments?: boolean;
   comments: FeedActionComment[];
   commentsErrorMessage?: string | null;
   commentsInitialLoading?: boolean;
@@ -145,6 +146,7 @@ export function PlaceCardFull({
   } = map;
   const {
     allowAddToList,
+    autoOpenComments = false,
     comments,
     commentsErrorMessage = null,
     commentsInitialLoading = false,
@@ -326,6 +328,7 @@ export function PlaceCardFull({
       />
 
       <FeedActionBar
+        autoOpenComments={autoOpenComments}
         currentUserName={currentUserName}
         currentUserPhoto={currentUserPhoto}
         liked={isLiked}

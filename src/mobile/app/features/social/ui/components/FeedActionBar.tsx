@@ -16,6 +16,8 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 export type FeedActionBarProps = {
+  // Opens the comments when this turns true, e.g. from a comment notification.
+  autoOpenComments?: boolean;
   comments?: FeedActionComment[];
   commentsErrorMessage?: string | null;
   commentsInitialLoading?: boolean;
@@ -81,6 +83,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
   const likers = props.likers ?? EMPTY_LIKERS;
   const [showSecondaryActions, setShowSecondaryActions] = React.useState(false);
   const state = useFeedActionBarState({
+    autoOpenComments: props.autoOpenComments,
     comments,
     commentCountOverride: props.commentCount,
     onCommentDelete: props.onCommentDelete,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import type {
@@ -13,6 +13,7 @@ type ReplyTarget = {
 };
 
 type UseFeedActionBarStateParams = {
+  autoOpenComments?: boolean;
   comments: FeedActionComment[];
   commentCountOverride?: number;
   onCommentDelete?: (commentId: string) => Promise<void> | void;
@@ -44,7 +45,17 @@ function countCommentTree(items: FeedActionComment[]): number {
 
 export const feedActionBarInternals = { getErrorMessage };
 
+// The card can mount before the request to open its comments arrives.
+function useOpenWhenRequested(requested: boolean, setOpen: (open: boolean) => void) {
+  useEffect(() => {
+    if (requested) {
+      setOpen(true);
+    }
+  }, [requested, setOpen]);
+}
+
 export function useFeedActionBarState({
+  autoOpenComments = false,
   comments,
   commentCountOverride,
   onCommentDelete,
@@ -61,7 +72,8 @@ export function useFeedActionBarState({
   const [commentText, setCommentText] = useState('');
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(autoOpenComments);
+  useOpenWhenRequested(autoOpenComments, setShowComments);
   const [showAddress, setShowAddress] = useState(false);
   const [showLikers, setShowLikers] = useState(false);
   const [showReportSheet, setShowReportSheet] = useState(false);

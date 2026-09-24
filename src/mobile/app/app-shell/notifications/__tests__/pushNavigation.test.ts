@@ -46,7 +46,16 @@ describe('push navigation verification', () => {
       ...payload,
       userId: '66666666-6666-4666-8666-666666666666',
     }, notification)).toBe(false);
+    // A push about a comment opens the place's comments.
     expect(resolveVerifiedPushNavigationTarget(notification)).toEqual({
+      params: {
+        listId: notification.listId,
+        openComments: true,
+        placeId: notification.placeId,
+      },
+      screen: 'ListDetail',
+    });
+    expect(resolveVerifiedPushNavigationTarget({ ...notification, type: 'like' })).toEqual({
       params: {
         listId: notification.listId,
         placeId: notification.placeId,

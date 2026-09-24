@@ -12,7 +12,7 @@ export type RootStackParamList = {
   AuthCallback: Record<string, string | undefined> | undefined;
   ResetPassword: Record<string, string | undefined> | undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
-  ListDetail: { listId: string; placeId?: string } | undefined;
+  ListDetail: { listId: string; openComments?: boolean; placeId?: string } | undefined;
   LocationPlaceCards: { lat: number; lng: number; placeId?: string; placeName?: string; ownerId?: string };
   UserProfile: { userId: string; allowBlockedView?: boolean };
   Notifications: undefined;

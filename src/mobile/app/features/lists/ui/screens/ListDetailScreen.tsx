@@ -46,6 +46,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { ListDetailSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
+import { useScrollToListRow } from '@/mobile/app/shared/hooks/useScrollToListRow';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -53,51 +54,10 @@ import { buildLocationPlaceStats } from '@/mobile/app/shared/utils/format';
 
 type ListDetailScreenContentProps = {
   listId: string;
+  // Open this place's comments once it is in view (a comment notification).
+  openComments?: boolean;
   placeId?: string;
 };
-
-// A notification opens a list on the place it is about. The first attempt
-// runs as the data lands, before the tall header and the rows below it are
-// measured, and fails. Each retry first steps to the furthest measured row,
-// which makes the list render the next ones, then aims for the place again.
-const MAX_LIST_SCROLL_RETRIES = 6;
-const LIST_SCROLL_RETRY_DELAY_MS = 120;
-
-function recoverListScroll({
-  highestMeasuredFrameIndex,
-  index,
-  listRef,
-  retryCountRef,
-  retryTimeoutRef,
-}: {
-  highestMeasuredFrameIndex: number;
-  index: number;
-  listRef: React.RefObject<FlatList<Place> | null>;
-  retryCountRef: React.MutableRefObject<number>;
-  retryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
-}) {
-  if (retryCountRef.current >= MAX_LIST_SCROLL_RETRIES) {
-    retryCountRef.current = 0;
-    return;
-  }
-
-  retryCountRef.current += 1;
-  if (highestMeasuredFrameIndex >= 0 && highestMeasuredFrameIndex < index) {
-    listRef.current?.scrollToIndex({ animated: false, index: highestMeasuredFrameIndex });
-  }
-  if (retryTimeoutRef.current) {
-    clearTimeout(retryTimeoutRef.current);
-  }
-  retryTimeoutRef.current = setTimeout(() => {
-    retryTimeoutRef.current = null;
-    listRef.current?.scrollToIndex({
-      animated: true,
-      index,
-      viewOffset: 12,
-      viewPosition: 0.08,
-    });
-  }, LIST_SCROLL_RETRY_DELAY_MS);
-}
 
 function ListDetailLoadingState() {
   return (
@@ -134,14 +94,12 @@ function ListDetailUnavailableState({
   );
 }
 
-function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentProps) {
+function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailScreenContentProps) {
   const navigation = useAppNavigation();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
   const { user } = useAuth();
   const listRef = React.useRef<FlatList<Place> | null>(null);
-  const scrollRetryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrollRetryCountRef = React.useRef(0);
   const [deleteListVisible, setDeleteListVisible] = useState(false);
   const [deletePlaceId, setDeletePlaceId] = useState<string | null>(null);
   const [editingPlace, setEditingPlace] = useState<Place | null>(null);
@@ -155,6 +113,9 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   const [reportReason, setReportReason] = useState('');
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const [pendingScrollTargetId, setPendingScrollTargetId] = useState<string | null>(null);
+  const [commentsPlaceId, setCommentsPlaceId] = useState<string | null>(
+    openComments ? placeId ?? null : null,
+  );
   const { mutateAsync: deleteListAsync } = useDeleteListMutation();
   const { mutateAsync: updateListAsync } = useUpdateListMutation();
 
@@ -192,17 +153,8 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   useEffect(() => {
     setHighlightedPlaceId(placeId ?? null);
     setPendingScrollTargetId(placeId ?? null);
-    scrollRetryCountRef.current = 0;
-  }, [placeId, listId]);
-
-  useEffect(
-    () => () => {
-      if (scrollRetryTimeoutRef.current) {
-        clearTimeout(scrollRetryTimeoutRef.current);
-      }
-    },
-    [],
-  );
+    setCommentsPlaceId(openComments ? placeId ?? null : null);
+  }, [openComments, placeId, listId]);
 
   useEffect(() => {
     setListEditorResumeDraft(null);
@@ -265,49 +217,43 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     setShowScrollTopButton((current) => (current === shouldShow ? current : shouldShow));
   };
 
+  // A notification or a map pin opens the list on one place. Pages load until
+  // it arrives; the hook then brings it into view once the list can.
+  const pendingScrollIndex = pendingScrollTargetId
+    ? displayPlaces.findIndex((place) => place.id === pendingScrollTargetId)
+    : -1;
+
   useEffect(() => {
-    if (!pendingScrollTargetId) {
+    if (!pendingScrollTargetId || pendingScrollIndex >= 0 || isInitialLoading) {
       return;
     }
 
-    const targetIndex = displayPlaces.findIndex((place) => place.id === pendingScrollTargetId);
-    if (targetIndex < 0) {
-      if (isInitialLoading) {
-        return;
-      }
-      if (hasNextPage && !isFetchingNextPage && fetchNextPage) {
-        void fetchNextPage();
-      } else if (hasNextPage === false) {
-        setPendingScrollTargetId((current) =>
-          current === pendingScrollTargetId ? null : current,
-        );
-      }
-      return;
+    if (hasNextPage && !isFetchingNextPage && fetchNextPage) {
+      void fetchNextPage();
+    } else if (hasNextPage === false) {
+      setPendingScrollTargetId(null);
     }
-
-    const frameId = requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex({
-        index: targetIndex,
-        animated: true,
-        viewOffset: 12,
-        viewPosition: 0.08,
-      });
-      setPendingScrollTargetId((current) =>
-        current === pendingScrollTargetId ? null : current,
-      );
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
   }, [
-    displayPlaces,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isInitialLoading,
+    pendingScrollIndex,
     pendingScrollTargetId,
   ]);
+
+  // Once the place is in view its comments have opened; a later remount of
+  // the row, after scrolling away and back, must not open them again.
+  const clearPendingScroll = React.useCallback(() => {
+    setPendingScrollTargetId(null);
+    setCommentsPlaceId(null);
+  }, []);
+  const rowScroll = useScrollToListRow({
+    listRef,
+    onDone: clearPendingScroll,
+    targetIndex: pendingScrollIndex >= 0 ? pendingScrollIndex : null,
+    targetKey: pendingScrollTargetId,
+  });
 
   const confirmDeletePlace = async () => {
     if (!list || !deletePlaceId) {
@@ -468,6 +414,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           keyExtractor={(place) => place.id}
           renderItem={({ item: place }) => (
             <ListDetailPlaceItem
+              autoOpenComments={commentsPlaceId === place.id}
               highlighted={highlightedPlaceId === place.id}
               isOwner={isOwner}
               listCoverImage={list.coverImage}
@@ -562,15 +509,9 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           onScroll={(event) => {
             handleScroll(event.nativeEvent.contentOffset.y);
           }}
-          onScrollToIndexFailed={({ highestMeasuredFrameIndex, index }) => {
-            recoverListScroll({
-              highestMeasuredFrameIndex,
-              index,
-              listRef,
-              retryCountRef: scrollRetryCountRef,
-              retryTimeoutRef: scrollRetryTimeoutRef,
-            });
-          }}
+          onContentSizeChange={rowScroll.onContentSizeChange}
+          onScrollBeginDrag={rowScroll.onScrollBeginDrag}
+          onScrollToIndexFailed={rowScroll.onScrollToIndexFailed}
         />
 
         {showScrollTopButton ? (
@@ -690,6 +631,7 @@ export function ListDetailScreen() {
   const route = useRootStackRoute<'ListDetail'>();
   const listId = route.params?.listId ?? '';
   const placeId = route.params?.placeId;
+  const openComments = route.params?.openComments;
 
-  return <ListDetailScreenContent listId={listId} placeId={placeId} />;
+  return <ListDetailScreenContent listId={listId} openComments={openComments} placeId={placeId} />;
 }

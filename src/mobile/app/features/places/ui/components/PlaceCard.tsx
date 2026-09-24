@@ -33,6 +33,8 @@ import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceCardProps = {
   place: Place;
+  // Opens the comments when this turns true, e.g. from a comment notification.
+  autoOpenComments?: boolean;
   context?: 'default' | 'list-detail';
   owner?: User | null;
   ownerId?: string | null;
@@ -119,6 +121,7 @@ function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {
 
 function PlaceCardComponent({
   place,
+  autoOpenComments = false,
   context,
   owner,
   ownerId,
@@ -562,6 +565,7 @@ function PlaceCardComponent({
     },
     social: {
       allowAddToList: allowAddToList && Boolean(user),
+      autoOpenComments,
       comments,
       commentsErrorMessage,
       commentsInitialLoading,

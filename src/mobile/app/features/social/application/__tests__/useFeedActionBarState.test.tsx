@@ -66,6 +66,23 @@ describe('useFeedActionBarState', () => {
     expect(onUserPress).toHaveBeenCalledWith('user-1');
   });
 
+  it('opens the comments when asked to, including after the card mounted', async () => {
+    const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
+    const opened = renderHook(() =>
+      hooks.useFeedActionBarState({ autoOpenComments: true, comments: [] }),
+    );
+    expect(opened.result.current.showComments).toBe(true);
+
+    const props = { autoOpenComments: false };
+    const later = renderHook(() =>
+      hooks.useFeedActionBarState({ autoOpenComments: props.autoOpenComments, comments: [] }),
+    );
+    expect(later.result.current.showComments).toBe(false);
+    props.autoOpenComments = true;
+    later.rerender();
+    expect(later.result.current.showComments).toBe(true);
+  });
+
   it('surfaces callback failures through toasts', async () => {
     const onLikePress = vi.fn().mockRejectedValue(new Error('like failed'));
     const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
