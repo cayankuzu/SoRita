@@ -3,11 +3,6 @@ import { Animated, type LayoutChangeEvent } from 'react-native';
 
 import { motion } from '@/mobile/app/shared/theme/tokens';
 
-type ScrollAwayHeaderOptions = {
-  // The part of the header that never leaves, such as the status bar strip.
-  pinnedHeight?: number;
-};
-
 export type ScrollAwayHeaderController = {
   height: number;
   onLayout: (event: LayoutChangeEvent) => void;
@@ -22,16 +17,12 @@ export type ScrollAwayHeaderController = {
  * the top the bar moves exactly with the content, so it never leaves an
  * empty band above the first item.
  */
-export function useScrollAwayHeader({
-  pinnedHeight = 0,
-}: ScrollAwayHeaderOptions = {}): ScrollAwayHeaderController {
+export function useScrollAwayHeader(): ScrollAwayHeaderController {
   const translateY = useRef(new Animated.Value(0)).current;
   const [height, setHeight] = useState(0);
   const heightRef = useRef(0);
   const hiddenRef = useRef(0);
   const lastOffsetRef = useRef<number | null>(null);
-  const pinnedHeightRef = useRef(pinnedHeight);
-  pinnedHeightRef.current = pinnedHeight;
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const nextHeight = event.nativeEvent.layout.height;
@@ -50,10 +41,9 @@ export function useScrollAwayHeader({
         return;
       }
 
-      const range = Math.max(0, heightRef.current - pinnedHeightRef.current);
       const next = Math.min(
         current,
-        range,
+        heightRef.current,
         Math.max(0, hiddenRef.current + current - last),
       );
       if (Math.abs(next - hiddenRef.current) < 0.5) {

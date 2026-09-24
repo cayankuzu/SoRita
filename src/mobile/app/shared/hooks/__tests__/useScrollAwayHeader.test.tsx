@@ -7,11 +7,11 @@ import {
   type ScrollAwayHeaderController,
 } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 
-function renderController(pinnedHeight?: number) {
+function renderController() {
   const result: { current?: ScrollAwayHeaderController } = {};
 
   function Harness() {
-    result.current = useScrollAwayHeader({ pinnedHeight });
+    result.current = useScrollAwayHeader();
     return null;
   }
 
@@ -54,14 +54,6 @@ describe('useScrollAwayHeader', () => {
 
     scroll(10);
     expect(hidden()).toBe(10);
-  });
-
-  it('keeps its pinned strip, such as the status bar, in place', () => {
-    const { hidden, scroll } = renderController(24);
-
-    scroll(0);
-    scroll(500);
-    expect(hidden()).toBe(96);
   });
 
   it('comes back when revealed and reads the next list afresh', () => {

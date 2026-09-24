@@ -43,6 +43,7 @@ import {
   radius,
   spacing,
   textStyle,
+  zIndex,
 } from '@/mobile/app/shared/theme/tokens';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
@@ -87,8 +88,8 @@ export function HomeScreen() {
   const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // The brand bar slides away while reading down the feed and returns on the
-  // first scroll up; the status bar strip under it stays.
-  const topBar = useScrollAwayHeader({ pinnedHeight: insets.top });
+  // first scroll up. An opaque strip keeps the status bar clear of the feed.
+  const topBar = useScrollAwayHeader();
   const trackTopBarScroll = topBar.onScrollOffset;
   const handleFeedScroll = React.useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -373,6 +374,7 @@ export function HomeScreen() {
       <ScrollAwayHeader controller={topBar} testID="home-top-bar">
         <AppHeader />
       </ScrollAwayHeader>
+      <View pointerEvents="none" style={[styles.statusBarStrip, { height: insets.top }]} />
     </Screen>
   );
 }
@@ -413,6 +415,14 @@ function HomeFeedEmptyState({
 }
 
 const styles = StyleSheet.create({
+  statusBarStrip: {
+    backgroundColor: colors.surface,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: zIndex.overlay,
+  },
   skeletonWrap: {
     flex: 1,
     paddingTop: spacing.md,
