@@ -18,6 +18,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAnchoredFeed } from '@/mobile/app/shared/hooks/useAnchoredFeed';
+import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
@@ -63,6 +64,9 @@ export function PlaceFeedScreen({
   const { height, width } = useWindowDimensions();
   const appLayout = useAppLayout();
   const feed = useAnchoredFeed({ items, startIndex });
+  // The feed is a view inside its tab, not a screen of its own: without this
+  // the back key left the tab for Home instead of returning to the grid.
+  useAndroidBackHandler(true, onBack);
   const listProps = React.useMemo(
     () =>
       buildAdaptiveFlatListProps<PlaceFeedCardItem>({
