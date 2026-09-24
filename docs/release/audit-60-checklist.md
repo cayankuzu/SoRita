@@ -64,7 +64,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
 | 4: Native paket #1 | ⏸ | Atlandı: `android/` altındaki native dosyalar bu oturumun sandbox'ında okumaya ve yazmaya kapalı; yükleme de Cayan'ın adımı. Tek renkli ikon adayı hazır |
-| 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet |
+| 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
 
 ---
 
@@ -185,7 +185,14 @@ Claude:
    Cayan'a göster.
 4. Native yüzey değiştiği için `nativeRuntimeVersion` yükselt.
 5. Android AAB ve iOS build'ini EAS ile al.
-6. Binary'ler yüklenince iki platformu `ota:record-binary` ile kaydet. İlk iOS
+6. Tek splash: Android 12+ sistem splash'i yuvarlak maskeli logoyu
+   gösteriyor, ardından JS splash'i (logo ve telif yazısı) geliyor.
+   `android/app/src/main/res/values/styles.xml` içinde
+   `windowSplashScreenAnimatedIcon` değerini `@android:color/transparent`
+   yap; arka plan `#f8fafc` kalsın. iOS'ta açılış ekranı zaten telif yazılı
+   görsel, değişiklik gerekmez. Bu dosya bu oturumun sandbox'ında yazmaya
+   kapalı; native build'e girer.
+7. Binary'ler yüklenince iki platformu `ota:record-binary` ile kaydet. İlk iOS
    OTA'yı yayınla. Mac olmadığı için iOS teslimatını Sentry olaylarındaki
    update id etiketinden kanıtla.
 
@@ -296,6 +303,43 @@ bir alan adı gerekir.
 
 **Faz 7'ye not:** `SettingsHeader` ile `StackScreenHeader` iki ayrı başlık
 bileşeni.
+
+### Faz 5–9 birleşik tur (2026-09-24)
+
+Cayan fazları sırayla değil birlikte ilerletmeyi istedi; bu tur Faz 5 (bileşen),
+Faz 6 (kart ve harita), Faz 9A (durum ve motion) ve Faz 11–19 (işlem matrisi)
+kapsamına giren işleri birlikte teslim etti.
+
+**Teslim:** OTA grupları `ec9e1dee`, `102f5293`, `b531e1de`, `316d8a0a`, `0afd4fe6`, `072eb9d6`, `e7404b96`, `330a2fec`; her biri iki soğuk başlatmayla cihazda
+doğrulandı (ilkinde indirildi, ikincisinde güncelleme kalmadı).
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| E1 | Profil ve Keşfet 3 sütunlu Instagram ızgarası: kenardan kenara, 2dp aralık, kare görsel, alt geçişte ad, köşede çoklu foto/video/gizli işareti; fotoğrafsız mekânda canlı harita yerine statik harita; Keşfet'te Kişiler liste kalır; yükleme durumu aynı ızgara. Eski kart kutuları ve yalnız onların kullandığı 43 stil silindi (net -1376 satır) | cihaz: Listeler ve Mekânlar ızgarası |
+| E2 | Ana Sayfa ve Keşfet üst barı aşağı kaydırınca kayboluyor, yukarıda geri geliyor; en üstte içerikle birlikte hareket ediyor; durum çubuğunu opak şerit örtüyor (şerit native safe area ile boyutlanıyor; hook sekme içinde 0 döndürüyordu) | cihaz: Ana Sayfa'da gizlenme, geri gelme, saat arkasında içerik yok; birim testi (4) |
+| E3 | Yorumlar tek istekte: `place_comment_threads_page` artık yazar adı, kullanıcı adı ve fotoğrafını döndürüyor (migration `20260924010000`, pgTAP 6 test, yerel 14 dosya geçti). İstemci satırdaki yazarı önce kullanıyor | birim testi; **production'a uygulanmadı** (izin sistemi) |
+| E4 | Yorum beğeni sayısı her yorumda 0 veya 1 görünüyordu (yalnız izleyicinin beğenisinden hesaplanıyordu); artık sunucu sayısı | birim testi |
+| E5 | Push uçtan uca izlendi: production'da tetikleyici ve dakikalık gönderici çalışıyor; Xiaomi cihazda uygulama açıkken, arka planda ve sistem öldürmüşken bildirim geldi; zorla durdurulmuşken Android FCM'i iptal ediyor (`result=CANCELLED`). Bildirimler ekranı izin kapalıysa uyarı, bu üreticilerde bir kerelik ipucu gösteriyor; "Bildirim ayarları" doğrudan SoRita kanal sayfasını açıyor (Kayan bildirimler ve Kilit ekranında anahtarları orada, uygulama bunları değiştiremez) | cihaz: 4 test bildirimi (silindi); kanal sayfası açıldı, anahtarlara dokunulmadı |
+| E6 | Büyütülen fotoğrafta iki parmakla yakınlaştırma (4x), yakınken tek parmakla gezinme, çift dokunuşla yakınlaştır/geri al; yakınken sayfa kaymıyor; sonraki fotoğrafa geçince sıfırlanıyor; tam çözünürlük gelene kadar küçük görsel | cihaz: çift dokunuş, gezinme, sıfırlama, sayfa geçişi; birim testi (5) |
+| E7 | "Adresi göster" açıkken "Adresi gizle" oluyor | basit koşul |
+| E8 | Liste sayfasındaki harita dokunulana kadar sabit, sayfa üstünden kayıyor; "Bitti" ile kapanıyor | kod |
+| E9 | Keşfet'in 20pt başlığı ve alt yazısı kalktı; profil adı 20pt'den 16pt'ye | cihaz |
+| E10 | Galeri sayısı 31 iken "Henüz fotoğraf yok" görünüyordu; sayılmış içerik gelene kadar ızgara iskeleti | cihaz |
+| E11 | Galeri ve Keşfet akışlarının üstündeki gri bant (çift safe-area) | cihaz |
+| E12 | Izgarada karta dokununca akış o kartta açılıyor, yukarı ve aşağı diğer kartlar (Instagram profil ve keşfet akışı). Önceden hep ilk kartta açılıyordu: dizine kaydırma üstteki kartların ölçülmesini gerektiriyor ve ölçülmeden vazgeçiyordu. Akış artık dokunulan karttan çiziliyor, önceki kartlar o kart yerinde tutularak üste ekleniyor. Profil ile Keşfet'in iki kopya akışı tek `PlaceFeedScreen` | cihaz: Profil > Mekânlar 5. kart (Tostmodern) ve Keşfet > Mekânlar 7. kart kendi yerinde açıldı; yukarı kaydırmada sıra doğru, en üstte ilk kart; birim testi (4) |
+| E13 | Uygulama açıkken gelen push artık uygulamanın kendi bandıyla, hangi ekran açıksa üstünde görünüyor: kim, ne yaptı; dokununca ilgili içerik, yukarı kaydırınca ya da 4,5 sn sonra kapanır. Xiaomi, OPPO ve vivo sistem bandını yeni uygulamalarda kapalı tuttuğu için bu bildirimler yalnız bildirim çubuğuna düşüyordu. Bant hazır değilse (oturum yok, açılış sürüyor) sistem sunumu eskisi gibi; iPhone bildirimi Bildirim Merkezi'nde de tutar | cihaz: uygulama açıkken test push'u bant olarak göründü, sistem bildirimi ayrıca düşmedi; banda dokununca Bildirimler açıldı (2 test kaydı silindi); birim testi (5) |
+| E14 | Izgaranın ilk ekranı tek seferde çiziliyor. Sekme geçişinde 6 kare ve altında boşluk vardı: ızgara hâlâ canlı harita listesi gibi 2 satırla başlıyordu | cihaz: 34 mekânlık sekmede boşluk |
+| E15 | Silinmiş ya da gizlenmiş listede geri çubuğu (iPhone'da çıkış yalnız kenar kaydırmasıydı) | kod |
+| E16 | Ana Sayfa üst barı ve durum şeridi kenardan kenara: ekranın 16dp iç boşluğunun içinde kaldığı için iki kenarda gri şerit vardı, logo çift boşlukla içerideydi | cihaz: kenar piksel örneği |
+| E18 | Karttan açılan akış ızgaranın üstünde açılıyor, ızgara altta yerinde duruyor: kapatınca aynı kaydırma konumuna dönülüyor (önceden profil en üstten yeniden kuruluyordu). Kendi profilinde akıştan Sil ve Düzenle artık çalışıyor: pencereleri yalnız ızgara görünümünde çiziliyordu, akışta hiçbir şey olmuyordu | cihaz: eski sürümde Düzenle tepkisiz, yenisinde düzenleyici açıldı (kaydedilmeden kapatıldı); geri dönüşte ızgara aynı yerde; birim testi |
+| E19 | Akışta Android geri tuşu ızgaraya dönüyor; önceden sekmeden çıkıp Ana Sayfa'ya atıyordu | cihaz |
+| E20 | Mekân düzenleyicisi hiçbir şey değişmeden kapatılınca da "Değişiklikler iptal edilsin mi?" soruyordu: taslak fotoğraf listesini ekleyen bir fonksiyondan geçiyor, karşılaştırıldığı başlangıç hali geçmiyordu | cihaz: sorun görüldü; regresyon testi düzeltmesiz kırmızı |
+| E17 | Bildirimden açılan listede ilgili mekâna kaydırma: ilk deneme başlık ölçülmeden düşüyordu; her deneme ölçülen en uzak satıra adım atıp yeniden hedefliyor | kod |
+
+**Açık kalan:** yorum migration'ının production'a uygulanması; iOS push
+teslimi (iOS token'larından hiç onay yok; iOS cihaz yok); web sitesi önizleme
+etiketleri; tek splash (native build, Faz 4); uygulama kapalıyken ekrana
+düşme cihaz ayarına bağlı (Kayan bildirimler, Kilit ekranında).
 
 ### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
 
