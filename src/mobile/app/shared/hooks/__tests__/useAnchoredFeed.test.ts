@@ -82,6 +82,76 @@ describe('useAnchoredFeed', () => {
     empty.unmount();
   });
 
+  it('goes back to the tapped card when Android showed the first one instead', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 4, viewOffset: 12 }));
+    const list = { scrollToIndex: vi.fn() };
+    hook.result.current.listRef.current = list as never;
+
+    act(() => {
+      hook.result.current.onContentSizeChange(390, 1200);
+    });
+    runFrames();
+    // The cards above went in, but the list did not hold the tapped card.
+    act(() => {
+      hook.result.current.onViewableItemsChanged({
+        viewableItems: [{ index: 0, isViewable: true, item: 'a', key: 'a' }],
+      } as never);
+      vi.advanceTimersByTime(250);
+    });
+    expect(list.scrollToIndex).toHaveBeenCalledWith({ animated: false, index: 4, viewOffset: 12 });
+
+    // Not measured yet: try again shortly, a bounded number of times.
+    list.scrollToIndex.mockClear();
+    act(() => {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        hook.result.current.onScrollToIndexFailed({ averageItemLength: 0, highestMeasuredFrameIndex: 0, index: 4 });
+        vi.advanceTimersByTime(120);
+      }
+    });
+    expect(list.scrollToIndex).toHaveBeenCalledTimes(3);
+
+    hook.unmount();
+    vi.useRealTimers();
+  });
+
+  it('leaves the list alone when the tapped card held, or once the person scrolls', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const held = renderHook(() => useAnchoredFeed({ items, startIndex: 4 }));
+    const heldList = { scrollToIndex: vi.fn() };
+    held.result.current.listRef.current = heldList as never;
+    act(() => {
+      held.result.current.onContentSizeChange(390, 1200);
+    });
+    runFrames();
+    act(() => {
+      held.result.current.onViewableItemsChanged({
+        viewableItems: [{ index: 4, isViewable: true, item: 'e', key: 'e' }],
+      } as never);
+      vi.advanceTimersByTime(250);
+    });
+    expect(heldList.scrollToIndex).not.toHaveBeenCalled();
+    held.unmount();
+
+    const scrolled = renderHook(() => useAnchoredFeed({ items, startIndex: 4 }));
+    const scrolledList = { scrollToIndex: vi.fn() };
+    scrolled.result.current.listRef.current = scrolledList as never;
+    act(() => {
+      scrolled.result.current.onContentSizeChange(390, 1200);
+    });
+    runFrames();
+    act(() => {
+      scrolled.result.current.onScrollBeginDrag();
+      scrolled.result.current.onViewableItemsChanged({
+        viewableItems: [{ index: 1, isViewable: true, item: 'b', key: 'b' }],
+      } as never);
+      vi.advanceTimersByTime(250);
+    });
+    expect(scrolledList.scrollToIndex).not.toHaveBeenCalled();
+    scrolled.unmount();
+    vi.useRealTimers();
+  });
+
   it('drops the pending frame when the feed closes first', () => {
     const hook = renderHook(() => useAnchoredFeed({ items, startIndex: 3 }));
     act(() => {
