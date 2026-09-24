@@ -24,6 +24,7 @@ import {
 import { OwnProfileActionBar } from '@/mobile/app/features/profile/ui/components/OwnProfileActionBar';
 import { ProfilePagedScrollContainer } from '@/mobile/app/features/profile/ui/components/ProfilePagedScrollContainer';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
+import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
@@ -325,40 +326,37 @@ export function ProfileScreen() {
     setEditingPlaceTarget({ list: targetList, place: targetPlace });
   };
 
-  if (feedMode) {
-    const feedItems =
-      feedMode.kind === 'places' ? filteredPlaces : filteredPhotos;
-    const feedTitle =
-      feedMode.kind === 'places'
-        ? tr.profile.feedTitle.places
-        : tr.profile.feedTitle.gallery;
-
-    return (
-      <PlaceFeedScreen
-        // The Profile tab's header already clears the status bar; clearing it
-        // again left a grey band above "Galeri".
-        safeTop={false}
-        title={feedTitle}
-        items={feedItems}
-        startIndex={feedMode.startIndex}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        onBack={() => setFeedMode(null)}
-        onDeletePlace={(item) => {
-          setDeletePlaceId(item.place.id);
-        }}
-        onEditPlace={(item) => {
-          openEditingPlaceTarget(item.listId, item.place.id);
-        }}
-        onOpenListDetail={(item) =>
-          openStackScreen(navigation, 'ListDetail', {
-            listId: item.listId,
-            placeId: item.place.id,
-          })
-        }
-      />
-    );
-  }
+  // Opened over the grid rather than in its place, so the grid keeps its
+  // scroll, and the delete and edit sheets below serve the feed too.
+  const feedOverlay = feedMode ? (
+    <PlaceFeedScreen
+      // The Profile tab's header already clears the status bar; clearing it
+      // again left a grey band above "Galeri".
+      safeTop={false}
+      title={
+        feedMode.kind === 'places'
+          ? tr.profile.feedTitle.places
+          : tr.profile.feedTitle.gallery
+      }
+      items={feedMode.kind === 'places' ? filteredPlaces : filteredPhotos}
+      startIndex={feedMode.startIndex}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onBack={() => setFeedMode(null)}
+      onDeletePlace={(item) => {
+        setDeletePlaceId(item.place.id);
+      }}
+      onEditPlace={(item) => {
+        openEditingPlaceTarget(item.listId, item.place.id);
+      }}
+      onOpenListDetail={(item) =>
+        openStackScreen(navigation, 'ListDetail', {
+          listId: item.listId,
+          placeId: item.place.id,
+        })
+      }
+    />
+  ) : null;
 
   const renderEmptyState = (tab: ProfileTab) => {
     // The summary already counted this tab's content: an empty list means it
@@ -483,41 +481,43 @@ export function ProfileScreen() {
 
   return (
     <>
-      <Screen safeTop={false} padded={false} scroll={false}>
-        <ProfilePagedScrollContainer
-          pager={
-            <ProfileContentPager
-              activeTab={activeTab}
-              dataByTab={dataByTab}
-              emptyStateForTab={renderEmptyState}
-              enabled={pagerSwipeEnabled}
-              header={renderProfileHero()}
-              stickyHeader={renderProfileStickyHeader()}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              listRef={profileListRef}
-              onEndReached={handleProfileEndReached}
-              onListPress={(list) =>
-                openStackScreen(navigation, 'ListDetail', { listId: list.id })
-              }
-              onPageProgressChange={handlePageProgressChange}
-              onPlacePress={(tab, index) =>
-                setFeedMode({
-                  startIndex: index,
-                  kind: tab === 'gallery' ? 'gallery' : 'places',
-                })
-              }
-              onRefresh={onRefresh}
-              onTabChange={handleTabChange}
-              onTabPreviewChange={handleTabPreviewChange}
-              refreshing={refreshing}
-              shouldShowErrorState={shouldShowErrorState}
-              showPrivacyBadge
-              tabs={pagerTabs}
-            />
-          }
-        />
-      </Screen>
+      <OverlayHost overlay={feedOverlay}>
+        <Screen safeTop={false} padded={false} scroll={false}>
+          <ProfilePagedScrollContainer
+            pager={
+              <ProfileContentPager
+                activeTab={activeTab}
+                dataByTab={dataByTab}
+                emptyStateForTab={renderEmptyState}
+                enabled={pagerSwipeEnabled}
+                header={renderProfileHero()}
+                stickyHeader={renderProfileStickyHeader()}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                listRef={profileListRef}
+                onEndReached={handleProfileEndReached}
+                onListPress={(list) =>
+                  openStackScreen(navigation, 'ListDetail', { listId: list.id })
+                }
+                onPageProgressChange={handlePageProgressChange}
+                onPlacePress={(tab, index) =>
+                  setFeedMode({
+                    startIndex: index,
+                    kind: tab === 'gallery' ? 'gallery' : 'places',
+                  })
+                }
+                onRefresh={onRefresh}
+                onTabChange={handleTabChange}
+                onTabPreviewChange={handleTabPreviewChange}
+                refreshing={refreshing}
+                shouldShowErrorState={shouldShowErrorState}
+                showPrivacyBadge
+                tabs={pagerTabs}
+              />
+            }
+          />
+        </Screen>
+      </OverlayHost>
 
       {deletePlaceId ? (
         <ConfirmActionModal

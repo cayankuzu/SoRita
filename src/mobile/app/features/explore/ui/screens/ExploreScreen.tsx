@@ -26,6 +26,7 @@ import type {
   ExploreTabType,
 } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { SwipeableTabPager } from '@/mobile/app/shared/components/navigation/SwipeableTabPager';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -280,115 +281,113 @@ export function ExploreScreen() {
     );
   }
 
-  if (feedMode) {
-    const feedItems =
-      feedMode.kind === 'places' ? filteredPlaces : filteredPhotos;
-
-    return (
-      // Shown inside the Explore tab, whose header already clears the status bar.
-      <PlaceFeedScreen
-        safeTop={false}
-        title={tr.explore.title}
-        items={feedItems}
-        startIndex={feedMode.startIndex}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        onBack={() => setFeedMode(null)}
-        ownerFor={(item) => item.owner}
-        onOwnerPress={(item) =>
-          item.owner && openStackScreen(navigation, 'UserProfile', { userId: item.owner.id })
-        }
-        onOpenListDetail={(item) =>
-          openStackScreen(navigation, 'ListDetail', {
-            listId: item.listId,
-            placeId: item.place.id,
-          })
-        }
-      />
-    );
-  }
+  // Opened over the results rather than in their place, so each tab keeps
+  // its scroll. The Explore tab's header already clears the status bar.
+  const feedOverlay = feedMode ? (
+    <PlaceFeedScreen
+      safeTop={false}
+      title={tr.explore.title}
+      items={feedMode.kind === 'places' ? filteredPlaces : filteredPhotos}
+      startIndex={feedMode.startIndex}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onBack={() => setFeedMode(null)}
+      ownerFor={(item) => item.owner}
+      onOwnerPress={(item) =>
+        item.owner && openStackScreen(navigation, 'UserProfile', { userId: item.owner.id })
+      }
+      onOpenListDetail={(item) =>
+        openStackScreen(navigation, 'ListDetail', {
+          listId: item.listId,
+          placeId: item.place.id,
+        })
+      }
+    />
+  ) : null;
 
   return (
-    <Screen safeTop={false} padded={false} scroll={false}>
-      <ExplorePagerLayout
-        headerController={browseHeader}
-        header={
-          <ExploreBrowseHeader
-            activeTab={visibleTab}
-            onRetry={handleRetry}
-            onSearchQueryChange={setSearchQuery}
-            onTabChange={handleTabChange}
-            // The count follows the tab being swiped to and never leaves: while
-            // a swipe was in flight it used to vanish, the header lost a line,
-            // and the whole pager jumped up and back down.
-            resultCount={dataByTab[visibleTab].length}
-            resultsPending={searchQuery.trim() !== debouncedSearchQuery.trim()}
-            resultsPreviewing={visibleTab !== activeTab}
-            screenPadding={screenPadding}
-            searchQuery={searchQuery}
-            showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
-          />
-        }
-        pager={
-          <SwipeableTabPager
-            activeTab={activeTab}
-            enabled={!refreshing && !feedMode}
-            getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
-            keepAlive
-            lazy
-            tabs={EXPLORE_PAGER_TABS}
-            onChange={handleTabChange}
-            onPreviewTabChange={handleTabPreviewChange}
-            renderPage={(tab, _preview, active) => {
-              const tabQuery = queryStateByTab[tab];
+    <OverlayHost overlay={feedOverlay}>
+      <Screen safeTop={false} padded={false} scroll={false}>
+        <ExplorePagerLayout
+          headerController={browseHeader}
+          header={
+            <ExploreBrowseHeader
+              activeTab={visibleTab}
+              onRetry={handleRetry}
+              onSearchQueryChange={setSearchQuery}
+              onTabChange={handleTabChange}
+              // The count follows the tab being swiped to and never leaves: while
+              // a swipe was in flight it used to vanish, the header lost a line,
+              // and the whole pager jumped up and back down.
+              resultCount={dataByTab[visibleTab].length}
+              resultsPending={searchQuery.trim() !== debouncedSearchQuery.trim()}
+              resultsPreviewing={visibleTab !== activeTab}
+              screenPadding={screenPadding}
+              searchQuery={searchQuery}
+              showPartialDataNotice={hasPartialDataError && hasAnyBrowseData}
+            />
+          }
+          pager={
+            <SwipeableTabPager
+              activeTab={activeTab}
+              enabled={!refreshing && !feedMode}
+              getTabLabel={(tab) => EXPLORE_TAB_LABELS[tab]}
+              keepAlive
+              lazy
+              tabs={EXPLORE_PAGER_TABS}
+              onChange={handleTabChange}
+              onPreviewTabChange={handleTabPreviewChange}
+              renderPage={(tab, _preview, active) => {
+                const tabQuery = queryStateByTab[tab];
 
-              return (
-                <ExploreResultsPage
-                  active={active}
-                  data={dataByTab[tab]}
-                  errorMessage={
-                    active && errorMessage && !hasAnyBrowseData
-                      ? errorMessage
-                      : null
-                  }
-                  following={following}
-                  hasNextPage={tabQuery.hasNextPage}
-                  isFetchingNextPage={tabQuery.isFetchingNextPage}
-                  listRef={getTabScrollRefCallback(tab)}
-                  onContentReady={() => notifyTabContentReady(tab)}
-                  onClearSearch={() => setSearchQuery('')}
-                  onEndReached={() => handleEndReached(tab)}
-                  onFollowUser={handleFollowUser}
-                  onListIntent={warmListIntent}
-                  onListPress={openListDetail}
-                  onOwnerIntent={warmOwnerIntent}
-                  onOwnerPress={openUserProfile}
-                  onPlacePress={(pageTab, index) =>
-                    setFeedMode({
-                      kind: pageTab === 'photos' ? 'photos' : 'places',
-                      startIndex: index,
-                    })
-                  }
-                  onRefresh={onRefresh}
-                  onRetry={retry}
-                  onScrollOffsetChange={(offset) => {
-                    recordTabScrollOffset(tab, offset);
-                    if (tab === activeTabRef.current) {
-                      browseHeader.onScrollOffset(offset);
+                return (
+                  <ExploreResultsPage
+                    active={active}
+                    data={dataByTab[tab]}
+                    errorMessage={
+                      active && errorMessage && !hasAnyBrowseData
+                        ? errorMessage
+                        : null
                     }
-                  }}
-                  pendingFollowRequests={pendingFollowRequests}
-                  refreshing={refreshing}
-                  searchQuery={debouncedSearchQuery}
-                  tab={tab}
-                  topInset={browseHeader.height}
-                />
-              );
-            }}
-          />
-        }
-      />
-    </Screen>
+                    following={following}
+                    hasNextPage={tabQuery.hasNextPage}
+                    isFetchingNextPage={tabQuery.isFetchingNextPage}
+                    listRef={getTabScrollRefCallback(tab)}
+                    onContentReady={() => notifyTabContentReady(tab)}
+                    onClearSearch={() => setSearchQuery('')}
+                    onEndReached={() => handleEndReached(tab)}
+                    onFollowUser={handleFollowUser}
+                    onListIntent={warmListIntent}
+                    onListPress={openListDetail}
+                    onOwnerIntent={warmOwnerIntent}
+                    onOwnerPress={openUserProfile}
+                    onPlacePress={(pageTab, index) =>
+                      setFeedMode({
+                        kind: pageTab === 'photos' ? 'photos' : 'places',
+                        startIndex: index,
+                      })
+                    }
+                    onRefresh={onRefresh}
+                    onRetry={retry}
+                    onScrollOffsetChange={(offset) => {
+                      recordTabScrollOffset(tab, offset);
+                      if (tab === activeTabRef.current) {
+                        browseHeader.onScrollOffset(offset);
+                      }
+                    }}
+                    pendingFollowRequests={pendingFollowRequests}
+                    refreshing={refreshing}
+                    searchQuery={debouncedSearchQuery}
+                    tab={tab}
+                    topInset={browseHeader.height}
+                  />
+                );
+              }}
+            />
+          }
+        />
+      </Screen>
+    </OverlayHost>
   );
 }
 

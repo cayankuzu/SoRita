@@ -29,6 +29,7 @@ import { ProfilePagedScrollContainer } from '@/mobile/app/features/profile/ui/co
 import { PublicProfileActionBar } from '@/mobile/app/features/profile/ui/components/PublicProfileActionBar';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
+import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -421,35 +422,31 @@ export function UserProfileScreen() {
     );
   }
 
-  if (feedMode) {
-    const feedItems =
-      feedMode.kind === 'places' ? filteredPlaces : filteredPhotos;
-    const feedTitle =
-      feedMode.kind === 'places'
-        ? tr.profile.feedTitle.places
-        : tr.profile.feedTitle.gallery;
-
-    return (
-      <DeferredPlaceFeedScreen
-        title={feedTitle}
-        items={feedItems}
-        startIndex={feedMode.startIndex}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        ownerFor={() => profileUser}
-        onBack={() => setFeedMode(null)}
-        onOpenListDetail={(item) =>
-          openStackScreen(navigation, 'ListDetail', {
-            listId: item.listId,
-            placeId: item.place.id,
-          })
-        }
-        onOwnerPress={() =>
-          openStackScreen(navigation, 'UserProfile', { userId: profileUser.id })
-        }
-      />
-    );
-  }
+  // Opened over the grid rather than in its place, so the grid keeps its scroll.
+  const feedOverlay = feedMode ? (
+    <DeferredPlaceFeedScreen
+      title={
+        feedMode.kind === 'places'
+          ? tr.profile.feedTitle.places
+          : tr.profile.feedTitle.gallery
+      }
+      items={feedMode.kind === 'places' ? filteredPlaces : filteredPhotos}
+      startIndex={feedMode.startIndex}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      ownerFor={() => profileUser}
+      onBack={() => setFeedMode(null)}
+      onOpenListDetail={(item) =>
+        openStackScreen(navigation, 'ListDetail', {
+          listId: item.listId,
+          placeId: item.place.id,
+        })
+      }
+      onOwnerPress={() =>
+        openStackScreen(navigation, 'UserProfile', { userId: profileUser.id })
+      }
+    />
+  ) : null;
 
   const renderEmptyState = (tab: ProfileTab) => {
     // Counted content that has not arrived yet is loading, not missing.
@@ -568,40 +565,42 @@ export function UserProfileScreen() {
   return (
     <>
       {canViewProfileContent ? (
-        <Screen safeTop={false} padded={false} scroll={false}>
-          <ProfilePagedScrollContainer
-            pager={
-              <ProfileContentPager
-                activeTab={activeTab}
-                dataByTab={dataByTab}
-                emptyStateForTab={renderEmptyState}
-                enabled={pagerSwipeEnabled}
-                header={renderProfileHero()}
-                stickyHeader={renderProfileStickyHeader()}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                listRef={profileListRef}
-                onEndReached={handleProfileEndReached}
-                onListPress={(list) =>
-                  openStackScreen(navigation, 'ListDetail', { listId: list.id })
-                }
-                onPageProgressChange={handlePageProgressChange}
-                onPlacePress={(tab, index) =>
-                  setFeedMode({
-                    startIndex: index,
-                    kind: tab === 'gallery' ? 'gallery' : 'places',
-                  })
-                }
-                onRefresh={onRefresh}
-                onTabChange={handleTabChange}
-                onTabPreviewChange={handleTabPreviewChange}
-                refreshing={refreshing}
-                shouldShowErrorState={shouldShowErrorState}
-                tabs={pagerTabs}
-              />
-            }
-          />
-        </Screen>
+        <OverlayHost overlay={feedOverlay}>
+          <Screen safeTop={false} padded={false} scroll={false}>
+            <ProfilePagedScrollContainer
+              pager={
+                <ProfileContentPager
+                  activeTab={activeTab}
+                  dataByTab={dataByTab}
+                  emptyStateForTab={renderEmptyState}
+                  enabled={pagerSwipeEnabled}
+                  header={renderProfileHero()}
+                  stickyHeader={renderProfileStickyHeader()}
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  listRef={profileListRef}
+                  onEndReached={handleProfileEndReached}
+                  onListPress={(list) =>
+                    openStackScreen(navigation, 'ListDetail', { listId: list.id })
+                  }
+                  onPageProgressChange={handlePageProgressChange}
+                  onPlacePress={(tab, index) =>
+                    setFeedMode({
+                      startIndex: index,
+                      kind: tab === 'gallery' ? 'gallery' : 'places',
+                    })
+                  }
+                  onRefresh={onRefresh}
+                  onTabChange={handleTabChange}
+                  onTabPreviewChange={handleTabPreviewChange}
+                  refreshing={refreshing}
+                  shouldShowErrorState={shouldShowErrorState}
+                  tabs={pagerTabs}
+                />
+              }
+            />
+          </Screen>
+        </OverlayHost>
       ) : (
         <Screen padded={false} refreshing={refreshing} onRefresh={onRefresh}>
           <ProfileHero
