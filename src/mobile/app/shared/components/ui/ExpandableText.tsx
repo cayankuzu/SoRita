@@ -59,7 +59,9 @@ export function ExpandableText({
   const [hasExpandedLinks, setHasExpandedLinks] = useState(false);
   const [isExpandable, setIsExpandable] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
-  const normalizedText = useMemo(() => text.replace(/\r\n?/g, '\n'), [text]);
+  // Line breaks are stored as U+2028; any path that forgets to decode them
+  // would otherwise draw a box where the line should break.
+  const normalizedText = useMemo(() => text.replace(/\r\n?|[\u2028\u2029]/g, '\n'), [text]);
   const shouldRenderPlainText = preserveLineBreaks && !renderContent;
   const usesRichText = !renderContent && !shouldRenderPlainText;
   const isControlled = typeof expanded === 'boolean';

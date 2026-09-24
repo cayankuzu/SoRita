@@ -2,6 +2,7 @@ import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entiti
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
+import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
 
 export type HomeFeedCursor = {
   id: string;
@@ -123,12 +124,12 @@ function mapFeedRow(row: HomeFeedRow, viewerId: string): PlaceFeedCardItem {
   const place: Place = {
     id: row.place_id,
     name: row.place_name,
-    title: row.place_title || undefined,
+    title: normalizeOptionalMultilineText(row.place_title),
     menuUrl: row.menu_url || undefined,
     lat: row.lat,
     lng: row.lng,
     address: row.address || undefined,
-    notes: row.notes || undefined,
+    notes: normalizeOptionalMultilineText(row.notes),
     rating: toNumber(row.rating),
     category: row.category || undefined,
     categories: row.categories?.length ? row.categories : undefined,

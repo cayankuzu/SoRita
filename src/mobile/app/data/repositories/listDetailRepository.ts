@@ -1,6 +1,7 @@
 import type { Place, PlaceList, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
+import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
 
 export type ListPlacesCursor = {
   addedAt: string;
@@ -101,12 +102,12 @@ export function mapPlaceRow(row: ListPlaceRow, viewerId?: string | null): Place 
   return {
     id: row.place_id,
     name: row.place_name,
-    title: row.place_title || undefined,
+    title: normalizeOptionalMultilineText(row.place_title),
     menuUrl: row.menu_url || undefined,
     lat: row.lat,
     lng: row.lng,
     address: row.address || undefined,
-    notes: row.notes || undefined,
+    notes: normalizeOptionalMultilineText(row.notes),
     rating: toNumber(row.rating),
     category: row.category || undefined,
     categories: row.categories?.length ? row.categories : undefined,
@@ -158,7 +159,7 @@ export async function fetchListDetailHeader(listId: string): Promise<ListDetailH
       id: row.list_id,
       userId: row.owner_id,
       name: row.list_name,
-      description: row.list_description || undefined,
+      description: normalizeOptionalMultilineText(row.list_description),
       emoji: row.list_emoji || undefined,
       coverImage: row.list_cover_image_url || undefined,
       isPublic: row.list_is_public,

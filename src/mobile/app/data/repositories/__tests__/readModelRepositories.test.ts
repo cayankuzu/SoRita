@@ -230,9 +230,9 @@ describe('read model repositories', () => {
         owner_profile_photo_url: 'https://cdn.example.com/owner.jpg',
         list_id: 'list-2', list_name: 'List 2', list_emoji: 'pin',
         list_cover_image_url: 'https://cdn.example.com/cover.jpg', list_is_public: true,
-        place_id: 'place-2', place_name: 'Place 2', place_title: 'Title',
+        place_id: 'place-2', place_name: 'Place 2', place_title: 'Kat 1\u2028Kat 2',
         menu_url: 'https://menu.example.com', lat: 3, lng: 4, address: 'Address',
-        notes: 'Notes', rating: 5, category: 'Cafe', categories: ['coffee'],
+        notes: 'Line 1\u2028Line 2', rating: 5, category: 'Cafe', categories: ['coffee'],
         student_discount: true, price_range: '2', price_min: 1, price_max: '3',
         best_time: 'morning', best_times: ['morning'], atmosphere: ['calm'],
         special_features: ['wifi'], added_at: isoA, updated_at: isoB, media: '{broken',
@@ -267,7 +267,9 @@ describe('read model repositories', () => {
         likedBy: undefined, addedBy: { userAvatar: undefined },
       },
     });
+    // Line breaks are stored as U+2028; the card gets real line breaks.
     expect(page.items[1]?.place).toMatchObject({
+      notes: 'Line 1\nLine 2', title: 'Kat 1\nKat 2',
       media: [], likes: 0, commentCount: 2, likedBy: ['viewer'], rating: 5,
       categories: ['coffee'], bestTimes: ['morning'], atmosphere: ['calm'],
       specialFeatures: ['wifi'],

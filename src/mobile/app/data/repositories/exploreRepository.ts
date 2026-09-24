@@ -2,6 +2,7 @@ import type { Place, PlaceList, PlaceMedia, User } from '@/mobile/app/data/contr
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
+import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
 
 export type ExploreKind = 'all' | 'lists' | 'photos' | 'places' | 'users';
 
@@ -166,7 +167,7 @@ function mapListItem(payload: ExploreListPayload): ExploreListItem {
       id: payload.id,
       userId: payload.ownerId,
       name: payload.name || '',
-      description: payload.description || undefined,
+      description: normalizeOptionalMultilineText(payload.description),
       emoji: payload.emoji || undefined,
       coverImage: payload.coverImageUrl || undefined,
       places: [],
@@ -197,12 +198,12 @@ function mapPlaceItem(payload: ExplorePlacePayload, viewerId: string): PlaceFeed
   const place: Place = {
     id: payload.placeId,
     name: payload.placeName,
-    title: payload.placeTitle || undefined,
+    title: normalizeOptionalMultilineText(payload.placeTitle),
     menuUrl: payload.menuUrl || undefined,
     lat: payload.lat,
     lng: payload.lng,
     address: payload.address || undefined,
-    notes: payload.notes || undefined,
+    notes: normalizeOptionalMultilineText(payload.notes),
     rating: toNumber(payload.rating),
     category: payload.category || undefined,
     categories: payload.categories?.length ? payload.categories : undefined,
