@@ -172,7 +172,9 @@ export function ExploreHeaderControls({
             accessibilityState={{ busy: resultsPending }}
             style={styles.resultStatus}
           >
-            {resultsPending ? tr.common.loading : tr.map.searchResultCount(resultCount)}
+            {resultsPending
+              ? tr.common.loading
+              : tr.explore.resultCount(resultCount, searchQuery.trim().length > 0)}
           </AppText>
         ) : null}
       </View>

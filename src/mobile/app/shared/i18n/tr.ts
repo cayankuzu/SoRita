@@ -227,6 +227,9 @@ export const tr = {
     errorDescription: 'Keşfet içerikleri şu an yüklenemiyor. Lütfen tekrar dene.',
     followRequiresUser: 'Takip işlemi için aktif kullanıcı gerekli.',
     loadMore: 'Daha fazla göster',
+    // Without a query the grid is suggestions; with one, it is what matched.
+    resultCount: (count: number, searching: boolean) =>
+      searching ? `${count} sonuç` : `${count} öneri`,
     loadMoreHint: 'Aşağı indikçe yeni sonuçlar yüklenir',
     partialDataDescription:
       'Kayıtlı sonuçlar gösteriliyor. Bağlantı düzelince tekrar deneyebilirsin.',
