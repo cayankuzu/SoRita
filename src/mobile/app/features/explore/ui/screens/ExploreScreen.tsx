@@ -140,6 +140,7 @@ export function ExploreScreen() {
     queryStateByTab,
     refreshing,
     retry,
+    searchTooShort,
     onRefresh,
   } = useExploreScreenState({
     activeTab,
@@ -354,6 +355,7 @@ export function ExploreScreen() {
                     following={following}
                     hasNextPage={tabQuery.hasNextPage}
                     isFetchingNextPage={tabQuery.isFetchingNextPage}
+                    isLoading={tabQuery.isLoading}
                     listRef={getTabScrollRefCallback(tab)}
                     onContentReady={() => notifyTabContentReady(tab)}
                     onClearSearch={() => setSearchQuery('')}
@@ -380,6 +382,7 @@ export function ExploreScreen() {
                     pendingFollowRequests={pendingFollowRequests}
                     refreshing={refreshing}
                     searchQuery={debouncedSearchQuery}
+                  searchTooShort={searchTooShort}
                     tab={tab}
                     topInset={browseHeader.height}
                   />

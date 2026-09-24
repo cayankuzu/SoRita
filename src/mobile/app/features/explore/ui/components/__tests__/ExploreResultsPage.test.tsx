@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('lucide-react-native', () => ({
   Compass: (props: Record<string, unknown>) => React.createElement('Compass', props),
+  Search: (props: Record<string, unknown>) => React.createElement('Search', props),
 }));
 
 vi.mock('@/mobile/app/features/discovery/public/components', () => ({
@@ -27,6 +28,7 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     following: [],
     hasNextPage: true,
     isFetchingNextPage: false,
+    isLoading: false,
     listRef,
     onClearSearch: vi.fn(),
     onContentReady: vi.fn(),
@@ -43,6 +45,7 @@ function createProps(active: boolean, listRef: (node: unknown) => void) {
     pendingFollowRequests: [],
     refreshing: false,
     searchQuery: '',
+    searchTooShort: false,
     tab: 'lists' as const,
     topInset: 148,
   };
@@ -106,5 +109,35 @@ describe('ExploreResultsPage', () => {
     expect(list.props.ListFooterComponent).not.toBeNull();
     expect(list.props.ListFooterComponent.props.accessibilityLiveRegion).toBe('polite');
     expect(list.props.ListFooterComponent.props.accessibilityState).toEqual({ busy: true });
+  });
+
+  it('asks for one more letter instead of reporting nothing found, and shows a grid while a search loads', () => {
+    const props = createProps(true, vi.fn());
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <ExploreResultsPage {...props} searchQuery="ka" searchTooShort />,
+      );
+    });
+    let empty = renderer.root.find(
+      (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
+    ).props.ListEmptyComponent;
+    let emptyRenderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      emptyRenderer = TestRenderer.create(empty);
+    });
+    expect(JSON.stringify(emptyRenderer.toJSON())).toContain('Biraz daha yaz');
+
+    act(() => {
+      renderer.update(<ExploreResultsPage {...props} isLoading searchQuery="kahve" />);
+    });
+    empty = renderer.root.find(
+      (node) => String(node.type) === 'VirtualizedDiscoveryGrid',
+    ).props.ListEmptyComponent;
+    act(() => {
+      emptyRenderer.update(empty);
+    });
+    expect(JSON.stringify(emptyRenderer.toJSON())).not.toContain('Sonuç bulunamadı');
   });
 });

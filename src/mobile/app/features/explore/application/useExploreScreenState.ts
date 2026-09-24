@@ -30,9 +30,19 @@ type ExploreTabQueryState = {
   fetchNextPage?: () => Promise<unknown>;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  // The tab's first page for the current query has not arrived yet.
+  isLoading: boolean;
 };
 
 const EXPLORE_TABS: ExploreTabKey[] = ['lists', 'places', 'photos', 'people'];
+// The server's trigram search needs three characters; shorter input asks for
+// one more letter instead of reporting that nothing matched.
+export const EXPLORE_MIN_QUERY_LENGTH = 3;
+
+export function isExploreQueryTooShort(query: string) {
+  const length = normalizeSearchText(query).length;
+  return length > 0 && length < EXPLORE_MIN_QUERY_LENGTH;
+}
 function useDebouncedValue(value: string, delayMs: number) {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -59,30 +69,6 @@ function shouldLoadExploreTab(
   return Math.abs(EXPLORE_TABS.indexOf(activeTab) - EXPLORE_TABS.indexOf(candidate)) <= 1;
 }
 
-function matchesText(value: string | undefined | null, query: string) {
-  return normalizeSearchText(value).includes(query);
-}
-
-function matchesUser(user: User, query: string) {
-  return (
-    matchesText(user.name, query) ||
-    matchesText(user.username, query) ||
-    matchesText(user.bio, query)
-  );
-}
-
-function matchesFeedItem(item: PlaceFeedCardItem, query: string) {
-  return (
-    matchesText(item.place.name, query) ||
-    matchesText(item.place.address, query) ||
-    matchesText(item.place.notes, query) ||
-    matchesText(item.listName, query) ||
-    item.memberships.some((membership) => matchesText(membership.listName, query)) ||
-    matchesText(item.owner?.name, query) ||
-    matchesText(item.owner?.username, query)
-  );
-}
-
 function getEntitySortTime(updatedAt?: string | null, createdAt?: string | null) {
   return new Date(updatedAt || createdAt || 0).getTime();
 }
@@ -96,22 +82,26 @@ export function useExploreScreenState({
   const userId = user?.id;
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
-  const q = normalizeSearchText(deferredSearchQuery);
+  // While searching, the server decides what matches and in which order:
+  // re-filtering here dropped its category and owner matches, and re-sorting
+  // by date undid its relevance order.
+  const searching = normalizeSearchText(deferredSearchQuery).length > 0;
   const hasSearchQuery = normalizeSearchText(debouncedSearchQuery).length > 0;
+  const searchTooShort = isExploreQueryTooShort(debouncedSearchQuery);
   const listExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'lists', hasSearchQuery),
+    enabled: Boolean(userId) && !searchTooShort && shouldLoadExploreTab(selectedTab, 'lists', hasSearchQuery),
     kind: 'lists',
   });
   const placeExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'places', hasSearchQuery),
+    enabled: Boolean(userId) && !searchTooShort && shouldLoadExploreTab(selectedTab, 'places', hasSearchQuery),
     kind: 'places',
   });
   const photoExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'photos', hasSearchQuery),
+    enabled: Boolean(userId) && !searchTooShort && shouldLoadExploreTab(selectedTab, 'photos', hasSearchQuery),
     kind: 'photos',
   });
   const userExploreQuery = useExploreQuery(userId, debouncedSearchQuery, {
-    enabled: Boolean(userId) && shouldLoadExploreTab(selectedTab, 'people', hasSearchQuery),
+    enabled: Boolean(userId) && !searchTooShort && shouldLoadExploreTab(selectedTab, 'people', hasSearchQuery),
     kind: 'users',
   });
   const exploreQueryByTab = {
@@ -147,10 +137,12 @@ export function useExploreScreenState({
   const following = useMemo(() => currentUser?.following || [], [currentUser?.following]);
   const pendingFollowRequests = currentUser?.pendingFollowRequestsSent || [];
   const followingSet = useMemo(() => new Set(following), [following]);
+  // Suggestions leave out the viewer and people they follow; a search finds
+  // them too, as the server returns them.
   const canAppearInExplore = useCallback(
     (ownerId?: string | null) =>
-      Boolean(ownerId && ownerId !== userId && !followingSet.has(ownerId)),
-    [followingSet, userId],
+      searching || Boolean(ownerId && ownerId !== userId && !followingSet.has(ownerId)),
+    [followingSet, searching, userId],
   );
 
   const readModelListItems = useMemo<ExploreListItem[]>(() => {
@@ -162,18 +154,19 @@ export function useExploreScreenState({
           return;
         }
 
-        if (!q || matchesText(item.list.name, q) || matchesText(item.list.description, q)) {
-          itemsById.set(item.list.id, item);
-        }
+        itemsById.set(item.list.id, item);
       });
     });
 
-    return Array.from(itemsById.values()).sort(
-      (left, right) =>
-        getEntitySortTime(right.list.updatedAt, right.list.createdAt) -
-        getEntitySortTime(left.list.updatedAt, left.list.createdAt),
-    );
-  }, [canAppearInExplore, listExploreQuery.data?.pages, q]);
+    const items = Array.from(itemsById.values());
+    return searching
+      ? items
+      : items.sort(
+          (left, right) =>
+            getEntitySortTime(right.list.updatedAt, right.list.createdAt) -
+            getEntitySortTime(left.list.updatedAt, left.list.createdAt),
+        );
+  }, [canAppearInExplore, listExploreQuery.data?.pages, searching]);
 
   const filteredListItems = readModelListItems;
 
@@ -186,14 +179,13 @@ export function useExploreScreenState({
           return;
         }
 
-        if (!q || matchesFeedItem(item, q)) {
-          itemsByKey.set(item.key, item);
-        }
+        itemsByKey.set(item.key, item);
       });
     });
 
-    return Array.from(itemsByKey.values()).sort((left, right) => right.sortTime - left.sortTime);
-  }, [canAppearInExplore, placeExploreQuery.data?.pages, q]);
+    const items = Array.from(itemsByKey.values());
+    return searching ? items : items.sort((left, right) => right.sortTime - left.sortTime);
+  }, [canAppearInExplore, placeExploreQuery.data?.pages, searching]);
 
   const readModelPhotos = useMemo<PlaceFeedCardItem[]>(() => {
     const itemsByKey = new Map<string, PlaceFeedCardItem>();
@@ -204,14 +196,15 @@ export function useExploreScreenState({
           return;
         }
 
-        if (getPlaceMedia(item.place).length > 0 && (!q || matchesFeedItem(item, q))) {
+        if (getPlaceMedia(item.place).length > 0) {
           itemsByKey.set(item.key, item);
         }
       });
     });
 
-    return Array.from(itemsByKey.values()).sort((left, right) => right.sortTime - left.sortTime);
-  }, [canAppearInExplore, photoExploreQuery.data?.pages, q]);
+    const items = Array.from(itemsByKey.values());
+    return searching ? items : items.sort((left, right) => right.sortTime - left.sortTime);
+  }, [canAppearInExplore, photoExploreQuery.data?.pages, searching]);
 
   const filteredPlaces = readModelPlaces;
   const filteredPhotos = readModelPhotos;
@@ -221,14 +214,14 @@ export function useExploreScreenState({
 
     (userExploreQuery.data?.pages || []).forEach((page) => {
       page.userItems.forEach((item) => {
-        if (canAppearInExplore(item.id) && (!q || matchesUser(item, q))) {
+        if (item.id !== userId && canAppearInExplore(item.id)) {
           usersByResultId.set(item.id, item);
         }
       });
     });
 
     return Array.from(usersByResultId.values());
-  }, [canAppearInExplore, q, userExploreQuery.data?.pages]);
+  }, [canAppearInExplore, userExploreQuery.data?.pages, userId]);
 
   const filteredUsers = readModelUsers;
 
@@ -238,36 +231,48 @@ export function useExploreScreenState({
         fetchNextPage: listExploreQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
         hasNextPage: Boolean(listExploreQuery.hasNextPage),
         isFetchingNextPage: listExploreQuery.isFetchingNextPage,
+        isLoading: listExploreQuery.isLoading && !listExploreQuery.data,
       },
       people: {
         fetchNextPage: userExploreQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
         hasNextPage: Boolean(userExploreQuery.hasNextPage),
         isFetchingNextPage: userExploreQuery.isFetchingNextPage,
+        isLoading: userExploreQuery.isLoading && !userExploreQuery.data,
       },
       photos: {
         fetchNextPage: photoExploreQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
         hasNextPage: Boolean(photoExploreQuery.hasNextPage),
         isFetchingNextPage: photoExploreQuery.isFetchingNextPage,
+        isLoading: photoExploreQuery.isLoading && !photoExploreQuery.data,
       },
       places: {
         fetchNextPage: placeExploreQuery.fetchNextPage as (() => Promise<unknown>) | undefined,
         hasNextPage: Boolean(placeExploreQuery.hasNextPage),
         isFetchingNextPage: placeExploreQuery.isFetchingNextPage,
+        isLoading: placeExploreQuery.isLoading && !placeExploreQuery.data,
       },
     };
   }, [
+    listExploreQuery.data,
     listExploreQuery.fetchNextPage,
     listExploreQuery.hasNextPage,
     listExploreQuery.isFetchingNextPage,
+    listExploreQuery.isLoading,
+    photoExploreQuery.data,
     photoExploreQuery.fetchNextPage,
     photoExploreQuery.hasNextPage,
     photoExploreQuery.isFetchingNextPage,
+    photoExploreQuery.isLoading,
+    placeExploreQuery.data,
     placeExploreQuery.fetchNextPage,
     placeExploreQuery.hasNextPage,
     placeExploreQuery.isFetchingNextPage,
+    placeExploreQuery.isLoading,
+    userExploreQuery.data,
     userExploreQuery.fetchNextPage,
     userExploreQuery.hasNextPage,
     userExploreQuery.isFetchingNextPage,
+    userExploreQuery.isLoading,
   ]);
 
   const followUser = useCallback(
@@ -301,11 +306,15 @@ export function useExploreScreenState({
         filteredUsers.length),
     ),
     isFetchingNextPage: queryStateByTab[selectedTab].isFetchingNextPage,
-    isInitialLoading: activeExploreQuery.isLoading && !activeExploreQuery.data,
+    // Only the first browse load takes over the whole screen. A search loads
+    // inside its tab: swapping the screen remounted the search field, which
+    // closed the keyboard three letters into every query.
+    isInitialLoading: !hasSearchQuery && activeExploreQuery.isLoading && !activeExploreQuery.data,
     pendingFollowRequests,
     queryStateByTab,
     refreshing,
     retry: loadData,
+    searchTooShort,
     onRefresh,
   };
 }

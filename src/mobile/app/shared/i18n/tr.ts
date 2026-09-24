@@ -221,6 +221,8 @@ export const tr = {
       noUser: 'Henüz kullanıcı yok',
       noUserDescription: 'Kullanıcılar burada görünecek.',
       noUserResult: 'Kullanıcı bulunamadı',
+      keepTyping: 'Biraz daha yaz',
+      keepTypingDescription: 'Aramak için en az 3 harf yaz.',
       tryDifferentSearch: 'Farklı bir arama deneyin.',
     },
     errorTitle: 'Keşfet şu anda açılamıyor',
