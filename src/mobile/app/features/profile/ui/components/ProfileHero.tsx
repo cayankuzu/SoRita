@@ -177,7 +177,8 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: spacing.md,
-    ...typography.title,
+    // A name, not a headline: Instagram and Reddit set it at body scale.
+    ...typography.compactTitleText,
     color: colors.text,
   },
   username: textStyle('captionText', colors.textSoft),

@@ -7,12 +7,6 @@ export const exploreScreenStyles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  header: {
-    paddingBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  title: textStyle('title', colors.text),
-  subtitle: textStyle('bodyText', colors.textMuted),
   filtersSection: {
     gap: spacing.sm,
   },

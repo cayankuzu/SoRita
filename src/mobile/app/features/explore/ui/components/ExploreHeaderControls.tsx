@@ -104,12 +104,9 @@ export function ExploreHeaderControls({
   );
 
   return (
+    // Search leads, as on Instagram: the tab bar already names the screen,
+    // and a title with a strapline above it took a sixth of the screen.
     <View style={[styles.headerRail, { paddingHorizontal: screenPadding }]}>
-      <View style={styles.header}>
-        <AppText style={styles.title}>{tr.explore.title}</AppText>
-        <AppText style={styles.subtitle}>{tr.explore.subtitle}</AppText>
-      </View>
-
       <View style={styles.filtersSection}>
         <View style={styles.searchWrap}>
           <Search color={colors.textMuted} size={iconSize.sm} />

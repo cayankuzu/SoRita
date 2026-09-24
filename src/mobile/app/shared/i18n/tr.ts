@@ -237,7 +237,6 @@ export const tr = {
       person: 'Kişi ara...',
       place: 'Mekân veya adres ara...',
     },
-    subtitle: 'Yeni mekânlar ve listeler keşfet',
     tabs: {
       lists: 'Listeler',
       people: 'Kişiler',
