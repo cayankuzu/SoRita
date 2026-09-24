@@ -5,7 +5,6 @@ import { Minus, X } from 'lucide-react-native';
 import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/components/place-editor/placeEditorModalStyles';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
-import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
@@ -40,15 +39,7 @@ export function PlaceEditorModalHeader({
           ) : null}
         </View>
         <View style={styles.headerActions}>
-          <InstantPressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: isLocked }}
-            disabled={isLocked}
-            onPress={onClose}
-            style={styles.cancelButton}
-          >
-            <AppText style={styles.cancelButtonText}>{tr.common.cancel}</AppText>
-          </InstantPressable>
+          {/* One way out: a grey "İptal" beside the close button did the same. */}
           {onMinimize ? (
             <IconButton
               accessibilityLabel={tr.common.minimize}

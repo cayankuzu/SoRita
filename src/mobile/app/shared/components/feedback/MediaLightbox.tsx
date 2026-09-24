@@ -494,7 +494,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.overlay,
+    // Near-black, as the light status-bar icons set for media expect; the
+    // 40% overlay left the screen behind readable and the clock unreadable.
+    backgroundColor: colors.scrim,
     padding: LIGHTBOX_HORIZONTAL_PADDING,
   },
   topBar: {

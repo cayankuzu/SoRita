@@ -94,6 +94,9 @@ export function MediaPickerPromptHost() {
     maxHeightRatio: 0.88,
     minHeight: 276,
   });
+  // The sheet meets the bottom edge and keeps the system bar's inset inside
+  // it; padding the overlay instead left a band of dimmed screen under it.
+  const sheetBottomPadding = insets.bottom + spacing.md;
   const availableSources = React.useMemo(
     () => options.availableSources || ['camera', 'library'],
     [options.availableSources],
@@ -157,7 +160,7 @@ export function MediaPickerPromptHost() {
         accessibilityViewIsModal
         importantForAccessibility="yes"
         onAccessibilityEscape={() => resolveMediaPickerPrompt(null)}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
+        style={[styles.overlay, { paddingTop }]}
       >
         <InstantPressable
           disableFeedback
@@ -166,7 +169,7 @@ export function MediaPickerPromptHost() {
           onPress={() => resolveMediaPickerPrompt(null)}
         />
 
-        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: sheetBottomPadding }]}>
           <View style={styles.handle} />
 
           <View style={styles.header}>

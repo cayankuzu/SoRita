@@ -82,8 +82,10 @@ export function ListEditorModal({
     topInset: insets.top,
     bottomInset: insets.bottom,
     topSpacing: 20,
-    bottomSpacing: 12,
-    minBottomPadding: Platform.OS === 'android' ? 28 : 12,
+    // The sheet meets the system bar, as the place editor's does; a 12dp gap
+    // showed the dimmed screen in a band under Kaydet.
+    bottomSpacing: 0,
+    minBottomPadding: 0,
   });
   const panelMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
