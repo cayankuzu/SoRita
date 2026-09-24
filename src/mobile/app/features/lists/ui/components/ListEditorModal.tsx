@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Globe, Lock, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,7 +26,6 @@ import { t } from '@/mobile/app/shared/i18n';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
@@ -38,6 +37,7 @@ import {
   clampTextLength,
   trimPreservingLineBreaks,
 } from '@/mobile/app/shared/validation/contentLimits';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 const DISCARD_LIST_EDITOR_CONFIRMATION = {
   cancelLabel: t.common.returnToEditing,
@@ -263,17 +263,10 @@ export function ListEditorModal({
   };
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible && (Platform.OS !== 'ios' || !isPickingCover)}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={handleRequestClose}
-      presentationStyle="overFullScreen"
+      visible={visible && (Platform.OS !== 'ios' || !isPickingCover)}
     >
       <View
         accessibilityViewIsModal
@@ -380,6 +373,6 @@ export function ListEditorModal({
           }}
         />
       ) : null}
-    </Modal>
+    </AppModal>
   );
 }

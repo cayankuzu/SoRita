@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   FlatList,
-  Modal,
   Platform,
   StyleSheet,
   useWindowDimensions,
@@ -36,9 +35,9 @@ import {
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type ImageLightboxProps = {
   allowDownload?: boolean;
@@ -153,17 +152,10 @@ export function ImageLightbox({
   }, [menuItems.length]);
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={imageUris.length > 0}
+    <AppModal
       animationType={animationType}
-      transparent
-      hardwareAccelerated
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
+      visible={imageUris.length > 0}
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
       <View
@@ -272,7 +264,7 @@ export function ImageLightbox({
         />
       </View>
       </GestureHandlerRootView>
-    </Modal>
+    </AppModal>
   );
 }
 

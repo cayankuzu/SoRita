@@ -5,7 +5,6 @@ import {
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   StyleSheet,
   useWindowDimensions,
@@ -42,10 +41,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 const ANDROID_MODAL_BASE_INSET = 22;
 const COMPOSER_DOCK_BOTTOM_PADDING = 10;
@@ -80,7 +79,7 @@ function CommentLikersModal({
   refreshing,
   topPadding,
 }: {
-  animationType: React.ComponentProps<typeof Modal>['animationType'];
+  animationType: React.ComponentProps<typeof AppModal>['animationType'];
   bottomPadding: number;
   comment: FeedActionComment | null;
   onClose: () => void;
@@ -90,17 +89,10 @@ function CommentLikersModal({
   topPadding: number;
 }) {
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={Boolean(comment)}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
+      visible={Boolean(comment)}
     >
       <View
         accessibilityViewIsModal
@@ -128,7 +120,7 @@ function CommentLikersModal({
           />
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -434,17 +426,10 @@ export function CommentPanel({
 
   return (
     <>
-      <Modal
-        {...getAndroidModalWindowProps({
-          navigationBarTranslucent: true,
-          statusBarTranslucent: true,
-        })}
-        visible={visible}
-        transparent
+      <AppModal
         animationType={sheetAnimationType}
-        hardwareAccelerated
         onRequestClose={handleClose}
-        presentationStyle="overFullScreen"
+        visible={visible}
       >
         <View
           accessibilityViewIsModal
@@ -593,7 +578,7 @@ export function CommentPanel({
             </View>
           </KeyboardAvoidingView>
         </View>
-      </Modal>
+      </AppModal>
 
       <ReportActionSheet
         visible={Boolean(activeReportCommentId)}

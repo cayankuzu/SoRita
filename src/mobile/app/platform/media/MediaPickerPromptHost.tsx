@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Camera, Images, Video, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,10 +28,10 @@ import {
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type MediaPickerOptionCardProps = {
   accentColor: string;
@@ -148,17 +148,10 @@ export function MediaPickerPromptHost() {
   );
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={() => resolveMediaPickerPrompt(null)}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
@@ -243,7 +236,7 @@ export function MediaPickerPromptHost() {
           />
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

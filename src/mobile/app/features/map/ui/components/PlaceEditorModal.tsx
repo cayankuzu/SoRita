@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   useWindowDimensions,
@@ -39,11 +38,11 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
 import { dismissKeyboardAndRunAfterInteractions } from '@/mobile/app/shared/utils/interaction';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 export type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 
@@ -471,17 +470,10 @@ export function PlaceEditorModal({
   };
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible && (Platform.OS !== 'ios' || (!isAddingMedia && !isPickingListCover))}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={handleModalBack}
-      presentationStyle="overFullScreen"
+      visible={visible && (Platform.OS !== 'ios' || (!isAddingMedia && !isPickingListCover))}
     >
       <KeyboardAvoidingView
         accessibilityViewIsModal
@@ -602,6 +594,6 @@ export function PlaceEditorModal({
           />
         ) : null}
       </KeyboardAvoidingView>
-    </Modal>
+    </AppModal>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { Camera, RefreshCcw, Square, Video, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,11 +23,11 @@ import {
   typography,
   zIndex,
 } from '@/mobile/app/shared/theme/tokens';
-import { getAndroidModalWindowProps } from '@/mobile/app/shared/utils/modalLayout';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type VideoCameraCaptureViewProps = {
-  animationType: React.ComponentProps<typeof Modal>['animationType'];
+  animationType: React.ComponentProps<typeof AppModal>['animationType'];
   cameraMountFailed: boolean;
   cameraRef: React.RefObject<CameraView | null>;
   cameraSessionKey: number;
@@ -82,15 +82,12 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
+      coverNavigationBar={false}
       onRequestClose={onClose}
-      presentationStyle="fullScreen"
+      opaque
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
@@ -247,7 +244,7 @@ export const VideoCameraCaptureView = React.memo(function VideoCameraCaptureView
           </InstantPressable>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 });
 

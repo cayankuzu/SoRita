@@ -115,6 +115,12 @@ export default [
               message:
                 'Import AppText from @/mobile/app/shared/components/ui/AppText so the text keeps the app-wide font-scale cap.',
             },
+            {
+              name: 'react-native',
+              importNames: ['Modal'],
+              message:
+                'Open layers through AppModal (or ModalScaffold for a sheet or dialog) so the window settings stay in one place.',
+            },
           ],
         },
       ],

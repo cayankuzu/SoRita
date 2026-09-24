@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Minus, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +18,6 @@ import {
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
@@ -26,6 +25,7 @@ import {
   buildLocationPlaceStats,
   formatLocationPlaceCardsCount,
 } from '@/mobile/app/shared/utils/format';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type PlacePreviewModalProps = {
   visible: boolean;
@@ -84,17 +84,10 @@ export function PlacePreviewModal({
   }
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
@@ -190,7 +183,7 @@ export function PlacePreviewModal({
           />
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
