@@ -156,10 +156,11 @@ export function ExploreHeaderControls({
                   key={key}
                   kind="filter"
                   label={label}
-                  leading={<Icon color={chipContentColor('filter', active)} size={iconSize.sm} />}
+                  leading={<Icon color={chipContentColor('filter', active)} size={iconSize.xs} />}
                   onLayout={(event) => handleTabLayout(key, event)}
                   onPress={() => onTabChange(key)}
                   selected={active}
+                  size="compact"
                 />
               );
             })}

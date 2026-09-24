@@ -320,6 +320,8 @@ export const avatarSize = {
   xs: 24,
   sm: 32,
   md: 40,
+  // A person as the subject of a tile, as in Explore's people grid.
+  lg: 56,
 } as const;
 
 export const contentWidth = {

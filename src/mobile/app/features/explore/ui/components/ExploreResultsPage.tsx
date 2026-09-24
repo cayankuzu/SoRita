@@ -152,7 +152,6 @@ type ExploreResultCellProps = Pick<
   | 'searchQuery'
   | 'tab'
 > & {
-  compact: boolean;
   following: Set<string>;
   index: number;
   item: ExploreGridItem;
@@ -160,7 +159,6 @@ type ExploreResultCellProps = Pick<
 };
 
 const ExploreResultCell = React.memo(function ExploreResultCell({
-  compact,
   following,
   index,
   item,
@@ -191,9 +189,7 @@ const ExploreResultCell = React.memo(function ExploreResultCell({
 
     return (
       <UserGridTile
-        compact={compact}
         user={targetUser}
-        fillWidth
         isFollowing={following.has(targetUser.id)}
         isPending={pendingFollowRequests.has(targetUser.id)}
         onPress={() => onOwnerPress(targetUser.id)}
@@ -285,9 +281,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     [tab],
   );
   const renderResult = React.useCallback(
-    ({ columnCount, item, index }: { columnCount: number; item: ExploreGridItem; index: number }) => (
+    ({ item, index }: { item: ExploreGridItem; index: number }) => (
       <ExploreResultCell
-        compact={columnCount >= 3}
         following={followingSet}
         index={index}
         item={item}
@@ -320,8 +315,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     <VirtualizedDiscoveryGrid<ExploreGridItem>
       listRef={listRef}
       listKey={`explore:${tab}`}
-      // People stay a list of rows; everything else is an Instagram-style grid.
-      columnStrategy={tab === 'people' ? 'discovery' : 'mosaic'}
+      // Every tab, people too, is the same three-column Instagram-style grid.
+      columnStrategy="mosaic"
       data={errorMessage ? [] : data}
       extraData={listState}
       refreshing={active && refreshing}

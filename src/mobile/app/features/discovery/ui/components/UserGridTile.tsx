@@ -6,7 +6,6 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
-import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   avatarSize,
@@ -18,12 +17,9 @@ import {
   spacing,
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
-import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
 
 export type UserGridTileProps = {
   user: User;
-  fillWidth?: boolean;
-  compact?: boolean;
   isFollowing: boolean;
   isPending?: boolean;
   onPress: () => void;
@@ -33,15 +29,12 @@ export type UserGridTileProps = {
 };
 
 /**
- * A person in a suggestion list: photo, name, username and a line of bio,
- * with a compact Follow beside them, the way Instagram lists suggestions.
- * Each person used to be a card with a cover band and a full-width button,
- * about a quarter of the screen tall.
+ * A suggested person in Explore's three-column grid, like the other tabs:
+ * photo, name and username centred over a compact Follow, the way
+ * Instagram's suggestion cards stack them. The tile fills its grid cell.
  */
 function UserGridTileComponent({
   user,
-  fillWidth = false,
-  compact = false,
   isFollowing,
   isPending = false,
   onPress,
@@ -49,8 +42,6 @@ function UserGridTileComponent({
   onFollowPress,
   searchQuery,
 }: UserGridTileProps) {
-  const { columnGap, height, width } = useAppLayout();
-  const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
   const followStatus = isFollowing
     ? tr.cards.following
     : isPending
@@ -59,7 +50,7 @@ function UserGridTileComponent({
   const followActionLabel = isFollowing ? tr.profile.actions.unfollow : followStatus;
 
   return (
-    <View style={[styles.row, fillWidth ? styles.fillWidth : { width: tileWidth }]}>
+    <View style={styles.tile}>
       <InstantPressable
         accessibilityLabel={`${user.name}, @${user.username}`}
         accessibilityRole="button"
@@ -67,7 +58,7 @@ function UserGridTileComponent({
         onPressIn={onPressIn}
         style={styles.identity}
       >
-        <AvatarView uri={user.profilePhoto} name={user.name} size={avatarSize.md} />
+        <AvatarView uri={user.profilePhoto} name={user.name} size={avatarSize.lg} />
         <View style={styles.copy}>
           <AppText numberOfLines={1} style={styles.name}>
             <HighlightedText query={searchQuery} text={user.name} />
@@ -75,11 +66,6 @@ function UserGridTileComponent({
           <AppText numberOfLines={1} style={styles.username}>
             <HighlightedText query={searchQuery} text={`@${user.username}`} />
           </AppText>
-          {user.bio && !compact ? (
-            <AppText numberOfLines={1} style={styles.bio}>
-              <HighlightedText query={searchQuery} text={user.bio} />
-            </AppText>
-          ) : null}
         </View>
       </InstantPressable>
 
@@ -122,8 +108,6 @@ function areUserGridTilePropsEqual(
 ) {
   return (
     previous.user === next.user &&
-    previous.fillWidth === next.fillWidth &&
-    previous.compact === next.compact &&
     previous.isFollowing === next.isFollowing &&
     previous.isPending === next.isPending
     && previous.searchQuery === next.searchQuery &&
@@ -139,32 +123,26 @@ export const UserGridTile = React.memo(
 );
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  fillWidth: {
+  tile: {
     width: '100%',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface,
   },
   identity: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: controlSize.large,
+    gap: spacing.sm,
   },
   copy: {
-    flex: 1,
-    gap: spacing.xxs,
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
   name: textStyle('labelText', colors.text, fontWeight.strong),
   username: textStyle('metadataText', colors.textSoft),
-  bio: textStyle('metadataText', colors.textMuted),
   followButton: {
     minHeight: controlSize.compact,
-    paddingHorizontal: spacing.lg,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -179,7 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
   },
-  followButtonText: textStyle('labelText', colors.onPrimary, fontWeight.strong),
+  followButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
   followButtonTextPassive: {
     color: colors.text,
   },
