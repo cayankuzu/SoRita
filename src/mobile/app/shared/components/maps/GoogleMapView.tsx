@@ -8,6 +8,7 @@ import MapView, {
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
+import { normalizeMapLabelName } from '@/mobile/app/shared/utils/mapLabelName';
 import {
   clusterMapMarkers,
   type MapMarkerCluster,
@@ -423,7 +424,7 @@ function GoogleMapViewComponent({
           onPoiPress({
             lat: event.nativeEvent.coordinate.latitude,
             lng: event.nativeEvent.coordinate.longitude,
-            name: event.nativeEvent.name,
+            name: normalizeMapLabelName(event.nativeEvent.name),
             placeId: event.nativeEvent.placeId,
           });
         }}
