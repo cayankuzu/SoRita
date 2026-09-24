@@ -514,8 +514,7 @@ export const tr = {
       resetSent: 'Şifre sıfırlama maili gönderildi',
       save: 'Şifreyi güncelle',
       saved: 'Şifre güncellendi',
-      sentDescription: (email: string) =>
-        `${email} adresine sıfırlama bağlantısı gönderildi.`,
+      sentDescription: (email: string) => `${email} adresine sıfırlama bağlantısı gönderildi.`,
       sentTitle: 'Mail gönderildi',
       title: 'Şifre güncelle',
       tooShort: 'Yeni şifre en az 8 karakter olmalı',
@@ -525,6 +524,7 @@ export const tr = {
       account: 'Hesap',
       other: 'Diğer',
     },
+    version: (label: string) => `SoRita ${label}`,
     sessionMissing: 'Aktif oturum bulunamadı. Lütfen tekrar giriş yapıp yeniden dene.',
     title: 'Ayarlar',
     toast: {

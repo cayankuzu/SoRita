@@ -198,7 +198,6 @@ export function LocationPlaceCardsScreen() {
                   listEmoji={list.emoji}
                   listIsPublic={list.isPublic}
                   listCoverImage={list.coverImage}
-                  locationPlaceCardsCount={totalCount}
                   locationOriginalPlaceName={headerTitle}
                   markerColor={getMarkerColorByVisibility(locationCardsQuery.markerVisibility)}
                   onPlaceNamePress={null}

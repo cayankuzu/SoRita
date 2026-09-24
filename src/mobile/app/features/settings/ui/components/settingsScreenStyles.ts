@@ -13,6 +13,12 @@ export const settingsScreenStyles = StyleSheet.create({
   sectionStack: {
     gap: spacing.xl,
   },
+  versionLabel: {
+    ...typography.captionText,
+    color: colors.textSoft,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
   form: {
     gap: spacing.md,
   },

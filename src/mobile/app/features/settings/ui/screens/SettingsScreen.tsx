@@ -22,6 +22,7 @@ import { SettingsMainMenuView } from '@/mobile/app/features/settings/ui/componen
 import type { SettingsMenuItem } from '@/mobile/app/features/settings/ui/components/SettingsMenuSection';
 import { SettingsPasswordView } from '@/mobile/app/features/settings/ui/components/SettingsPasswordView';
 import { SettingsPrivacyView } from '@/mobile/app/features/settings/ui/components/SettingsPrivacyView';
+import { getInstalledAppVersionLabel } from '@/mobile/app/platform/config/appVersion';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -463,6 +464,7 @@ export function SettingsScreen() {
         onRefresh={onRefresh}
         refreshing={refreshing}
         sections={menuSections}
+        versionLabel={getInstalledAppVersionLabel()}
       />
 
       <ConfirmActionModal

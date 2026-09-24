@@ -63,7 +63,7 @@ const settingsState = {
   updateEditUsername: vi.fn(),
   usernameHelper: '',
   usernameHelperTone: 'muted' as const,
-  view: 'editProfile' as const,
+  view: 'editProfile' as 'editProfile' | 'main',
 };
 
 vi.mock('@/mobile/app/app-shell/auth/AuthSessionProvider', () => ({
@@ -75,6 +75,9 @@ vi.mock('@/mobile/app/app-shell/auth/AuthSessionProvider', () => ({
   }),
 }));
 
+vi.mock('@/mobile/app/platform/config/appVersion', () => ({
+  getInstalledAppVersionLabel: () => '1.0.110 (116)',
+}));
 vi.mock('@/mobile/app/app-shell/navigation/navigation', () => ({
   openStackScreen: vi.fn(),
   useAppNavigation: () => ({ goBack: vi.fn(), navigate: vi.fn() }),
@@ -172,5 +175,19 @@ describe('SettingsScreen', () => {
     );
     expect(modal.props.visible).toBe(true);
     expect(goToMain).not.toHaveBeenCalled();
+  });
+
+  it('shows the installed build under the menu', async () => {
+    settingsState.view = 'main';
+    const { SettingsScreen } = await import('../SettingsScreen');
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(<SettingsScreen />);
+    });
+
+    const menu = renderer.root.findByType('SettingsMainMenuView' as unknown as React.ElementType);
+    expect(menu.props.versionLabel).toBe('1.0.110 (116)');
+    settingsState.view = 'editProfile';
   });
 });
