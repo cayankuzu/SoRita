@@ -59,8 +59,8 @@ type ImageLightboxProps = React.ComponentProps<
 type ProfileConnectionsModalProps = React.ComponentProps<
   typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal')['ProfileConnectionsModal']
 >;
-type ProfileFeedScreenProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/profile/ui/components/ProfileFeedScreen')['ProfileFeedScreen']
+type PlaceFeedScreenProps = React.ComponentProps<
+  typeof import('@/mobile/app/features/places/public/feed')['PlaceFeedScreen']
 >;
 type ReportActionSheetProps = React.ComponentProps<
   typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
@@ -87,10 +87,10 @@ function DeferredProfileConnectionsModal(props: ProfileConnectionsModalProps) {
   return <ProfileConnectionsModal {...props} />;
 }
 
-function DeferredProfileFeedScreen(props: ProfileFeedScreenProps) {
-  const { ProfileFeedScreen } = require('@/mobile/app/features/profile/ui/components/ProfileFeedScreen') as
-    typeof import('@/mobile/app/features/profile/ui/components/ProfileFeedScreen');
-  return <ProfileFeedScreen {...props} />;
+function DeferredPlaceFeedScreen(props: PlaceFeedScreenProps) {
+  const { PlaceFeedScreen } = require('@/mobile/app/features/places/public/feed') as
+    typeof import('@/mobile/app/features/places/public/feed');
+  return <PlaceFeedScreen {...props} />;
 }
 
 function DeferredReportActionSheet(props: ReportActionSheetProps) {
@@ -430,14 +430,13 @@ export function UserProfileScreen() {
         : tr.profile.feedTitle.gallery;
 
     return (
-      <DeferredProfileFeedScreen
+      <DeferredPlaceFeedScreen
         title={feedTitle}
         items={feedItems}
         startIndex={feedMode.startIndex}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        owner={profileUser}
-        showOwner
+        ownerFor={() => profileUser}
         onBack={() => setFeedMode(null)}
         onOpenListDetail={(item) =>
           openStackScreen(navigation, 'ListDetail', {

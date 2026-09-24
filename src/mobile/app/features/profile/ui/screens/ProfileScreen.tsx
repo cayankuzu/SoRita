@@ -10,6 +10,7 @@ import {
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
+import { PlaceFeedScreen } from '@/mobile/app/features/places/public/feed';
 import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/public/ownedPlaceListUpdates';
 import { useOwnProfileScreenState } from '@/mobile/app/features/profile/application/useOwnProfileScreenState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -30,7 +31,6 @@ import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
-import { ProfileFeedScreen } from '@/mobile/app/features/profile/ui/components/ProfileFeedScreen';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
 import {
@@ -334,7 +334,7 @@ export function ProfileScreen() {
         : tr.profile.feedTitle.gallery;
 
     return (
-      <ProfileFeedScreen
+      <PlaceFeedScreen
         // The Profile tab's header already clears the status bar; clearing it
         // again left a grey band above "Galeri".
         safeTop={false}
@@ -343,7 +343,6 @@ export function ProfileScreen() {
         startIndex={feedMode.startIndex}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        owner={freshUser}
         onBack={() => setFeedMode(null)}
         onDeletePlace={(item) => {
           setDeletePlaceId(item.place.id);

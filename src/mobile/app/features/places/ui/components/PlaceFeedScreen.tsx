@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   FlatList,
+  RefreshControl,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -8,73 +9,63 @@ import {
 import { ArrowLeft } from 'lucide-react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
-import { PlaceCard } from '@/mobile/app/features/places/public/components';
+import {
+  getPlaceFeedLocationCardCount,
+  type PlaceFeedCardItem,
+} from '@/mobile/app/data/selectors/placeAggregation';
+import { PlaceCard } from '@/mobile/app/features/places/ui/components/PlaceCard';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
-import { useInitialFlatListIndex } from '@/mobile/app/shared/hooks/useInitialFlatListIndex';
+import { useAnchoredFeed } from '@/mobile/app/shared/hooks/useAnchoredFeed';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
-import {
-  getPlaceFeedLocationCardCount,
-  type PlaceFeedCardItem,
-} from '@/mobile/app/data/selectors/placeAggregation';
 
-type ProfileFeedScreenProps = {
+type PlaceFeedScreenProps = {
   title: string;
   items: PlaceFeedCardItem[];
+  // The card that was tapped in the grid; the feed opens on it.
   startIndex?: number;
   refreshing?: boolean;
   onRefresh?: () => void;
-  owner?: User;
-  showOwner?: boolean;
   onBack: () => void;
   onDeletePlace?: (item: PlaceFeedCardItem) => void;
   onEditPlace?: (item: PlaceFeedCardItem) => void;
   onOpenListDetail: (item: PlaceFeedCardItem) => void;
-  onOwnerPress?: () => void;
+  // Who to show on each card; left out, the cards show no owner.
+  ownerFor?: (item: PlaceFeedCardItem) => User | null | undefined;
+  onOwnerPress?: (item: PlaceFeedCardItem) => void;
   // False inside a tab, whose navigator header already clears the status bar.
   safeTop?: boolean;
 };
 
-export function ProfileFeedScreen({
+/**
+ * The feed a grid tile opens, on Profile and Explore alike: the tapped place
+ * first, the rest of the grid's places above and below it.
+ */
+export function PlaceFeedScreen({
   title,
   items,
   startIndex = 0,
   refreshing = false,
   onRefresh,
-  owner,
-  showOwner = false,
   onBack,
   onDeletePlace,
   onEditPlace,
   onOpenListDetail,
+  ownerFor,
   onOwnerPress,
   safeTop = true,
-}: ProfileFeedScreenProps) {
+}: PlaceFeedScreenProps) {
   const { height, width } = useWindowDimensions();
   const appLayout = useAppLayout();
-  const estimatedItemLength = React.useMemo(
-    () => Math.max(440, Math.round(height * 0.78)),
-    [height],
-  );
-  const {
-    listRef,
-    safeStartIndex,
-    initialScrollIndex,
-    handleContentSizeChange,
-    handleScrollToIndexFailed,
-  } = useInitialFlatListIndex<PlaceFeedCardItem>({
-    estimatedItemLength,
-    itemCount: items.length,
-    startIndex,
-  });
+  const feed = useAnchoredFeed({ items, startIndex });
   const listProps = React.useMemo(
     () =>
-      buildAdaptiveFlatListProps({
+      buildAdaptiveFlatListProps<PlaceFeedCardItem>({
         containsNativeMaps: true,
         itemCount: items.length,
         viewportHeight: height,
@@ -82,11 +73,10 @@ export function ProfileFeedScreen({
       }),
     [height, items.length, width],
   );
+
   return (
     <Screen safeTop={safeTop} scroll={false} padded={false}>
-      <View
-        style={[styles.header, { paddingHorizontal: appLayout.screenPadding }]}
-      >
+      <View style={[styles.header, { paddingHorizontal: appLayout.screenPadding }]}>
         <IconButton
           accessibilityLabel={tr.common.back}
           onPress={onBack}
@@ -94,50 +84,50 @@ export function ProfileFeedScreen({
         >
           <ArrowLeft color={colors.textMuted} size={iconSize.md} />
         </IconButton>
-        <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+        <AppText accessibilityRole="header" numberOfLines={1} style={styles.title}>
+          {title}
+        </AppText>
       </View>
 
       <FlatList
         {...listProps}
-        ref={listRef}
-        data={items}
-        initialScrollIndex={initialScrollIndex}
-        initialNumToRender={Math.max(
-          listProps.initialNumToRender ?? 4,
-          safeStartIndex > 0 ? 6 : 4,
-        )}
+        data={feed.data}
         keyExtractor={(item) => item.key}
-        onContentSizeChange={handleContentSizeChange}
-        onScrollToIndexFailed={handleScrollToIndexFailed}
+        maintainVisibleContentPosition={feed.maintainVisibleContentPosition}
+        onContentSizeChange={feed.onContentSizeChange}
         renderItem={({ item }) => (
-          <View>
-            <PlaceCard
-              place={item.place}
-              owner={showOwner ? owner : undefined}
-              ownerId={item.ownerId}
-              listId={item.listId}
-              listName={item.listName}
-              listEmoji={item.listEmoji}
-              listIsPublic={item.listIsPublic}
-              listCoverImage={item.listCoverImage}
-              locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
-              locationOriginalPlaceName={item.place.name}
-              markerColor={getMarkerColorForMemberships(
-                item.memberships,
-                item.listIsPublic,
-              )}
-              onEdit={onEditPlace ? () => onEditPlace(item) : undefined}
-              onDelete={onDeletePlace ? () => onDeletePlace(item) : undefined}
-              onOwnerPress={showOwner ? onOwnerPress : undefined}
-              onPress={() => onOpenListDetail(item)}
-              onRefresh={onRefresh}
-            />
-          </View>
+          <PlaceCard
+            place={item.place}
+            owner={ownerFor?.(item)}
+            ownerId={item.ownerId}
+            listId={item.listId}
+            listName={item.listName}
+            listEmoji={item.listEmoji}
+            listIsPublic={item.listIsPublic}
+            listCoverImage={item.listCoverImage}
+            locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
+            locationOriginalPlaceName={item.place.name}
+            markerColor={getMarkerColorForMemberships(item.memberships, item.listIsPublic)}
+            onEdit={onEditPlace ? () => onEditPlace(item) : undefined}
+            onDelete={onDeletePlace ? () => onDeletePlace(item) : undefined}
+            onOwnerPress={onOwnerPress ? () => onOwnerPress(item) : undefined}
+            onPress={() => onOpenListDetail(item)}
+            onRefresh={onRefresh}
+          />
         )}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
+        style={styles.list}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
       />
     </Screen>
   );
@@ -158,7 +148,13 @@ const styles = StyleSheet.create({
     width: minTouchSize,
     height: minTouchSize,
   },
-  title: textStyle('section', colors.text),
+  title: {
+    ...textStyle('compactTitleText', colors.text),
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
   content: {
     paddingVertical: spacing.md,
     gap: spacing.md,

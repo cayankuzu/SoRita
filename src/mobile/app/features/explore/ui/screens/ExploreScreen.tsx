@@ -14,7 +14,7 @@ import {
   warmUserProfileData,
 } from '@/mobile/app/app-shell/startup/startupDataWarmup';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
-import { ExploreFeedView } from '@/mobile/app/features/explore/ui/components/ExploreFeedView';
+import { PlaceFeedScreen } from '@/mobile/app/features/places/public/feed';
 import { ExploreHeaderControls } from '@/mobile/app/features/explore/ui/components/ExploreHeaderControls';
 import { ExplorePagerLayout } from '@/mobile/app/features/explore/ui/components/ExplorePagerLayout';
 import {
@@ -285,12 +285,25 @@ export function ExploreScreen() {
       feedMode.kind === 'places' ? filteredPlaces : filteredPhotos;
 
     return (
-      <ExploreFeedView
+      // Shown inside the Explore tab, whose header already clears the status bar.
+      <PlaceFeedScreen
+        safeTop={false}
+        title={tr.explore.title}
         items={feedItems}
         startIndex={feedMode.startIndex}
         refreshing={refreshing}
         onRefresh={onRefresh}
         onBack={() => setFeedMode(null)}
+        ownerFor={(item) => item.owner}
+        onOwnerPress={(item) =>
+          item.owner && openStackScreen(navigation, 'UserProfile', { userId: item.owner.id })
+        }
+        onOpenListDetail={(item) =>
+          openStackScreen(navigation, 'ListDetail', {
+            listId: item.listId,
+            placeId: item.place.id,
+          })
+        }
       />
     );
   }

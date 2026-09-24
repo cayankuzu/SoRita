@@ -53,27 +53,4 @@ export const exploreScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 0,
   },
-  feedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-  },
-  feedTitle: textStyle('bodyText', colors.text, fontWeight.strong),
-  feedContent: {
-    paddingVertical: spacing.md,
-    gap: spacing.md,
-  },
-  feedList: {
-    flex: 1,
-  },
 });

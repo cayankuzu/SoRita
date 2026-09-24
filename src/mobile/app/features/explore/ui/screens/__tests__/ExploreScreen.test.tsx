@@ -37,8 +37,8 @@ vi.mock('@/mobile/app/features/explore/application/useExploreScreenState', () =>
   useExploreScreenState: useExploreScreenStateMock,
 }));
 
-vi.mock('@/mobile/app/features/explore/ui/components/ExploreFeedView', () => ({
-  ExploreFeedView: () => null,
+vi.mock('@/mobile/app/features/places/public/feed', () => ({
+  PlaceFeedScreen: () => null,
 }));
 
 vi.mock('@/mobile/app/features/explore/ui/components/ExploreResultsPage', () => ({
