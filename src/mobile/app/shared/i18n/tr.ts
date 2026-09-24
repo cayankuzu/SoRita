@@ -285,6 +285,10 @@ export const tr = {
       title: 'Listeyi sil?',
     },
     empty: {
+      filteredDescription: 'Filtreyi kaldırınca tüm içeriğin görünür.',
+      filteredTitle: (tab: 'gallery' | 'lists' | 'places', visibility: 'private' | 'public') =>
+        `${visibility === 'private' ? 'Özel' : 'Herkese açık'} ${{ gallery: 'fotoğrafın', lists: 'listen', places: 'mekânın' }[tab]} yok`,
+      showAll: 'Tümünü göster',
       myNoList: 'Henüz listen yok',
       myNoListDescription: 'Yeni liste oluştur ve mekân eklemeye başla.',
       myNoPhoto: 'Henüz fotoğraf yok',

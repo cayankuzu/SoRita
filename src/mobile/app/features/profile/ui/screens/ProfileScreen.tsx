@@ -35,6 +35,7 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
+import { ProfileFilteredEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileFilteredEmptyState';
 import {
   ProfileTabs,
   type ProfileTabOption,
@@ -377,6 +378,16 @@ export function ProfileScreen() {
           actionLabel={tr.common.retry}
           onAction={retry}
           tone="danger"
+        />
+      );
+    }
+
+    if (visibilityFilter !== 'all') {
+      return (
+        <ProfileFilteredEmptyState
+          onShowAll={() => setVisibilityFilter('all')}
+          tab={tab}
+          visibility={visibilityFilter}
         />
       );
     }
