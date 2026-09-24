@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { AppHeader } from '@/mobile/app/app-shell/chrome/AppHeader';
@@ -86,7 +86,6 @@ function requestNextPage(pagination: PaginationState) {
 export function HomeScreen() {
   const navigation = useAppNavigation();
   const { height, width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   // The brand bar slides away while reading down the feed and returns on the
   // first scroll up. An opaque strip keeps the status bar clear of the feed.
   const topBar = useScrollAwayHeader();
@@ -374,7 +373,9 @@ export function HomeScreen() {
       <ScrollAwayHeader controller={topBar} testID="home-top-bar">
         <AppHeader />
       </ScrollAwayHeader>
-      <View pointerEvents="none" style={[styles.statusBarStrip, { height: insets.top }]} />
+      {/* Sized by the native safe area: inside the tab navigator the insets
+          hook reported no top inset, and a zero-height strip hid nothing. */}
+      <SafeAreaView edges={['top']} pointerEvents="none" style={styles.statusBarStrip} />
     </Screen>
   );
 }
