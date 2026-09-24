@@ -51,17 +51,21 @@ export function PlacePreviewModal({
   const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
+  const { paddingTop } = getModalSafeAreaPadding({
     topInset: insets.top,
     bottomInset: insets.bottom,
     topSpacing: 20,
     bottomSpacing: 12,
     minBottomPadding: Platform.OS === 'android' ? 28 : 12,
   });
+  // The sheet sits on the bottom edge, as the shared sheets do, with the
+  // navigation bar's inset inside it. Floating it above that inset left the
+  // dimmed tab bar's labels showing under it.
+  const sheetBottomPadding = Math.max(insets.bottom, spacing.md);
   const sheetMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
     paddingTop,
-    paddingBottom,
+    paddingBottom: 0,
     maxHeightRatio: 0.82,
     minHeight: 276,
   });
@@ -96,11 +100,11 @@ export function PlacePreviewModal({
         accessibilityViewIsModal
         importantForAccessibility="yes"
         onAccessibilityEscape={onClose}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
+        style={[styles.overlay, { paddingTop }]}
       >
         <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
 
-        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: sheetBottomPadding }]}>
           <InstantPressable
             accessibilityLabel={onMinimize ? tr.common.minimize : tr.common.close}
             accessibilityRole="button"
