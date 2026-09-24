@@ -21,11 +21,13 @@ import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
 type ListDetailHeaderProps = {
   list: PlaceList;
+  placeCount: number;
   onOpenCover: () => void;
 };
 
 export function ListDetailHeader({
   list,
+  placeCount,
   onOpenCover,
 }: ListDetailHeaderProps) {
   const timestampText = formatCreatedUpdatedInline(list.createdAt, list.updatedAt);
@@ -77,7 +79,7 @@ export function ListDetailHeader({
               label={list.isPublic ? tr.listDetail.public : tr.listDetail.private}
               tone={list.isPublic ? 'success' : 'neutral'}
             />
-            <Badge icon={MapPin} label={tr.cards.placesCount(list.places.length)} numeric />
+            <Badge icon={MapPin} label={tr.cards.placesCount(placeCount)} numeric />
             {(list.likes || 0) > 0 ? (
               <Badge icon={Heart} iconFilled label={`${list.likes}`} numeric tone="danger" />
             ) : null}

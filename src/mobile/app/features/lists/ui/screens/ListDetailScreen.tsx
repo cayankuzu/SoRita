@@ -163,6 +163,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
     deletePlace,
     displayPlaces,
     errorMessage,
+    placeTotal,
     fetchNextPage,
     hasNextPage,
     hasPartialDataError,
@@ -390,13 +391,8 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   }
 
   if (!list) {
-    return (
-      <ListDetailUnavailableState
-        errorMessage={errorMessage}
-        onBack={() => navigation.goBack()}
-        onRetry={retry}
-      />
-    );
+    const goBack = () => navigation.goBack();
+    return <ListDetailUnavailableState errorMessage={errorMessage} onBack={goBack} onRetry={retry} />;
   }
 
   const actionItems = [
@@ -452,7 +448,7 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
         <StackScreenHeader
           onBack={() => navigation.goBack()}
           title={tr.common.list}
-          subtitle={tr.cards.placesCount(displayPlaces.length)}
+          subtitle={tr.cards.placesCount(placeTotal)}
           rightAction={actionItems.length > 0 ? (
             <IconButton
               accessibilityLabel={tr.common.contentActionsTitle}
@@ -495,11 +491,13 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
             <View style={styles.feed}>
               <ListDetailHeader
                 list={list}
+                placeCount={placeTotal}
                 onOpenCover={() => list.coverImage && setLightboxUri(list.coverImage)}
               />
               <ListDetailPlacesSection
                 list={list}
                 displayPlaces={displayPlaces}
+                placeCount={placeTotal}
                 mapPlaces={mapPlaces}
                 highlightedIndex={highlightedIndex}
                 highlightedPlaceId={highlightedPlaceId}

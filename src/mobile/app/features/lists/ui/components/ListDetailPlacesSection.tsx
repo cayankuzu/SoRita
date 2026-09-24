@@ -19,6 +19,7 @@ import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 type ListDetailPlacesSectionProps = {
   list: PlaceList;
   displayPlaces: Place[];
+  placeCount: number;
   mapPlaces: MapMarkerItem[];
   highlightedIndex: number | null;
   highlightedPlaceId: string | null;
@@ -31,6 +32,7 @@ type ListDetailPlacesSectionProps = {
 export function ListDetailPlacesSection({
   list,
   displayPlaces,
+  placeCount,
   mapPlaces,
   highlightedIndex,
   owner,
@@ -150,7 +152,7 @@ export function ListDetailPlacesSection({
       {displayPlaces.length > 0 ? (
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
-            <AppText style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</AppText>
+            <AppText style={styles.sectionEyebrow}>{tr.cards.placesCount(placeCount)}</AppText>
             <AppText accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</AppText>
             <AppText style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</AppText>
           </View>

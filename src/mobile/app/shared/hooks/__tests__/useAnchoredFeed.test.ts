@@ -105,7 +105,7 @@ describe('useAnchoredFeed', () => {
     list.scrollToIndex.mockClear();
     act(() => {
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        hook.result.current.onScrollToIndexFailed({ averageItemLength: 0, highestMeasuredFrameIndex: 0, index: 4 });
+        hook.result.current.onScrollToIndexFailed();
         vi.advanceTimersByTime(120);
       }
     });
