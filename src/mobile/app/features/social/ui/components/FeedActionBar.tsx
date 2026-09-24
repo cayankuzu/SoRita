@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Crosshair, Flag, ListPlus, MapPin } from 'lucide-react-native';
+import { Crosshair, Flag, ListPlus, MapPin, MapPinOff } from 'lucide-react-native';
 
 import { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
 import { FeedActionButtons } from '@/mobile/app/features/social/ui/components/FeedActionButtons';
@@ -142,10 +142,15 @@ export function FeedActionBar(props: FeedActionBarProps) {
   }
 
   if (props.location) {
+    // Says what the next tap does: the address was left open after the first
+    // tap while the menu kept offering to show it.
     secondaryActions.push({
       key: 'address',
-      label: tr.cards.showAddressAction,
-      renderIcon: (color) => <MapPin color={color} size={iconSize.sm} />,
+      label: state.showAddress ? tr.cards.hideAddressAction : tr.cards.showAddressAction,
+      renderIcon: (color) =>
+        state.showAddress
+          ? <MapPinOff color={color} size={iconSize.sm} />
+          : <MapPin color={color} size={iconSize.sm} />,
       onPress: () => {
         closeSecondaryActions();
         state.setShowAddress((visible) => !visible);

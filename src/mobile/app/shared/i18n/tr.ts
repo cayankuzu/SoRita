@@ -1071,6 +1071,7 @@ export const tr = {
     share: 'Paylaş',
     shareDescription: (title: string) => `${title} — SoRita'da keşfet`,
     showAddressAction: 'Adresi göster',
+    hideAddressAction: 'Adresi gizle',
     studentDiscount: 'Öğrenci dostu',
     unlikeAction: 'Beğeniyi kaldır',
     unlikeComment: 'Yorum beğenisini kaldır',
