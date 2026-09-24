@@ -107,23 +107,29 @@ function ListDetailLoadingState() {
   );
 }
 
+// A deleted or hidden list keeps the back bar the list itself has.
 function ListDetailUnavailableState({
   errorMessage,
+  onBack,
   onRetry,
 }: {
   errorMessage?: string | null;
+  onBack: () => void;
   onRetry: () => void;
 }) {
   return (
-    <Screen>
-      <EmptyState
-        icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={iconSize.xl} />}
-        title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
-        description={errorMessage || tr.listDetail.notFoundDescription}
-        actionLabel={errorMessage ? tr.common.retry : undefined}
-        onAction={errorMessage ? onRetry : undefined}
-        tone={errorMessage ? 'danger' : 'default'}
-      />
+    <Screen safeTop={false} padded={false} scroll={false}>
+      <StackScreenHeader onBack={onBack} title={tr.common.list} />
+      <View style={styles.unavailableBody}>
+        <EmptyState
+          icon={<MapPin color={errorMessage ? colors.danger : colors.textSoft} size={iconSize.xl} />}
+          title={errorMessage ? tr.profile.error.contentUnavailable : tr.listDetail.notFoundTitle}
+          description={errorMessage || tr.listDetail.notFoundDescription}
+          actionLabel={errorMessage ? tr.common.retry : undefined}
+          onAction={errorMessage ? onRetry : undefined}
+          tone={errorMessage ? 'danger' : 'default'}
+        />
+      </View>
     </Screen>
   );
 }
@@ -384,7 +390,13 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
   }
 
   if (!list) {
-    return <ListDetailUnavailableState errorMessage={errorMessage} onRetry={retry} />;
+    return (
+      <ListDetailUnavailableState
+        errorMessage={errorMessage}
+        onBack={() => navigation.goBack()}
+        onRetry={retry}
+      />
+    );
   }
 
   const actionItems = [

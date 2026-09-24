@@ -13,6 +13,11 @@ import {
 } from '@/mobile/app/shared/theme/tokens';
 
 export const listDetailScreenStyles = StyleSheet.create({
+  unavailableBody: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.screen,
+  },
   screenLoader: {
     flex: 1,
     alignItems: 'center',
