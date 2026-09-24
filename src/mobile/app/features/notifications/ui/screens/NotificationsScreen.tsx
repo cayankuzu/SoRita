@@ -14,8 +14,10 @@ import {
   useNotificationsScreenState,
 } from '@/mobile/app/features/notifications/application/useNotificationsScreenState';
 import { resolveNotificationTarget } from '@/mobile/app/features/notifications/application/notificationTarget';
+import { useNotificationDeliveryHealth } from '@/mobile/app/features/notifications/application/useNotificationDeliveryHealth';
 import { notificationUiConfig } from '@/mobile/app/features/notifications/ui/notificationUiConfig';
 import { NotificationCategoryTabs } from '@/mobile/app/features/notifications/ui/components/NotificationCategoryTabs';
+import { NotificationDeliveryNotice } from '@/mobile/app/features/notifications/ui/components/NotificationDeliveryNotice';
 import { NotificationListItem } from '@/mobile/app/features/notifications/ui/components/NotificationListItem';
 import { NotificationsEmptyState } from '@/mobile/app/features/notifications/ui/components/NotificationsEmptyState';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
@@ -62,6 +64,7 @@ export function NotificationsScreen() {
     setCategory,
     unreadCount,
   } = useNotificationsScreenState({ userId: user?.id });
+  const deliveryHealth = useNotificationDeliveryHealth();
   useScreenPerformanceMetric({
     hasContent: filteredItems.length > 0,
     hasError: Boolean(errorMessage),
@@ -208,19 +211,22 @@ export function NotificationsScreen() {
           )
         }
         ListHeaderComponent={
-          errorMessage && filteredItems.length > 0 ? (
-            <View style={styles.noticeWrap}>
-              <InlineNotice
-                tone="warning"
-                title={notificationUiConfig.partialTitle}
-                description={notificationUiConfig.partialDescription}
-                actionLabel={tr.common.retry}
-                onAction={() => {
-                  void retry();
-                }}
-              />
-            </View>
-          ) : null
+          <>
+            <NotificationDeliveryNotice {...deliveryHealth} />
+            {errorMessage && filteredItems.length > 0 ? (
+              <View style={styles.noticeWrap}>
+                <InlineNotice
+                  tone="warning"
+                  title={notificationUiConfig.partialTitle}
+                  description={notificationUiConfig.partialDescription}
+                  actionLabel={tr.common.retry}
+                  onAction={() => {
+                    void retry();
+                  }}
+                />
+              </View>
+            ) : null}
+          </>
         }
         ListFooterComponent={
           isFetchingNextPage ? (

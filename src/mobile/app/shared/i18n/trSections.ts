@@ -15,6 +15,16 @@ export const notificationsTr = {
     places: 'Mekânlar',
     quotes: 'Alıntılar',
   },
+  delivery: {
+    backgroundTipDescription: (maker: string) =>
+      `${maker} telefonlar, son uygulamalardan kaydırılan uygulamaları durdurur ve bildirimleri de keser. SoRita'nın ayarlarında Otomatik başlatma'yı aç, pil tasarrufunu Kısıtlama yok yap.`,
+    backgroundTipTitle: 'Uygulama kapalıyken de bildirim al',
+    blockedDescription:
+      'Beğeni, yorum ve takip bildirimleri bu telefona gelmiyor. Ayarlardan SoRita bildirimlerini aç.',
+    blockedTitle: 'Bildirimler kapalı',
+    dismiss: 'Tamam',
+    openSettings: 'Ayarları aç',
+  },
   emptyDescription: 'Bu kategoride şu an içerik bulunmuyor.',
   emptyTitle: 'Bildirim yok',
   errorTitle: 'Bildirimler açılamıyor',

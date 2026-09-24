@@ -10,6 +10,9 @@ type InlineNoticeProps = {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  // A quieter second choice beside the main action, such as dismissing a tip.
+  onSecondaryAction?: () => void;
+  secondaryActionLabel?: string;
   tone?: 'info' | 'warning' | 'danger';
 };
 
@@ -41,9 +44,13 @@ export function InlineNotice({
   actionLabel,
   description,
   onAction,
+  onSecondaryAction,
+  secondaryActionLabel,
   title,
   tone = 'info',
 }: InlineNoticeProps) {
+  const hasAction = Boolean(actionLabel && onAction);
+  const hasSecondaryAction = Boolean(secondaryActionLabel && onSecondaryAction);
   const palette = tonePalettes[tone];
 
   return (
@@ -68,10 +75,21 @@ export function InlineNotice({
           {description}
         </AppText>
       ) : null}
-      {actionLabel && onAction ? (
-        <InstantPressable disableFeedback onPress={onAction} style={styles.actionButton}>
-          <AppText style={[styles.actionLabel, { color: palette.actionColor }]}>{actionLabel}</AppText>
-        </InstantPressable>
+      {hasAction || hasSecondaryAction ? (
+        <View style={styles.actions}>
+          {hasAction ? (
+            <InstantPressable disableFeedback onPress={onAction} style={styles.actionButton}>
+              <AppText style={[styles.actionLabel, { color: palette.actionColor }]}>{actionLabel}</AppText>
+            </InstantPressable>
+          ) : null}
+          {hasSecondaryAction ? (
+            <InstantPressable disableFeedback onPress={onSecondaryAction} style={styles.actionButton}>
+              <AppText style={[styles.actionLabel, { color: palette.descriptionColor }]}>
+                {secondaryActionLabel}
+              </AppText>
+            </InstantPressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -92,9 +110,13 @@ const styles = StyleSheet.create({
   description: {
     ...typography.captionText,
   },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.xxs,
+  },
   actionButton: {
     alignSelf: 'flex-start',
-    marginTop: spacing.xxs,
   },
   actionLabel: {
     ...typography.captionText,
