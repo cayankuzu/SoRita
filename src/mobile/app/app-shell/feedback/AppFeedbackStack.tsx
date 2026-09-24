@@ -5,6 +5,7 @@ import {
   useAppProgressBanner,
 } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
 import { resolveAppFeedbackPriority } from '@/mobile/app/app-shell/feedback/feedbackPriority';
+import { InAppPushBannerHost } from '@/mobile/app/app-shell/feedback/InAppPushBannerHost';
 import { ToastHost } from '@/mobile/app/platform/feedback/ToastHost';
 import {
   OfflineIndicator,
@@ -31,6 +32,7 @@ export function AppFeedbackStack() {
         suppressed={!networkHasPriority}
       />
       <ToastHost suppressed={priority !== 'toast'} />
+      <InAppPushBannerHost />
     </>
   );
 }

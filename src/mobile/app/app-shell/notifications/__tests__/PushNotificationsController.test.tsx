@@ -36,6 +36,14 @@ const navigateMock = vi.fn();
 
 let appStateChangeHandler: ((state: AppStateStatus) => void) | null = null;
 let notificationResponseHandler: ((response: NotificationResponseFixture) => void) | null = null;
+let notificationReceivedHandler: ((notification: ReceivedNotificationFixture) => void) | null = null;
+
+type ReceivedNotificationFixture = {
+  request: {
+    content: { body: string | null; data: Record<string, unknown>; title: string | null };
+    identifier: string;
+  };
+};
 
 type NotificationResponseFixture = {
   notification: {
@@ -109,7 +117,10 @@ vi.mock('@/mobile/app/app-shell/navigation/navigationRef', () => ({
 
 vi.mock('expo-notifications', () => ({
   AndroidNotificationPriority: { MAX: 'max' },
-  addNotificationReceivedListener: vi.fn(() => ({ remove: vi.fn() })),
+  addNotificationReceivedListener: vi.fn((listener) => {
+    notificationReceivedHandler = listener;
+    return { remove: vi.fn() };
+  }),
   addNotificationResponseReceivedListener: addNotificationResponseReceivedListenerMock,
   addPushTokenListener: vi.fn(() => ({ remove: vi.fn() })),
   clearLastNotificationResponseAsync: clearLastNotificationResponseAsyncMock,
@@ -169,6 +180,7 @@ beforeEach(() => {
   notificationRuntimeState.supportsRemotePushRegistration = true;
   appStateChangeHandler = null;
   notificationResponseHandler = null;
+  notificationReceivedHandler = null;
 
   ensureAndroidPushChannelMock.mockReset();
   ensureAndroidPushChannelMock.mockResolvedValue(undefined);
@@ -548,6 +560,55 @@ describe('PushNotificationsController notification synchronization', () => {
     await act(async () => {
       renderer.unmount();
     });
+  });
+});
+
+describe('PushNotificationsController in-app banner', () => {
+  it('shows a push received in the open app as its own banner, which opens its target', async () => {
+    notificationRuntimeState.supportsNotificationObservers = true;
+    const {
+      inAppPushBannerInternals,
+      showsForegroundPushesInApp,
+      subscribeToInAppPushBanners,
+    } = await import('@/mobile/app/platform/notifications/inAppPushBanner');
+    inAppPushBannerInternals.reset();
+    const host = vi.fn();
+    const unsubscribe = subscribeToInAppPushBanners(host);
+    const renderer = await renderController();
+
+    await vi.waitFor(() => {
+      expect(notificationReceivedHandler).not.toBeNull();
+    });
+    expect(showsForegroundPushesInApp()).toBe(true);
+
+    await act(async () => {
+      notificationReceivedHandler?.({
+        request: {
+          content: { body: 'listeni beğendi', data: {}, title: 'Ayşe' },
+          identifier: 'push-1',
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(host).toHaveBeenCalledOnce();
+    expect(host.mock.calls[0]?.[0]).toMatchObject({
+      body: 'listeni beğendi',
+      id: 'push-1',
+      title: 'Ayşe',
+    });
+
+    act(() => {
+      host.mock.calls[0]?.[0].onPress();
+    });
+    expect(navigateMock).toHaveBeenCalledWith('Notifications');
+
+    await act(async () => {
+      renderer.unmount();
+    });
+    // Signed out, the system decides again, and no banner is left waiting.
+    expect(showsForegroundPushesInApp()).toBe(false);
+    unsubscribe();
   });
 });
 

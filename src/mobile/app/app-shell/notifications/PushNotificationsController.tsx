@@ -12,6 +12,10 @@ import {
   type MobileNotification,
 } from '@/mobile/app/data/repositories/notificationRepository';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
+import {
+  claimForegroundPushes,
+  showInAppPushBanner,
+} from '@/mobile/app/platform/notifications/inAppPushBanner';
 import { ensureForegroundNotificationPresentation } from '@/mobile/app/platform/notifications/foregroundNotificationPresentation';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
@@ -304,6 +308,7 @@ export function PushNotificationsController() {
 
     let receivedSubscription: { remove: () => void } | null = null;
     let responseSubscription: { remove: () => void } | null = null;
+    let releaseForegroundPushes: (() => void) | null = null;
     let cancelled = false;
 
     void loadNotificationsModule()
@@ -317,15 +322,28 @@ export function PushNotificationsController() {
             return;
           }
 
+          const { content, identifier } = notification.request;
           const payload = normalizePushPayload(
-            notification.request.content.data as Record<string, unknown> | undefined,
+            content.data as Record<string, unknown> | undefined,
           );
 
           void hydrateLatestNotifications(userId, {
             notificationId: payload.notificationId,
             reason: 'push-received',
           });
+
+          if (content.body) {
+            showInAppPushBanner({
+              body: content.body,
+              id: identifier,
+              onPress: () => openPushTarget(payload, identifier),
+              title: content.title?.trim() || 'SoRita',
+            });
+          }
         });
+        if (userId) {
+          releaseForegroundPushes = claimForegroundPushes();
+        }
 
         responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
           const payload = normalizePushPayload(
@@ -341,6 +359,7 @@ export function PushNotificationsController() {
 
     return () => {
       cancelled = true;
+      releaseForegroundPushes?.();
       receivedSubscription?.remove();
       responseSubscription?.remove();
     };

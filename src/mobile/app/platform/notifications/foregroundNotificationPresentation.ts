@@ -1,6 +1,8 @@
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 import { ensureAndroidPushChannel } from '@/mobile/app/platform/notifications/androidPushChannel';
+import { showsForegroundPushesInApp } from '@/mobile/app/platform/notifications/inAppPushBanner';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
 
 let notificationPresentationPromise: Promise<void> | null = null;
@@ -18,13 +20,19 @@ export async function ensureForegroundNotificationPresentation() {
   if (!notificationPresentationPromise) {
     notificationPresentationPromise = (async () => {
       Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowBanner: true,
-          shouldShowList: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-        }),
+        handleNotification: async () => {
+          // While the app shows the push itself, a system banner would be a
+          // second copy of it. Android cannot file a push in the shade
+          // without the banner; an iPhone keeps it in Notification Center.
+          const shownInApp = showsForegroundPushesInApp();
+          return {
+            shouldShowBanner: !shownInApp,
+            shouldShowList: !shownInApp || Platform.OS === 'ios',
+            shouldPlaySound: !shownInApp,
+            shouldSetBadge: true,
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          };
+        },
       });
 
       await ensureAndroidPushChannel();
