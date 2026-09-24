@@ -6,6 +6,7 @@ import {
   dismissBackgroundDeliveryTip,
   getRestrictiveMakerName,
   isBackgroundDeliveryTipDismissed,
+  openAppNotificationSettings,
 } from '@/mobile/app/platform/notifications/pushReliability';
 
 export type NotificationDeliveryHealth =
@@ -57,7 +58,12 @@ export function useNotificationDeliveryHealth() {
     };
   }, [refresh]);
 
-  const openSettings = useCallback(() => {
+  // Where pushes are switched on and allowed to show on screen.
+  const openNotificationSettings = useCallback(() => {
+    void openAppNotificationSettings();
+  }, []);
+  // The app page, where the battery limit that stops closed apps is lifted.
+  const openAppSettings = useCallback(() => {
     void Linking.openSettings();
   }, []);
 
@@ -66,5 +72,5 @@ export function useNotificationDeliveryHealth() {
     void dismissBackgroundDeliveryTip();
   }, []);
 
-  return { dismissTip, health, openSettings };
+  return { dismissTip, health, openAppSettings, openNotificationSettings };
 }

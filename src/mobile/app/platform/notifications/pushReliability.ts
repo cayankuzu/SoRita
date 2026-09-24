@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import * as Application from 'expo-application';
+import { Linking, Platform } from 'react-native';
+
+import { androidNotificationChannelId } from '@/mobile/app/platform/notifications/channels';
 
 // Makers whose battery managers stop an app that was swiped away from the
 // recent apps, and Android then drops every push until it is opened again
@@ -23,7 +26,8 @@ const RESTRICTIVE_MAKERS: Record<string, string> = {
   xiaomi: 'Xiaomi',
 };
 
-const BACKGROUND_TIP_DISMISSED_KEY = 'sorita.push-background-tip.dismissed';
+// v2: the tip now also covers pushes showing on screen, so it asks again.
+const BACKGROUND_TIP_DISMISSED_KEY = 'sorita.push-background-tip.v2.dismissed';
 
 /** The maker's name when this Android phone stops swiped-away apps, or null. */
 export function getRestrictiveMakerName(): string | null {
@@ -40,6 +44,43 @@ export function getRestrictiveMakerName(): string | null {
   }
 
   return null;
+}
+
+/**
+ * Opens the settings of SoRita's push channel. MIUI and HyperOS keep "Kayan
+ * bildirimler" (show on screen) and the lock screen choice per channel, and
+ * create a new channel with both off, whatever the app asks: on a Xiaomi
+ * phone pushes reached the shade and never the screen. Falls back to the
+ * app's notification settings, then to its page.
+ */
+export async function openAppNotificationSettings() {
+  const packageName = Application.applicationId;
+  if (Platform.OS === 'android' && packageName) {
+    const intents: Array<[string, Array<{ key: string; value: string }>]> = [
+      [
+        'android.settings.CHANNEL_NOTIFICATION_SETTINGS',
+        [
+          { key: 'android.provider.extra.APP_PACKAGE', value: packageName },
+          { key: 'android.provider.extra.CHANNEL_ID', value: androidNotificationChannelId },
+        ],
+      ],
+      [
+        'android.settings.APP_NOTIFICATION_SETTINGS',
+        [{ key: 'android.provider.extra.APP_PACKAGE', value: packageName }],
+      ],
+    ];
+
+    for (const [action, extras] of intents) {
+      try {
+        await Linking.sendIntent(action, extras);
+        return;
+      } catch {
+        // This build refuses the page; try the broader one.
+      }
+    }
+  }
+
+  await Linking.openSettings();
 }
 
 export async function isBackgroundDeliveryTipDismissed() {

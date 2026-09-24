@@ -10,14 +10,16 @@ import { spacing } from '@/mobile/app/shared/theme/tokens';
 type NotificationDeliveryNoticeProps = {
   dismissTip: () => void;
   health: NotificationDeliveryHealth;
-  openSettings: () => void;
+  openAppSettings: () => void;
+  openNotificationSettings: () => void;
 };
 
 /** Says why pushes may not arrive and opens the setting that fixes it. */
 export function NotificationDeliveryNotice({
   dismissTip,
   health,
-  openSettings,
+  openAppSettings,
+  openNotificationSettings,
 }: NotificationDeliveryNoticeProps) {
   const { screenPadding } = useAppLayout();
 
@@ -31,19 +33,21 @@ export function NotificationDeliveryNotice({
     <View style={[styles.wrap, { paddingHorizontal: screenPadding }]}>
       {health.kind === 'blocked' ? (
         <InlineNotice
-          actionLabel={copy.openSettings}
+          actionLabel={copy.notificationSettings}
           description={copy.blockedDescription}
-          onAction={openSettings}
+          onAction={openNotificationSettings}
           title={copy.blockedTitle}
           tone="warning"
         />
       ) : (
         <InlineNotice
-          actionLabel={copy.openSettings}
+          actionLabel={copy.notificationSettings}
           description={copy.backgroundTipDescription(health.maker)}
-          onAction={openSettings}
-          onSecondaryAction={dismissTip}
-          secondaryActionLabel={copy.dismiss}
+          extraActions={[
+            { key: 'battery', label: copy.batterySettings, onPress: openAppSettings },
+            { key: 'dismiss', label: copy.dismiss, onPress: dismissTip },
+          ]}
+          onAction={openNotificationSettings}
           title={copy.backgroundTipTitle}
         />
       )}

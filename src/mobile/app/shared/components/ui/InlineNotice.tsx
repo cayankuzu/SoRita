@@ -10,9 +10,8 @@ type InlineNoticeProps = {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
-  // A quieter second choice beside the main action, such as dismissing a tip.
-  onSecondaryAction?: () => void;
-  secondaryActionLabel?: string;
+  // Quieter choices beside the main action, such as a second setting or dismiss.
+  extraActions?: ReadonlyArray<{ key: string; label: string; onPress: () => void }>;
   tone?: 'info' | 'warning' | 'danger';
 };
 
@@ -44,13 +43,12 @@ export function InlineNotice({
   actionLabel,
   description,
   onAction,
-  onSecondaryAction,
-  secondaryActionLabel,
+  extraActions = [],
   title,
   tone = 'info',
 }: InlineNoticeProps) {
   const hasAction = Boolean(actionLabel && onAction);
-  const hasSecondaryAction = Boolean(secondaryActionLabel && onSecondaryAction);
+
   const palette = tonePalettes[tone];
 
   return (
@@ -75,20 +73,25 @@ export function InlineNotice({
           {description}
         </AppText>
       ) : null}
-      {hasAction || hasSecondaryAction ? (
+      {hasAction || extraActions.length > 0 ? (
         <View style={styles.actions}>
           {hasAction ? (
             <InstantPressable disableFeedback onPress={onAction} style={styles.actionButton}>
               <AppText style={[styles.actionLabel, { color: palette.actionColor }]}>{actionLabel}</AppText>
             </InstantPressable>
           ) : null}
-          {hasSecondaryAction ? (
-            <InstantPressable disableFeedback onPress={onSecondaryAction} style={styles.actionButton}>
+          {extraActions.map((action) => (
+            <InstantPressable
+              disableFeedback
+              key={action.key}
+              onPress={action.onPress}
+              style={styles.actionButton}
+            >
               <AppText style={[styles.actionLabel, { color: palette.descriptionColor }]}>
-                {secondaryActionLabel}
+                {action.label}
               </AppText>
             </InstantPressable>
-          ) : null}
+          ))}
         </View>
       ) : null}
     </View>
@@ -112,7 +115,9 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    flexWrap: 'wrap',
+    columnGap: spacing.lg,
+    rowGap: spacing.xs,
     marginTop: spacing.xxs,
   },
   actionButton: {
