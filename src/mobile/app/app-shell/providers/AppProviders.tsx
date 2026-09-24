@@ -1,6 +1,10 @@
 import React, { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import * as NativeSplashScreen from 'expo-splash-screen';
 import { AppState, StyleSheet, View } from 'react-native';
 
@@ -109,14 +113,16 @@ export function AppProviders({ children }: AppProvidersProps) {
       typeof import('@/mobile/app/app-shell/startup/AppConfigErrorScreen');
 
     return (
-      <SafeAreaProvider>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <AppConfigErrorScreen missingEnvVars={env.missingRequiredStartupEnvVars} />
       </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaProvider>
+    // Measured at launch, so the first frame lays out around the status bar
+    // and navigation bar instead of under them.
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <AppSystemBarsProvider>

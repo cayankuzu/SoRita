@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Bell } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
@@ -25,6 +24,7 @@ import {
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useTopInset } from '@/mobile/app/shared/hooks/useTopInset';
 
 const NOTIFICATION_COUNT_REFRESH_WINDOW_MS = 1000 * 60;
 
@@ -35,6 +35,7 @@ export function AppHeader() {
   const userId = user?.id;
   const showNotifications = route.name === 'Home';
   const appLayout = useAppLayout();
+  const topInset = useTopInset();
   const notificationsQuery = useNotificationUnreadCountQuery(userId, {
     enabled: showNotifications,
   });
@@ -107,11 +108,11 @@ export function AppHeader() {
   }, [navigation, userId]);
 
   if (!showNotifications) {
-    return <SafeAreaView edges={['top']} style={styles.safeArea} />;
+    return <View style={[styles.safeArea, { paddingTop: topInset }]} />;
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <View style={[styles.header, { paddingHorizontal: appLayout.screenPadding }]}>
         <SoRitaLogo size="sm" showIcon={false} showTagline />
         <IconButton
@@ -134,7 +135,7 @@ export function AppHeader() {
           ) : null}
         </IconButton>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
