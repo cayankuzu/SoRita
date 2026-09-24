@@ -11,7 +11,10 @@
   </style>
   <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">
     <item name="windowSplashScreenBackground">@color/splashscreen_background</item>
-    <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen_logo</item>
+    <!-- No icon: the round-masked logo was a second splash before the
+         JavaScript one with the logo and copyright line. The plain
+         background hands straight over to it. -->
+    <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
     <item name="postSplashScreenTheme">@style/AppTheme</item>
     <item name="android:windowSplashScreenBehavior">icon_preferred</item>
   </style>

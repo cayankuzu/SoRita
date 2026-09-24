@@ -146,7 +146,9 @@ describe('app.config push notification extras', () => {
     ).toBe(true);
     expect(config.ios?.infoPlist?.UIBackgroundModes).toContain('remote-notification');
 
-    expect(config.plugins).toContain('@react-native-firebase/app');
+    // Firebase through CocoaPods: react-native-firebase 26 refuses Swift Package
+    // Manager under the static frameworks this app builds iOS with.
+    expect(config.plugins).toContainEqual(['@react-native-firebase/app', { ios: { disableSPM: true } }]);
     expect(config.plugins).toContain('@react-native-firebase/messaging');
     expect(config.plugins).toContainEqual([
       'expo-build-properties',

@@ -55,15 +55,16 @@ describe('app.config EAS Update safety', () => {
     const config = await loadAppConfig();
 
     expect(config).toMatchObject({
+      orientation: 'portrait',
       scheme: 'sorita',
-      version: '1.0.109',
+      version: '1.0.110',
       android: {
         package: 'com.cayan.sorita.socialmap',
-        versionCode: 115,
+        versionCode: 116,
       },
       ios: {
         bundleIdentifier: 'com.cayan.sorita.socialmap',
-        buildNumber: '94',
+        buildNumber: '95',
       },
     });
   });
@@ -92,6 +93,8 @@ describe('app.config EAS Update safety', () => {
       'android:name="expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY"',
     );
     expect(manifest).toContain('${expoUpdatesChannel}');
+    // Portrait before JavaScript starts, as app.config.ts declares for iOS.
+    expect(manifest).toMatch(/android:name=".MainActivity"[^>]*android:screenOrientation="portrait"/);
     const androidGradle = readFileSync(
       resolve(process.cwd(), 'android/app/build.gradle'),
       'utf8',

@@ -242,9 +242,12 @@ const config: SoRitaExpoConfig = {
   name: 'SoRita',
   slug: 'sorita',
   ...(expoOwner ? { owner: expoOwner } : {}),
-  version: '1.0.109',
+  version: '1.0.110',
   newArchEnabled: true,
-  orientation: 'default',
+  // Every screen is laid out for portrait. The lock lives in the native
+  // projects too, so a rotated phone never lays a screen out sideways before
+  // JavaScript starts.
+  orientation: 'portrait',
   scheme: appScheme,
   icon: './assets/app-icons_background_removed/appstore.png',
   userInterfaceStyle: 'light',
@@ -298,6 +301,9 @@ const config: SoRitaExpoConfig = {
       'expo-splash-screen',
       {
         backgroundColor: '#f8fafc',
+        // The tracked Android theme (res/values/styles.xml) shows no icon on the
+        // system splash, so only the JavaScript splash with the logo and
+        // copyright line is seen; this image is used by prebuild alone.
         android: {
           backgroundColor: '#f8fafc',
           image:
@@ -389,7 +395,7 @@ const config: SoRitaExpoConfig = {
   android: {
     package: 'com.cayan.sorita.socialmap',
     googleServicesFile: './google-services.json',
-    versionCode: 115,
+    versionCode: 116,
     usesCleartextTraffic: false,
     softwareKeyboardLayoutMode: 'resize',
     blockedPermissions: [
@@ -429,7 +435,7 @@ const config: SoRitaExpoConfig = {
   } as NonNullable<ExpoConfig['android']> & { usesCleartextTraffic: boolean },
   ios: {
     bundleIdentifier: 'com.cayan.sorita.socialmap',
-    buildNumber: '94',
+    buildNumber: '95',
     googleServicesFile: './GoogleService-Info.plist',
     ...(appLinkDomain ? { associatedDomains: [`applinks:${appLinkDomain}`] } : {}),
     infoPlist: {
