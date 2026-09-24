@@ -56,29 +56,35 @@ type ListDetailScreenContentProps = {
   placeId?: string;
 };
 
+// A notification opens a list on the place it is about. The first attempt
+// runs as the data lands, before the tall header and the rows below it are
+// measured, and fails. Each retry first steps to the furthest measured row,
+// which makes the list render the next ones, then aims for the place again.
+const MAX_LIST_SCROLL_RETRIES = 6;
+const LIST_SCROLL_RETRY_DELAY_MS = 120;
+
 function recoverListScroll({
-  averageItemLength,
+  highestMeasuredFrameIndex,
   index,
   listRef,
   retryCountRef,
   retryTimeoutRef,
 }: {
-  averageItemLength: number;
+  highestMeasuredFrameIndex: number;
   index: number;
   listRef: React.RefObject<FlatList<Place> | null>;
   retryCountRef: React.MutableRefObject<number>;
   retryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }) {
-  if (retryCountRef.current >= 2) {
+  if (retryCountRef.current >= MAX_LIST_SCROLL_RETRIES) {
     retryCountRef.current = 0;
     return;
   }
 
   retryCountRef.current += 1;
-  listRef.current?.scrollToOffset({
-    offset: Math.max(0, averageItemLength * index),
-    animated: false,
-  });
+  if (highestMeasuredFrameIndex >= 0 && highestMeasuredFrameIndex < index) {
+    listRef.current?.scrollToIndex({ animated: false, index: highestMeasuredFrameIndex });
+  }
   if (retryTimeoutRef.current) {
     clearTimeout(retryTimeoutRef.current);
   }
@@ -90,7 +96,7 @@ function recoverListScroll({
       viewOffset: 12,
       viewPosition: 0.08,
     });
-  }, 80);
+  }, LIST_SCROLL_RETRY_DELAY_MS);
 }
 
 function ListDetailLoadingState() {
@@ -546,9 +552,9 @@ function ListDetailScreenContent({ listId, placeId }: ListDetailScreenContentPro
           onScroll={(event) => {
             handleScroll(event.nativeEvent.contentOffset.y);
           }}
-          onScrollToIndexFailed={({ averageItemLength, index }) => {
+          onScrollToIndexFailed={({ highestMeasuredFrameIndex, index }) => {
             recoverListScroll({
-              averageItemLength,
+              highestMeasuredFrameIndex,
               index,
               listRef,
               retryCountRef: scrollRetryCountRef,
