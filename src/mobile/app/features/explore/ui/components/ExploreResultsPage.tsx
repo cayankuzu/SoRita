@@ -324,7 +324,6 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
       columnStrategy={tab === 'people' ? 'discovery' : 'mosaic'}
       data={errorMessage ? [] : data}
       extraData={listState}
-      containsNativeMaps={tab !== 'people'}
       refreshing={active && refreshing}
       progressViewOffset={topInset}
       ListHeaderComponent={topSpacer}

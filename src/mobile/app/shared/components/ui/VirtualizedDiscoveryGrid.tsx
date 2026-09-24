@@ -38,7 +38,6 @@ type VirtualizedDiscoveryGridProps<ItemT> = {
   ListFooterComponent?: React.ReactElement | null;
   ListHeaderComponent?: React.ReactElement | null;
   contentContainerStyle?: StyleProp<ViewStyle>;
-  containsNativeMaps?: boolean;
   extraData?: unknown;
   onContentSizeChange?: (width: number, height: number) => void;
   // Keep this set, or unset, for the life of the list. On Android, adding or
@@ -65,7 +64,6 @@ export function VirtualizedDiscoveryGrid<ItemT>({
   ListFooterComponent = null,
   ListHeaderComponent = null,
   contentContainerStyle,
-  containsNativeMaps = true,
   extraData,
   onContentSizeChange,
   onEndReached,
@@ -106,16 +104,21 @@ export function VirtualizedDiscoveryGrid<ItemT>({
     pendingAnchorIndexRef.current = visibleAnchorIndexRef.current;
     previousColumnCountRef.current = columnCount;
   }
-  const listProps = React.useMemo(
-    () =>
-      buildAdaptiveFlatListProps({
-        containsNativeMaps,
-        itemCount: data.length,
-        viewportHeight: height,
-        viewportWidth: width,
-      }),
-    [containsNativeMaps, data.length, height, width],
-  );
+  const listProps = React.useMemo(() => {
+    const adaptive = buildAdaptiveFlatListProps({
+      itemCount: data.length,
+      viewportHeight: height,
+      viewportWidth: width,
+    });
+    if (!isMosaic) {
+      return adaptive;
+    }
+
+    // Square tiles are light, and a grid counts rows: draw the whole first
+    // screen at once, so a tab never opens on two rows above a blank.
+    const screenRows = Math.ceil(height / Math.max(columnWidth, 1)) + 1;
+    return { ...adaptive, initialNumToRender: screenRows, maxToRenderPerBatch: screenRows };
+  }, [columnWidth, data.length, height, isMosaic, width]);
   const handleScroll = React.useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       onScrollOffsetChange?.(event.nativeEvent.contentOffset.y);
