@@ -159,6 +159,18 @@ export const listDetailScreenStyles = StyleSheet.create({
     fontWeight: fontWeight.strong,
     color: colors.text,
   },
+  mapDoneButton: {
+    alignItems: 'center',
+    backgroundColor: colors.glassSurface,
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    minHeight: minTouchSize,
+    paddingHorizontal: spacing.lg,
+    position: 'absolute',
+    right: spacing.sm,
+    top: spacing.sm,
+  },
+  mapDoneLabel: textStyle('labelText', colors.text),
   mapFrame: {
     overflow: 'hidden',
     borderRadius: radius.lg,

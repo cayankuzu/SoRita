@@ -377,6 +377,8 @@ export const tr = {
     editorDiscardDescription: 'Kaydedilmemiş liste değişiklikleri silinecek.',
     editorDiscardTitle: 'Değişiklikler iptal edilsin mi?',
     mapHelper: 'Haritadaki işarete dokunarak mekâna git',
+    mapActivateHint: 'Haritayı gezmek için dokun',
+    mapDone: 'Bitti',
     mapPlacesTitle: 'Mekân konumları',
     mapSelectedPlace: 'Haritada seçili mekân',
     ownerLabel: 'Liste sahibi',

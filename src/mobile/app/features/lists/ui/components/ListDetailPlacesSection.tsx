@@ -1,8 +1,10 @@
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
+import { MiniMapInteractionHint } from '@/mobile/app/shared/components/maps/MiniMapInteractionHint';
 import { MiniMapPreview } from '@/mobile/app/shared/components/maps/MiniMapPreview';
+import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
@@ -36,6 +38,16 @@ export function ListDetailPlacesSection({
   onHighlightPlace,
   onOpenOwnerProfile,
 }: ListDetailPlacesSectionProps) {
+  // The map starts still, so a swipe over it scrolls the page; a tap wakes
+  // it for panning and zooming, and Bitti puts it back.
+  const {
+    activateMap,
+    deactivateMap,
+    isMapInteractive,
+    mapFocusKey,
+    showInteractionHint,
+  } = useMiniMapInteraction(`list-detail:${list.id}`);
+
   return (
     <View style={styles.sectionStack}>
       {owner ? (
@@ -92,7 +104,8 @@ export function ListDetailPlacesSection({
             <MiniMapPreview
               places={mapPlaces}
               height={192}
-              interactive
+              interactive={isMapInteractive}
+              instanceId={mapFocusKey}
               highlightedIndex={highlightedIndex}
               focusIndex={highlightedIndex}
               focusTrigger={highlightedIndex ?? 0}
@@ -101,8 +114,32 @@ export function ListDetailPlacesSection({
                 onHighlightPlace(targetPlace?.id || null);
               }}
             />
+            {isMapInteractive ? (
+              <>
+                <MiniMapInteractionHint visible={showInteractionHint} />
+                <InstantPressable
+                  accessibilityLabel={tr.listDetail.mapDone}
+                  accessibilityRole="button"
+                  onPress={deactivateMap}
+                  style={styles.mapDoneButton}
+                >
+                  <AppText style={styles.mapDoneLabel}>{tr.listDetail.mapDone}</AppText>
+                </InstantPressable>
+              </>
+            ) : (
+              <InstantPressable
+                accessibilityHint={tr.listDetail.mapActivateHint}
+                accessibilityLabel={tr.listDetail.mapPlacesTitle}
+                accessibilityRole="button"
+                disableFeedback
+                onPress={activateMap}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
           </View>
-          <AppText style={styles.mapHelper}>{tr.listDetail.mapHelper}</AppText>
+          <AppText style={styles.mapHelper}>
+            {isMapInteractive ? tr.listDetail.mapHelper : tr.listDetail.mapActivateHint}
+          </AppText>
         </View>
       ) : null}
 
