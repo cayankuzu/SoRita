@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import { buildPlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorPreview';
 import type {
   PlaceEditorSaveOptions,
   PlaceEditorSaveStartHandler,
@@ -119,11 +120,11 @@ function createInitialPlaceEditorDraft(params: {
   } satisfies PlaceEditorDraft;
 }
 
+// Both sides go through the builder the editor's own draft comes from, which
+// adds the photo list. A built draft against a raw one never matched, so every
+// untouched editor asked whether to discard its changes on close.
 function serializePlaceEditorDraft(draft: PlaceEditorDraft) {
-  return JSON.stringify({
-    ...draft,
-    media: draft.media ?? [],
-  });
+  return JSON.stringify(buildPlaceEditorDraft({ ...draft, media: draft.media ?? [] }));
 }
 
 export function PlaceEditorModal({

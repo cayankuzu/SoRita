@@ -138,6 +138,7 @@ vi.mock('@/mobile/app/shared/components/feedback/MediaLightbox', () => ({
   MediaLightbox: (props: Record<string, unknown>) => React.createElement('MediaLightbox', props),
 }));
 
+import { buildPlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorPreview';
 import { PlaceEditorModal } from '@/mobile/app/features/map/ui/components/PlaceEditorModal';
 
 function initialDraft(name = '') {
@@ -200,6 +201,40 @@ describe('PlaceEditorModal accessibility dismissal', () => {
     act(() => modal.props.onRequestClose());
     expect(editorState.goToPreviousStep).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('closes an untouched editor without asking to discard changes', () => {
+    editorState.step = 0;
+    editorState.isCreatingList = false;
+    // The editor's own draft carries the photo list its builder adds.
+    editorState.buildDraft.mockReturnValue(buildPlaceEditorDraft(initialDraft()));
+    const onClose = vi.fn();
+    const renderModal = () => (
+      <PlaceEditorModal
+        visible
+        lat={41}
+        lng={29}
+        lists={[]}
+        onClose={onClose}
+        onSave={vi.fn()}
+      />
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderModal());
+    });
+    act(() => renderer.update(renderModal()));
+    act(() => {
+      renderer.root.find(
+        (node) => String(node.type) === 'KeyboardAvoidingView',
+      ).props.onAccessibilityEscape();
+    });
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(
+      renderer.root.findAll((node) => String(node.type) === 'ConfirmActionModal'),
+    ).toHaveLength(0);
   });
 
   it('keeps dirty confirmation and creation lock on accessibility escape', () => {
