@@ -456,6 +456,10 @@ export function CommentPanel({
           ]}
         >
           <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+          {/* The sheet stops above the navigation bar's inset; filling that
+              inset in the composer's colour carries the sheet to the bottom
+              edge instead of leaving a dimmed band with the tab bar showing. */}
+          <View pointerEvents="none" style={[styles.bottomFill, { height: modalBottomInset }]} />
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={[
