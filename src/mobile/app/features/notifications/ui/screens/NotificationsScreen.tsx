@@ -93,6 +93,19 @@ export function NotificationsScreen() {
     },
     [markItemRead, navigation],
   );
+  const handleActorPress = React.useCallback(
+    (notification: MobileNotification) => {
+      if (!notification.userId) {
+        return;
+      }
+
+      openStackScreen(navigation, 'UserProfile', { userId: notification.userId });
+      if (!notification.read) {
+        void markItemRead(notification);
+      }
+    },
+    [markItemRead, navigation],
+  );
   const handleMarkAllRead = React.useCallback(() => {
     void markAllItemsRead()
       .then(() => showToast(tr.notifications.toast.allRead, 'success'))
@@ -119,10 +132,11 @@ export function NotificationsScreen() {
         notification={notification}
         followRequestPending={pendingFollowRequestIds.has(notification.id)}
         onPress={handleNotificationPress}
+        onActorPress={handleActorPress}
         onFollowRequestDecision={handleFollowRequestDecision}
       />
     ),
-    [handleFollowRequestDecision, handleNotificationPress, pendingFollowRequestIds],
+    [handleActorPress, handleFollowRequestDecision, handleNotificationPress, pendingFollowRequestIds],
   );
 
   if (isInitialLoading) {

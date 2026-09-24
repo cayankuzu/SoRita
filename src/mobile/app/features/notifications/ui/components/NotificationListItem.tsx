@@ -12,6 +12,7 @@ import {
   avatarSize,
   colors,
   fontWeight,
+  hitSlopFor,
   minTouchSize,
   opacity,
   radius,
@@ -24,6 +25,9 @@ type NotificationListItemProps = {
   notification: MobileNotification;
   followRequestPending?: boolean;
   onPress: (notification: MobileNotification) => void;
+  // The avatar opens the person's profile; the rest of the row opens what
+  // the notification is about, as on Instagram.
+  onActorPress?: (notification: MobileNotification) => void;
   onFollowRequestDecision?: (
     notification: MobileNotification,
     decision: 'accept' | 'reject',
@@ -34,8 +38,11 @@ function NotificationListItemComponent({
   notification,
   followRequestPending = false,
   onPress,
+  onActorPress,
   onFollowRequestDecision,
 }: NotificationListItemProps) {
+  const canOpenActor = Boolean(onActorPress && notification.userId);
+  const openProfileLabel = tr.notifications.openProfile(notification.userName || '');
   const isPendingFollowRequest =
     notification.type === 'follow_request' && notification.followRequest?.status === 'pending';
   const isResolvedFollowRequest =
@@ -61,12 +68,32 @@ function NotificationListItemComponent({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         accessibilityState={{ busy: followRequestPending }}
+        accessibilityActions={
+          canOpenActor ? [{ name: 'openProfile', label: openProfileLabel }] : undefined
+        }
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'openProfile') {
+            onActorPress?.(notification);
+          }
+        }}
         onPress={() => onPress(notification)}
         style={styles.mainAction}
       >
-        <View style={styles.avatarWrap}>
-          <AvatarView uri={notification.userPhoto} name={notification.userName} size={avatarSize.md} />
-        </View>
+        {canOpenActor ? (
+          <InstantPressable
+            accessibilityLabel={openProfileLabel}
+            accessibilityRole="button"
+            hitSlop={hitSlopFor(40)}
+            onPress={() => onActorPress?.(notification)}
+            style={styles.avatarWrap}
+          >
+            <AvatarView uri={notification.userPhoto} name={notification.userName} size={avatarSize.md} />
+          </InstantPressable>
+        ) : (
+          <View style={styles.avatarWrap}>
+            <AvatarView uri={notification.userPhoto} name={notification.userName} size={avatarSize.md} />
+          </View>
+        )}
 
         <View style={styles.body}>
           <AppText style={styles.message}>
