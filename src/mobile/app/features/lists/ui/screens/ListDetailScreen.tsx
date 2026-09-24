@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { ActivityIndicator, FlatList, useWindowDimensions, View } from 'react-native';
 import {
   ChevronUp,
@@ -27,6 +28,7 @@ import { ListDetailHeader } from '@/mobile/app/features/lists/ui/components/List
 import { ListDetailPlaceItem } from '@/mobile/app/features/lists/ui/components/ListDetailPlaceItem';
 import { ListDetailPlacesSection } from '@/mobile/app/features/lists/ui/components/ListDetailPlacesSection';
 import { listDetailScreenStyles as styles } from '@/mobile/app/features/lists/ui/components/listDetailScreenStyles';
+import { buildListShareMenuItems } from '@/mobile/app/features/lists/ui/components/listShareMenuItems';
 import { PlaceEditorModal } from '@/mobile/app/features/map/public/components';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import {
@@ -56,6 +58,9 @@ type ListDetailScreenContentProps = {
   listId: string;
   // Open this place's comments once it is in view (a comment notification).
   openComments?: boolean;
+  // The request is spent: drop it from the route, so restoring the screen
+  // after a restart does not open the comments again.
+  onOpenCommentsDone?: () => void;
   placeId?: string;
 };
 
@@ -94,7 +99,12 @@ function ListDetailUnavailableState({
   );
 }
 
-function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailScreenContentProps) {
+function ListDetailScreenContent({
+  listId,
+  onOpenCommentsDone,
+  openComments,
+  placeId,
+}: ListDetailScreenContentProps) {
   const navigation = useAppNavigation();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
@@ -153,6 +163,9 @@ function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailSc
   useEffect(() => {
     setHighlightedPlaceId(placeId ?? null);
     setPendingScrollTargetId(placeId ?? null);
+  }, [placeId, listId]);
+
+  useEffect(() => {
     setCommentsPlaceId(openComments ? placeId ?? null : null);
   }, [openComments, placeId, listId]);
 
@@ -247,7 +260,10 @@ function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailSc
   const clearPendingScroll = React.useCallback(() => {
     setPendingScrollTargetId(null);
     setCommentsPlaceId(null);
-  }, []);
+    if (openComments) {
+      onOpenCommentsDone?.();
+    }
+  }, [onOpenCommentsDone, openComments]);
   const rowScroll = useScrollToListRow({
     listRef,
     onDone: clearPendingScroll,
@@ -342,6 +358,7 @@ function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailSc
   }
 
   const actionItems = [
+    ...buildListShareMenuItems(list, () => setListActionMenuVisible(false)),
     isOwner
       ? {
           key: 'edit',
@@ -393,7 +410,8 @@ function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailSc
       <View style={styles.screenShell}>
         <StackScreenHeader
           onBack={() => navigation.goBack()}
-          title={tr.common.list}
+          // The list's own name: the cover that shows it scrolls away.
+          title={list.emoji ? `${list.emoji} ${list.name}` : list.name}
           subtitle={tr.cards.placesCount(placeTotal)}
           rightAction={actionItems.length > 0 ? (
             <IconButton
@@ -629,9 +647,20 @@ function ListDetailScreenContent({ listId, openComments, placeId }: ListDetailSc
 
 export function ListDetailScreen() {
   const route = useRootStackRoute<'ListDetail'>();
+  const navigation = useNavigation();
   const listId = route.params?.listId ?? '';
   const placeId = route.params?.placeId;
   const openComments = route.params?.openComments;
+  const handleOpenCommentsDone = React.useCallback(() => {
+    navigation.setParams({ openComments: undefined } as never);
+  }, [navigation]);
 
-  return <ListDetailScreenContent listId={listId} openComments={openComments} placeId={placeId} />;
+  return (
+    <ListDetailScreenContent
+      listId={listId}
+      onOpenCommentsDone={handleOpenCommentsDone}
+      openComments={openComments}
+      placeId={placeId}
+    />
+  );
 }
