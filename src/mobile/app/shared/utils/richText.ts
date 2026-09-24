@@ -27,8 +27,29 @@ type ParseOptions = {
 
 const COLLAPSED_LINK_MAX_LENGTH = 36;
 
+// A scheme counts only with "//" or when it is one that runs code or opens
+// another app, so "No:2/B" in an address or "Saat:10:00" in a note stays text.
 const RICH_TEXT_TOKEN_REGEX =
-  /(@[A-Za-z0-9_]{2,})|((?:https?:\/\/|www\.)[^\s<>()]+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:\/[^\s<>()]*)?)|([A-Za-z][A-Za-z0-9+.-]*:[^\s<>]+)/gi;
+  /(@[A-Za-z0-9_]{2,})|((?:https?:\/\/|www\.)[^\s<>()]+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:\/[^\s<>()]*)?)|((?:[A-Za-z][A-Za-z0-9+.-]*:\/\/|(?:javascript|vbscript|data|file|intent|blob):)[^\s<>]+)/gi;
+
+// A bare "name.tld" becomes a link only for endings people actually share.
+// Turkish writing often skips the space after a full stop ("Bağdat Cd.No:12",
+// "vs.Ama"), and those must not turn into links.
+const LINKABLE_BARE_DOMAIN_ENDINGS = new Set([
+  'ai', 'app', 'bar', 'biz', 'blog', 'cafe', 'co', 'com', 'dev', 'edu', 'eu', 'gov',
+  'info', 'io', 'link', 'live', 'ly', 'me', 'menu', 'net', 'news', 'online', 'org',
+  'page', 'restaurant', 'shop', 'site', 'store', 'tr', 'tv', 'uk', 'us', 'xyz',
+]);
+
+function isLinkableWebCandidate(candidate: string) {
+  if (/^(?:https?:\/\/|www\.)/i.test(candidate)) {
+    return true;
+  }
+
+  const host = candidate.split('/')[0] ?? '';
+  const ending = host.slice(host.lastIndexOf('.') + 1).toLowerCase();
+  return LINKABLE_BARE_DOMAIN_ENDINGS.has(ending);
+}
 
 function isTokenBoundaryBefore(source: string, index: number) {
   if (index <= 0) {
@@ -162,7 +183,7 @@ export function parseRichTextSegments(text: string, options: ParseOptions = {}):
     }
 
     if (webCandidate) {
-      if (!isTokenBoundaryBefore(source, start)) {
+      if (!isTokenBoundaryBefore(source, start) || !isLinkableWebCandidate(webCandidate)) {
         pushTextSegment(segments, raw);
         cursor = start + raw.length;
         continue;
