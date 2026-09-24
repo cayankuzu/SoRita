@@ -166,6 +166,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
   const {
     clearSearch,
+    handleMapCenterChange,
     handleSearchQueryChange,
     handleSearchResultPress,
     hasSearched,
@@ -792,6 +793,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     activeEditorMarkerIndex,
     activeEditorPanel,
     clearSearch,
+    handleMapCenterChange,
     closeEditor,
     closeSelectedExistingPlace: () => {
       setSelectedExistingPlace(null);

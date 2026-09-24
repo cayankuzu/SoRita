@@ -25,7 +25,6 @@ import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/sto
 import { env } from '@/mobile/app/platform/config/env';
 import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -167,6 +166,7 @@ export function MapScreen() {
     effectiveViewport,
     handleDeletePlace,
     handleLocateUser,
+    handleMapCenterChange,
     handleMapPress,
     handleMarkerPress,
     handlePoiPress,
@@ -442,18 +442,14 @@ export function MapScreen() {
                         ]}
                         onPress={() => handleSearchResultPress(item)}
                       >
-                        <ExpandableText
-                          text={item.name}
-                          collapsedLines={1}
-                          textStyle={styles.resultTitle}
-                          showIndicator={false}
-                        />
-                        <ExpandableText
-                          text={item.address}
-                          collapsedLines={2}
-                          textStyle={styles.resultAddress}
-                          showIndicator={false}
-                        />
+                        <AppText numberOfLines={1} style={styles.resultTitle}>
+                          {item.name}
+                        </AppText>
+                        {item.address ? (
+                          <AppText numberOfLines={2} style={styles.resultAddress}>
+                            {item.address}
+                          </AppText>
+                        ) : null}
                       </InstantPressable>
                     ))}
                   </ScrollView>
@@ -481,6 +477,7 @@ export function MapScreen() {
                 onMapPress={handleInteractiveMapPress}
                 onPoiPress={handleInteractivePoiPress}
                 onMarkerPress={handleInteractiveMarkerPress}
+                onCenterChange={handleMapCenterChange}
               />
             ) : (
               <View style={styles.mapPlaceholder} />
@@ -527,12 +524,9 @@ export function MapScreen() {
               onPress={reopenMinimizedEditor}
             >
               <View style={styles.reopenEditorBody}>
-                <ExpandableText
-                  text={minimizedEditor.panel.name || tr.placeEditor.minimizedNewTitle}
-                  collapsedLines={1}
-                  textStyle={styles.reopenEditorTitle}
-                  showIndicator={false}
-                />
+                <AppText numberOfLines={1} style={styles.reopenEditorTitle}>
+                  {minimizedEditor.panel.name || tr.placeEditor.minimizedNewTitle}
+                </AppText>
                 <AppText style={styles.reopenEditorSubtitle}>
                   {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
                 </AppText>
@@ -550,12 +544,9 @@ export function MapScreen() {
               onPress={reopenMinimizedExistingPlace}
             >
               <View style={styles.reopenEditorBody}>
-                <ExpandableText
-                  text={tr.map.placeCardLabel}
-                  collapsedLines={1}
-                  textStyle={styles.reopenEditorTitle}
-                  showIndicator={false}
-                />
+                <AppText numberOfLines={1} style={styles.reopenEditorTitle}>
+                  {tr.map.placeCardLabel}
+                </AppText>
                 <AppText style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</AppText>
               </View>
               <ChevronUp color={colors.onPrimary} size={iconSize.sm} />

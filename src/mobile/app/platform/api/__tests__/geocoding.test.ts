@@ -56,6 +56,18 @@ describe('platform/api/geocoding', () => {
     );
   });
 
+  it('sends where the map is looking, rounded to about a kilometre', async () => {
+    callJsonEdgeFunctionMock.mockResolvedValue({ results: [] });
+
+    const { searchPlacesByText } = await import('@/mobile/app/platform/api/geocoding');
+    await searchPlacesByText('Kahve', { latitude: 41.012345, longitude: 28.987654 });
+    expect(callJsonEdgeFunctionMock).toHaveBeenCalledWith(
+      'maps-geocoding',
+      { action: 'search', near: { latitude: 41.01, longitude: 28.99 }, query: 'Kahve' },
+      { accessToken: 'session-token' },
+    );
+  });
+
   it('does not call the network for a blank text search', async () => {
     const { searchPlacesByText } = await import('@/mobile/app/platform/api/geocoding');
     await expect(searchPlacesByText('   ')).resolves.toEqual([]);

@@ -206,6 +206,7 @@ function GoogleMapViewComponent({
   onMarkerPress,
   onPoiPress,
   onMapPress,
+  onCenterChange,
 }: SharedMapProps) {
   const mapRef = useRef<MapView>(null);
   const lastSelectionPressAt = useRef(0);
@@ -414,7 +415,10 @@ function GoogleMapViewComponent({
           onMapGesture?.();
         }}
         onMapReady={() => setIsReady(true)}
-        onRegionChangeComplete={setVisibleRegion}
+        onRegionChangeComplete={(region) => {
+          setVisibleRegion(region);
+          onCenterChange?.({ latitude: region.latitude, longitude: region.longitude });
+        }}
         onPoiClick={(event) => {
           if (!interactive || !onPoiPress) {
             return;

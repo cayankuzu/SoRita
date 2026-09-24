@@ -24,4 +24,6 @@ export type SharedMapProps = {
   onMarkerPress?: (index: number) => void;
   onPoiPress?: (poi: { lat: number; lng: number; name: string; placeId: string }) => void;
   onMapPress?: (coords: { lat: number; lng: number }) => void;
+  // The centre of the map once it settles after a move.
+  onCenterChange?: (center: { latitude: number; longitude: number }) => void;
 };

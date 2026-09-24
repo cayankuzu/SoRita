@@ -13,6 +13,7 @@ import {
 } from '@/mobile/app/features/map/application/mapScreenUtils';
 import {
   searchPlacesByText,
+  type GeocodingSearchNear,
   type GeocodingSearchResult,
 } from '@/mobile/app/platform/api/geocoding';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
@@ -46,6 +47,12 @@ export function useMapSearchController({
   const [searchErrorMessage, setSearchErrorMessage] = useState<string | null>(null);
   const searchRequestIdRef = useRef(0);
   const skipNextLiveSearchRef = useRef(false);
+  // Where the map is looking: a search ranks places near it first.
+  const searchNearRef = useRef<GeocodingSearchNear | null>(null);
+
+  const handleMapCenterChange = useCallback((center: GeocodingSearchNear) => {
+    searchNearRef.current = center;
+  }, []);
 
   const performSearch = useCallback(async (rawQuery: string, showErrorToast = false) => {
     const trimmedQuery = rawQuery.trim();
@@ -64,7 +71,7 @@ export function useMapSearchController({
 
     try {
       setIsSearching(true);
-      const results = await searchPlacesByText(trimmedQuery);
+      const results = await searchPlacesByText(trimmedQuery, searchNearRef.current);
 
       if (searchRequestIdRef.current !== requestId) {
         return;
@@ -188,6 +195,7 @@ export function useMapSearchController({
 
   return {
     clearSearch,
+    handleMapCenterChange,
     handleSearchQueryChange,
     handleSearchResultPress,
     hasSearched,
