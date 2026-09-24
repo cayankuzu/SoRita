@@ -36,6 +36,8 @@ type ProfileFeedScreenProps = {
   onEditPlace?: (item: PlaceFeedCardItem) => void;
   onOpenListDetail: (item: PlaceFeedCardItem) => void;
   onOwnerPress?: () => void;
+  // False inside a tab, whose navigator header already clears the status bar.
+  safeTop?: boolean;
 };
 
 export function ProfileFeedScreen({
@@ -51,6 +53,7 @@ export function ProfileFeedScreen({
   onEditPlace,
   onOpenListDetail,
   onOwnerPress,
+  safeTop = true,
 }: ProfileFeedScreenProps) {
   const { height, width } = useWindowDimensions();
   const appLayout = useAppLayout();
@@ -80,7 +83,7 @@ export function ProfileFeedScreen({
     [height, items.length, width],
   );
   return (
-    <Screen scroll={false} padded={false}>
+    <Screen safeTop={safeTop} scroll={false} padded={false}>
       <View
         style={[styles.header, { paddingHorizontal: appLayout.screenPadding }]}
       >

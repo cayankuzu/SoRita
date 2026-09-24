@@ -335,6 +335,9 @@ export function ProfileScreen() {
 
     return (
       <ProfileFeedScreen
+        // The Profile tab's header already clears the status bar; clearing it
+        // again left a grey band above "Galeri".
+        safeTop={false}
         title={feedTitle}
         items={feedItems}
         startIndex={feedMode.startIndex}

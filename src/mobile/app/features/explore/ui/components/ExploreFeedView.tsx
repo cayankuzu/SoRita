@@ -90,7 +90,8 @@ export function ExploreFeedView({
   );
 
   return (
-    <Screen scroll={false} padded={false}>
+    // Shown inside the Explore tab, whose header already clears the status bar.
+    <Screen safeTop={false} scroll={false} padded={false}>
       <FlatList
         {...listProps}
         ref={listRef}
