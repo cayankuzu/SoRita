@@ -63,7 +63,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
-| 4: Native paket #1 | ⏸ | Atlandı: `android/` altındaki native dosyalar bu oturumun sandbox'ında okumaya ve yazmaya kapalı; yükleme de Cayan'ın adımı. Tek renkli ikon adayı hazır |
+| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
 
 ---
@@ -340,6 +340,72 @@ doğrulandı (ilkinde indirildi, ikincisinde güncelleme kalmadı).
 teslimi (iOS token'larından hiç onay yok; iOS cihaz yok); web sitesi önizleme
 etiketleri; tek splash (native build, Faz 4); uygulama kapalıyken ekrana
 düşme cihaz ayarına bağlı (Kayan bildirimler, Kilit ekranında).
+
+### Faz 4 ve Faz 5–19 birleşik tur 2 (2026-09-24)
+
+Cayan `android/` erişimini ve veritabanı iznini verdi, fazların birlikte
+ilerlemesini istedi. Geri alınamaz işlem (silme, düzenleme, hesap) yapılmadı.
+
+**Teslim:** OTA grupları 316d8a0a … 2bdd36bc (önceki tur), 13b `2cd0ae21`, 14 `bf01f42b`, 15 `88cda775`, 16 `77b26b31` (geri alındı → `07f4c7fd`), 17 `6acad2b7`, 18 `47e02bb6`, 19 `118e6da7`; her biri iki soğuk başlatmayla cihazda
+doğrulandı.
+
+**Faz 4, native paket #1** (dal `native/faz-4`, main'e alınmadı; OTA'lar
+main'den sürmeye devam ediyor):
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| N1 | Tek splash: Android 12+ sistem splash'i ikon göstermiyor, düz zemin doğrudan logolu ve telif yazılı JS splash'ine geçiyor. iOS'ta açılış görseli zaten telif yazılı | cihaz: soğuk açılış karelerinde yuvarlak logo yok |
+| N2 | Dikey kilit native'de: manifest `screenOrientation="portrait"`, iOS için `app.config.ts` `orientation: 'portrait'` | config testi |
+| N3 | Tema ikonu: logonun silüetinden, 66dp güvenli daireye oturtulmuş tek renkli katman (Android 13+) | önizleme |
+| N4 | 1.0.110 (116), iOS 95. Runtime 1.0.108'de kaldı: değişiklikler kaynak dosyası, native modül değil; Play'deki kurulu taban OTA almaya devam eder | native-parity, config testi |
+| N5 | Yerel release AAB (`bundleRelease`) üretildi; bundletool ile evrensel APK olarak, veriler korunarak cihaza kuruldu (1.0.110/116); OTA'lar bu kurulumda da iniyor | cihaz: `dumpsys package`, `dev.expo.updates` |
+
+**Düzeltmeler:**
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| G1 | İlk kare: güvenli alan sağlayıcı açılış ölçüleriyle başlıyor; üst bar ve Ana Sayfa şeridi ilk karede saatin altında (önceden bir kare saatin üstüne biniyordu) | cihaz: açılış kare dizisi; birim testi |
+| G2 | Önceden dolu tek satırlık alanlar Android'de baştan görünüyor (adres ortasından okunuyordu) | cihaz: mekân düzenleyicisi |
+| G3 | Açık akıştayken Profil/Keşfet sekmesine ikinci dokunuş ızgaraya döndürüyor, ızgara yerinde kalıyor | cihaz; birim testi |
+| G4 | Gizlilik: "Herkese açık" ile "Gizli hesap" araya analitik girmeden "Profil görünürlüğü" altında | cihaz |
+| G5 | Liste haritası ipucu "Bitince Bitti'ye dokun" diyor (olmayan Odakla düğmesini anlatıyordu); Bitti düz beyaz hap | cihaz: etkinleştir, Bitti ile kilitle |
+| G6 | Harita önizleme sheet'i alt kenara oturuyor (altında sekme çubuğu şeridi kalıyordu) | cihaz |
+| G7 | Uzak karttan açılan akış: Android bazen önceki kartları eklerken başa atıyordu (13. kartta 4'te 2). Ekleme kart oturduktan sonra yapılıyor; liste hâlâ en üstteyse dokunulan karta geri götürülüyor | cihaz: tekrarlı açılış; birim testi (5) |
+| G8 | Liste başlığı yerler gelmeden "0 mekân" yerine sunucunun sayısını gösteriyor | cihaz: ilk kareden "2 mekân" |
+| G9 | Yorum paneli alt kenara kadar iniyor (yorum kutusunun altında soluk şerit vardı) | cihaz: piksel taraması |
+| G10 | Keşfet sayacı aramada "N sonuç", aramasız "N öneri" (haritanın "öneri" metnini ödünç alıyordu) | cihaz: "20 öneri" / "5 sonuç" |
+| G11 | Keşfet Kişiler 3'lü ızgarada (Cayan'ın isteği): ortalanmış fotoğraf, ad, kullanıcı adı, küçük Takip et. Keşfet sekme çipleri küçük boy (32dp, 12pt) | cihaz |
+| G12 | Haritada POI'ye dokunarak eklenen mekânda iki satırlık etiket boşluksuz birleşiyordu ("StadyumuFenerbahçe"); satır sonu artık boşluk | birim testi |
+| G13 | Yorum yazar migration'ı (`20260924010000`) production'da: fonksiyon yazar sütunlarını döndürüyor, anon çalıştıramıyor | production sorgusu |
+| G14 | Keşfet araması (Cayan'ın bildirdiği "arama yapamıyorum"): arama alanı sonuç yüklenirken yeniden kurulmuyor (üç harfte klavye kapanıyordu); 1–2 harfte "Biraz daha yaz", sayaç boş; sekme ilk sayfası gelirken iskelet | cihaz: "ka" / "kah"; birim testleri |
+| G15 | Keşfet kuralı (Cayan onayladı): arama kutusu boşken yalnız takip edilmeyenlerin önerileri; aramada takip edilenler ve gizli hesaplar da bulunuyor, kendi içeriğin çıkmıyor; alaka katmanı (ad başı > ad içi > diğer alan), eşit eşleşmede takip edilen önde; kategori Türkçe etiketiyle ("kafe") bulunuyor. Migration `20260924020000` + 14 pgTAP | yerel doğrulama PASS; production'a Cayan uygulayacak |
+| G16 | Harita araması konuma göre: "kahve" Almanya'dan sonuç getiriyordu (sunucu Frankfurt'ta). Uygulama harita merkezini ~1 km'ye yuvarlayıp gönderiyor; fonksiyon 50 km yanlılık, bölge TR, eşit eşleşmede Google sırası. Eski fonksiyon yeni alanı yok sayıyor | cihaz: Almanya sonuçları görüldü; fonksiyon testleri (17); deploy Cayan'da |
+| G17 | Uzun ad dokunulabilir satırda (harita sonucu, liste seçici, kart liste çubuğu, sahip kartı, takipçi/engelli biyografisi) dokunuşu yutup metni açıyordu; artık satır açılıyor | kod incelemesi, cihaz |
+| G18 | "@kullanıcı" aramaları (Keşfet Kişiler, takipçiler, beğenenler) @'yi atıyor; vurgu aramayla aynı harf katlamasını kullanıyor ("ist" → "Istanbul", "sukru" → "Şükrü") | cihaz: "@fin"; birim testleri |
+| G19 | Adres ve saatler bağlantıya dönüşmüyor: "No:2/B", "Saat:10:00", "Cd.No:12", "vs.Ama" üstü çizili güvensiz bağlantı görünüyordu; şema yalnız "//" veya tehlikeli şemalarda, çıplak alan adı bilinen uzantılarda | cihaz: harita sonucu adresi; birim testleri |
+| G20 | Bildirime dokununca mekân görünüme geliyor (liste en üstte kalıyordu: altı hızlı deneme uzun başlıkta bitiyordu); yorum, yorum beğenisi ve yanıt bildirimleri (uygulama içi ve push) yorumları bir kez açıyor; yeniden açılışta tekrar açılmıyor | cihaz: Deniz → Kloft yorumları; birim testleri |
+| G21 | Genel liste paylaşılabiliyor (Paylaş, Bağlantıyı kopyala); gizli liste bağlantı sunmuyor; üst bar liste adını gösteriyor; vurgulu kart rozeti "Seçili mekân" | birim testleri |
+| G22 | Yeni oturum Ana Sayfa'da açılıyor: ekran yığını 24 saat yerine 30 dk geri yükleniyor | cihaz: soğuk açılış |
+| G24 | Çok satırlı notlar Android'de satır sonu yerine kutu çiziyordu: satır sonları U+2028 olarak yazılıyor, Ana Sayfa/liste/profil/Keşfet okuma modelleri çözmüyordu. Dördü de çözüyor; `ExpandableText` ayrıca güvenlik ağı | cihaz: KargArt notu; birim testi |
+| G25 | Profil görünürlük filtresi sekmeyi boşaltınca "Henüz listen yok · Yeni liste oluştur" yerine "Özel listen yok" ve "Tümünü göster" | cihaz; birim testi |
+| G26 | Ayarlar sonunda kurulu sürüm ("SoRita 1.0.110 (116)"); aynı konum ekranında her kartta tekrar eden, bir yere gitmeyen "Bu konumda 2 kart" satırı kalktı | birim testleri |
+| G23 | Listeler kırpmayı (`removeClippedSubviews`) öğe sayısına göre açıp kapatıyordu: Keşfet'te arama ızgarayı boşaltınca boş mesaj çizilmiyordu, satırlar değişirken Fabric "addViewAt index" hatasıyla React'i düşürüp ekranı boşaltabiliyordu. Artık hep kapalı | cihaz: logcat; birim testi |
+
+**Olay:** OTA 16 (`77b26b31`) G23'ün yanlış teşhisiyle ızgaranın konum
+korumasını açıp kapatıyordu; cihazda Keşfet aramasında React'i düşürdü.
+Aynı dakikada `eas update:rollback` ile OTA 15 içeriğine dönüldü
+(`07f4c7fd`), değişiklik geri alındı, kök neden (G23) OTA 17'de düzeltildi.
+
+**Açık kalan (Cayan):** `npx supabase db push --linked` (G15) ve
+`npx supabase functions deploy maps-geocoding` (G16); ikisi de bu oturumda
+"Production Deploy" olarak reddedildi. Cayan'ın "Chobani
+StadyumuFenerbahçe Şükrü…" mekânının adı sahibince düzeltilmeli; iOS push
+teslimi (iOS cihaz yok); web sitesi önizleme etiketleri. **Karar bekleyen:**
+Ayarlar'a "Yasal" grubu (Kullanım Koşulları, Topluluk Kuralları, Gizlilik,
+KVKK; kayıttaki belge sayfası yeniden kullanılıyor) hazırlandı ama
+dondurulmuş ürün yüzeyini (3 grup) aştığı için geri alındı. Apple 5.1.1(i)
+gizlilik politikasının uygulama içinden erişilebilir olmasını istiyor;
+Cayan onaylarsa `quality/feature-surface.snapshot.json` güncellenip eklenir.
 
 ### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
 
