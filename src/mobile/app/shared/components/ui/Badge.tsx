@@ -65,9 +65,12 @@ export function Badge({
   const { background, content } = toneColors[tone];
 
   return (
+    // A badge is a label, never a control: touches pass through to what it
+    // sits on. "Kapağı aç" over a list cover swallowed the tap on the cover.
     <View
       accessible={Boolean(accessibilityLabel)}
       accessibilityLabel={accessibilityLabel}
+      pointerEvents="none"
       style={[styles.badge, label ? null : styles.iconOnly, { backgroundColor: background }, style]}
     >
       {Icon ? (
