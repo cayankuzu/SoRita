@@ -527,7 +527,7 @@ export function CommentPanel({
                   onRefresh={onRefreshComments}
                   refreshing={Boolean(onRefreshComments && refreshing)}
                   showsVerticalScrollIndicator={false}
-                  removeClippedSubviews={Platform.OS === 'android'}
+                  removeClippedSubviews={false}
                   updateCellsBatchingPeriod={32}
                   windowSize={7}
                   ListEmptyComponent={

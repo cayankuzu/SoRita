@@ -162,7 +162,9 @@ export function PlacePreviewModal({
             keyExtractor={({ list, place }) => `${list.id}:${place.id}`}
             keyboardShouldPersistTaps="handled"
             maxToRenderPerBatch={3}
-            removeClippedSubviews={Platform.OS === 'android'}
+            // Off, as for every list here: Fabric on Android can leave rows that
+            // arrive after the first render undrawn while clipping is on.
+            removeClippedSubviews={false}
             renderItem={({ item: { place, list } }) => (
               <View style={styles.cardWrap}>
                 <PlaceCard
