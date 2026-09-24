@@ -34,6 +34,7 @@ import {
   MosaicGridSkeleton,
 } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useTabReselect } from '@/mobile/app/shared/hooks/useTabReselect';
 import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -157,6 +158,7 @@ export function ExploreScreen() {
     screen: 'explore',
   });
   useScrollToTop(activeListRef as React.RefObject<FlatList>);
+  useTabReselect(Boolean(feedMode), () => setFeedMode(null));
   useEffect(() => {
     activeListRef.current = getTabScrollRef(activeTab) as FlatList<ExploreGridItem> | null;
     restoreTabScrollOffset(activeTab);

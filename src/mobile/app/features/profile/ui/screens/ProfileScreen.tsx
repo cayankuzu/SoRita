@@ -30,6 +30,7 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import { useTabReselect } from '@/mobile/app/shared/hooks/useTabReselect';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
@@ -193,6 +194,7 @@ export function ProfileScreen() {
     [tabs],
   );
   useScrollToTop(profileListRef as React.RefObject<FlatList>);
+  useTabReselect(Boolean(feedMode), () => setFeedMode(null));
 
   const scrollProfileToTop = useCallback(() => {
     profileListRef.current?.scrollToOffset({ offset: 0, animated: true });

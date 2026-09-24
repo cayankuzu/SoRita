@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const useExploreScreenStateMock = vi.fn();
 
 vi.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ addListener: () => () => undefined, isFocused: () => true }),
   useScrollToTop: vi.fn(),
 }));
 
