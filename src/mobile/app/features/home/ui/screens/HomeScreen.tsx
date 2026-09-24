@@ -6,9 +6,11 @@ import {
   FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type StyleProp,
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -48,6 +50,7 @@ import {
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
+import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
 
 function getFeedMediaPreviewUris(item: PlaceFeedCardItem) {
@@ -86,6 +89,9 @@ function requestNextPage(pagination: PaginationState) {
 export function HomeScreen() {
   const navigation = useAppNavigation();
   const { height, width } = useWindowDimensions();
+  // The bars run edge to edge and pad themselves; only the cards are inset.
+  const { screenPadding } = useAppLayout();
+  const insetStyle = React.useMemo(() => ({ paddingHorizontal: screenPadding }), [screenPadding]);
   // The brand bar slides away while reading down the feed and returns on the
   // first scroll up. An opaque strip keeps the status bar clear of the feed.
   const topBar = useScrollAwayHeader();
@@ -276,36 +282,15 @@ export function HomeScreen() {
   }, []);
 
   if (!user || isInitialLoading) {
-    return (
-      <Screen safeTop={false} scroll={false} variant="feed">
-        <AppHeader />
-        <SkeletonGroup style={styles.skeletonWrap}>
-          <PlaceCardSkeleton />
-          <PlaceCardSkeleton />
-          <PlaceCardSkeleton />
-        </SkeletonGroup>
-      </Screen>
-    );
+    return <HomeLoadingState insetStyle={insetStyle} />;
   }
 
   if (errorMessage && feedItems.length === 0) {
-    return (
-      <Screen safeTop={false} variant="feed">
-        <AppHeader />
-        <EmptyState
-          icon={<MapPin color={colors.danger} size={iconSize.xl} />}
-          title={tr.home.errorTitle}
-          description={errorMessage}
-          actionLabel={tr.common.retry}
-          onAction={retry}
-          tone="danger"
-        />
-      </Screen>
-    );
+    return <HomeErrorState errorMessage={errorMessage} insetStyle={insetStyle} onRetry={retry} />;
   }
 
   return (
-    <Screen safeTop={false} scroll={false} variant="feed">
+    <Screen padded={false} safeTop={false} scroll={false} variant="feed">
       <FlatList
         accessibilityState={{ busy: refreshing || isFetchingNextPage }}
         {...listProps}
@@ -346,6 +331,7 @@ export function HomeScreen() {
         }
         contentContainerStyle={[
           styles.feedListContent,
+          insetStyle,
           feedItems.length === 0 ? styles.feedListContentEmpty : null,
         ]}
         showsVerticalScrollIndicator={false}
@@ -376,6 +362,47 @@ export function HomeScreen() {
       {/* Sized by the native safe area: inside the tab navigator the insets
           hook reported no top inset, and a zero-height strip hid nothing. */}
       <SafeAreaView edges={['top']} pointerEvents="none" style={styles.statusBarStrip} />
+    </Screen>
+  );
+}
+
+/** The first load: the bar over three card skeletons. */
+function HomeLoadingState({ insetStyle }: { insetStyle: StyleProp<ViewStyle> }) {
+  return (
+    <Screen padded={false} safeTop={false} scroll={false} variant="feed">
+      <AppHeader />
+      <SkeletonGroup style={[styles.skeletonWrap, insetStyle]}>
+        <PlaceCardSkeleton />
+        <PlaceCardSkeleton />
+        <PlaceCardSkeleton />
+      </SkeletonGroup>
+    </Screen>
+  );
+}
+
+/** A first load that failed with nothing cached to show. */
+function HomeErrorState({
+  errorMessage,
+  insetStyle,
+  onRetry,
+}: {
+  errorMessage: string;
+  insetStyle: StyleProp<ViewStyle>;
+  onRetry: () => void;
+}) {
+  return (
+    <Screen padded={false} safeTop={false} variant="feed">
+      <AppHeader />
+      <View style={insetStyle}>
+        <EmptyState
+          icon={<MapPin color={colors.danger} size={iconSize.xl} />}
+          title={tr.home.errorTitle}
+          description={errorMessage}
+          actionLabel={tr.common.retry}
+          onAction={onRetry}
+          tone="danger"
+        />
+      </View>
     </Screen>
   );
 }
