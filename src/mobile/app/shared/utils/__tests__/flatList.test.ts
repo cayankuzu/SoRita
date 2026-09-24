@@ -25,7 +25,7 @@ describe('flatList utils', () => {
       keyboardDismissMode: 'on-drag',
       keyboardShouldPersistTaps: 'handled',
       maxToRenderPerBatch: 6,
-      removeClippedSubviews: true,
+      removeClippedSubviews: false,
       updateCellsBatchingPeriod: 50,
       windowSize: 6,
     });
@@ -49,6 +49,19 @@ describe('flatList utils', () => {
       updateCellsBatchingPeriod: 40,
       windowSize: 8,
     });
+  });
+
+  it('never switches clipping as items come and go', () => {
+    for (const itemCount of [0, 1, 4, 5, 20, 200]) {
+      expect(
+        buildAdaptiveFlatListProps({
+          itemCount,
+          platformOS: 'android',
+          viewportHeight: 932,
+          viewportWidth: 430,
+        }).removeClippedSubviews,
+      ).toBe(false);
+    }
   });
 
   it('keeps clipping disabled for android lists that contain native maps', () => {
