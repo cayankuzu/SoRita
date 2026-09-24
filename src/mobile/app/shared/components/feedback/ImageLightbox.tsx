@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Download, MoreHorizontal, X } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -16,6 +17,7 @@ import {
 } from '@/mobile/app/shared/components/feedback/ActionMenuSheet';
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { useLightboxAnnouncements } from '@/mobile/app/shared/components/feedback/useLightboxAnnouncements';
+import { ZoomableView } from '@/mobile/app/shared/components/media/ZoomableView';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
@@ -80,6 +82,8 @@ export function ImageLightbox({
     : 0;
   const [currentIndex, setCurrentIndex] = React.useState(startIndex);
   const [menuVisible, setMenuVisible] = React.useState(false);
+  // While a photo is zoomed, one finger moves around it instead of paging.
+  const [photoZoomed, setPhotoZoomed] = React.useState(false);
   const flatListKey = React.useMemo(
     () => `${imageUris.length}:${startIndex}:${imageUris[startIndex] || 'empty'}`,
     [imageUris, startIndex],
@@ -161,6 +165,7 @@ export function ImageLightbox({
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
+      <GestureHandlerRootView style={styles.gestureRoot}>
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
@@ -211,6 +216,7 @@ export function ImageLightbox({
               key={flatListKey}
               data={imageUris}
               horizontal
+              scrollEnabled={!photoZoomed}
               pagingEnabled
               disableIntervalMomentum
               directionalLockEnabled
@@ -229,17 +235,22 @@ export function ImageLightbox({
               }}
               renderItem={({ item, index }) => (
                 <View style={[styles.imagePage, { width: pageWidth }]}>
-                  <AppImage
-                    uri={item}
-                    style={styles.image}
-                    resizeMode="contain"
-                    accessibilityLabel={`${tr.common.enlargedPhotoLabel(index + 1)}. ${getLightboxPositionLabel(
-                      tr.placeEditor.photo,
-                      index,
-                      imageUris.length,
-                    )}`}
-                    backgroundColor="transparent"
-                  />
+                  <ZoomableView
+                    active={index === currentIndex}
+                    onZoomChange={index === currentIndex ? setPhotoZoomed : undefined}
+                  >
+                    <AppImage
+                      uri={item}
+                      style={styles.image}
+                      resizeMode="contain"
+                      accessibilityLabel={`${tr.common.enlargedPhotoLabel(index + 1)}. ${getLightboxPositionLabel(
+                        tr.placeEditor.photo,
+                        index,
+                        imageUris.length,
+                      )}`}
+                      backgroundColor="transparent"
+                    />
+                  </ZoomableView>
                 </View>
               )}
               showsHorizontalScrollIndicator={false}
@@ -260,11 +271,15 @@ export function ImageLightbox({
           returnFocusRef={titleRef}
         />
       </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: colors.scrim,

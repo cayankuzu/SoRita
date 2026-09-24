@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Download, MoreHorizontal, Play, Trash2, X } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
@@ -21,6 +22,7 @@ import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/Conf
 import { getLightboxPositionLabel } from '@/mobile/app/shared/components/feedback/lightboxAccessibility';
 import { useLightboxAnnouncements } from '@/mobile/app/shared/components/feedback/useLightboxAnnouncements';
 import { VideoPreview } from '@/mobile/app/shared/components/media/VideoPreview';
+import { ZoomableView } from '@/mobile/app/shared/components/media/ZoomableView';
 import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
@@ -67,6 +69,7 @@ const DELETE_MEDIA_CONFIRMATION = {
 function MediaLightboxPage({
   isActive,
   item,
+  onZoomChange,
   pageHeight,
   pageWidth,
   positionLabel,
@@ -74,6 +77,7 @@ function MediaLightboxPage({
 }: {
   isActive: boolean;
   item: PlaceMedia;
+  onZoomChange?: (zoomed: boolean) => void;
   pageHeight: number;
   pageWidth: number;
   positionLabel: string;
@@ -107,14 +111,16 @@ function MediaLightboxPage({
             }
           />
         ) : (
-          <AppImage
-            uri={item.url}
-            style={styles.image}
-            resizeMode="contain"
-            accessibilityLabel={`${tr.common.enlargedMedia}. ${positionLabel}`}
-            backgroundColor="transparent"
-            priority={isActive ? 'high' : 'normal'}
-          />
+          <ZoomableView active={isActive} onZoomChange={onZoomChange}>
+            <AppImage
+              uri={item.url}
+              style={styles.image}
+              resizeMode="contain"
+              accessibilityLabel={`${tr.common.enlargedMedia}. ${positionLabel}`}
+              backgroundColor="transparent"
+              priority={isActive ? 'high' : 'normal'}
+            />
+          </ZoomableView>
         )}
       </View>
     </View>
@@ -222,6 +228,8 @@ export function MediaLightbox({
     return Math.min(Math.max(initialIndex, 0), visibleItems.length - 1);
   }, [initialIndex, visibleItems]);
   const [currentIndex, setCurrentIndex] = React.useState(startIndex);
+  // While a photo is zoomed, one finger moves around it instead of paging.
+  const [photoZoomed, setPhotoZoomed] = React.useState(false);
   const [menuVisible, setMenuVisible] = React.useState(false);
   const [pendingRemoveIndex, setPendingRemoveIndex] = React.useState<number | null>(null);
   const flatListKey = React.useMemo(
@@ -334,6 +342,7 @@ export function MediaLightbox({
       onRequestClose={handleClose}
       presentationStyle="overFullScreen"
     >
+      <GestureHandlerRootView style={styles.gestureRoot}>
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
@@ -388,6 +397,7 @@ export function MediaLightbox({
               key={flatListKey}
               data={visibleItems}
               horizontal
+              scrollEnabled={!photoZoomed}
               pagingEnabled
               disableIntervalMomentum
               directionalLockEnabled
@@ -421,6 +431,7 @@ export function MediaLightbox({
                 <MediaLightboxPage
                   isActive={index === currentIndex}
                   item={item.item}
+                  onZoomChange={index === currentIndex ? setPhotoZoomed : undefined}
                   pageHeight={pageHeight}
                   pageWidth={pageWidth}
                   positionLabel={getLightboxPositionLabel(
@@ -466,11 +477,15 @@ export function MediaLightbox({
           />
         ) : null}
       </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     alignItems: 'center',
