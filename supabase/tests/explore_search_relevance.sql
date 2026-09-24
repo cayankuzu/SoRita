@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 insert into auth.users (
   id,
@@ -74,6 +74,22 @@ values
     null,
     true,
     timezone('utc', now())
+  ),
+  (
+    '82000000-0000-4000-8000-000000000004',
+    '81000000-0000-4000-8000-000000000003',
+    'Kahve Evleri',
+    null,
+    true,
+    timezone('utc', now())
+  ),
+  (
+    '82000000-0000-4000-8000-000000000005',
+    '81000000-0000-4000-8000-000000000002',
+    'Tatlıcılar',
+    'Yanında kahve de var',
+    true,
+    timezone('utc', now())
   );
 
 insert into public.list_places (id, list_id, created_by, name, lat, lng, category, categories)
@@ -108,11 +124,33 @@ select ok(
 );
 
 select ok(
-  exists (
+  not exists (
     select 1 from public.explore_page('lists', 'kahve', null, null, 20)
     where item_id = '82000000-0000-4000-8000-000000000003'
   ),
-  'a search finds the viewer''s own public list'
+  'a search leaves out the viewer''s own lists; they are on the profile'
+);
+
+select ok(
+  (
+    select rank from public.explore_page('lists', 'kahve', null, null, 20)
+    where item_id = '82000000-0000-4000-8000-000000000001'
+  ) > (
+    select rank from public.explore_page('lists', 'kahve', null, null, 20)
+    where item_id = '82000000-0000-4000-8000-000000000004'
+  ),
+  'among equal matches, someone the viewer follows comes before a newer stranger'
+);
+
+select ok(
+  (
+    select rank from public.explore_page('lists', 'kahve', null, null, 20)
+    where item_id = '82000000-0000-4000-8000-000000000004'
+  ) > (
+    select rank from public.explore_page('lists', 'kahve', null, null, 20)
+    where item_id = '82000000-0000-4000-8000-000000000005'
+  ),
+  'following never lifts a weaker match above a better one'
 );
 
 select ok(

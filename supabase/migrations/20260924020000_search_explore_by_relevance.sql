@@ -1,16 +1,18 @@
 -- Explore search finds what people look for, in the order they expect.
 --
 -- Searching reused the discovery feed's rules, so a search never returned
--- content from people the viewer follows, the viewer's own lists and places,
--- private accounts, or places by their category's Turkish name ("kafe"), and
--- ordered hits by recency alone. Browsing without a query keeps its rules and
--- its keyset plan unchanged; a query now:
+-- content from people the viewer follows, private accounts, or places by
+-- their category's Turkish name ("kafe"), and ordered hits by recency alone.
+-- Browsing without a query keeps its rules and its keyset plan unchanged; a
+-- query now:
 --
 -- * matches public content from anyone the viewer is not blocked from,
---   followed people and the viewer included, and any account in People;
+--   followed people included, and any account in People; the viewer's own
+--   lists and places stay on their profile, as they do in browsing;
 -- * matches a place by its category's label as well as its key;
 -- * ranks a name starting with the query (or with a word starting with it)
---   first, a name containing it next, any other field last, then by recency.
+--   first, a name containing it next, any other field last; within each,
+--   people the viewer follows come first, then the most recent.
 --
 -- Queries shorter than three characters still return nothing: the trigram
 -- indexes cannot serve them, and the app asks for one more letter instead.
@@ -241,13 +243,28 @@ as $$
               then 2
             else 1
           end
-        ) * 10000000000::double precision + extract(epoch from lists.updated_at)::double precision as rank
+        ) * 10000000000::double precision
+          -- Within a tier, someone the viewer follows comes before a stranger:
+          -- half a tier exceeds any epoch in seconds until 2128 and stays
+          -- below the next tier.
+          + case
+            when exists (
+              select 1
+              from public.user_follows
+              where user_follows.follower_id = request.viewer_id
+                and user_follows.following_id = lists.owner_id
+            )
+              then 5000000000::double precision
+            else 0
+          end
+          + extract(epoch from lists.updated_at)::double precision as rank
       from public.lists
       join public.public_profile_summaries owner_profile on owner_profile.id = lists.owner_id
       join request on true
       where p_kind in ('all', 'lists')
         and request.q <> ''
         and lists.is_public is true
+        and lists.owner_id <> request.viewer_id
         and private.can_view_list(lists.id)
         and not private.users_have_block_relation(request.viewer_id, lists.owner_id)
         and private.normalize_search_text(
@@ -310,7 +327,18 @@ as $$
               then 2
             else 1
           end
-        ) * 10000000000::double precision + extract(epoch from list_places.updated_at)::double precision as rank
+        ) * 10000000000::double precision
+          + case
+            when exists (
+              select 1
+              from public.user_follows
+              where user_follows.follower_id = request.viewer_id
+                and user_follows.following_id = lists.owner_id
+            )
+              then 5000000000::double precision
+            else 0
+          end
+          + extract(epoch from list_places.updated_at)::double precision as rank
       from public.list_places
       join public.lists on lists.id = list_places.list_id
       join public.public_profile_summaries owner_profile on owner_profile.id = lists.owner_id
@@ -318,6 +346,7 @@ as $$
       where p_kind in ('all', 'places', 'photos')
         and request.q <> ''
         and lists.is_public is true
+        and lists.owner_id <> request.viewer_id
         and private.can_view_list_place(list_places.id)
         and not private.users_have_block_relation(request.viewer_id, lists.owner_id)
         and (
@@ -392,7 +421,18 @@ as $$
               then 2
             else 1
           end
-        ) * 10000000000::double precision + extract(epoch from profiles.updated_at)::double precision as rank
+        ) * 10000000000::double precision
+          + case
+            when exists (
+              select 1
+              from public.user_follows
+              where user_follows.follower_id = request.viewer_id
+                and user_follows.following_id = profiles.id
+            )
+              then 5000000000::double precision
+            else 0
+          end
+          + extract(epoch from profiles.updated_at)::double precision as rank
       from public.public_profile_summaries profiles
       join request on true
       where p_kind in ('all', 'users')
