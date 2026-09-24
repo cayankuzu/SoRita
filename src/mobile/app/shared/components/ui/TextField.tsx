@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   StyleSheet,
   TextInput,
   TextInputProps,
@@ -21,6 +22,20 @@ import {
 } from '@/mobile/app/shared/validation/contentLimits';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+
+// Android scrolls a one-line field to its cursor, which it puts after the
+// last character: a filled address read "…bağlar, Tüt Sk. 9/B" from the
+// middle. Until the field is focused, hold the cursor at the start.
+const START_OF_TEXT = { end: 0, start: 0 } as const;
+
+function resolveSelection(
+  selection: TextInputProps['selection'],
+  { focused, multiline }: { focused: boolean; multiline: boolean },
+) {
+  return Platform.OS === 'android' && !multiline && !focused && selection === undefined
+    ? START_OF_TEXT
+    : selection;
+}
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -67,6 +82,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
   const resolvedTone =
     status === 'error' ? 'danger' : status === 'success' ? 'success' : helperTone;
   const isMultiline = Boolean(multilineRows);
+  const selection = resolveSelection(props.selection, { focused, multiline: isMultiline });
   const handleChangeText = React.useCallback(
     (value: string) => {
       onChangeText?.(isMultiline ? normalizeLineBreaks(value) : value);
@@ -110,6 +126,7 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
         placeholderTextColor={colors.textMuted}
         returnKeyType={isMultiline ? props.returnKeyType ?? 'default' : props.returnKeyType}
         scrollEnabled={isMultiline ? props.scrollEnabled ?? true : props.scrollEnabled}
+        selection={selection}
         style={[
           styles.input,
           focused ? styles.inputFocused : null,
