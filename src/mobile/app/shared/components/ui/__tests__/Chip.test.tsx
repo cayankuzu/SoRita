@@ -32,10 +32,12 @@ describe('Chip', () => {
     expect(pressable.props.accessibilityState).toMatchObject({ checked: true });
   });
 
-  it('reaches the touch floor from a lighter painted height', () => {
+  it('reaches the touch floor from a lighter painted height, at either size', () => {
     const { pressable } = render(<Chip label="Açık" onPress={vi.fn()} selected={false} />);
-    expect(pressable.props.hitSlop).toBe(hitSlopFor(controlSize.chip));
-    expect(controlSize.chip + 2 * hitSlopFor(controlSize.chip)).toBeGreaterThanOrEqual(48);
+    const slop = pressable.props.hitSlop as number;
+    expect(slop).toBe(hitSlopFor(controlSize.compact));
+    expect(controlSize.compact + 2 * slop).toBeGreaterThanOrEqual(48);
+    expect(controlSize.chip + 2 * slop).toBeGreaterThanOrEqual(48);
   });
 
   it('fills dark for a selected filter and tints a selected choice', () => {

@@ -62,7 +62,8 @@ export function Chip({
       }
       disabled={disabled}
       hapticFeedback="selection"
-      // Sized for the smaller chip, which also clears 48dp for the default one.
+      // Sized for the compact chip, which also carries the default one past
+      // 48dp; the touch-target guard reads one static hitSlopFor call.
       hitSlop={hitSlopFor(controlSize.compact)}
       onLayout={onLayout}
       onPress={onPress}
