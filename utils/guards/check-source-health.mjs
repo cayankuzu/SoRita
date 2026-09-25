@@ -8,7 +8,6 @@ const DEFAULT_MAX_LINES = 700;
 const DEFAULT_MAX_FUNCTION_LINES = 300;
 const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/features/map/application/usePlaceEditorState.ts': 930,
-  'src/mobile/app/platform/supabase/media.ts': 950,
   'src/mobile/app/features/map/application/useMapScreenState.ts': 900,
   'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 860,
   'src/mobile/app/features/places/ui/components/PlaceCard.tsx': 820,
