@@ -10,6 +10,7 @@ import {
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { pickPlaceMediaFromPrompt } from '@/mobile/app/platform/media/images';
 import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
+import { PLACE_MEDIA_MAX_FILE_SIZE_MB } from '@/mobile/app/platform/media/placeMediaSize';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMediaCounts } from '@/mobile/app/shared/utils/placeMedia';
 import {
@@ -23,15 +24,43 @@ export type MediaSelectionIssueSummary = {
   rejectedVideos: number;
 };
 
+export type EditorBlockingNotice = {
+  description: string;
+  title: string;
+};
+
+// Shown when a picked or saved file is over the upload budget; it stops the
+// step, so it is a notice rather than a passing toast.
+export const OVERSIZED_MEDIA_NOTICE: EditorBlockingNotice = {
+  description: tr.placeEditor.mediaSizeLimitPopupDescription(PLACE_MEDIA_MAX_FILE_SIZE_MB),
+  title: tr.placeEditor.mediaSizeLimitPopupTitle,
+};
+
 type UsePlaceEditorMediaControllerParams = {
   media: PlaceMedia[];
   setMedia: Dispatch<SetStateAction<PlaceMedia[]>>;
-  showSelectionFeedback: (
-    issues: MediaSelectionIssueSummary,
-    rejectedVideoDurationCount?: number,
-    rejectedOversizeCount?: number,
-  ) => void;
+  showBlockingNotice: (notice: EditorBlockingNotice) => void;
 };
+
+// One message for a picker result, the most serious first.
+function reportMediaSelectionIssues(
+  issues: MediaSelectionIssueSummary,
+  rejectedVideoDurationCount: number,
+  rejectedOversizeCount: number,
+  showBlockingNotice: (notice: EditorBlockingNotice) => void,
+) {
+  if (rejectedOversizeCount > 0) {
+    showBlockingNotice(OVERSIZED_MEDIA_NOTICE);
+  } else if (rejectedVideoDurationCount > 0) {
+    showToast(tr.placeEditor.videoDurationLimitExceeded, 'error');
+  } else if (issues.rejectedVideos > 0) {
+    showToast(tr.placeEditor.videoLimitNotice(MAX_PLACE_VIDEOS), 'error');
+  } else if (issues.rejectedPhotos > 0) {
+    showToast(tr.placeEditor.photoLimitNotice(MAX_PLACE_PHOTOS), 'error');
+  } else if (issues.rejectedTotal > 0) {
+    showToast(tr.placeEditor.mediaLimitNotice(MAX_PLACE_MEDIA_ITEMS), 'error');
+  }
+}
 
 export function appendPlaceMediaWithinLimits(
   currentMedia: PlaceMedia[],
@@ -68,42 +97,12 @@ export function appendPlaceMediaWithinLimits(
   return { issues, nextMedia };
 }
 
-export function replacePlaceMediaWithinLimits(
-  currentMedia: PlaceMedia[],
-  index: number,
-  replacement: PlaceMedia,
-) {
-  if (index < 0 || index >= currentMedia.length) {
-    return {
-      issues: { rejectedPhotos: 0, rejectedTotal: 0, rejectedVideos: 0 },
-      nextMedia: currentMedia,
-      replaced: false,
-    };
-  }
-
-  const nextWithoutItem = currentMedia.filter((_, itemIndex) => itemIndex !== index);
-  const { issues, nextMedia: appendedMedia } = appendPlaceMediaWithinLimits(nextWithoutItem, [
-    replacement,
-  ]);
-  const acceptedReplacement = appendedMedia[appendedMedia.length - 1];
-
-  if (!acceptedReplacement || appendedMedia.length === nextWithoutItem.length) {
-    return { issues, nextMedia: currentMedia, replaced: false };
-  }
-
-  const reorderedMedia = [...nextWithoutItem];
-  reorderedMedia.splice(Math.min(index, reorderedMedia.length), 0, acceptedReplacement);
-
-  return { issues, nextMedia: reorderedMedia, replaced: true };
-}
-
 export function usePlaceEditorMediaController({
   media,
   setMedia,
-  showSelectionFeedback,
+  showBlockingNotice,
 }: UsePlaceEditorMediaControllerParams) {
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
-  const [editingVideoThumbnailIndex, setEditingVideoThumbnailIndex] = useState<number | null>(null);
   const [isAddingMedia, setIsAddingMedia] = useState(false);
   const isAddingMediaRef = useRef(false);
 
@@ -132,39 +131,30 @@ export function usePlaceEditorMediaController({
         remainingVideos: Math.max(MAX_PLACE_VIDEOS - currentCounts.videos, 0),
       });
 
-      if (selection.items.length > 0) {
-        const { issues, nextMedia } = appendPlaceMediaWithinLimits(media, selection.items);
-        const nextVideoIndex = nextMedia.findIndex(
-          (item, index) => index >= media.length && item.type === 'video',
-        );
+      const { issues, nextMedia } = appendPlaceMediaWithinLimits(media, selection.items);
 
+      if (selection.items.length > 0) {
         setMedia(nextMedia);
         setSelectedMediaIndex(null);
-        setEditingVideoThumbnailIndex(nextVideoIndex >= 0 ? nextVideoIndex : null);
-        showSelectionFeedback(
-          issues,
-          selection.rejectedVideoCount,
-          selection.rejectedOversizeCount,
-        );
-      } else if (selection.rejectedVideoCount > 0 || selection.rejectedOversizeCount > 0) {
-        showSelectionFeedback(
-          { rejectedPhotos: 0, rejectedTotal: 0, rejectedVideos: 0 },
-          selection.rejectedVideoCount,
-          selection.rejectedOversizeCount,
-        );
       }
+
+      reportMediaSelectionIssues(
+        issues,
+        selection.rejectedVideoCount,
+        selection.rejectedOversizeCount,
+        showBlockingNotice,
+      );
     } finally {
       await waitForMediaPickerTransition();
       isAddingMediaRef.current = false;
       setIsAddingMedia(false);
     }
-  }, [media, setMedia, showSelectionFeedback]);
+  }, [media, setMedia, showBlockingNotice]);
 
   const handleRemoveMedia = useCallback(
     (index: number) => {
       setMedia((current) => current.filter((_, itemIndex) => itemIndex !== index));
       setSelectedMediaIndex((current) => adjustIndexAfterRemoval(current, index));
-      setEditingVideoThumbnailIndex((current) => adjustIndexAfterRemoval(current, index));
     },
     [setMedia],
   );
@@ -201,102 +191,20 @@ export function usePlaceEditorMediaController({
 
       setMedia((items) => reorderPhotos(items, fromIndex, toIndex));
       setSelectedMediaIndex(null);
-      setEditingVideoThumbnailIndex(null);
     },
     [media.length, setMedia],
   );
 
-  const handleEditMedia = useCallback(
-    async (index: number) => {
-      if (isAddingMedia || index < 0 || index >= media.length) {
-        return;
-      }
-
-      setIsAddingMedia(true);
-
-      try {
-        await waitForMediaPickerTransition();
-        const mediaWithoutEditedItem = media.filter((_, itemIndex) => itemIndex !== index);
-        const remainingCounts = getPlaceMediaCounts(mediaWithoutEditedItem);
-        const selection = await pickPlaceMediaFromPrompt({
-          allowMultiple: false,
-          maxSelection: 1,
-          remainingPhotos: Math.max(MAX_PLACE_PHOTOS - remainingCounts.photos, 0),
-          remainingVideos: Math.max(MAX_PLACE_VIDEOS - remainingCounts.videos, 0),
-        });
-        const replacement = selection.items[0];
-
-        if (!replacement) {
-          if (selection.rejectedVideoCount > 0 || selection.rejectedOversizeCount > 0) {
-            showSelectionFeedback(
-              { rejectedPhotos: 0, rejectedTotal: 0, rejectedVideos: 0 },
-              selection.rejectedVideoCount,
-              selection.rejectedOversizeCount,
-            );
-          }
-          return;
-        }
-
-        const { issues, nextMedia } = replacePlaceMediaWithinLimits(media, index, replacement);
-        setMedia(nextMedia);
-        setSelectedMediaIndex(null);
-        setEditingVideoThumbnailIndex(replacement.type === 'video' ? index : null);
-        showSelectionFeedback(
-          issues,
-          selection.rejectedVideoCount,
-          selection.rejectedOversizeCount,
-        );
-      } finally {
-        await waitForMediaPickerTransition();
-        setIsAddingMedia(false);
-      }
-    },
-    [isAddingMedia, media, setMedia, showSelectionFeedback],
-  );
-
-  const openVideoThumbnailEditor = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < media.length && media[index]?.type === 'video') {
-        setEditingVideoThumbnailIndex(index);
-      }
-    },
-    [media],
-  );
-
-  const applyVideoThumbnail = useCallback(
-    (selection: { thumbnailTimeMs: number; thumbnailUrl?: string }) => {
-      setMedia((current) =>
-        current.map((item, index) =>
-          index === editingVideoThumbnailIndex
-            ? {
-                ...item,
-                thumbnailTimeMs: selection.thumbnailTimeMs,
-                thumbnailUrl: selection.thumbnailUrl || undefined,
-              }
-            : item,
-        ),
-      );
-      setEditingVideoThumbnailIndex(null);
-    },
-    [editingVideoThumbnailIndex, setMedia],
-  );
-
   const resetMediaInteraction = useCallback(() => {
     setSelectedMediaIndex(null);
-    setEditingVideoThumbnailIndex(null);
   }, []);
 
   return {
-    applyVideoThumbnail,
-    closeVideoThumbnailEditor: () => setEditingVideoThumbnailIndex(null),
-    editingVideoThumbnailIndex,
     handleAddMedia,
-    handleEditMedia,
     handleMediaPress,
     handleMoveMedia,
     handleRemoveMedia,
     isAddingMedia,
-    openVideoThumbnailEditor,
     resetMediaInteraction,
     selectedMediaIndex,
   };

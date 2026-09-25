@@ -16,11 +16,7 @@ import type {
   PlaceEditorSaveOptions,
   PlaceEditorSaveStartHandler,
 } from '@/mobile/app/features/map/application/placeEditorSaveTypes';
-import {
-  getInitialBestTimes,
-  getInitialSelectedCategories,
-  getInitialSelectedLists,
-} from '@/mobile/app/features/map/application/placeEditorStateUtils';
+import { createInitialPlaceEditorFields } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 import { usePlaceEditorState } from '@/mobile/app/features/map/application/usePlaceEditorState';
 import { PlaceEditorBasicsStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorBasicsStep';
 import { PlaceEditorDetailsStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorDetailsStep';
@@ -36,7 +32,6 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
-import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import {
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
@@ -77,47 +72,6 @@ const DISCARD_PLACE_EDITOR_CONFIRMATION = {
   confirmLabel: tr.common.cancelAction,
   title: tr.placeEditor.discardTitle,
 } as const;
-
-function createInitialPlaceEditorDraft(params: {
-  draft?: PlaceEditorDraft | null;
-  existingPlace?: Place | null;
-  lists: PlaceList[];
-  placeAddress?: string;
-  placeName?: string;
-}) {
-  const { draft, existingPlace, lists, placeAddress, placeName } = params;
-
-  if (draft) {
-    return {
-      ...draft,
-      media: draft.media ?? [],
-    };
-  }
-
-  return {
-    step: 0,
-    name: placeName || existingPlace?.name || '',
-    title: existingPlace?.title || '',
-    menuUrl: existingPlace?.menuUrl || '',
-    address: placeAddress || existingPlace?.address || '',
-    notes: existingPlace?.notes || '',
-    selectedCategories: getInitialSelectedCategories(existingPlace),
-    rating: existingPlace?.rating || 0,
-    studentFriendly: Boolean(existingPlace?.studentDiscount),
-    priceMin: existingPlace?.priceMin != null ? String(existingPlace.priceMin) : '',
-    priceMax: existingPlace?.priceMax != null ? String(existingPlace.priceMax) : '',
-    selectedLists: getInitialSelectedLists(existingPlace, lists),
-    media: getPlaceMedia(existingPlace),
-    bestTimes: getInitialBestTimes(existingPlace),
-    atmosphere: existingPlace?.atmosphere || [],
-    features: existingPlace?.specialFeatures || [],
-    newListName: '',
-    newListDescription: '',
-    newListCoverImage: '',
-    newListPublic: false,
-    showNewListForm: false,
-  } satisfies PlaceEditorDraft;
-}
 
 // Both sides go through the builder the editor's own draft comes from, which
 // adds the photo list. A built draft against a raw one never matched, so every
@@ -288,7 +242,7 @@ export function PlaceEditorModal({
   const buildInitialDraftSignature = React.useCallback(
     () =>
       serializePlaceEditorDraft(
-        createInitialPlaceEditorDraft({
+        createInitialPlaceEditorFields({
           draft,
           existingPlace,
           lists,
