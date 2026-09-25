@@ -6,7 +6,7 @@ import { FeedActionButtons } from '@/mobile/app/features/social/ui/components/Fe
 import {
   DeferredActionMenuSheet,
   type DeferredActionMenuSheetProps,
-} from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import type {
   FeedActionComment,
   FeedActionLiker,

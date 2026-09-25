@@ -1,7 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { useScrollToTop } from '@react-navigation/native';
-import { Animated, StyleSheet, View } from 'react-native';
-import type { FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import {
   Image as ImageIcon,
   Ban,
@@ -32,17 +30,26 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import {
+  useProfileTabPager,
+  useProfileTabState,
+} from '@/mobile/app/features/profile/ui/components/useProfileTabPager';
+import {
+  DeferredPlaceFeedScreen,
+  DeferredProfileConnectionsModal,
+  DeferredUserProfileActionsSheet,
+} from '@/mobile/app/features/profile/ui/components/userProfileOverlays';
+import {
+  DeferredConfirmActionModal,
+  DeferredImageLightbox,
+  DeferredReportActionSheet,
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
-import {
-  buildProfileTabOptions,
-  resolveProfileTabCount,
-} from '@/mobile/app/features/profile/ui/components/profileTabOptions';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import {
   ProfileTabs,
-  type ProfileTabOption,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 
 type ProfileTab = ProfileContentTab;
@@ -50,61 +57,6 @@ const UNBLOCK_CONFIRMATION = {
   description: tr.profile.userActions.unblockConfirmDescription,
   title: tr.profile.userActions.unblockConfirmTitle,
 } as const;
-
-type ConfirmActionModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
->;
-type ImageLightboxProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ImageLightbox')['ImageLightbox']
->;
-type ProfileConnectionsModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal')['ProfileConnectionsModal']
->;
-type PlaceFeedScreenProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/places/public/feed')['PlaceFeedScreen']
->;
-type ReportActionSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
->;
-type UserProfileActionsSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet')['UserProfileActionsSheet']
->;
-
-function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
-  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
-    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
-  return <ConfirmActionModal {...props} />;
-}
-
-function DeferredImageLightbox(props: ImageLightboxProps) {
-  const { ImageLightbox } = require('@/mobile/app/shared/components/feedback/ImageLightbox') as
-    typeof import('@/mobile/app/shared/components/feedback/ImageLightbox');
-  return <ImageLightbox {...props} />;
-}
-
-function DeferredProfileConnectionsModal(props: ProfileConnectionsModalProps) {
-  const { ProfileConnectionsModal } = require('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal') as
-    typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal');
-  return <ProfileConnectionsModal {...props} />;
-}
-
-function DeferredPlaceFeedScreen(props: PlaceFeedScreenProps) {
-  const { PlaceFeedScreen } = require('@/mobile/app/features/places/public/feed') as
-    typeof import('@/mobile/app/features/places/public/feed');
-  return <PlaceFeedScreen {...props} />;
-}
-
-function DeferredReportActionSheet(props: ReportActionSheetProps) {
-  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
-    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
-  return <ReportActionSheet {...props} />;
-}
-
-function DeferredUserProfileActionsSheet(props: UserProfileActionsSheetProps) {
-  const { UserProfileActionsSheet } = require('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet') as
-    typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet');
-  return <UserProfileActionsSheet {...props} />;
-}
 
 function PublicUserAction({
   canShow,
@@ -166,10 +118,8 @@ export function UserProfileScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'UserProfile'>();
   const { user } = useAuth();
-  const profileListRef = React.useRef<FlatList<ProfileGridItem> | null>(null);
-  const pagerProgress = React.useRef(new Animated.Value(0)).current;
-  const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
-  const [visibleTab, setVisibleTab] = useState<ProfileTab>('lists');
+  const tabState = useProfileTabState();
+  const { activeTab, pagerProgress, profileListRef, visibleTab } = tabState;
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [feedMode, setFeedMode] = useState<{
     startIndex: number;
@@ -258,87 +208,34 @@ export function UserProfileScreen() {
     places: filteredPlaces,
   } satisfies Record<ProfileTab, ProfileGridItem[]>;
 
-  const tabs = useMemo<ProfileTabOption[]>(
-    () =>
-      buildProfileTabOptions({
-        gallery: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPhotos.length,
-          total: tabTotals.gallery,
-        }),
-        lists: resolveProfileTabCount({
-          complete: isContentComplete.lists,
-          loaded: filteredLists.length,
-          total: tabTotals.lists,
-        }),
-        places: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPlaces.length,
-          total: tabTotals.places,
-        }),
-      }),
-    [
-      filteredLists.length,
-      filteredPhotos.length,
-      filteredPlaces.length,
-      isContentComplete.lists,
-      isContentComplete.places,
-      tabTotals.gallery,
-      tabTotals.lists,
-      tabTotals.places,
-    ],
-  );
-  const pagerTabs = useMemo(
-    () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),
-    [tabs],
-  );
-  useScrollToTop(profileListRef as React.RefObject<FlatList>);
-
-  const scrollProfileToTop = useCallback(() => {
-    profileListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, []);
-
-  const setPagerProgressForTab = useCallback(
-    (tab: ProfileTab) => {
-      const nextIndex = Math.max(
-        0,
-        pagerTabs.findIndex((pagerTab) => pagerTab.key === tab),
-      );
-      pagerProgress.setValue(nextIndex);
+  const {
+    handlePageProgressChange,
+    handleProfileEndReached,
+    handleTabChange,
+    handleTabPreviewChange,
+    pagerTabs,
+    tabs,
+  } = useProfileTabPager({
+    counts: {
+      gallery: {
+        complete: isContentComplete.places,
+        loaded: filteredPhotos.length,
+        total: tabTotals.gallery,
+      },
+      lists: {
+        complete: isContentComplete.lists,
+        loaded: filteredLists.length,
+        total: tabTotals.lists,
+      },
+      places: {
+        complete: isContentComplete.places,
+        loaded: filteredPlaces.length,
+        total: tabTotals.places,
+      },
     },
-    [pagerProgress, pagerTabs],
-  );
-  const handlePageProgressChange = useCallback(
-    (pageOffset: number) => {
-      pagerProgress.setValue(pageOffset);
-    },
-    [pagerProgress],
-  );
-  const handleTabChange = useCallback(
-    (key: string) => {
-      const nextTab = key as ProfileTab;
-      setPagerProgressForTab(nextTab);
-
-      if (nextTab === activeTab) {
-        scrollProfileToTop();
-        return;
-      }
-
-      setVisibleTab(nextTab);
-      setActiveTab(nextTab);
-    },
-    [activeTab, scrollProfileToTop, setPagerProgressForTab],
-  );
-  const handleTabPreviewChange = useCallback((key: ProfileTab) => {
-    setVisibleTab(key);
-  }, []);
-  const handleProfileEndReached = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) {
-      return;
-    }
-
-    void fetchNextPage?.();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+    pagination: { fetchNextPage, hasNextPage, isFetchingNextPage },
+    tabState,
+  });
 
   if (isInitialLoading) {
     return (

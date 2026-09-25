@@ -30,7 +30,10 @@ import {
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import {
   DeferredActionMenuSheet,
-} from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+  DeferredConfirmActionModal,
+  DeferredMediaLightbox,
+  DeferredReportActionSheet,
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
@@ -40,10 +43,7 @@ import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
-  DeferredConfirmActionModal,
-  DeferredMediaLightbox,
   DeferredPlaceEditorModal,
-  DeferredReportActionSheet,
   DeferredSourcePlaceCardModal,
   type PlaceCardOverlay,
   renderWhen,

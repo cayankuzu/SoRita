@@ -1,21 +1,9 @@
-// The place card's overlays (editor, lightbox, report, confirm, source card), loaded only when one opens so a feed of cards stays light.
+// The place card's own overlays (the place editor and the source card), loaded only when one opens so a feed of cards stays light; shared dialogs come from DeferredFeedback.
 
 import React from 'react';
 
-type ConfirmActionModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
->;
-
-type MediaLightboxProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/MediaLightbox')['MediaLightbox']
->;
-
 type PlaceEditorModalProps = React.ComponentProps<
   typeof import('@/mobile/app/features/map/public/components')['PlaceEditorModal']
->;
-
-type ReportActionSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
 >;
 
 type SourcePlaceCardModalProps = React.ComponentProps<
@@ -39,28 +27,10 @@ export function renderWhen(
   return visible ? render() : null;
 }
 
-export function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
-  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
-    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
-  return <ConfirmActionModal {...props} />;
-}
-
-export function DeferredMediaLightbox(props: MediaLightboxProps) {
-  const { MediaLightbox } = require('@/mobile/app/shared/components/feedback/MediaLightbox') as
-    typeof import('@/mobile/app/shared/components/feedback/MediaLightbox');
-  return <MediaLightbox {...props} />;
-}
-
 export function DeferredPlaceEditorModal(props: PlaceEditorModalProps) {
   const { PlaceEditorModal } = require('@/mobile/app/features/map/public/components') as
     typeof import('@/mobile/app/features/map/public/components');
   return <PlaceEditorModal {...props} />;
-}
-
-export function DeferredReportActionSheet(props: ReportActionSheetProps) {
-  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
-    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
-  return <ReportActionSheet {...props} />;
 }
 
 export function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {

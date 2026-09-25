@@ -6,16 +6,13 @@ const ROOT = process.cwd();
 const SOURCE_ROOT = path.join(ROOT, 'src', 'mobile', 'app');
 const DEFAULT_MAX_LINES = 700;
 const DEFAULT_MAX_FUNCTION_LINES = 300;
-const HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/features/map/application/useMapScreenState.ts': 860,
-  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 800,
-}));
+const HOTSPOT_LIMITS = new Map(Object.entries({}));
 const FUNCTION_HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/features/map/application/useMapScreenState.ts': 800,
-  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 700,
+  'src/mobile/app/features/map/application/useMapScreenState.ts': 490,
+  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 560,
   'src/mobile/app/features/auth/application/useAuthScreenState.ts': 620,
   'src/mobile/app/features/places/ui/components/PlaceCard.tsx': 630,
-  'src/mobile/app/features/profile/ui/screens/ProfileScreen.tsx': 590,
+  'src/mobile/app/features/profile/ui/screens/ProfileScreen.tsx': 485,
   'src/mobile/app/features/lists/ui/screens/ListDetailScreen.tsx': 560,
   'src/mobile/app/platform/media/MediaLibrarySelectionHost.tsx': 480,
   'src/mobile/app/features/map/ui/components/PlaceEditorModal.tsx': 480,
