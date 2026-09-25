@@ -41,10 +41,10 @@ type MiniMapFallbackProps = {
   places: MapMarkerItem[];
 };
 
-function DeferredAppMapView(props: SharedMapProps) {
-  const { AppMapView } = require('@/mobile/app/shared/components/maps/AppMapView') as
-    typeof import('@/mobile/app/shared/components/maps/AppMapView');
-  return <AppMapView {...props} />;
+function DeferredGoogleMapView(props: SharedMapProps) {
+  const { GoogleMapView } = require('@/mobile/app/shared/components/maps/GoogleMapView') as
+    typeof import('@/mobile/app/shared/components/maps/GoogleMapView');
+  return <GoogleMapView {...props} />;
 }
 
 function buildPlacesSignature(places: MapMarkerItem[]) {
@@ -200,7 +200,7 @@ function MiniMapPreviewComponent({
       style={[styles.container, { height }]}
     >
       <View collapsable={false} style={StyleSheet.absoluteFillObject}>
-        <DeferredAppMapView
+        <DeferredGoogleMapView
           instanceId={effectiveInstanceId}
           places={places}
           interactive={interactive}

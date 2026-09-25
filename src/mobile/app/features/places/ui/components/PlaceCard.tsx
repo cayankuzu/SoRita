@@ -477,7 +477,6 @@ function PlaceCardComponent({
       onPress,
       onPressIn,
       onRefresh,
-      onReportPlace: handleReportPlace,
       onUserPress: openUserProfile,
       onCommentsVisibilityChange: (visible) => {
         if (visible) {

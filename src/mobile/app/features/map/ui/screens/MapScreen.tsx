@@ -23,7 +23,7 @@ import {
 } from '@/mobile/app/features/map/ui/components/MapScreenOverlays';
 import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
 import { env } from '@/mobile/app/platform/config/env';
-import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
+import { GoogleMapView } from '@/mobile/app/shared/components/maps/GoogleMapView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -466,7 +466,7 @@ export function MapScreen() {
 
           <View style={styles.map}>
             {isFocused ? (
-              <AppMapView
+              <GoogleMapView
                 places={mapPlaces}
                 interactive
                 showUserLocation

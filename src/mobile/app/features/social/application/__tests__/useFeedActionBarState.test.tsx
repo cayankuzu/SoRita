@@ -129,7 +129,6 @@ describe('useFeedActionBarState', () => {
     const onCommentUpdate = vi.fn().mockResolvedValue(undefined);
     const onCommentsRefresh = vi.fn().mockResolvedValue(undefined);
     const onRefresh = vi.fn().mockResolvedValue(undefined);
-    const onReportSubmit = vi.fn().mockResolvedValue(undefined);
     const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
     const comment = {
       id: 'comment-1',
@@ -152,7 +151,6 @@ describe('useFeedActionBarState', () => {
         onCommentUpdate,
         onCommentsRefresh,
         onRefresh,
-        onReportSubmit,
       }),
     );
 
@@ -169,13 +167,6 @@ describe('useFeedActionBarState', () => {
     });
     await hook.result.current.handleCommentReport('comment-1');
     expect(onCommentReport).toHaveBeenCalledWith('comment-1', 'spam', undefined);
-
-    act(() => {
-      hook.result.current.setItemReportReason('abuse');
-      hook.result.current.setShowReportSheet(true);
-    });
-    await hook.result.current.handleItemReport();
-    expect(onReportSubmit).toHaveBeenCalledWith('abuse', undefined);
 
     await hook.result.current.handleCommentLikeToggle('comment-1');
     await hook.result.current.handleDeleteComment('comment-1');
@@ -253,7 +244,6 @@ describe('useFeedActionBarState', () => {
     const onCommentLikeToggle = vi.fn().mockRejectedValue(new Error('like failed'));
     const onCommentReport = vi.fn().mockRejectedValue(new Error('report failed'));
     const onCommentSubmit = vi.fn().mockRejectedValue(new Error('submit failed'));
-    const onReportSubmit = vi.fn().mockRejectedValue(new Error('item report failed'));
     const hooks = await import('@/mobile/app/features/social/application/useFeedActionBarState');
     const comment = {
       id: 'comment-1',
@@ -273,7 +263,6 @@ describe('useFeedActionBarState', () => {
         onCommentLikeToggle,
         onCommentReport,
         onCommentSubmit,
-        onReportSubmit,
       }),
     );
 
@@ -281,14 +270,12 @@ describe('useFeedActionBarState', () => {
       hook.result.current.handleStartReply(comment);
       hook.result.current.setCommentText('reply');
       hook.result.current.setReportReason('spam');
-      hook.result.current.setItemReportReason('abuse');
     });
 
     await hook.result.current.handleCommentSubmit();
     await hook.result.current.handleCommentLikeToggle('comment-1');
     await hook.result.current.handleCommentReport('comment-1');
     await hook.result.current.handleDeleteComment('comment-1');
-    await hook.result.current.handleItemReport();
 
     act(() => {
       hook.result.current.resetCommentComposer();
@@ -320,7 +307,6 @@ describe('useFeedActionBarState', () => {
       await guardedHook.result.current.handleRefreshLikers();
       await guardedHook.result.current.handleCommentReport(comment.id);
       await guardedHook.result.current.handleCommentLikeToggle(comment.id);
-      await guardedHook.result.current.handleItemReport();
     });
 
     let releaseRefresh!: () => void;

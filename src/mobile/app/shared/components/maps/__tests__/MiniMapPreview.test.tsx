@@ -18,8 +18,8 @@ vi.mock('@/mobile/app/platform/config/env', () => ({
   env: { googleMapsStaticApiKey: 'public-static-map-key' },
 }));
 
-vi.mock('@/mobile/app/shared/components/maps/AppMapView', () => ({
-  AppMapView: () => null,
+vi.mock('@/mobile/app/shared/components/maps/GoogleMapView', () => ({
+  GoogleMapView: () => null,
 }));
 
 vi.mock('@/mobile/app/shared/components/ui/AppImage', () => ({

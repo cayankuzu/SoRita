@@ -24,7 +24,6 @@ type UseFeedActionBarStateParams = {
   onCommentsRefresh?: () => Promise<void> | void;
   onLikePress?: () => Promise<void> | void;
   onRefresh?: () => Promise<void> | void;
-  onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
   onUserPress?: (userId: string) => void;
 };
 
@@ -66,7 +65,6 @@ export function useFeedActionBarState({
   onCommentsRefresh,
   onLikePress,
   onRefresh,
-  onReportSubmit,
   onUserPress,
 }: UseFeedActionBarStateParams) {
   const [commentText, setCommentText] = useState('');
@@ -76,12 +74,9 @@ export function useFeedActionBarState({
   useOpenWhenRequested(autoOpenComments, setShowComments);
   const [showAddress, setShowAddress] = useState(false);
   const [showLikers, setShowLikers] = useState(false);
-  const [showReportSheet, setShowReportSheet] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [activeReportCommentId, setActiveReportCommentId] = useState<string | null>(null);
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState<string | null>(null);
-  const [itemReportReason, setItemReportReason] = useState('');
-  const [itemReportDetails, setItemReportDetails] = useState('');
   const [replyingTo, setReplyingTo] = useState<ReplyTarget | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [commentsRefreshing, setCommentsRefreshing] = useState(false);
@@ -284,22 +279,6 @@ export function useFeedActionBarState({
     }
   };
 
-  const handleItemReport = async () => {
-    if (!itemReportReason || !onReportSubmit) {
-      return;
-    }
-
-    try {
-      await onReportSubmit(itemReportReason, itemReportDetails.trim() || undefined);
-      setItemReportDetails('');
-      setItemReportReason('');
-      setShowReportSheet(false);
-      showToast(tr.cards.reportSent, 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error, tr.cards.reportFailed), 'error');
-    }
-  };
-
   const handleUserPress = (userId: string) => {
     setShowComments(false);
     setShowLikers(false);
@@ -320,7 +299,6 @@ export function useFeedActionBarState({
     handleCommentReport,
     handleCommentSubmit,
     handleDeleteComment,
-    handleItemReport,
     handleLikePress,
     handleRefreshComments,
     handleRefreshLikers,
@@ -328,8 +306,6 @@ export function useFeedActionBarState({
     handleStartReply,
     handleStartReport,
     handleUserPress,
-    itemReportReason,
-    itemReportDetails,
     likersRefreshing,
     replyingTo,
     reportDetails,
@@ -338,19 +314,15 @@ export function useFeedActionBarState({
     setActiveReportCommentId,
     setCommentText,
     setConfirmDeleteCommentId,
-    setItemReportDetails,
-    setItemReportReason,
     setReportDetails,
     setReplyingTo,
     setReportReason,
     setShowAddress,
     setShowComments,
     setShowLikers,
-    setShowReportSheet,
     showAddress,
     showComments,
     showLikers,
-    showReportSheet,
     submitting,
   };
 }
