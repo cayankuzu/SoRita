@@ -4,3 +4,5 @@
 89d9bc89835d55e3fd8415e0225a21213bd05692:android/app/google-services.json:gcp-api-key:18
 89d9bc89835d55e3fd8415e0225a21213bd05692:eas.json:generic-api-key:31
 89d9bc89835d55e3fd8415e0225a21213bd05692:google-services.json:gcp-api-key:18
+# Fake JWT-shaped fixture in the redaction test (payload "signature-value"); the test now builds it at runtime.
+8f9da5c428b1ee9b71fd2b1665891669aff66cbe:src/mobile/app/platform/observability/__tests__/redaction.test.ts:jwt:3
