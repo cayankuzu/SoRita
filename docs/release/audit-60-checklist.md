@@ -848,10 +848,16 @@ Denenen düzeltme (OTA 33 `495c1851`): harita ilk ziyarette kurulup
 tutuldu. Sızıntı durmadı (241 → 571 MB, 6 ziyaret) ve daha kötüsü, sekmeden
 dönünce haritadaki bütün pinler kayboldu. OTA 32 yeniden yayınlanarak geri
 alındı (`e076ba6f`, cihazda pinler geri geldi), kod da geri çevrildi
-(`f26f4be`). Sızıntı açık: sıradaki şüpheli işaretçilerin özel React
-görünümleri (`MapMarkerGlyph`, SVG). Sonraki deneme görsel tabanlı
-işaretçilerle, yayından önce cihazda iki kontrolle: sekme gidiş-dönüşünde
-pinler görünüyor mu, 6 ziyarette `meminfo` düz mü.
+(`f26f4be`).
+
+Teşhis: bütün pinler gizliyken de her ziyaret ~65 görünüm ve 35–40 MB
+ekliyor; yani asıl sızan native haritanın kendisi, pinler üstüne ~31
+görünüm ekliyor. Harita React tarafında tutulduğunda da büyüme sürdü; bu,
+dondurulan sekmenin native görünümlerinin dönüşte yeniden kurulduğunu
+gösteriyor (pinlerin kaybolmasını da bu açıklar). Sonraki deneme sekme
+ekranının nasıl ayrılıp yeniden bağlandığına (react-native-screens,
+`detachInactiveScreens`) bakacak; yayından önce cihazda iki kontrol: sekme
+gidiş-dönüşünde pinler görünüyor mu, 6 ziyarette `meminfo` düz mü.
 
 **D25 arka plan.** Harita dışındayken uygulamanın konum isteği, alarmı ve
 wakelock'u yok (`dumpsys location/alarm/power`).
