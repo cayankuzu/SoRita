@@ -34,6 +34,10 @@ import {
   useProfileTabState,
 } from '@/mobile/app/features/profile/ui/components/useProfileTabPager';
 import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
+import {
+  profileConnectionsCopy,
+  type ProfileConnectionMode,
+} from '@/mobile/app/features/profile/ui/components/profileConnectionsCopy';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
@@ -81,9 +85,7 @@ export function ProfileScreen() {
     startIndex: number;
     kind: 'gallery' | 'places';
   } | null>(null);
-  const [connectionMode, setConnectionMode] = useState<
-    'followers' | 'following' | null
-  >(null);
+  const [connectionMode, setConnectionMode] = useState<ProfileConnectionMode | null>(null);
   const [editingPlaceTarget, setEditingPlaceTarget] = useState<{
     list: PlaceList;
     place: Place;
@@ -491,19 +493,8 @@ export function ProfileScreen() {
       {connectionMode ? (
         <ProfileConnectionsModal
           visible
-          title={
-            connectionMode === 'followers'
-              ? tr.profile.connections.followers
-              : tr.profile.connections.following
-          }
-          users={
-            connectionMode === 'followers' ? followerUsers : followingUsers
-          }
-          emptyTitle={
-            connectionMode === 'followers'
-              ? tr.profile.connections.emptyFollowers
-              : tr.profile.connections.emptyFollowing
-          }
+          {...profileConnectionsCopy(connectionMode)}
+          users={connectionMode === 'followers' ? followerUsers : followingUsers}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onClose={() => setConnectionMode(null)}

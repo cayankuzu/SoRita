@@ -11,13 +11,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
-import { buildPlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorPreview';
 import type {
   PlaceEditorSaveOptions,
   PlaceEditorSaveStartHandler,
 } from '@/mobile/app/features/map/application/placeEditorSaveTypes';
-import { createInitialPlaceEditorFields } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 import { usePlaceEditorState } from '@/mobile/app/features/map/application/usePlaceEditorState';
+import { usePlaceEditorUnsavedChanges } from '@/mobile/app/features/map/ui/components/place-editor/usePlaceEditorUnsavedChanges';
 import { PlaceEditorBasicsStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorBasicsStep';
 import { PlaceEditorDetailsStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorDetailsStep';
 import { PlaceEditorFinalStep } from '@/mobile/app/features/map/ui/components/place-editor/PlaceEditorFinalStep';
@@ -71,11 +70,33 @@ const DISCARD_PLACE_EDITOR_CONFIRMATION = {
   title: tr.placeEditor.discardTitle,
 } as const;
 
-// Both sides go through the builder the editor's own draft comes from, which
-// adds the photo list. A built draft against a raw one never matched, so every
-// untouched editor asked whether to discard its changes on close.
-function serializePlaceEditorDraft(draft: PlaceEditorDraft) {
-  return JSON.stringify(buildPlaceEditorDraft({ ...draft, media: draft.media ?? [] }));
+// How tall the editor sheet may be: most of the screen, less while the save
+// progress banner needs room at the top.
+function getEditorPanelHeight({
+  isProgressBannerVisible,
+  paddingBottom,
+  paddingTop,
+  windowHeight,
+}: {
+  isProgressBannerVisible: boolean;
+  paddingBottom: number;
+  paddingTop: number;
+  windowHeight: number;
+}) {
+  const bannerReserve = Platform.OS === 'android' ? 212 : 176;
+  const panelMaxHeight = getModalContentMaxHeight({
+    viewportHeight: windowHeight,
+    paddingTop,
+    paddingBottom,
+    minHeight: 310,
+    ...(isProgressBannerVisible ? { reservedSpace: bannerReserve } : { maxHeightRatio: 0.88 }),
+  });
+  const preferredPanelHeight = Math.max(
+    Math.round(windowHeight * (isProgressBannerVisible ? 0.76 : 0.84)),
+    460,
+  );
+
+  return { panelHeight: Math.min(panelMaxHeight, preferredPanelHeight), panelMaxHeight };
 }
 
 export function PlaceEditorModal({
@@ -106,7 +127,7 @@ export function PlaceEditorModal({
     bottomInset: insets.bottom,
     topSpacing: 20,
     bottomSpacing: 0,
-    minTopPadding: Platform.OS === 'android' ? 20 : 20,
+    minTopPadding: 20,
     minBottomPadding: 0,
   });
   const {
@@ -197,55 +218,22 @@ export function PlaceEditorModal({
   // navigation inset in the footer left a large empty block below the action.
   const footerPaddingBottom = 12;
   const isProgressBannerVisible = banner != null;
-  const progressBannerReserve = isProgressBannerVisible
-    ? Platform.OS === 'android'
-      ? 212
-      : 176
-    : 0;
-  const defaultPanelMaxHeight = getModalContentMaxHeight({
-    viewportHeight: windowHeight,
-    paddingTop,
+  const { panelHeight, panelMaxHeight } = getEditorPanelHeight({
+    isProgressBannerVisible,
     paddingBottom,
-    maxHeightRatio: 0.88,
-    minHeight: 310,
-  });
-  const compressedPanelMaxHeight = getModalContentMaxHeight({
-    viewportHeight: windowHeight,
     paddingTop,
-    paddingBottom,
-    minHeight: 310,
-    reservedSpace: progressBannerReserve,
+    windowHeight,
   });
-  const panelMaxHeight = isProgressBannerVisible
-    ? compressedPanelMaxHeight
-    : defaultPanelMaxHeight;
-  const preferredPanelHeight = Math.max(
-    Math.round(windowHeight * (isProgressBannerVisible ? 0.76 : 0.84)),
-    460,
-  );
-  const panelHeight = Math.min(panelMaxHeight, preferredPanelHeight);
-  const initialDraftSourceRef = React.useRef<string | null>(null);
-  const initialDraftSignatureRef = React.useRef<string | null>(null);
-  const currentDraftSignature = React.useMemo(
-    () => serializePlaceEditorDraft(buildDraft()),
-    [buildDraft],
-  );
-  // Changes are measured against the place (or the tapped point) as it was,
-  // never against a reopened draft: a draft is itself unsaved work, and
-  // closing one without asking lost it.
-  const initialDraftSource = `base:${existingPlace?.id || 'new'}:${lat}:${lng}:${placeName || ''}:${placeAddress || ''}`;
-  const buildInitialDraftSignature = React.useCallback(
-    () =>
-      serializePlaceEditorDraft(
-        createInitialPlaceEditorFields({ existingPlace, lists, placeAddress, placeName }),
-      ),
-    [existingPlace, lists, placeAddress, placeName],
-  );
-  const isDraftDirty =
-    visible &&
-    initialDraftSourceRef.current === initialDraftSource &&
-    initialDraftSignatureRef.current != null &&
-    currentDraftSignature !== initialDraftSignatureRef.current;
+  const isDraftDirty = usePlaceEditorUnsavedChanges({
+    buildDraft,
+    existingPlace,
+    lat,
+    lists,
+    lng,
+    placeAddress,
+    placeName,
+    visible,
+  });
 
   React.useEffect(() => {
     if (!visible || media.length === 0) {
@@ -264,20 +252,10 @@ export function PlaceEditorModal({
 
   React.useEffect(() => {
     if (!visible) {
-      initialDraftSourceRef.current = null;
-      initialDraftSignatureRef.current = null;
       setShowDeleteConfirm(false);
       setShowDiscardConfirm(false);
-      return;
     }
-
-    if (initialDraftSourceRef.current === initialDraftSource) {
-      return;
-    }
-
-    initialDraftSourceRef.current = initialDraftSource;
-    initialDraftSignatureRef.current = buildInitialDraftSignature();
-  }, [buildInitialDraftSignature, initialDraftSource, visible]);
+  }, [visible]);
 
   const handlePreviewMediaRemove = React.useCallback((index: number) => {
     handleRemoveMedia(index);

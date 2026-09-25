@@ -3,12 +3,11 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Platform,
-  ScrollView,
   TextInput,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import { ChevronUp, LocateFixed, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react-native';
+import { LocateFixed, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
@@ -21,6 +20,10 @@ import {
   MapPriorityNotice,
   MapVisibilityLegend,
 } from '@/mobile/app/features/map/ui/components/MapScreenOverlays';
+import {
+  MapReopenPill,
+  MapSearchResults,
+} from '@/mobile/app/features/map/ui/components/MapScreenControls';
 import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
 import { env } from '@/mobile/app/platform/config/env';
 import { GoogleMapView } from '@/mobile/app/shared/components/maps/GoogleMapView';
@@ -409,61 +412,11 @@ export function MapScreen() {
           </View>
 
           {showSearchFeedback ? (
-            <View
-              pointerEvents="box-none"
-              style={[
-                styles.resultsLayer,
-                mapOverlayLayout.isShort ? styles.resultsLayerShort : null,
-                mapOverlayLayout.resultsTop == null ? null : { top: mapOverlayLayout.resultsTop },
-                mapOverlayLayout.resultsBottom == null
-                  ? null
-                  : { bottom: mapOverlayLayout.resultsBottom },
-              ]}
-            >
-              {searchResults.length > 0 ? (
-                <View style={[styles.resultsCard, { maxHeight: mapOverlayLayout.resultsMaxHeight }]}>
-                  <View style={styles.resultsHeader}>
-                    <AppText style={styles.resultsHeaderText}>
-                      {tr.map.searchResultCount(searchResults.length)}
-                    </AppText>
-                  </View>
-                  <ScrollView
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                    style={styles.resultsScroll}
-                    contentContainerStyle={styles.resultsScrollContent}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    {searchResults.map((item, index) => (
-                      <InstantPressable
-                        accessibilityLabel={`${item.name}. ${item.address}`}
-                        accessibilityRole="button"
-                        key={item.placeId}
-                        style={[
-                          styles.resultRow,
-                          index === searchResults.length - 1 ? styles.resultRowLast : null,
-                        ]}
-                        onPress={() => handleSearchResultPress(item)}
-                      >
-                        <AppText numberOfLines={1} style={styles.resultTitle}>
-                          {item.name}
-                        </AppText>
-                        {item.address ? (
-                          <AppText numberOfLines={2} style={styles.resultAddress}>
-                            {item.address}
-                          </AppText>
-                        ) : null}
-                      </InstantPressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.emptyResultsCard}>
-                  <AppText style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</AppText>
-                  <AppText style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</AppText>
-                </View>
-              )}
-            </View>
+            <MapSearchResults
+              layout={mapOverlayLayout}
+              onResultPress={handleSearchResultPress}
+              results={searchResults}
+            />
           ) : null}
 
           <View style={styles.map}>
@@ -521,45 +474,14 @@ export function MapScreen() {
             )}
           </InstantPressable>
 
-          {minimizedEditor ? (
-            <InstantPressable
-              accessibilityLabel={tr.map.reopenPanel}
-              accessibilityRole="button"
-              hitSlop={hitSlopFor(46)}
-              style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
-              onPress={reopenMinimizedEditor}
-            >
-              <View style={styles.reopenEditorBody}>
-                <AppText numberOfLines={1} style={styles.reopenEditorTitle}>
-                  {minimizedEditor.draft.name.trim() ||
-                    minimizedEditor.panel.name ||
-                    tr.placeEditor.minimizedNewTitle}
-                </AppText>
-                <AppText style={styles.reopenEditorSubtitle}>
-                  {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
-                </AppText>
-              </View>
-              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
-            </InstantPressable>
-          ) : null}
-
-          {!minimizedEditor && minimizedExistingPlace ? (
-            <InstantPressable
-              accessibilityLabel={tr.map.reopenPreview}
-              accessibilityRole="button"
-              hitSlop={hitSlopFor(46)}
-              style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
-              onPress={reopenMinimizedExistingPlace}
-            >
-              <View style={styles.reopenEditorBody}>
-                <AppText numberOfLines={1} style={styles.reopenEditorTitle}>
-                  {tr.map.placeCardLabel}
-                </AppText>
-                <AppText style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</AppText>
-              </View>
-              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
-            </InstantPressable>
-          ) : null}
+          <MapReopenPill
+            bottom={locateButtonBottomOffset}
+            editor={minimizedEditor}
+            hasMinimizedPlace={Boolean(minimizedExistingPlace)}
+            isSaving={isEditorInteractionLocked}
+            onReopenEditor={reopenMinimizedEditor}
+            onReopenPlace={reopenMinimizedExistingPlace}
+          />
         </View>
       </Screen>
 

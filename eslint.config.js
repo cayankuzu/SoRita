@@ -85,7 +85,9 @@ export default [
     files: ['src/mobile/app/**/*.{ts,tsx}'],
     ignores: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],
     rules: {
-      complexity: ['error', 35],
+      // Ratchet: lowered from 35 as the busiest functions were split. Row
+      // mappers score high on `??` fallbacks alone, so the bar stays at 30.
+      complexity: ['error', 30],
       'max-depth': ['error', 5],
       'max-lines-per-function': [
         'error',

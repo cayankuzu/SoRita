@@ -44,6 +44,10 @@ import {
   DeferredReportActionSheet,
 } from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
+import {
+  profileConnectionsCopy,
+  type ProfileConnectionMode,
+} from '@/mobile/app/features/profile/ui/components/profileConnectionsCopy';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -57,6 +61,45 @@ const UNBLOCK_CONFIRMATION = {
   description: tr.profile.userActions.unblockConfirmDescription,
   title: tr.profile.userActions.unblockConfirmTitle,
 } as const;
+
+// What the report sheet says for each thing that can be reported here.
+const REPORT_SHEET = {
+  list: { description: tr.listDetail.reportDescription, targetType: 'list' },
+  place: { description: tr.cards.reportContentDescription, targetType: 'place' },
+  user: { description: tr.profile.reportProfileDescription, targetType: 'profile' },
+} as const;
+
+// The profile did not load: either it failed (with a retry) or there is no
+// such person.
+function UserProfileUnavailable({
+  errorMessage,
+  onRetry,
+}: {
+  errorMessage?: string | null;
+  onRetry: () => void;
+}) {
+  if (errorMessage) {
+    return (
+      <EmptyState
+        icon={<MapPin color={colors.danger} size={iconSize.xl} />}
+        title={tr.profile.error.loadingUnavailable}
+        description={errorMessage}
+        actionLabel={tr.common.retry}
+        onAction={onRetry}
+        tone="danger"
+      />
+    );
+  }
+
+  return (
+    <EmptyState
+      icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
+      title={tr.profile.empty.userNotFound}
+      description={tr.profile.empty.userNotFoundDescription}
+      tone="default"
+    />
+  );
+}
 
 function PublicUserAction({
   canShow,
@@ -125,9 +168,7 @@ export function UserProfileScreen() {
     startIndex: number;
     kind: 'gallery' | 'places';
   } | null>(null);
-  const [connectionMode, setConnectionMode] = useState<
-    'followers' | 'following' | null
-  >(null);
+  const [connectionMode, setConnectionMode] = useState<ProfileConnectionMode | null>(null);
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [reportTarget, setReportTarget] = useState<{
     id?: string;
@@ -300,27 +341,7 @@ export function UserProfileScreen() {
   if (!profileUser) {
     return (
       <Screen>
-        <EmptyState
-          icon={
-            <MapPin
-              color={errorMessage ? colors.danger : colors.textSoft}
-              size={iconSize.xl}
-            />
-          }
-          title={
-            errorMessage
-              ? tr.profile.error.loadingUnavailable
-              : tr.profile.empty.userNotFound
-          }
-          description={
-            errorMessage
-              ? errorMessage
-              : tr.profile.empty.userNotFoundDescription
-          }
-          actionLabel={errorMessage ? tr.common.retry : undefined}
-          onAction={errorMessage ? retry : undefined}
-          tone={errorMessage ? 'danger' : 'default'}
-        />
+        <UserProfileUnavailable errorMessage={errorMessage} onRetry={retry} />
       </Screen>
     );
   }
@@ -570,15 +591,8 @@ export function UserProfileScreen() {
       {reportTarget ? (
         <DeferredReportActionSheet
           visible
-          targetType={reportTarget.kind === 'user' ? 'profile' : reportTarget.kind}
+          {...REPORT_SHEET[reportTarget.kind]}
           title={reportTarget.title}
-          description={
-            reportTarget.kind === 'user'
-              ? tr.profile.reportProfileDescription
-              : reportTarget.kind === 'list'
-                ? tr.listDetail.reportDescription
-                : tr.cards.reportContentDescription
-          }
           reportDetails={reportDetails}
           reportReason={reportReason}
           onReportDetailsChange={setReportDetails}
@@ -595,19 +609,8 @@ export function UserProfileScreen() {
       {connectionMode ? (
         <DeferredProfileConnectionsModal
           visible
-          title={
-            connectionMode === 'followers'
-              ? tr.profile.connections.followers
-              : tr.profile.connections.following
-          }
-          users={
-            connectionMode === 'followers' ? followerUsers : followingUsers
-          }
-          emptyTitle={
-            connectionMode === 'followers'
-              ? tr.profile.connections.emptyFollowers
-              : tr.profile.connections.emptyFollowing
-          }
+          {...profileConnectionsCopy(connectionMode)}
+          users={connectionMode === 'followers' ? followerUsers : followingUsers}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onClose={() => setConnectionMode(null)}

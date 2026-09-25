@@ -140,6 +140,8 @@ function PlaceCardComponent({
   });
 
   const priceLabel = formatPrice(place) ?? undefined;
+  // Adding to a list needs someone signed in to own the list.
+  const canAddToList = allowAddToList && Boolean(user);
   const shareUrl = useMemo(() => buildListContentUrl(listId, place.id), [listId, place.id]);
   const shareDescription = useMemo(
     () =>
@@ -322,12 +324,11 @@ function PlaceCardComponent({
     }
   };
 
-  const mediaOwnerUserId =
-    place.sourceAttribution?.userId ||
-    place.addedBy?.userId ||
-    resolvedOwnerId ||
-    initialResolvedOwnerId;
-  const canDownloadOwnedPlaceMedia = Boolean(user && mediaOwnerUserId === user.id);
+  const canDownloadOwnedPlaceMedia = Boolean(
+    user &&
+      [place.sourceAttribution?.userId, place.addedBy?.userId, resolvedOwnerId, initialResolvedOwnerId]
+        .find(Boolean) === user.id,
+  );
 
   const handleOwnedPlaceSave = async (
     placeData: Omit<Place, 'id' | 'addedAt'>,
@@ -519,7 +520,7 @@ function PlaceCardComponent({
       visible: isMapVisible,
     },
     social: {
-      allowAddToList: allowAddToList && Boolean(user),
+      allowAddToList: canAddToList,
       autoOpenComments,
       comments,
       commentsErrorMessage,
@@ -558,7 +559,7 @@ function PlaceCardComponent({
         />
       ))}
 
-      {renderWhen(Boolean(allowAddToList && user && showAddToList), () => (
+      {renderWhen(canAddToList && showAddToList, () => (
         <DeferredPlaceEditorModal
           visible={showAddToList}
           lat={place.lat}
@@ -619,7 +620,7 @@ function PlaceCardComponent({
         >
           {sourceAttributionPlace && sourceAttributionList ? (
             <PlaceCard
-              allowAddToList={allowAddToList && Boolean(user)}
+              allowAddToList={canAddToList}
               listCoverImage={sourceAttributionList.coverImage}
               listEmoji={sourceAttributionList.emoji}
               listId={sourceAttributionList.id}
