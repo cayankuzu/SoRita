@@ -407,6 +407,39 @@ dondurulmuş ürün yüzeyini (3 grup) aştığı için geri alındı. Apple 5.1
 gizlilik politikasının uygulama içinden erişilebilir olmasını istiyor;
 Cayan onaylarsa `quality/feature-surface.snapshot.json` güncellenip eklenir.
 
+### Faz 5–7 birleşik tur 3 (2026-09-25)
+
+Cayan fazların birlikte ilerlemesini ve gözünden kaçan tekrarların
+kaldırılmasını istedi; testler yalnız bağlı telefonda (emülatör yok).
+
+**Teslim:** OTA grupları 20 `6c47041f`, 21 `6952424f`, 22 `36f82599`,
+23 `a668f3ca`, 24 `001bf52d`, 25 `ad151fb2`, 26 `d8509424`, 27 `d80cdaf7`;
+her biri iki başlatmayla cihazda doğrulandı.
+
+| # | Faz | Değişiklik | Kanıt |
+|---|---|---|---|
+| H1 | 5 | Tek pencere primitive'i: 10 dosya react-native `Modal`'ını aynı ayarlarla yazıyordu; hepsi `AppModal` (kamera opak, medya seçici sistem çubuğunu korur). eslint başka dosyada `Modal` import'unu reddediyor | deneme dosyasıyla guard kanıtı; cihaz: kart menüsü, yer ve liste düzenleyici, yorumlar, harita önizleme, görüntüleyici |
+| H2 | 7 (E28) | İki görüntüleyici tek: `ImageLightbox` 330 satırlık ikinci bir görüntüleyiciydi, artık `MediaLightbox`'a veren ince bir adaptör; profil, kapak ve liste kapağı da yakınlaştırılıyor | cihaz: profil fotoğrafı, liste kapağı |
+| H3 | 7 (E27) | `tr.ts` (1098 satır) özellik başına 11 dosyaya bölündü; çözümlenen `tr` nesnesinin anlık görüntüsü önce ve sonra bayt bayt aynı; source-health istisnası kalktı | anlık görüntü karşılaştırması; tüm testler |
+| H4 | 6 | Haritanın ilk açılış ipucu Google logosunun üstünde; ipucu görünürken renk açıklaması kenara çekiliyor | kod |
+| H5 | 9A | Görüntüleyici zemini %40'tan %90 koyuya: açık durum çubuğu simgeleri açık ekranda kayboluyordu | cihaz |
+| H6 | 9B | Liste düzenleyici ve kamera/galeri seçimi alt kenara oturuyor (Kaydet altında karartılmış şerit vardı) | cihaz: piksel örneği |
+| H7 | 9B | Yer düzenleyici başlığında "İptal" ile X aynı işi yapıyordu; seçim sayfasında da alttaki "İptal" ile X; tek çıkış | cihaz |
+| H8 | 9B | "Bağlantı URL'sini kopyala" → "Bağlantıyı kopyala" | cihaz: toast |
+| H9 | 5 | `Badge` dokunuşu geçiriyor: kapak üstündeki "Kapağı aç" rozeti dokunuşu yutuyordu | cihaz: rozete dokununca kapak açıldı |
+| H10 | 13 | Takibi bırakma onaylı (profil ve Keşfet karosu): düğme "Takiptesin", dokununca "@kullanıcı takibini bırak?"; gizli hesapta yeniden istek gerektiği yazıyor. Takip etme tek dokunuş | birim testleri; gerçek kullanıcıyı etkileyeceği için cihazda basılmadı |
+| H11 | 19 | Bildirimde avatar kişinin profilini, satırın geri kalanı içeriği açıyor; ekran okuyucuya satır eylemi | birim testi |
+| H12 | 9B | Liste sayfası tekrarları (Cayan): ad ve mekân sayısı yalnız üst çubukta; kartta görünürlük ve tarihler; "Harita" tek etiket; "Mekânlar" üstündeki üçüncü sayı ve tekrar eden ipucu kalktı | cihaz |
+| H13 | 9B | Düzenleyici tekrarları: yer düzenleyicide "Şu anda … listesinde" iki kez; liste düzenleyicide başlıkta görünürlük rozeti + görünürlük bölümü; "Seçilen konum" kartı adres alanını tekrar ediyordu (artık adres boşken görünür) | cihaz, kod |
+| H14 | 9B | Liste sayfasında "başa dön" düğmesi kartların "…" menüsünü örtüyordu; artık listenin üstünde küçük hap | cihaz: menü açıkta, hap başa kaydırıyor |
+
+**Faz 5 kalanı:** form standardı (auth alanı ile `TextField` birleşmesi;
+giriş ekranları hesaptan çıkmadan cihazda test edilemediği için Cayan'la
+birlikte), `SettingsHeader`/`StackScreenHeader` birleşmesi, durum
+bileşenleri denetimi. **Faz 6 kalanı:** kart varyantlarının tek meta ızgarası,
+harita durumları (boş/hata/izin). **Faz 7 kalanı:** en büyük 5 dosyanın
+bölünmesi, ölü kod taraması.
+
 ### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
 
 Claude:
