@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   FlatList,
-  Modal,
   Platform,
   StyleSheet,
   useWindowDimensions,
@@ -27,7 +26,7 @@ import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/A
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
-import { useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
+import { useSystemBarMode } from '@/mobile/app/shared/components/chrome/AppSystemBars';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
@@ -41,10 +40,10 @@ import {
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
 import { formatPlaceMediaDuration } from '@/mobile/app/shared/utils/placeMedia';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type MediaLightboxProps = {
   allowDownload?: boolean;
@@ -342,17 +341,10 @@ export function MediaLightbox({
   });
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visibleItems.length > 0}
+    <AppModal
       animationType={animationType}
-      transparent
-      hardwareAccelerated
       onRequestClose={handleClose}
-      presentationStyle="overFullScreen"
+      visible={visibleItems.length > 0}
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
       <View
@@ -490,7 +482,7 @@ export function MediaLightbox({
         ) : null}
       </View>
       </GestureHandlerRootView>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -502,7 +494,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.overlay,
+    // Near-black, as the light status-bar icons set for media expect; the
+    // 40% overlay left the screen behind readable and the clock unreadable.
+    backgroundColor: colors.scrim,
     padding: LIGHTBOX_HORIZONTAL_PADDING,
   },
   topBar: {

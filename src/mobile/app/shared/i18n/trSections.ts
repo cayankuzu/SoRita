@@ -32,6 +32,7 @@ export const notificationsTr = {
   errorDescription: 'Bildirimler şu an yüklenemiyor. Lütfen tekrar dene.',
   newCount: (count: number) => `${count} yeni bildirim`,
   openHint: 'İlgili içeriği aç',
+  openProfile: (name: string) => `${name} profilini aç`,
   processingRequest: 'Takip isteği işleniyor',
   read: 'Okundu',
   resultCount: (count: number) => `${count} bildirim`,

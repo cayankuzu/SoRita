@@ -187,13 +187,6 @@ export const textScale = {
 } as const;
 
 /**
- * Font scale never shrinks a layout below its designed size, so callers that
- * size a box from the scale clamp the floor at 1 as well as the ceiling.
- */
-export const clampFontScale = (fontScale: number, limit: number) =>
-  Math.min(Math.max(fontScale, 1), limit);
-
-/**
  * Every text style in the app is the same three-part composition: a step of
  * the type scale, a colour from the palette, sometimes a weight. Writing that
  * out per style left 225 hand-copied bodies across 64 files, collapsing into
@@ -320,6 +313,8 @@ export const avatarSize = {
   xs: 24,
   sm: 32,
   md: 40,
+  // A person as the subject of a tile, as in Explore's people grid.
+  lg: 56,
 } as const;
 
 export const contentWidth = {

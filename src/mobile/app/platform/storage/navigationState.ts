@@ -2,7 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { InitialState } from '@react-navigation/native';
 
 const NAVIGATION_STATE_STORAGE_VERSION = 2;
-const NAVIGATION_STATE_TTL_MS = 1000 * 60 * 60 * 24;
+// Long enough to come back to the same screen after Android closed the app in
+// the background (a photo picked, a map opened); a later launch starts on the
+// home feed, as a new session should, not deep in yesterday's stack.
+const NAVIGATION_STATE_TTL_MS = 1000 * 60 * 30;
 const NAVIGATION_STATE_STORAGE_PREFIX = `sorita.navigation.state.v${NAVIGATION_STATE_STORAGE_VERSION}`;
 const LEGACY_NAVIGATION_STATE_STORAGE_KEY = 'sorita.navigation.state.v1';
 

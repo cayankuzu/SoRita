@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Minus, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +18,6 @@ import {
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
@@ -26,6 +25,7 @@ import {
   buildLocationPlaceStats,
   formatLocationPlaceCardsCount,
 } from '@/mobile/app/shared/utils/format';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type PlacePreviewModalProps = {
   visible: boolean;
@@ -51,17 +51,21 @@ export function PlacePreviewModal({
   const animationType = useModalAnimationType('slide');
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { paddingTop, paddingBottom } = getModalSafeAreaPadding({
+  const { paddingTop } = getModalSafeAreaPadding({
     topInset: insets.top,
     bottomInset: insets.bottom,
     topSpacing: 20,
     bottomSpacing: 12,
     minBottomPadding: Platform.OS === 'android' ? 28 : 12,
   });
+  // The sheet sits on the bottom edge, as the shared sheets do, with the
+  // navigation bar's inset inside it. Floating it above that inset left the
+  // dimmed tab bar's labels showing under it.
+  const sheetBottomPadding = Math.max(insets.bottom, spacing.md);
   const sheetMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
     paddingTop,
-    paddingBottom,
+    paddingBottom: 0,
     maxHeightRatio: 0.82,
     minHeight: 276,
   });
@@ -80,27 +84,20 @@ export function PlacePreviewModal({
   }
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
         onAccessibilityEscape={onClose}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
+        style={[styles.overlay, { paddingTop }]}
       >
         <InstantPressable disableFeedback accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
 
-        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: sheetBottomPadding }]}>
           <InstantPressable
             accessibilityLabel={onMinimize ? tr.common.minimize : tr.common.close}
             accessibilityRole="button"
@@ -158,7 +155,9 @@ export function PlacePreviewModal({
             keyExtractor={({ list, place }) => `${list.id}:${place.id}`}
             keyboardShouldPersistTaps="handled"
             maxToRenderPerBatch={3}
-            removeClippedSubviews={Platform.OS === 'android'}
+            // Off, as for every list here: Fabric on Android can leave rows that
+            // arrive after the first render undrawn while clipping is on.
+            removeClippedSubviews={false}
             renderItem={({ item: { place, list } }) => (
               <View style={styles.cardWrap}>
                 <PlaceCard
@@ -184,7 +183,7 @@ export function PlacePreviewModal({
           />
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

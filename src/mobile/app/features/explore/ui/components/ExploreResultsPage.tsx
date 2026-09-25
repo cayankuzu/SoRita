@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { FlatList } from 'react-native';
-import { Compass } from 'lucide-react-native';
+import { Compass, Search } from 'lucide-react-native';
 
 import type {
   PlaceList,
@@ -16,6 +16,7 @@ import {
 import type { ExploreTabType } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
+import { MosaicGridSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { VirtualizedDiscoveryGrid } from '@/mobile/app/shared/components/ui/VirtualizedDiscoveryGrid';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, fontWeight, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
@@ -35,6 +36,8 @@ type ExploreResultsPageProps = {
   following: string[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  // The first page for the current query has not arrived.
+  isLoading: boolean;
   listRef: React.Ref<FlatList<ExploreGridItem>>;
   onContentReady: () => void;
   onClearSearch: () => void;
@@ -51,6 +54,8 @@ type ExploreResultsPageProps = {
   pendingFollowRequests: string[];
   refreshing: boolean;
   searchQuery: string;
+  // One or two letters: too few to search yet.
+  searchTooShort: boolean;
   tab: ExploreTabType;
   // Room kept at the top for the header that floats over the results.
   topInset: number;
@@ -58,11 +63,31 @@ type ExploreResultsPageProps = {
 
 function ExplorePageEmptyState({
   errorMessage,
+  isLoading,
   onClearSearch,
   onRetry,
   searchQuery,
+  searchTooShort,
   tab,
-}: Pick<ExploreResultsPageProps, 'errorMessage' | 'onClearSearch' | 'onRetry' | 'searchQuery' | 'tab'>) {
+}: Pick<
+  ExploreResultsPageProps,
+  'errorMessage' | 'isLoading' | 'onClearSearch' | 'onRetry' | 'searchQuery' | 'searchTooShort' | 'tab'
+>) {
+  if (searchTooShort) {
+    return (
+      <EmptyState
+        icon={<Search color={colors.textSoft} size={iconSize.xl} />}
+        title={tr.explore.empty.keepTyping}
+        description={tr.explore.empty.keepTypingDescription}
+      />
+    );
+  }
+
+  // Still loading the query's first page: not yet "nothing found".
+  if (isLoading && !errorMessage) {
+    return <MosaicGridSkeleton rows={3} />;
+  }
+
   if (errorMessage) {
     return (
       <View style={styles.errorWrap}>
@@ -152,7 +177,6 @@ type ExploreResultCellProps = Pick<
   | 'searchQuery'
   | 'tab'
 > & {
-  compact: boolean;
   following: Set<string>;
   index: number;
   item: ExploreGridItem;
@@ -160,7 +184,6 @@ type ExploreResultCellProps = Pick<
 };
 
 const ExploreResultCell = React.memo(function ExploreResultCell({
-  compact,
   following,
   index,
   item,
@@ -191,9 +214,7 @@ const ExploreResultCell = React.memo(function ExploreResultCell({
 
     return (
       <UserGridTile
-        compact={compact}
         user={targetUser}
-        fillWidth
         isFollowing={following.has(targetUser.id)}
         isPending={pendingFollowRequests.has(targetUser.id)}
         onPress={() => onOwnerPress(targetUser.id)}
@@ -225,6 +246,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   following,
   hasNextPage,
   isFetchingNextPage,
+  isLoading,
   listRef,
   onContentReady,
   onClearSearch,
@@ -241,6 +263,7 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
   pendingFollowRequests,
   refreshing,
   searchQuery,
+  searchTooShort,
   tab,
   topInset,
 }: ExploreResultsPageProps) {
@@ -285,9 +308,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     [tab],
   );
   const renderResult = React.useCallback(
-    ({ columnCount, item, index }: { columnCount: number; item: ExploreGridItem; index: number }) => (
+    ({ item, index }: { item: ExploreGridItem; index: number }) => (
       <ExploreResultCell
-        compact={columnCount >= 3}
         following={followingSet}
         index={index}
         item={item}
@@ -320,8 +342,8 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
     <VirtualizedDiscoveryGrid<ExploreGridItem>
       listRef={listRef}
       listKey={`explore:${tab}`}
-      // People stay a list of rows; everything else is an Instagram-style grid.
-      columnStrategy={tab === 'people' ? 'discovery' : 'mosaic'}
+      // Every tab, people too, is the same three-column Instagram-style grid.
+      columnStrategy="mosaic"
       data={errorMessage ? [] : data}
       extraData={listState}
       refreshing={active && refreshing}
@@ -337,9 +359,11 @@ export const ExploreResultsPage = React.memo(function ExploreResultsPage({
       ListEmptyComponent={
         <ExplorePageEmptyState
           errorMessage={errorMessage}
+          isLoading={isLoading}
           onClearSearch={onClearSearch}
           onRetry={onRetry}
           searchQuery={searchQuery}
+          searchTooShort={searchTooShort}
           tab={tab}
         />
       }

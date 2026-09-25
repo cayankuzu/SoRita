@@ -1,17 +1,16 @@
 import { createPromptController } from '@/mobile/app/platform/media/createPromptController';
 
-export type VideoCameraCaptureOptions = {
+type VideoCameraCaptureOptions = {
   maxDurationSeconds?: number;
 };
 
-export type VideoCameraCaptureResult = {
+type VideoCameraCaptureResult = {
   durationMs: number;
   uri: string;
 };
 
 const controller = createPromptController<VideoCameraCaptureOptions, VideoCameraCaptureResult>({});
 
-export const subscribeToVideoCameraCapture = controller.subscribe;
 export const getVideoCameraCaptureSnapshot = controller.getSnapshot;
 export const useVideoCameraCaptureState = controller.useControllerState;
 export const openVideoCameraCapture = controller.open;

@@ -15,7 +15,6 @@ import { ModalScaffold } from '@/mobile/app/shared/components/feedback/ModalScaf
 import { SheetHeader } from '@/mobile/app/shared/components/feedback/SheetHeader';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -31,7 +30,7 @@ import {
   typography,
 } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
+import { normalizeSearchQuery, normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
 type ProfileConnectionsModalProps = {
   visible: boolean;
@@ -64,7 +63,7 @@ export function ProfileConnectionsModal({
 }: ProfileConnectionsModalProps) {
   const { height, width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
-  const q = normalizeSearchText(searchQuery);
+  const q = normalizeSearchQuery(searchQuery);
   const filteredUsers = useMemo(
     () => (q ? users.filter((user) => matchesUser(user, q)) : users),
     [q, users],
@@ -113,7 +112,7 @@ export function ProfileConnectionsModal({
               <AppText numberOfLines={1} style={styles.userName}>{item.name}</AppText>
               <AppText numberOfLines={1} style={styles.userUsername}>@{item.username}</AppText>
               {item.bio ? (
-                <ExpandableText text={item.bio} collapsedLines={1} textStyle={styles.userBio} />
+                <AppText numberOfLines={1} style={styles.userBio}>{item.bio}</AppText>
               ) : null}
             </View>
           </InstantPressable>

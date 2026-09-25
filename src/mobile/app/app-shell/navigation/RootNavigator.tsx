@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 import {
   DefaultTheme,
   NavigationContainer,
+  getStateFromPath,
   type InitialState,
   type LinkingOptions,
 } from '@react-navigation/native';
@@ -12,7 +13,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { MainTabs } from '@/mobile/app/app-shell/navigation/MainTabs';
 import { startAuthDeepLinkCapture } from '@/mobile/app/app-shell/auth/session/authDeepLinkUrl';
-import { buildNavigationLinkingPrefixes } from '@/mobile/app/app-shell/navigation/linkingPrefixes';
+import {
+  buildNavigationLinkingPrefixes,
+  isSafeLinkPath,
+} from '@/mobile/app/app-shell/navigation/linkingPrefixes';
 import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
 import {
   AppHeaderScreen,
@@ -65,6 +69,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       UICatalog: 'dev/ui-catalog',
     },
   },
+  getStateFromPath: (path, options) =>
+    isSafeLinkPath(path) ? getStateFromPath(path, options) : undefined,
 };
 const navigationTheme = {
   ...DefaultTheme,
@@ -104,7 +110,6 @@ function getActiveRouteName(state?: InitialState) {
 
   return routeName;
 }
-
 
 export function RootNavigator() {
   const { booted, user } = useAuth();
@@ -418,7 +423,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export const rootNavigatorInternals = {
-  getActiveRouteName,
-  getWarmupStageForRoute,
-};

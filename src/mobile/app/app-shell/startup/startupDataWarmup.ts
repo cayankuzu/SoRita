@@ -3,7 +3,6 @@ import { onlineManager } from '@tanstack/react-query';
 import { AppState } from 'react-native';
 
 import {
-  STARTUP_MEDIA_PREFETCH_LIMIT,
   type StartupWarmupStage,
   warmListDetailStage,
   warmStageData,
@@ -223,13 +222,3 @@ export async function startStartupDataWarmup({
   }
 }
 
-export const startupDataWarmupInternals = {
-  IDLE_WARMUP_DELAY_MS,
-  STARTUP_MEDIA_PREFETCH_LIMIT,
-  canRunBackgroundWarmup,
-  cancelIdleWarmup,
-  getAdjacentStartupWarmupStage,
-  getWarmupKey,
-  inFlightWarmups,
-  warmupControllers,
-};

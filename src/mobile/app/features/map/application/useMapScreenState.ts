@@ -1,59 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
-import { rootNavigationRef } from '@/mobile/app/app-shell/navigation/navigationRef';
-import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
-import {
-  useCreateListMutation,
-  useUpdateListsMutation,
-} from '@/mobile/app/data/hooks/useListMutations';
-import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import type {
   ExistingPlaceSelection,
   MapViewport,
   MarkerFilterOption,
-  MinimizedEditorState,
   MinimizedPlacePreviewState,
   PanelData,
-} from '@/mobile/app/features/map/application/mapScreenTypes';
+  PersistedMapScreenState,
+} from '@/mobile/app/contracts/mapScreenState';
+import type { PlaceList } from '@/mobile/app/data/contracts/entities';
+import { useCreateListMutation } from '@/mobile/app/data/hooks/useListMutations';
+import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import {
-  buildChangedListsForPlaceSave,
   defaultViewport,
   findExistingPlaceMatchByCoordinates,
 } from '@/mobile/app/features/map/application/mapScreenUtils';
+import { useMapEditorSession } from '@/mobile/app/features/map/application/useMapEditorSession';
 import {
   useMapMarkerModel,
   useOwnedMapPlaceIndex,
 } from '@/mobile/app/features/map/application/useMapMarkerModel';
+import { useMapPlaceSave } from '@/mobile/app/features/map/application/useMapPlaceSave';
+import { useMapScreenPersistence } from '@/mobile/app/features/map/application/useMapScreenPersistence';
 import { useMapSearchController } from '@/mobile/app/features/map/application/useMapSearchController';
 import { useMapLocation } from '@/mobile/app/features/map/application/useMapLocation';
 import { useMapScreenData } from '@/mobile/app/features/map/application/useMapScreenData';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
-import type {
-  PlaceEditorSaveOptions,
-  PlaceEditorSaveSessionConfig,
-} from '@/mobile/app/features/map/application/placeEditorSaveTypes';
 import { reverseGeocodeLocation, type GeocodingSearchResult } from '@/mobile/app/platform/api/geocoding';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
-import { logger } from '@/mobile/app/platform/feedback/logger';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import {
-  getPersistedMapScreenState,
-  savePersistedMapScreenState,
-} from '@/mobile/app/platform/storage/mapScreenState';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getMarkerAggregationKey } from '@/mobile/app/shared/utils/markerColors';
-import { isAbortError } from '@/mobile/app/shared/utils/abort';
 
 type UseMapScreenStateParams = {
   user: { id: string; name: string } | null;
-};
-
-type PendingPlaceSaveRequest = {
-  draft: PlaceEditorDraft | null;
-  placeData: Omit<Place, 'id' | 'addedAt'>;
-  sourcePlace: Place | null;
-  targetListIds: string[];
 };
 
 function createErrorWithCause(message: string, cause: unknown) {
@@ -63,23 +42,23 @@ function createErrorWithCause(message: string, cause: unknown) {
 }
 
 export function useMapScreenState({ user }: UseMapScreenStateParams) {
-  const { beginProgress } = useAppProgressBanner();
-  const hasRestoredPersistedStateRef = useRef(false);
-  const activeSaveAbortControllerRef = useRef<AbortController | null>(null);
-  const activeSaveDraftRef = useRef<PlaceEditorDraft | null>(null);
-  const activeSaveSourcePlaceRef = useRef<Place | null>(null);
-  const minimizedEditorRef = useRef<MinimizedEditorState | null>(null);
-  const pendingPlaceSaveRequestRef = useRef<PendingPlaceSaveRequest | null>(null);
-  const [editorData, setEditorData] = useState<PanelData | null>(null);
-  const [editorDraft, setEditorDraft] = useState<PlaceEditorDraft | null>(null);
-  const [isEditorInteractionLocked, setIsEditorInteractionLocked] = useState(false);
-  const [minimizedEditor, setMinimizedEditor] = useState<MinimizedEditorState | null>(null);
+  const editor = useMapEditorSession();
+  const {
+    clearEditor,
+    editorData,
+    editorDraft,
+    isEditorInteractionLocked,
+    minimizedEditor,
+    openEditor,
+    reopenMinimizedEditor,
+    restoreEditor,
+    setEditorData,
+  } = editor;
   const [minimizedExistingPlace, setMinimizedExistingPlace] = useState<MinimizedPlacePreviewState | null>(null);
   const [selectedExistingPlace, setSelectedExistingPlace] = useState<ExistingPlaceSelection | null>(null);
   const [selectedSearchResult, setSelectedSearchResult] = useState<GeocodingSearchResult | null>(null);
   const [manualViewport, setManualViewport] = useState<MapViewport | null>(null);
   const [markerFilter, setMarkerFilter] = useState<MarkerFilterOption>('all');
-  const [editorFocusTrigger, setEditorFocusTrigger] = useState(0);
   const {
     isLocating,
     locate,
@@ -91,10 +70,6 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     userViewport,
   } = useMapLocation();
 
-  useEffect(() => {
-    minimizedEditorRef.current = minimizedEditor;
-  }, [minimizedEditor]);
-
   const userId = user?.id;
   const {
     areMarkersLoading,
@@ -105,15 +80,13 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     markerError,
     markerSnapshots,
     onRefresh,
-    prepareFullData,
+    prepareFullData: prepareFullMapData,
     refreshing,
     retry: retryLists,
     visibleDataErrorMessage,
   } = useMapScreenData(userId);
   const createListMutation = useCreateListMutation();
-  const updateListsMutation = useUpdateListsMutation();
   const deletePlaceMutation = useDeletePlaceMutation();
-  const prepareFullMapData = prepareFullData;
 
   const {
     allPlaces,
@@ -121,6 +94,14 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     selectedExistingEntries,
     selectedExistingEntry,
   } = useOwnedMapPlaceIndex(lists, selectedExistingPlace);
+
+  // The editor and what is selected on the map close together: after a save
+  // or a delete, as when the reader closes the editor.
+  const clearEditorAndSelection = useCallback(() => {
+    setSelectedSearchResult(null);
+    setManualViewport(null);
+    clearEditor();
+  }, [clearEditor]);
 
   const openEditorPanel = useCallback(
     (data: PanelData) => {
@@ -131,13 +112,9 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       prepareFullMapData();
       setSelectedExistingPlace(null);
       setMinimizedExistingPlace(null);
-      setMinimizedEditor(null);
-      setEditorDraft(null);
-      setIsEditorInteractionLocked(false);
-      setEditorData(data);
-      setEditorFocusTrigger((current) => current + 1);
+      openEditor(data);
     },
-    [isEditorInteractionLocked, prepareFullMapData],
+    [isEditorInteractionLocked, openEditor, prepareFullMapData],
   );
 
   const openExistingPlacePanel = useCallback(
@@ -148,24 +125,16 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
       prepareFullMapData();
       setSelectedSearchResult(null);
-      setEditorData(null);
-      setEditorDraft(null);
-      setIsEditorInteractionLocked(false);
-      setMinimizedEditor(null);
+      clearEditor();
       setMinimizedExistingPlace(null);
-      setSelectedExistingPlace({
-        markerKey: getMarkerAggregationKey(target),
-      });
+      setSelectedExistingPlace({ markerKey: getMarkerAggregationKey(target) });
     },
-    [isEditorInteractionLocked, prepareFullMapData],
+    [clearEditor, isEditorInteractionLocked, prepareFullMapData],
   );
-
-  const resetManualViewport = useCallback(() => {
-    setManualViewport(null);
-  }, []);
 
   const {
     clearSearch,
+    handleMapCenterChange,
     handleSearchQueryChange,
     handleSearchResultPress,
     hasSearched,
@@ -188,6 +157,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   const activeEditorPanel = editorData ?? minimizedEditor?.panel ?? null;
   const {
     activeEditorMarkerIndex,
+    filterHidesEveryPin,
     interactiveMapMarkers,
     mapPlaces,
     selectedExistingMarkerColor,
@@ -226,203 +196,90 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     fullDataRequested,
   ]);
 
-  useEffect(() => {
-    if (!userId || hasRestoredPersistedStateRef.current) {
-      return;
-    }
+  const persistedState = useMemo<PersistedMapScreenState>(
+    () => ({
+      editorData,
+      editorDraft,
+      manualViewport,
+      markerFilter,
+      minimizedEditor,
+      minimizedExistingPlace,
+      selectedExistingPlace,
+      selectedSearchResult,
+      userViewport,
+    }),
+    [
+      editorData,
+      editorDraft,
+      manualViewport,
+      markerFilter,
+      minimizedEditor,
+      minimizedExistingPlace,
+      selectedExistingPlace,
+      selectedSearchResult,
+      userViewport,
+    ],
+  );
+  const restorePersistedState = useCallback(
+    (persisted: PersistedMapScreenState) => {
+      restoreEditor(persisted);
+      setManualViewport(persisted.manualViewport);
+      setMarkerFilter(persisted.markerFilter);
+      setMinimizedExistingPlace(persisted.minimizedExistingPlace);
+      setSelectedExistingPlace(persisted.selectedExistingPlace);
+      setSelectedSearchResult(persisted.selectedSearchResult);
 
-    let active = true;
-
-    void getPersistedMapScreenState(userId)
-      .then((persistedState) => {
-        if (!active || !persistedState) {
-          hasRestoredPersistedStateRef.current = true;
-          return;
-        }
-
-        setEditorData(persistedState.editorData);
-        setEditorDraft(persistedState.editorDraft);
-        setManualViewport(persistedState.manualViewport);
-        setMarkerFilter(persistedState.markerFilter);
-        setMinimizedEditor(persistedState.minimizedEditor);
-        setMinimizedExistingPlace(persistedState.minimizedExistingPlace);
-        setSelectedExistingPlace(persistedState.selectedExistingPlace);
-        setSelectedSearchResult(persistedState.selectedSearchResult);
-
-        if (!userViewport && persistedState.userViewport) {
-          setUserViewport(persistedState.userViewport);
-        }
-
-        hasRestoredPersistedStateRef.current = true;
-      })
-      .catch((error) => {
-        logger.warn('map', 'Failed to restore persisted map screen state', error);
-        hasRestoredPersistedStateRef.current = true;
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [setUserViewport, userId, userViewport]);
-
-  useEffect(() => {
-    if (!userId || !hasRestoredPersistedStateRef.current) {
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      void savePersistedMapScreenState(userId, {
-        editorData,
-        editorDraft,
-        manualViewport,
-        markerFilter,
-        minimizedEditor,
-        minimizedExistingPlace,
-        selectedExistingPlace,
-        selectedSearchResult,
-        userViewport,
-      }).catch((error) => {
-        logger.warn('map', 'Failed to persist map screen state', error);
-      });
-    }, 180);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [
-    editorData,
-    editorDraft,
-    manualViewport,
-    markerFilter,
-    minimizedEditor,
-    minimizedExistingPlace,
-    selectedExistingPlace,
-    selectedSearchResult,
-    userId,
-    userViewport,
-  ]);
-
-  const updateEditorData = useCallback((updater: (current: PanelData | null) => PanelData | null) => {
-    setEditorData((current) => updater(current));
-  }, []);
-
-  const openPendingSaveTarget = useCallback(() => {
-    if (rootNavigationRef.isReady()) {
-      rootNavigationRef.navigate('MainTabs', { screen: 'Map' });
-    }
-
-    const nextMinimizedEditor = minimizedEditorRef.current;
-
-    if (!nextMinimizedEditor) {
-      return;
-    }
-
-    setEditorData(nextMinimizedEditor.panel);
-    setMinimizedEditor(null);
-    setEditorFocusTrigger((current) => current + 1);
-  }, []);
-
-  const cancelActiveSave = useCallback(() => {
-    activeSaveAbortControllerRef.current?.abort();
-    activeSaveAbortControllerRef.current = null;
-    pendingPlaceSaveRequestRef.current = null;
-    setIsEditorInteractionLocked(false);
-  }, []);
-
-  const performPlaceSave = useCallback(
-    async (
-      request: PendingPlaceSaveRequest,
-      options?: PlaceEditorSaveOptions,
-    ) => {
-      if (!user) {
-        return;
-      }
-
-      const selectedListIds = Array.from(new Set(request.targetListIds));
-      const changedLists = buildChangedListsForPlaceSave({
-        lists,
-        selectedListIds,
-        sourcePlace: request.sourcePlace,
-        placeData: request.placeData,
-        user,
-      });
-
-      pendingPlaceSaveRequestRef.current = request;
-
-      try {
-        await updateListsMutation.mutateAsync({
-          abortSignal: options?.abortSignal,
-          lists: changedLists,
-          onProgress: options?.onProgress,
-          previousLists: lists,
-        });
-        setSelectedSearchResult(null);
-        setManualViewport(null);
-        setEditorData(null);
-        setEditorDraft(null);
-        setIsEditorInteractionLocked(false);
-        setMinimizedEditor(null);
-        activeSaveAbortControllerRef.current = null;
-        activeSaveDraftRef.current = null;
-        activeSaveSourcePlaceRef.current = null;
-        pendingPlaceSaveRequestRef.current = null;
-        showToast(tr.map.placeSaved, 'success');
-      } catch (error) {
-        setIsEditorInteractionLocked(false);
-        activeSaveAbortControllerRef.current = null;
-
-        if (isAbortError(error)) {
-          throw error;
-        }
-
-        throw error;
+      if (!userViewport && persisted.userViewport) {
+        setUserViewport(persisted.userViewport);
       }
     },
-    [lists, updateListsMutation, user],
+    [restoreEditor, setUserViewport, userViewport],
+  );
+  useMapScreenPersistence({ restore: restorePersistedState, state: persistedState, userId });
+
+  const { beginEditorSave, handleSavePlace } = useMapPlaceSave({
+    editor,
+    lists,
+    onSaved: clearEditorAndSelection,
+    user,
+  });
+
+  // The address (and, for a point of interest, the name) of a tapped point;
+  // the device geocoder answers when the service has no address.
+  const lookUpPoint = useCallback(
+    async (lat: number, lng: number) => {
+      let name: string | undefined;
+      let address: string | undefined;
+
+      try {
+        const reverseResult = await reverseGeocodeLocation(lat, lng);
+        name = reverseResult.isPointOfInterest ? reverseResult.name : undefined;
+        address = reverseResult.address;
+      } catch {
+        // The device geocoder below still gives an address.
+      }
+
+      return { address: address || (await resolveAddress(lat, lng)), name };
+    },
+    [resolveAddress],
   );
 
-  const retryPendingSave = useCallback(() => {
-    const pendingRequest = pendingPlaceSaveRequestRef.current;
-
-    if (!pendingRequest) {
-      return;
-    }
-
-    const abortController = new AbortController();
-    activeSaveAbortControllerRef.current = abortController;
-    setIsEditorInteractionLocked(true);
-
-    const progressSession = beginProgress({
-      detail: tr.placeEditor.saveProgressLists(
-        new Set(pendingRequest.targetListIds).size,
-      ),
-      onCancel: cancelActiveSave,
-      onOpen: openPendingSaveTarget,
-    });
-
-    void performPlaceSave(pendingRequest, {
-      abortSignal: abortController.signal,
-      onProgress: progressSession.setProgress,
-    })
-      .then(() => {
-        progressSession.complete();
-      })
-      .catch((error) => {
-        if (isAbortError(error)) {
-          return;
-        }
-
-        progressSession.fail({
-          onCancel: cancelActiveSave,
-          onOpen: openPendingSaveTarget,
-          onRetry: retryPendingSave,
-        });
-        showToast(getUserFacingErrorMessage(error, tr.map.savePlaceUnexpected), 'error');
-      })
-      .finally(() => {
-        progressSession.end();
-      });
-  }, [beginProgress, cancelActiveSave, openPendingSaveTarget, performPlaceSave]);
+  // Fills in the editor once the point's details arrive, unless the reader
+  // has moved on to another point.
+  const fillEditorPoint = useCallback(
+    (lat: number, lng: number, details: { address?: string; name?: string }) => {
+      setEditorData((current) =>
+        !current || current.lat !== lat || current.lng !== lng
+          ? current
+          : {
+              ...current,
+              name: details.name,
+              address: details.address || tr.map.addressUnavailable,
+            },
+      );
+    },
+    [setEditorData],
+  );
 
   const handleMapPress = useCallback(
     async ({ lat, lng }: { lat: number; lng: number }) => {
@@ -431,43 +288,10 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       }
 
       setSelectedSearchResult(null);
-
-      openEditorPanel({
-        lat,
-        lng,
-        name: undefined,
-        address: tr.map.resolvingAddress,
-      });
-
-      let resolvedName: string | undefined;
-      let resolvedAddress: string | undefined;
-
-      try {
-        const reverseResult = await reverseGeocodeLocation(lat, lng);
-        resolvedName = reverseResult.isPointOfInterest ? reverseResult.name : undefined;
-        resolvedAddress = reverseResult.address;
-      } catch {
-        resolvedName = undefined;
-        resolvedAddress = undefined;
-      }
-
-      if (!resolvedAddress) {
-        resolvedAddress = await resolveAddress(lat, lng);
-      }
-
-      setEditorData((current) => {
-        if (!current || current.lat !== lat || current.lng !== lng) {
-          return current;
-        }
-
-        return {
-          ...current,
-          name: resolvedName,
-          address: resolvedAddress || tr.map.addressUnavailable,
-        };
-      });
+      openEditorPanel({ lat, lng, name: undefined, address: tr.map.resolvingAddress });
+      fillEditorPoint(lat, lng, await lookUpPoint(lat, lng));
     },
-    [isEditorInteractionLocked, openEditorPanel, resolveAddress],
+    [fillEditorPoint, isEditorInteractionLocked, lookUpPoint, openEditorPanel],
   );
 
   const handlePoiPress = useCallback(
@@ -484,154 +308,38 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       }
 
       setSelectedSearchResult(null);
-      setManualViewport({
-        latitude: lat,
-        longitude: lng,
-        zoom: 15,
-      });
-      openEditorPanel({
-        lat,
-        lng,
-        name,
-        address: tr.map.resolvingAddress,
-      });
-
-      let resolvedAddress: string | undefined;
-
-      try {
-        const reverseResult = await reverseGeocodeLocation(lat, lng);
-        resolvedAddress = reverseResult.address;
-      } catch {
-        resolvedAddress = undefined;
-      }
-
-      if (!resolvedAddress) {
-        resolvedAddress = await resolveAddress(lat, lng);
-      }
-
-      updateEditorData((current) => {
-        if (!current || current.lat !== lat || current.lng !== lng) {
-          return current;
-        }
-
-        return {
-          ...current,
-          name: name || current.name,
-          address: resolvedAddress || tr.map.addressUnavailable,
-        };
-      });
+      setManualViewport({ latitude: lat, longitude: lng, zoom: 15 });
+      openEditorPanel({ lat, lng, name, address: tr.map.resolvingAddress });
+      const { address } = await lookUpPoint(lat, lng);
+      fillEditorPoint(lat, lng, { address, name });
     },
     [
       allPlaces,
+      fillEditorPoint,
       isEditorInteractionLocked,
+      lookUpPoint,
       openEditorPanel,
       openExistingPlacePanel,
-      resolveAddress,
-      updateEditorData,
     ],
-  );
-
-  const beginEditorSave = useCallback(
-    (draft: PlaceEditorDraft): PlaceEditorSaveSessionConfig => {
-      if (!editorData) {
-        return {
-          onBannerCancel: cancelActiveSave,
-          onBannerOpen: openPendingSaveTarget,
-          onBannerRetry: retryPendingSave,
-        };
-      }
-
-      const abortController = new AbortController();
-      activeSaveAbortControllerRef.current = abortController;
-      activeSaveDraftRef.current = draft;
-      activeSaveSourcePlaceRef.current = editorData.existingPlace || null;
-      pendingPlaceSaveRequestRef.current = null;
-      setEditorDraft(draft);
-      setMinimizedEditor({ panel: editorData, draft });
-      setEditorData(null);
-      setIsEditorInteractionLocked(true);
-      setEditorFocusTrigger((current) => current + 1);
-
-      return {
-        abortSignal: abortController.signal,
-        onBannerCancel: cancelActiveSave,
-        onBannerOpen: openPendingSaveTarget,
-        onBannerRetry: retryPendingSave,
-      };
-    },
-    [cancelActiveSave, editorData, openPendingSaveTarget, retryPendingSave],
-  );
-
-  const unlockEditorAfterSaveFailure = useCallback((draft?: PlaceEditorDraft) => {
-    setIsEditorInteractionLocked(false);
-
-    if (!draft) {
-      return;
-    }
-
-    setEditorDraft(draft);
-    if (editorData) {
-      return;
-    }
-
-    const panel = minimizedEditor?.panel;
-
-    if (!panel) {
-      return;
-    }
-
-    setMinimizedEditor({
-      panel,
-      draft,
-    });
-  }, [editorData, minimizedEditor]);
-
-  const handleSavePlace = useCallback(
-    async (
-      placeData: Omit<Place, 'id' | 'addedAt'>,
-      targetListIds: string[],
-      options?: PlaceEditorSaveOptions,
-    ) => {
-      await performPlaceSave(
-        {
-          draft: activeSaveDraftRef.current,
-          placeData,
-          sourcePlace: activeSaveSourcePlaceRef.current,
-          targetListIds,
-        },
-        options,
-      );
-    },
-    [performPlaceSave],
   );
 
   const handleDeletePlace = useCallback(async (placeId: string) => {
     try {
       await deletePlaceMutation.mutateAsync(placeId);
-      setSelectedSearchResult(null);
-      setManualViewport(null);
-      setEditorData(null);
-      setEditorDraft(null);
-      setIsEditorInteractionLocked(false);
-      setMinimizedEditor(null);
+      clearEditorAndSelection();
       showToast(tr.map.placeDeleted, 'success');
     } catch (error) {
-      const message = getUserFacingErrorMessage(
-        error,
-        tr.map.deletePlaceUnexpected,
-      );
+      const message = getUserFacingErrorMessage(error, tr.map.deletePlaceUnexpected);
       showToast(message, 'error');
       throw createErrorWithCause(message, error);
     }
-  }, [deletePlaceMutation]);
+  }, [clearEditorAndSelection, deletePlaceMutation]);
 
   const handleMarkerPress = useCallback(
     (index: number) => {
       prepareFullMapData();
       if (activeEditorMarkerIndex != null && index === activeEditorMarkerIndex && minimizedEditor) {
-        setEditorData(minimizedEditor.panel);
-        setMinimizedEditor(null);
-        setEditorFocusTrigger((current) => current + 1);
+        reopenMinimizedEditor();
         return;
       }
 
@@ -656,31 +364,24 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
 
       const targetMarker = interactiveMapMarkers[index];
 
-      if (!targetMarker) {
-        return;
-      }
-
-      if (targetMarker.markerKind !== 'saved' || !targetMarker.targetLocationKey) {
+      if (targetMarker?.markerKind !== 'saved' || !targetMarker.targetLocationKey) {
         return;
       }
 
       setSelectedSearchResult(null);
-      setEditorData(null);
-      setEditorDraft(null);
-      setIsEditorInteractionLocked(false);
-      setMinimizedEditor(null);
+      clearEditor();
       setMinimizedExistingPlace(null);
-      setSelectedExistingPlace({
-        markerKey: targetMarker.targetLocationKey,
-      });
+      setSelectedExistingPlace({ markerKey: targetMarker.targetLocationKey });
     },
     [
       activeEditorMarkerIndex,
+      clearEditor,
       interactiveMapMarkers,
+      isEditorInteractionLocked,
       minimizedEditor,
       openEditorPanel,
       prepareFullMapData,
-      isEditorInteractionLocked,
+      reopenMinimizedEditor,
       selectedSearchMarkerIndex,
       selectedSearchResult,
     ],
@@ -700,38 +401,9 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
       return;
     }
 
-    setSelectedSearchResult(null);
-    resetManualViewport();
-    setEditorData(null);
-    setEditorDraft(null);
-    setIsEditorInteractionLocked(false);
-    setMinimizedEditor(null);
+    clearEditorAndSelection();
     setMinimizedExistingPlace(null);
-  }, [isEditorInteractionLocked, resetManualViewport]);
-
-  const minimizeEditor = useCallback(
-    (draft: PlaceEditorDraft) => {
-      if (!editorData) {
-        return;
-      }
-
-      setEditorDraft(draft);
-      setMinimizedEditor({ panel: editorData, draft });
-      setEditorData(null);
-      setEditorFocusTrigger((current) => current + 1);
-    },
-    [editorData],
-  );
-
-  const reopenMinimizedEditor = useCallback(() => {
-    if (!minimizedEditor) {
-      return;
-    }
-
-    setEditorData(minimizedEditor.panel);
-    setMinimizedEditor(null);
-    setEditorFocusTrigger((current) => current + 1);
-  }, [minimizedEditor]);
+  }, [clearEditorAndSelection, isEditorInteractionLocked]);
 
   const minimizeSelectedExistingPlace = useCallback(() => {
     if (!selectedExistingPlace) {
@@ -792,6 +464,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     activeEditorMarkerIndex,
     activeEditorPanel,
     clearSearch,
+    handleMapCenterChange,
     closeEditor,
     closeSelectedExistingPlace: () => {
       setSelectedExistingPlace(null);
@@ -801,7 +474,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     createList,
     editorData,
     editorDraft,
-    editorFocusTrigger,
+    editorFocusTrigger: editor.editorFocusTrigger,
     effectiveViewport,
     beginEditorSave,
     handleDeletePlace,
@@ -812,6 +485,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     handleSavePlace,
     handleSearchQueryChange,
     handleSearchResultPress,
+    filterHidesEveryPin,
     hasMapDataPartialError:
       hasVisibleDataPartialError ||
       Boolean(markerError && mapPlaces.length > 0),
@@ -829,7 +503,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     mapPlaces,
     minimizedEditor,
     minimizedExistingPlace,
-    minimizeEditor,
+    minimizeEditor: editor.minimizeEditor,
     minimizeSelectedExistingPlace,
     onRefresh,
     refreshing,
@@ -838,7 +512,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     retryLists,
     retryLocation: handleLocateUser,
     setMarkerFilter: handleMarkerFilterChange,
-    unlockEditorAfterSaveFailure,
+    unlockEditorAfterSaveFailure: editor.unlockEditorAfterSaveFailure,
     runSearch,
     searchErrorMessage,
     searchFocusTrigger,

@@ -34,6 +34,7 @@ vi.mock('@/mobile/app/app-shell/chrome/AppHeader', () => ({
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: (props: Record<string, unknown>) => React.createElement('SafeAreaView', props),
   useSafeAreaInsets: () => ({ bottom: 0, left: 0, right: 0, top: 0 }),
+  initialWindowMetrics: null,
 }));
 
 vi.mock('@/mobile/app/app-shell/auth/AuthSessionProvider', () => ({

@@ -122,42 +122,42 @@ describe('usePlaceEditorState', () => {
     });
 
     await act(async () => {
-      await hook.result.current.handleAddPhoto();
+      await hook.result.current.handleAddMedia();
     });
 
     await act(async () => {
-      await hook.result.current.handleAddPhoto();
+      await hook.result.current.handleAddMedia();
       await hook.result.current.handlePickListCover();
     });
 
-    expect(hook.result.current.photos).toEqual(['file://photo-1.jpg', 'file://photo-2.jpg']);
+    expect(hook.result.current.media.map((item) => item.url)).toEqual(['file://photo-1.jpg', 'file://photo-2.jpg']);
     expect(hook.result.current.newListCoverImage).toBe('file://cover.jpg');
-    expect(hook.result.current.selectedPhotoIndex).toBeNull();
+    expect(hook.result.current.selectedMediaIndex).toBeNull();
 
     act(() => {
-      hook.result.current.handlePhotoPress(0);
+      hook.result.current.handleMediaPress(0);
     });
 
-    expect(hook.result.current.selectedPhotoIndex).toBe(0);
+    expect(hook.result.current.selectedMediaIndex).toBe(0);
 
     act(() => {
-      hook.result.current.handlePhotoPress(0);
+      hook.result.current.handleMediaPress(0);
     });
 
-    expect(hook.result.current.selectedPhotoIndex).toBeNull();
+    expect(hook.result.current.selectedMediaIndex).toBeNull();
 
     act(() => {
-      hook.result.current.handlePhotoPress(0);
+      hook.result.current.handleMediaPress(0);
     });
 
-    expect(hook.result.current.selectedPhotoIndex).toBe(0);
+    expect(hook.result.current.selectedMediaIndex).toBe(0);
 
     act(() => {
-      hook.result.current.handlePhotoPress(1);
+      hook.result.current.handleMediaPress(1);
     });
 
-    expect(hook.result.current.selectedPhotoIndex).toBeNull();
-    expect(hook.result.current.photos).toEqual(['file://photo-2.jpg', 'file://photo-1.jpg']);
+    expect(hook.result.current.selectedMediaIndex).toBeNull();
+    expect(hook.result.current.media.map((item) => item.url)).toEqual(['file://photo-2.jpg', 'file://photo-1.jpg']);
 
     act(() => {
       hook.result.current.setShowNewListForm(true);
@@ -623,7 +623,7 @@ describe('usePlaceEditorState', () => {
     );
 
     await act(async () => {
-      await hook.result.current.handleAddPhoto();
+      await hook.result.current.handleAddMedia();
     });
 
     act(() => {
@@ -736,16 +736,16 @@ describe('usePlaceEditorState', () => {
     const hook = renderHook(() => hooks.usePlaceEditorState(params));
 
     await act(async () => {
-      await hook.result.current.handleAddPhoto();
+      await hook.result.current.handleAddMedia();
     });
 
-    expect(hook.result.current.photos).toEqual(['file://photo-1.jpg']);
+    expect(hook.result.current.media.map((item) => item.url)).toEqual(['file://photo-1.jpg']);
     expect(hook.result.current.address).toBe('Adres cozuluyor...');
 
     params.placeAddress = 'Marmara Universitesi, Istanbul';
     hook.rerender();
 
-    expect(hook.result.current.photos).toEqual(['file://photo-1.jpg']);
+    expect(hook.result.current.media.map((item) => item.url)).toEqual(['file://photo-1.jpg']);
     expect(hook.result.current.address).toBe('Marmara Universitesi, Istanbul');
 
     act(() => {
@@ -755,7 +755,7 @@ describe('usePlaceEditorState', () => {
     params.placeAddress = 'Guncel ama kullaniciya yazdirilmamali';
     hook.rerender();
 
-    expect(hook.result.current.photos).toEqual(['file://photo-1.jpg']);
+    expect(hook.result.current.media.map((item) => item.url)).toEqual(['file://photo-1.jpg']);
     expect(hook.result.current.address).toBe('Kullanici tarafindan duzenlenen adres');
 
     hook.unmount();
@@ -851,7 +851,7 @@ describe('usePlaceEditorState', () => {
     hook.unmount();
   });
 
-  it('enforces media composition limits and supports edit, remove, reorder, and video thumbnails', async () => {
+  it('enforces media composition limits and supports remove and reorder', async () => {
     const hooks = await import('@/mobile/app/features/map/application/usePlaceEditorState');
     const lists: PlaceList[] = [];
     const onSave = vi.fn();
@@ -896,33 +896,7 @@ describe('usePlaceEditorState', () => {
       hook.result.current.handleRemoveMedia(-1);
     });
     expect(hook.result.current.selectedMediaIndex).toBeNull();
-
-    pickPlaceMediaFromPromptMock.mockResolvedValueOnce({
-      items: [{ type: 'video', url: 'file://v1.mp4' }], rejectedVideoCount: 0, rejectedOversizeCount: 0,
-    });
-    await act(async () => {
-      await hook.result.current.handleEditMedia(0);
-    });
-    expect(hook.result.current.editingVideoThumbnailIndex).toBe(0);
-    act(() => {
-      hook.result.current.openVideoThumbnailEditor(-1);
-      hook.result.current.openVideoThumbnailEditor(1);
-      hook.result.current.openVideoThumbnailEditor(0);
-      hook.result.current.applyVideoThumbnail({ thumbnailTimeMs: 2500, thumbnailUrl: '' });
-    });
-    expect(hook.result.current.media[0]).toMatchObject({
-      type: 'video', thumbnailTimeMs: 2500, thumbnailUrl: undefined,
-    });
-    expect(hook.result.current.editingVideoThumbnailIndex).toBeNull();
-
-    pickPlaceMediaFromPromptMock.mockResolvedValueOnce({
-      items: [], rejectedVideoCount: 1, rejectedOversizeCount: 0,
-    });
-    await act(async () => {
-      await hook.result.current.handleEditMedia(0);
-    });
-    expect(showToastMock).toHaveBeenCalled();
-    act(() => hook.result.current.closeVideoThumbnailEditor());
+    expect(hook.result.current.media).toHaveLength(4);
     hook.unmount();
   });
 
@@ -985,43 +959,32 @@ describe('usePlaceEditorState', () => {
     hook.unmount();
   });
 
-  it('enforces media quotas and replacement bounds at the pure editor boundary', async () => {
-    const { placeEditorInternals } = await import(
-      '@/mobile/app/features/map/application/usePlaceEditorState'
+  it('enforces media quotas at the pure editor boundary', async () => {
+    const { appendPlaceMediaWithinLimits } = await import(
+      '@/mobile/app/features/map/application/usePlaceEditorMediaController'
+    );
+    const { getErrorMessage, sanitizeNumericInput } = await import(
+      '@/mobile/app/features/map/application/placeEditorStateUtils'
     );
     const photos = Array.from({ length: 6 }, (_, index) => ({
       type: 'photo' as const, url: `file://photo-${index}.jpg`,
     }));
     const video = { type: 'video' as const, url: 'file://video.mp4' };
 
-    expect(placeEditorInternals.appendPlaceMediaWithinLimits(photos, [
+    expect(appendPlaceMediaWithinLimits(photos, [
       { type: 'photo', url: 'file://overflow.jpg' },
     ])).toMatchObject({ issues: { rejectedPhotos: 1 }, nextMedia: photos });
     const secondVideo = { type: 'video' as const, url: 'file://second-current.mp4' };
-    expect(placeEditorInternals.appendPlaceMediaWithinLimits([video, secondVideo], [
+    expect(appendPlaceMediaWithinLimits([video, secondVideo], [
       { type: 'video', url: 'file://second.mp4' },
     ])).toMatchObject({ issues: { rejectedVideos: 1 }, nextMedia: [video, secondVideo] });
-    expect(placeEditorInternals.appendPlaceMediaWithinLimits([...photos.slice(0, 5), video], [
+    expect(appendPlaceMediaWithinLimits([...photos.slice(0, 5), video], [
       { type: 'photo', url: 'file://total-overflow.jpg' },
     ])).toMatchObject({ issues: { rejectedTotal: 1 } });
 
-    expect(placeEditorInternals.replacePlaceMediaWithinLimits(photos, -1, video)).toMatchObject({
-      replaced: false, nextMedia: photos,
-    });
-    expect(placeEditorInternals.replacePlaceMediaWithinLimits(photos, 9, video)).toMatchObject({
-      replaced: false,
-    });
-    expect(placeEditorInternals.replacePlaceMediaWithinLimits(
-      [video, secondVideo, photos[0]!], 2, { type: 'video', url: 'file://replacement.mp4' },
-    )).toMatchObject({ replaced: false, issues: { rejectedVideos: 1 } });
-    expect(placeEditorInternals.replacePlaceMediaWithinLimits(
-      photos, 4, { type: 'video', url: 'file://replacement.mp4' },
-    )).toMatchObject({ replaced: true, nextMedia: [
-      ...photos.slice(0, 4), { type: 'video', url: 'file://replacement.mp4' }, photos[5],
-    ] });
-    expect(placeEditorInternals.sanitizeNumericInput('12a-3')).toBe('123');
-    expect(placeEditorInternals.getErrorMessage(new Error('specific'), 'fallback')).toBe('specific');
-    expect(placeEditorInternals.getErrorMessage(new Error('  '), 'fallback')).toBe('fallback');
-    expect(placeEditorInternals.getErrorMessage('failure', 'fallback')).toBe('fallback');
+    expect(sanitizeNumericInput('12a-3')).toBe('123');
+    expect(getErrorMessage(new Error('specific'), 'fallback')).toBe('specific');
+    expect(getErrorMessage(new Error('  '), 'fallback')).toBe('fallback');
+    expect(getErrorMessage('failure', 'fallback')).toBe('fallback');
   });
 });

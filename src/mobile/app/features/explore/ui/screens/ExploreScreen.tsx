@@ -8,6 +8,7 @@ import {
   openStackScreen,
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
+import { useExploreFollowToggle } from '@/mobile/app/features/explore/application/useExploreFollowToggle';
 import { useExploreScreenState } from '@/mobile/app/features/explore/application/useExploreScreenState';
 import {
   warmListDetailData,
@@ -25,7 +26,7 @@ import type {
   ExploreFeedMode,
   ExploreTabType,
 } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
-import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { UnfollowConfirmModal } from '@/mobile/app/shared/components/feedback/UnfollowConfirmModal';
 import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { SwipeableTabPager } from '@/mobile/app/shared/components/navigation/SwipeableTabPager';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
@@ -34,6 +35,7 @@ import {
   MosaicGridSkeleton,
 } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useTabReselect } from '@/mobile/app/shared/hooks/useTabReselect';
 import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 import { useTabScrollMemory } from '@/mobile/app/shared/hooks/useTabScrollMemory';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -54,6 +56,7 @@ type ExploreBrowseHeaderProps = {
   onSearchQueryChange: (value: string) => void;
   onTabChange: (tab: ExploreTabType) => void;
   resultCount?: number;
+  resultsHidden: boolean;
   resultsPending: boolean;
   resultsPreviewing: boolean;
   screenPadding: number;
@@ -67,6 +70,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
   onSearchQueryChange,
   onTabChange,
   resultCount,
+  resultsHidden,
   resultsPending,
   resultsPreviewing,
   screenPadding,
@@ -78,6 +82,7 @@ const ExploreBrowseHeader = React.memo(function ExploreBrowseHeader({
       <ExploreHeaderControls
         activeTab={activeTab}
         resultCount={resultCount}
+        resultsHidden={resultsHidden}
         resultsPending={resultsPending}
         resultsPreviewing={resultsPreviewing}
         searchQuery={searchQuery}
@@ -139,6 +144,7 @@ export function ExploreScreen() {
     queryStateByTab,
     refreshing,
     retry,
+    searchTooShort,
     onRefresh,
   } = useExploreScreenState({
     activeTab,
@@ -157,6 +163,7 @@ export function ExploreScreen() {
     screen: 'explore',
   });
   useScrollToTop(activeListRef as React.RefObject<FlatList>);
+  useTabReselect(Boolean(feedMode), () => setFeedMode(null));
   useEffect(() => {
     activeListRef.current = getTabScrollRef(activeTab) as FlatList<ExploreGridItem> | null;
     restoreTabScrollOffset(activeTab);
@@ -203,27 +210,8 @@ export function ExploreScreen() {
     void retry();
   }, [retry]);
 
-  const handleFollowUser = useCallback(
-    async (targetUserId: string) => {
-      try {
-        const result = await followUser(targetUserId);
-        showToast(
-          result === 'requested'
-            ? tr.explore.toast.followRequestSent
-            : result === 'following'
-              ? tr.explore.toast.userFollowed
-              : tr.explore.toast.followUpdated,
-          'success',
-        );
-      } catch (error) {
-        showToast(
-          error instanceof Error ? error.message : tr.profile.toast.followFailed,
-          'error',
-        );
-      }
-    },
-    [followUser],
-  );
+  const { cancelUnfollow, confirmUnfollow, requestFollowToggle, unfollowTarget } =
+    useExploreFollowToggle({ followUser, following, people: filteredUsers });
   const openUserProfile = useCallback(
     (userId: string) => {
       openStackScreen(navigation, 'UserProfile', { userId });
@@ -320,7 +308,12 @@ export function ExploreScreen() {
               // a swipe was in flight it used to vanish, the header lost a line,
               // and the whole pager jumped up and back down.
               resultCount={dataByTab[visibleTab].length}
-              resultsPending={searchQuery.trim() !== debouncedSearchQuery.trim()}
+              resultsHidden={searchTooShort}
+              // Typing, or the tab's first page still loading: not yet a count.
+              resultsPending={
+                searchQuery.trim() !== debouncedSearchQuery.trim() ||
+                queryStateByTab[visibleTab].isLoading
+              }
               resultsPreviewing={visibleTab !== activeTab}
               screenPadding={screenPadding}
               searchQuery={searchQuery}
@@ -352,11 +345,12 @@ export function ExploreScreen() {
                     following={following}
                     hasNextPage={tabQuery.hasNextPage}
                     isFetchingNextPage={tabQuery.isFetchingNextPage}
+                    isLoading={tabQuery.isLoading}
                     listRef={getTabScrollRefCallback(tab)}
                     onContentReady={() => notifyTabContentReady(tab)}
                     onClearSearch={() => setSearchQuery('')}
                     onEndReached={() => handleEndReached(tab)}
-                    onFollowUser={handleFollowUser}
+                    onFollowUser={requestFollowToggle}
                     onListIntent={warmListIntent}
                     onListPress={openListDetail}
                     onOwnerIntent={warmOwnerIntent}
@@ -378,6 +372,7 @@ export function ExploreScreen() {
                     pendingFollowRequests={pendingFollowRequests}
                     refreshing={refreshing}
                     searchQuery={debouncedSearchQuery}
+                  searchTooShort={searchTooShort}
                     tab={tab}
                     topInset={browseHeader.height}
                   />
@@ -385,6 +380,11 @@ export function ExploreScreen() {
               }}
             />
           }
+        />
+        <UnfollowConfirmModal
+          target={unfollowTarget}
+          onClose={cancelUnfollow}
+          onConfirm={confirmUnfollow}
         />
       </Screen>
     </OverlayHost>

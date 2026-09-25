@@ -271,7 +271,7 @@ describe('useExploreScreenState', () => {
     expect(hook.result.current.filteredUsers).toHaveLength(1);
   });
 
-  it('hydrates every read-model tab, filters duplicates, and exposes per-tab pagination', async () => {
+  it('hydrates every read-model tab, drops duplicates, keeps the viewer own content in a search, and exposes per-tab pagination', async () => {
     const viewer = {
       id: 'viewer', email: 'viewer@example.com', name: 'Viewer', username: 'viewer',
     };
@@ -401,10 +401,13 @@ describe('useExploreScreenState', () => {
       }),
     );
 
-    expect(listHook.result.current.filteredListItems.map((item) => item.list.id)).toEqual(['list-1']);
+    // A search keeps the server's order and finds the viewer's own list too.
+    expect(listHook.result.current.filteredListItems.map((item) => item.list.id)).toEqual([
+      'list-1', 'viewer-list',
+    ]);
     expect(listHook.result.current.fetchNextPage).toBe(fetchers.lists);
     expect(listHook.result.current.hasNextPage).toBe(true);
-    expect(placeHook.result.current.filteredPlaces).toHaveLength(1);
+    expect(placeHook.result.current.filteredPlaces.map((item) => item.key)).toEqual(['place-key', 'own-place']);
     expect(placeHook.result.current.filteredPlaces[0]?.sortTime).toBe(5);
     expect(placeHook.result.current.isFetchingNextPage).toBe(true);
     expect(photoHook.result.current.filteredPhotos.map((item) => item.key)).toEqual(['photo-key']);
@@ -413,7 +416,7 @@ describe('useExploreScreenState', () => {
       otherOwner.id, owner.id,
     ]);
     expect(peopleHook.result.current.isInitialLoading).toBe(false);
-    expect(invalidTabHook.result.current.filteredListItems).toHaveLength(1);
+    expect(invalidTabHook.result.current.filteredListItems).toHaveLength(2);
     expect(listHook.result.current.refreshing).toBe(true);
     expect(listHook.result.current.hasPartialDataError).toBe(false);
   });

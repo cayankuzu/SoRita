@@ -63,12 +63,9 @@ export function ListDetailPlacesSection({
           </View>
           <View style={styles.ownerBody}>
             <AppText style={styles.ownerEyebrow}>{tr.listDetail.ownerLabel}</AppText>
-            <ExpandableText
-              text={owner.name}
-              collapsedLines={1}
-              textStyle={styles.ownerName}
-              showIndicator={false}
-            />
+            <AppText numberOfLines={1} style={styles.ownerName}>
+              {owner.name}
+            </AppText>
             <AppText numberOfLines={1} style={styles.ownerUsername}>
               @{owner.username}
             </AppText>
@@ -94,10 +91,7 @@ export function ListDetailPlacesSection({
       {displayPlaces.length > 0 ? (
         <View style={styles.mapSection}>
           <View style={styles.mapCardHeader}>
-            <View>
-              <AppText style={styles.mapCardEyebrow}>{tr.cards.map}</AppText>
-              <AppText accessibilityRole="header" style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</AppText>
-            </View>
+            <AppText accessibilityRole="header" style={styles.mapCardTitle}>{tr.cards.map}</AppText>
           </View>
 
           <View style={styles.mapFrame}>
@@ -116,7 +110,11 @@ export function ListDetailPlacesSection({
             />
             {isMapInteractive ? (
               <>
-                <MiniMapInteractionHint visible={showInteractionHint} />
+                <MiniMapInteractionHint
+                  // This map locks with its Done button; it has no Focus button.
+                  description={tr.listDetail.mapInteractiveHint}
+                  visible={showInteractionHint}
+                />
                 <InstantPressable
                   accessibilityLabel={tr.listDetail.mapDone}
                   accessibilityRole="button"
@@ -145,10 +143,10 @@ export function ListDetailPlacesSection({
 
       {displayPlaces.length > 0 ? (
         <View style={styles.sectionHeader}>
+          {/* The count is in the title bar and the map's own line says what
+              a pin does, so the section is named once. */}
           <View style={styles.sectionHeaderCopy}>
-            <AppText style={styles.sectionEyebrow}>{tr.cards.placesCount(displayPlaces.length)}</AppText>
             <AppText accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</AppText>
-            <AppText style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</AppText>
           </View>
         </View>
       ) : null}

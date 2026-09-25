@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import * as Location from 'expo-location';
 
-import type { MapViewport } from '@/mobile/app/features/map/application/mapScreenTypes';
+import type { MapViewport } from '@/mobile/app/contracts/mapScreenState';
 import { getUserFacingErrorMessage } from '@/mobile/app/platform/feedback/errorMessage';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { tr } from '@/mobile/app/shared/i18n/tr';

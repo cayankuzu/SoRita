@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
-import { Globe, Lock, X } from 'lucide-react-native';
+import { Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCoverImagePicker } from '@/mobile/app/platform/media/useCoverImagePicker';
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { ListEditorForm } from '@/mobile/app/features/lists/ui/components/ListEditorForm';
 import { listEditorModalStyles as styles } from '@/mobile/app/features/lists/ui/components/listEditorModalStyles';
-import { pickSingleImageFromPrompt } from '@/mobile/app/platform/media/images';
-import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
 import {
   clearPersistedListEditorDraft,
   savePersistedListEditorDraft,
@@ -16,7 +15,6 @@ import {
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -26,7 +24,6 @@ import { t } from '@/mobile/app/shared/i18n';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
@@ -38,6 +35,7 @@ import {
   clampTextLength,
   trimPreservingLineBreaks,
 } from '@/mobile/app/shared/validation/contentLimits';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 const DISCARD_LIST_EDITOR_CONFIRMATION = {
   cancelLabel: t.common.returnToEditing,
@@ -82,8 +80,10 @@ export function ListEditorModal({
     topInset: insets.top,
     bottomInset: insets.bottom,
     topSpacing: 20,
-    bottomSpacing: 12,
-    minBottomPadding: Platform.OS === 'android' ? 28 : 12,
+    // The sheet meets the system bar, as the place editor's does; a 12dp gap
+    // showed the dimmed screen in a band under Kaydet.
+    bottomSpacing: 0,
+    minBottomPadding: 0,
   });
   const panelMaxHeight = getModalContentMaxHeight({
     viewportHeight: windowHeight,
@@ -100,8 +100,6 @@ export function ListEditorModal({
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isPickingCover, setIsPickingCover] = useState(false);
-  const isPickingCoverRef = React.useRef(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const initialStateSourceRef = React.useRef<string | null>(null);
   const initialStateSignatureRef = React.useRef<string | null>(null);
@@ -207,31 +205,10 @@ export function ListEditorModal({
     onClose();
   };
 
-  const handlePickCover = async () => {
-    if (loading || isPickingCoverRef.current) {
-      return;
-    }
-
-    isPickingCoverRef.current = true;
-    setIsPickingCover(true);
-
-    try {
-      await waitForMediaPickerTransition();
-
-      const uri = await pickSingleImageFromPrompt({
-        cropAspect: [16, 9],
-        cropShape: 'rectangle',
-      });
-
-      if (uri) {
-        setCoverImage(uri);
-      }
-    } finally {
-      await waitForMediaPickerTransition();
-      isPickingCoverRef.current = false;
-      setIsPickingCover(false);
-    }
-  };
+  const { isPicking: isPickingCover, pickCover: handlePickCover } = useCoverImagePicker(
+    setCoverImage,
+    loading,
+  );
 
   const handleSave = async () => {
     if (!list || !name.trim() || loading) {
@@ -263,17 +240,10 @@ export function ListEditorModal({
   };
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible && (Platform.OS !== 'ios' || !isPickingCover)}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={handleRequestClose}
-      presentationStyle="overFullScreen"
+      visible={visible && (Platform.OS !== 'ios' || !isPickingCover)}
     >
       <View
         accessibilityViewIsModal
@@ -296,13 +266,7 @@ export function ListEditorModal({
             <View style={styles.headerText}>
               <AppText accessibilityRole="header" style={styles.title}>{t.listEditor.title}</AppText>
               <AppText style={styles.subtitle}>{t.listEditor.subtitle}</AppText>
-              <View style={styles.headerMetaRow}>
-                <Badge
-                  icon={isPublic ? Globe : Lock}
-                  label={isPublic ? t.listEditor.privacyPublic : t.listEditor.privacyPrivate}
-                  tone={isPublic ? 'success' : 'neutral'}
-                />
-              </View>
+              {/* Visibility is chosen in its own section below, where it shows. */}
             </View>
 
             <InstantPressable
@@ -380,6 +344,6 @@ export function ListEditorModal({
           }}
         />
       ) : null}
-    </Modal>
+    </AppModal>
   );
 }

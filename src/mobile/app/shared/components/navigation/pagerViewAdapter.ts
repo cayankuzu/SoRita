@@ -25,7 +25,7 @@ export type NativePagerViewOnPageScrollStateChangedEvent = {
   };
 };
 
-export type NativePagerViewProps = {
+type NativePagerViewProps = {
   children: React.ReactNode;
   initialPage: number;
   offscreenPageLimit?: number;

@@ -1,9 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { useScrollToTop } from '@react-navigation/native';
-import { Animated, StyleSheet, View } from 'react-native';
-import type { FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import {
-  Image as ImageIcon,
   Ban,
   MapPin,
   UserPlus,
@@ -32,17 +29,31 @@ import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import {
+  useProfileTabPager,
+  useProfileTabState,
+} from '@/mobile/app/features/profile/ui/components/useProfileTabPager';
+import {
+  DeferredPlaceFeedScreen,
+  DeferredProfileConnectionsModal,
+  DeferredUserProfileActionsSheet,
+} from '@/mobile/app/features/profile/ui/components/userProfileOverlays';
+import {
+  DeferredConfirmActionModal,
+  DeferredImageLightbox,
+  DeferredReportActionSheet,
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
+import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
+import {
+  profileConnectionsCopy,
+  type ProfileConnectionMode,
+} from '@/mobile/app/features/profile/ui/components/profileConnectionsCopy';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
-import {
-  buildProfileTabOptions,
-  resolveProfileTabCount,
-} from '@/mobile/app/features/profile/ui/components/profileTabOptions';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import {
   ProfileTabs,
-  type ProfileTabOption,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 
 type ProfileTab = ProfileContentTab;
@@ -51,59 +62,43 @@ const UNBLOCK_CONFIRMATION = {
   title: tr.profile.userActions.unblockConfirmTitle,
 } as const;
 
-type ConfirmActionModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
->;
-type ImageLightboxProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ImageLightbox')['ImageLightbox']
->;
-type ProfileConnectionsModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal')['ProfileConnectionsModal']
->;
-type PlaceFeedScreenProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/places/public/feed')['PlaceFeedScreen']
->;
-type ReportActionSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
->;
-type UserProfileActionsSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet')['UserProfileActionsSheet']
->;
+// What the report sheet says for each thing that can be reported here.
+const REPORT_SHEET = {
+  list: { description: tr.listDetail.reportDescription, targetType: 'list' },
+  place: { description: tr.cards.reportContentDescription, targetType: 'place' },
+  user: { description: tr.profile.reportProfileDescription, targetType: 'profile' },
+} as const;
 
-function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
-  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
-    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
-  return <ConfirmActionModal {...props} />;
-}
+// The profile did not load: either it failed (with a retry) or there is no
+// such person.
+function UserProfileUnavailable({
+  errorMessage,
+  onRetry,
+}: {
+  errorMessage?: string | null;
+  onRetry: () => void;
+}) {
+  if (errorMessage) {
+    return (
+      <EmptyState
+        icon={<MapPin color={colors.danger} size={iconSize.xl} />}
+        title={tr.profile.error.loadingUnavailable}
+        description={errorMessage}
+        actionLabel={tr.common.retry}
+        onAction={onRetry}
+        tone="danger"
+      />
+    );
+  }
 
-function DeferredImageLightbox(props: ImageLightboxProps) {
-  const { ImageLightbox } = require('@/mobile/app/shared/components/feedback/ImageLightbox') as
-    typeof import('@/mobile/app/shared/components/feedback/ImageLightbox');
-  return <ImageLightbox {...props} />;
-}
-
-function DeferredProfileConnectionsModal(props: ProfileConnectionsModalProps) {
-  const { ProfileConnectionsModal } = require('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal') as
-    typeof import('@/mobile/app/features/profile/ui/components/ProfileConnectionsModal');
-  return <ProfileConnectionsModal {...props} />;
-}
-
-function DeferredPlaceFeedScreen(props: PlaceFeedScreenProps) {
-  const { PlaceFeedScreen } = require('@/mobile/app/features/places/public/feed') as
-    typeof import('@/mobile/app/features/places/public/feed');
-  return <PlaceFeedScreen {...props} />;
-}
-
-function DeferredReportActionSheet(props: ReportActionSheetProps) {
-  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
-    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
-  return <ReportActionSheet {...props} />;
-}
-
-function DeferredUserProfileActionsSheet(props: UserProfileActionsSheetProps) {
-  const { UserProfileActionsSheet } = require('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet') as
-    typeof import('@/mobile/app/features/profile/ui/components/UserProfileActionsSheet');
-  return <UserProfileActionsSheet {...props} />;
+  return (
+    <EmptyState
+      icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
+      title={tr.profile.empty.userNotFound}
+      description={tr.profile.empty.userNotFoundDescription}
+      tone="default"
+    />
+  );
 }
 
 function PublicUserAction({
@@ -112,16 +107,20 @@ function PublicUserAction({
   hasPendingFollowRequest,
   isBlockedByCurrent,
   isFollowing,
+  isPrivateAccount,
   onMorePress,
   onUnblockPress,
+  username,
 }: {
   canShow: boolean;
   followUser: () => Promise<'following' | 'requested' | 'unfollowed'>;
   hasPendingFollowRequest: boolean;
   isBlockedByCurrent: boolean;
   isFollowing: boolean;
+  isPrivateAccount: boolean;
   onMorePress: () => void;
   onUnblockPress: () => void;
+  username: string;
 }) {
   if (!canShow) {
     return null;
@@ -149,9 +148,11 @@ function PublicUserAction({
       hasPendingFollowRequest={hasPendingFollowRequest}
       isBlockedByCurrent={isBlockedByCurrent}
       isFollowing={isFollowing}
+      isPrivateAccount={isPrivateAccount}
       onFollowPress={handleFollowPress}
       onMorePress={onMorePress}
       onUnblockPress={onUnblockPress}
+      username={username}
     />
   );
 }
@@ -160,18 +161,14 @@ export function UserProfileScreen() {
   const navigation = useAppNavigation();
   const route = useRootStackRoute<'UserProfile'>();
   const { user } = useAuth();
-  const profileListRef = React.useRef<FlatList<ProfileGridItem> | null>(null);
-  const pagerProgress = React.useRef(new Animated.Value(0)).current;
-  const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
-  const [visibleTab, setVisibleTab] = useState<ProfileTab>('lists');
+  const tabState = useProfileTabState();
+  const { activeTab, pagerProgress, profileListRef, visibleTab } = tabState;
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [feedMode, setFeedMode] = useState<{
     startIndex: number;
     kind: 'gallery' | 'places';
   } | null>(null);
-  const [connectionMode, setConnectionMode] = useState<
-    'followers' | 'following' | null
-  >(null);
+  const [connectionMode, setConnectionMode] = useState<ProfileConnectionMode | null>(null);
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [reportTarget, setReportTarget] = useState<{
     id?: string;
@@ -252,87 +249,34 @@ export function UserProfileScreen() {
     places: filteredPlaces,
   } satisfies Record<ProfileTab, ProfileGridItem[]>;
 
-  const tabs = useMemo<ProfileTabOption[]>(
-    () =>
-      buildProfileTabOptions({
-        gallery: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPhotos.length,
-          total: tabTotals.gallery,
-        }),
-        lists: resolveProfileTabCount({
-          complete: isContentComplete.lists,
-          loaded: filteredLists.length,
-          total: tabTotals.lists,
-        }),
-        places: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPlaces.length,
-          total: tabTotals.places,
-        }),
-      }),
-    [
-      filteredLists.length,
-      filteredPhotos.length,
-      filteredPlaces.length,
-      isContentComplete.lists,
-      isContentComplete.places,
-      tabTotals.gallery,
-      tabTotals.lists,
-      tabTotals.places,
-    ],
-  );
-  const pagerTabs = useMemo(
-    () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),
-    [tabs],
-  );
-  useScrollToTop(profileListRef as React.RefObject<FlatList>);
-
-  const scrollProfileToTop = useCallback(() => {
-    profileListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, []);
-
-  const setPagerProgressForTab = useCallback(
-    (tab: ProfileTab) => {
-      const nextIndex = Math.max(
-        0,
-        pagerTabs.findIndex((pagerTab) => pagerTab.key === tab),
-      );
-      pagerProgress.setValue(nextIndex);
+  const {
+    handlePageProgressChange,
+    handleProfileEndReached,
+    handleTabChange,
+    handleTabPreviewChange,
+    pagerTabs,
+    tabs,
+  } = useProfileTabPager({
+    counts: {
+      gallery: {
+        complete: isContentComplete.places,
+        loaded: filteredPhotos.length,
+        total: tabTotals.gallery,
+      },
+      lists: {
+        complete: isContentComplete.lists,
+        loaded: filteredLists.length,
+        total: tabTotals.lists,
+      },
+      places: {
+        complete: isContentComplete.places,
+        loaded: filteredPlaces.length,
+        total: tabTotals.places,
+      },
     },
-    [pagerProgress, pagerTabs],
-  );
-  const handlePageProgressChange = useCallback(
-    (pageOffset: number) => {
-      pagerProgress.setValue(pageOffset);
-    },
-    [pagerProgress],
-  );
-  const handleTabChange = useCallback(
-    (key: string) => {
-      const nextTab = key as ProfileTab;
-      setPagerProgressForTab(nextTab);
-
-      if (nextTab === activeTab) {
-        scrollProfileToTop();
-        return;
-      }
-
-      setVisibleTab(nextTab);
-      setActiveTab(nextTab);
-    },
-    [activeTab, scrollProfileToTop, setPagerProgressForTab],
-  );
-  const handleTabPreviewChange = useCallback((key: ProfileTab) => {
-    setVisibleTab(key);
-  }, []);
-  const handleProfileEndReached = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) {
-      return;
-    }
-
-    void fetchNextPage?.();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+    pagination: { fetchNextPage, hasNextPage, isFetchingNextPage },
+    tabState,
+  });
 
   if (isInitialLoading) {
     return (
@@ -397,27 +341,7 @@ export function UserProfileScreen() {
   if (!profileUser) {
     return (
       <Screen>
-        <EmptyState
-          icon={
-            <MapPin
-              color={errorMessage ? colors.danger : colors.textSoft}
-              size={iconSize.xl}
-            />
-          }
-          title={
-            errorMessage
-              ? tr.profile.error.loadingUnavailable
-              : tr.profile.empty.userNotFound
-          }
-          description={
-            errorMessage
-              ? errorMessage
-              : tr.profile.empty.userNotFoundDescription
-          }
-          actionLabel={errorMessage ? tr.common.retry : undefined}
-          onAction={errorMessage ? retry : undefined}
-          tone={errorMessage ? 'danger' : 'default'}
-        />
+        <UserProfileUnavailable errorMessage={errorMessage} onRetry={retry} />
       </Screen>
     );
   }
@@ -467,33 +391,7 @@ export function UserProfileScreen() {
       );
     }
 
-    if (tab === 'lists') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.publicNoList}
-          description={tr.profile.empty.publicNoListDescription}
-        />
-      );
-    }
-
-    if (tab === 'places') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.publicNoPlace}
-          description={tr.profile.empty.publicNoPlaceDescription}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
-        title={tr.profile.empty.publicNoPhoto}
-        description={tr.profile.empty.publicNoPhotoDescription}
-      />
-    );
+    return <ProfileTabEmptyState tab={tab} whose="other" />;
   };
 
   const renderProfileHero = () => (
@@ -527,8 +425,10 @@ export function UserProfileScreen() {
             hasPendingFollowRequest={hasPendingFollowRequest}
             isBlockedByCurrent={isBlockedByCurrent}
             isFollowing={isFollowing}
+            isPrivateAccount={profileUser.isPublicAccount === false}
             onMorePress={() => setActionMenuVisible(true)}
             onUnblockPress={() => setUnblockConfirmVisible(true)}
+            username={profileUser.username}
           />
         )}
       />
@@ -625,8 +525,10 @@ export function UserProfileScreen() {
                 hasPendingFollowRequest={hasPendingFollowRequest}
                 isBlockedByCurrent={isBlockedByCurrent}
                 isFollowing={isFollowing}
+                isPrivateAccount={profileUser.isPublicAccount === false}
                 onMorePress={() => setActionMenuVisible(true)}
                 onUnblockPress={() => setUnblockConfirmVisible(true)}
+                username={profileUser.username}
               />
             )}
           />
@@ -689,15 +591,8 @@ export function UserProfileScreen() {
       {reportTarget ? (
         <DeferredReportActionSheet
           visible
-          targetType={reportTarget.kind === 'user' ? 'profile' : reportTarget.kind}
+          {...REPORT_SHEET[reportTarget.kind]}
           title={reportTarget.title}
-          description={
-            reportTarget.kind === 'user'
-              ? tr.profile.reportProfileDescription
-              : reportTarget.kind === 'list'
-                ? tr.listDetail.reportDescription
-                : tr.cards.reportContentDescription
-          }
           reportDetails={reportDetails}
           reportReason={reportReason}
           onReportDetailsChange={setReportDetails}
@@ -714,19 +609,8 @@ export function UserProfileScreen() {
       {connectionMode ? (
         <DeferredProfileConnectionsModal
           visible
-          title={
-            connectionMode === 'followers'
-              ? tr.profile.connections.followers
-              : tr.profile.connections.following
-          }
-          users={
-            connectionMode === 'followers' ? followerUsers : followingUsers
-          }
-          emptyTitle={
-            connectionMode === 'followers'
-              ? tr.profile.connections.emptyFollowers
-              : tr.profile.connections.emptyFollowing
-          }
+          {...profileConnectionsCopy(connectionMode)}
+          users={connectionMode === 'followers' ? followerUsers : followingUsers}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onClose={() => setConnectionMode(null)}

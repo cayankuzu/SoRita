@@ -107,4 +107,3 @@ export interface PlaceList {
   updatedAt: string;
 }
 
-export type PrivacyType = 'public' | 'private';

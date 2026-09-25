@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,10 +22,10 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 
 type ModalScaffoldProps = {
@@ -90,17 +89,10 @@ export function ModalScaffold({
   });
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -161,7 +153,7 @@ export function ModalScaffold({
           {footer ? <View style={styles.footer}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </AppModal>
   );
 }
 

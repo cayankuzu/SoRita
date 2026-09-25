@@ -3,15 +3,20 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   Ban,
   Download,
+  FileText,
   Lock,
   LogOut,
   Palette,
+  Scale,
   Shield,
+  ShieldCheck,
   Trash2,
   User as UserIcon,
+  Users,
 } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
+import { LegalDocumentSheet, type LegalDocumentId } from '@/mobile/app/features/auth/public/legal';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import { useSettingsAccountState } from '@/mobile/app/features/settings/application/useSettingsAccountState';
 import { useSettingsDataControls } from '@/mobile/app/features/settings/application/useSettingsDataControls';
@@ -22,6 +27,7 @@ import { SettingsMainMenuView } from '@/mobile/app/features/settings/ui/componen
 import type { SettingsMenuItem } from '@/mobile/app/features/settings/ui/components/SettingsMenuSection';
 import { SettingsPasswordView } from '@/mobile/app/features/settings/ui/components/SettingsPasswordView';
 import { SettingsPrivacyView } from '@/mobile/app/features/settings/ui/components/SettingsPrivacyView';
+import { getInstalledAppVersionLabel } from '@/mobile/app/platform/config/appVersion';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -55,6 +61,10 @@ const editProfileSteps = [
 
 type SettingsMenuActionKey =
   | 'exportPersonalData'
+  | 'openLegalCommunity'
+  | 'openLegalKvkk'
+  | 'openLegalPrivacy'
+  | 'openLegalTerms'
   | 'openBlocked'
   | 'openDeveloperCatalog'
   | 'openEditProfile'
@@ -100,6 +110,37 @@ const sections: SettingsMenuSectionDescriptor[] = [
         label: tr.settings.password.title,
         color: iconTile,
         action: 'openPassword',
+      },
+    ],
+  },
+  // The documents accepted at sign-up, readable again at any time (App
+  // Store 5.1.1 asks for the privacy policy inside the app).
+  {
+    title: tr.settings.sections.legal,
+    items: [
+      {
+        icon: <Scale color={iconInk} size={iconSize.md} />,
+        label: tr.auth.legalConsent.terms,
+        color: iconTile,
+        action: 'openLegalTerms',
+      },
+      {
+        icon: <Users color={iconInk} size={iconSize.md} />,
+        label: tr.auth.legalConsent.community,
+        color: iconTile,
+        action: 'openLegalCommunity',
+      },
+      {
+        icon: <ShieldCheck color={iconInk} size={iconSize.md} />,
+        label: tr.auth.legalConsent.privacy,
+        color: iconTile,
+        action: 'openLegalPrivacy',
+      },
+      {
+        icon: <FileText color={iconInk} size={iconSize.md} />,
+        label: tr.auth.legalConsent.kvkk,
+        color: iconTile,
+        action: 'openLegalKvkk',
       },
     ],
   },
@@ -187,6 +228,7 @@ export function SettingsScreen() {
   const navigation = useAppNavigation();
   const { user, logout, refreshUser, requestPasswordReset } = useAuth();
   const [showEditCancelConfirm, setShowEditCancelConfirm] = React.useState(false);
+  const [legalDocumentId, setLegalDocumentId] = React.useState<LegalDocumentId | null>(null);
   const {
     analyticsConsentGranted,
     exportPersonalData,
@@ -339,6 +381,10 @@ export function SettingsScreen() {
       openBlocked,
       openDeveloperCatalog: () => openStackScreen(navigation, 'UICatalog'),
       openEditProfile,
+      openLegalCommunity: () => setLegalDocumentId('community'),
+      openLegalKvkk: () => setLegalDocumentId('kvkk'),
+      openLegalPrivacy: () => setLegalDocumentId('privacy'),
+      openLegalTerms: () => setLegalDocumentId('terms'),
       openPassword,
       openPrivacy,
       requestDeleteAccount: () => setShowDeleteConfirm(true),
@@ -463,6 +509,7 @@ export function SettingsScreen() {
         onRefresh={onRefresh}
         refreshing={refreshing}
         sections={menuSections}
+        versionLabel={getInstalledAppVersionLabel()}
       />
 
       <ConfirmActionModal
@@ -484,6 +531,13 @@ export function SettingsScreen() {
         onConfirm={deleteAccount}
       />
 
+      {legalDocumentId ? (
+        <LegalDocumentSheet
+          documentId={legalDocumentId}
+          visible
+          onClose={() => setLegalDocumentId(null)}
+        />
+      ) : null}
     </>
   );
 }

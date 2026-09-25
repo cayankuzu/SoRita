@@ -42,6 +42,7 @@ docs/*
 !docs/aaa-mvp-baseline.md
 !docs/no-new-feature-audit.md
 !docs/network-and-data-inventory.md
+!docs/api-contracts.md
 !docs/offline-and-concurrency-contract.md
 !docs/ota-runtime-and-release.md
 !docs/ota-rollback-runbook.md

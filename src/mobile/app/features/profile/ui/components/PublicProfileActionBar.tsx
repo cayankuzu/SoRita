@@ -4,8 +4,9 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Ellipsis, UserMinus, UserPlus } from 'lucide-react-native';
+import { Ellipsis, UserCheck, UserPlus } from 'lucide-react-native';
 
+import { UnfollowConfirmModal } from '@/mobile/app/shared/components/feedback/UnfollowConfirmModal';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -17,27 +18,36 @@ type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
   isBlockedByCurrent: boolean;
   isFollowing: boolean;
+  // A private account takes a new request to see again after unfollowing.
+  isPrivateAccount?: boolean;
   onFollowPress: () => Promise<void>;
   onMorePress: () => void;
   onUnblockPress: () => void;
+  username: string;
 };
 
 export function PublicProfileActionBar({
   hasPendingFollowRequest,
   isBlockedByCurrent,
   isFollowing,
+  isPrivateAccount = false,
   onFollowPress,
   onMorePress,
   onUnblockPress,
+  username,
 }: PublicProfileActionBarProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [confirmUnfollowVisible, setConfirmUnfollowVisible] = React.useState(false);
   const disabled = hasPendingFollowRequest || isSubmitting;
+  // Following reads as a state, as on Instagram; unfollowing asks first. One
+  // tap used to unfollow at once, and on a private account that meant
+  // sending a new request to see them again.
   const actionLabel = isFollowing
-    ? tr.profile.actions.unfollow
+    ? tr.profile.actions.following
     : hasPendingFollowRequest
       ? tr.profile.actions.requestSent
       : tr.profile.actions.follow;
-  const handleFollowPress = async () => {
+  const submitFollow = async () => {
     if (disabled) {
       return;
     }
@@ -48,6 +58,14 @@ export function PublicProfileActionBar({
     } finally {
       setIsSubmitting(false);
     }
+  };
+  const handleFollowPress = async () => {
+    if (isFollowing) {
+      setConfirmUnfollowVisible(true);
+      return;
+    }
+
+    await submitFollow();
   };
 
   return (
@@ -62,9 +80,8 @@ export function PublicProfileActionBar({
         />
       ) : (
         <InstantPressable
-          accessibilityLabel={
-            actionLabel
-          }
+          accessibilityHint={isFollowing ? tr.profile.actions.unfollowHint : undefined}
+          accessibilityLabel={actionLabel}
           accessibilityRole="button"
           accessibilityState={{
             busy: isSubmitting,
@@ -84,7 +101,7 @@ export function PublicProfileActionBar({
               size="small"
             />
           ) : isFollowing ? (
-            <UserMinus color={colors.textMuted} size={iconSize.xs} />
+            <UserCheck color={colors.textMuted} size={iconSize.xs} />
           ) : (
             <UserPlus
               color={hasPendingFollowRequest ? colors.textMuted : colors.onPrimary}
@@ -110,6 +127,15 @@ export function PublicProfileActionBar({
       >
         <Ellipsis color={colors.textMuted} size={iconSize.sm} />
       </IconButton>
+
+      <UnfollowConfirmModal
+        target={confirmUnfollowVisible ? { isPrivateAccount, username } : null}
+        onClose={() => setConfirmUnfollowVisible(false)}
+        onConfirm={async () => {
+          setConfirmUnfollowVisible(false);
+          await submitFollow();
+        }}
+      />
     </View>
   );
 }

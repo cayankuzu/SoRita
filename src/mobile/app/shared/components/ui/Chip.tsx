@@ -29,6 +29,8 @@ type ChipProps = {
   disabled?: boolean;
   leading?: React.ReactNode;
   onLayout?: ViewProps['onLayout'];
+  // A row of tabs above content, like Explore's, uses the smaller chip.
+  size?: 'default' | 'compact';
 };
 
 /** The ink a chip's label uses, so a leading icon can match it. */
@@ -46,7 +48,9 @@ export function Chip({
   disabled = false,
   leading,
   onLayout,
+  size = 'default',
 }: ChipProps) {
+  const compact = size === 'compact';
   return (
     <InstantPressable
       accessibilityLabel={label}
@@ -58,17 +62,23 @@ export function Chip({
       }
       disabled={disabled}
       hapticFeedback="selection"
-      hitSlop={hitSlopFor(controlSize.chip)}
+      // Sized for the compact chip, which also carries the default one past
+      // 48dp; the touch-target guard reads one static hitSlopFor call.
+      hitSlop={hitSlopFor(controlSize.compact)}
       onLayout={onLayout}
       onPress={onPress}
       style={[
         styles.chip,
+        compact ? styles.chipCompact : null,
         selected ? (kind === 'filter' ? styles.filterSelected : styles.choiceSelected) : null,
         disabled ? styles.disabled : null,
       ]}
     >
       {leading}
-      <AppText numberOfLines={1} style={[styles.label, { color: chipContentColor(kind, selected) }]}>
+      <AppText
+        numberOfLines={1}
+        style={[styles.label, compact ? styles.labelCompact : null, { color: chipContentColor(kind, selected) }]}
+      >
         {label}
       </AppText>
     </InstantPressable>
@@ -88,6 +98,10 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
   },
+  chipCompact: {
+    minHeight: controlSize.compact,
+    paddingHorizontal: spacing.md,
+  },
   filterSelected: {
     backgroundColor: colors.text,
     borderColor: colors.text,
@@ -100,4 +114,5 @@ const styles = StyleSheet.create({
     opacity: opacity.disabled,
   },
   label: textStyle('supportingLabelText', colors.textMuted),
+  labelCompact: textStyle('metadataText', colors.textMuted),
 });

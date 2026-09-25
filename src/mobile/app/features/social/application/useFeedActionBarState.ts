@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import type {
@@ -13,6 +13,7 @@ type ReplyTarget = {
 };
 
 type UseFeedActionBarStateParams = {
+  autoOpenComments?: boolean;
   comments: FeedActionComment[];
   commentCountOverride?: number;
   onCommentDelete?: (commentId: string) => Promise<void> | void;
@@ -23,7 +24,6 @@ type UseFeedActionBarStateParams = {
   onCommentsRefresh?: () => Promise<void> | void;
   onLikePress?: () => Promise<void> | void;
   onRefresh?: () => Promise<void> | void;
-  onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
   onUserPress?: (userId: string) => void;
 };
 
@@ -44,7 +44,17 @@ function countCommentTree(items: FeedActionComment[]): number {
 
 export const feedActionBarInternals = { getErrorMessage };
 
+// The card can mount before the request to open its comments arrives.
+function useOpenWhenRequested(requested: boolean, setOpen: (open: boolean) => void) {
+  useEffect(() => {
+    if (requested) {
+      setOpen(true);
+    }
+  }, [requested, setOpen]);
+}
+
 export function useFeedActionBarState({
+  autoOpenComments = false,
   comments,
   commentCountOverride,
   onCommentDelete,
@@ -55,21 +65,18 @@ export function useFeedActionBarState({
   onCommentsRefresh,
   onLikePress,
   onRefresh,
-  onReportSubmit,
   onUserPress,
 }: UseFeedActionBarStateParams) {
   const [commentText, setCommentText] = useState('');
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(autoOpenComments);
+  useOpenWhenRequested(autoOpenComments, setShowComments);
   const [showAddress, setShowAddress] = useState(false);
   const [showLikers, setShowLikers] = useState(false);
-  const [showReportSheet, setShowReportSheet] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [activeReportCommentId, setActiveReportCommentId] = useState<string | null>(null);
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState<string | null>(null);
-  const [itemReportReason, setItemReportReason] = useState('');
-  const [itemReportDetails, setItemReportDetails] = useState('');
   const [replyingTo, setReplyingTo] = useState<ReplyTarget | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [commentsRefreshing, setCommentsRefreshing] = useState(false);
@@ -272,22 +279,6 @@ export function useFeedActionBarState({
     }
   };
 
-  const handleItemReport = async () => {
-    if (!itemReportReason || !onReportSubmit) {
-      return;
-    }
-
-    try {
-      await onReportSubmit(itemReportReason, itemReportDetails.trim() || undefined);
-      setItemReportDetails('');
-      setItemReportReason('');
-      setShowReportSheet(false);
-      showToast(tr.cards.reportSent, 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error, tr.cards.reportFailed), 'error');
-    }
-  };
-
   const handleUserPress = (userId: string) => {
     setShowComments(false);
     setShowLikers(false);
@@ -308,7 +299,6 @@ export function useFeedActionBarState({
     handleCommentReport,
     handleCommentSubmit,
     handleDeleteComment,
-    handleItemReport,
     handleLikePress,
     handleRefreshComments,
     handleRefreshLikers,
@@ -316,8 +306,6 @@ export function useFeedActionBarState({
     handleStartReply,
     handleStartReport,
     handleUserPress,
-    itemReportReason,
-    itemReportDetails,
     likersRefreshing,
     replyingTo,
     reportDetails,
@@ -326,19 +314,15 @@ export function useFeedActionBarState({
     setActiveReportCommentId,
     setCommentText,
     setConfirmDeleteCommentId,
-    setItemReportDetails,
-    setItemReportReason,
     setReportDetails,
     setReplyingTo,
     setReportReason,
     setShowAddress,
     setShowComments,
     setShowLikers,
-    setShowReportSheet,
     showAddress,
     showComments,
     showLikers,
-    showReportSheet,
     submitting,
   };
 }

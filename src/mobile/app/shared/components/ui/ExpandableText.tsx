@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  GestureResponderEvent,
   LayoutChangeEvent,
   LayoutAnimation,
   NativeSyntheticEvent,
@@ -59,7 +60,9 @@ export function ExpandableText({
   const [hasExpandedLinks, setHasExpandedLinks] = useState(false);
   const [isExpandable, setIsExpandable] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
-  const normalizedText = useMemo(() => text.replace(/\r\n?/g, '\n'), [text]);
+  // Line breaks are stored as U+2028; any path that forgets to decode them
+  // would otherwise draw a box where the line should break.
+  const normalizedText = useMemo(() => text.replace(/\r\n?|[\u2028\u2029]/g, '\n'), [text]);
   const shouldRenderPlainText = preserveLineBreaks && !renderContent;
   const usesRichText = !renderContent && !shouldRenderPlainText;
   const isControlled = typeof expanded === 'boolean';
@@ -132,115 +135,78 @@ export function ExpandableText({
     [resolvedCollapsedLines],
   );
 
+  const handlePress = (event: GestureResponderEvent) => {
+    event.stopPropagation?.();
+    handleToggleExpanded();
+  };
+  const showsIndicator = isExpandable && showIndicator;
+  const indicatorStyle = [styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null];
+
+  // The same body is drawn twice: off screen at full length, to learn whether
+  // it runs past the collapsed lines, and on screen clamped to them.
+  const renderBody = (measuring: boolean) => {
+    const shared = measuring
+      ? {
+          onTextLayout: handleMeasureLayout,
+          pointerEvents: 'none' as const,
+          style: [styles.text, textStyle, styles.hiddenMeasure],
+        }
+      : {
+          ellipsizeMode: 'tail' as const,
+          numberOfLines: contentExpanded ? undefined : resolvedCollapsedLines,
+          style: [styles.text, textStyle, showsIndicator ? styles.textWithIndicator : null],
+        };
+
+    if (!usesRichText) {
+      return <AppText {...shared}>{renderContent ? content : normalizedText}</AppText>;
+    }
+
+    return (
+      <RichText
+        {...shared}
+        text={normalizedText}
+        variant={variant}
+        onExpandedLinksChange={measuring ? undefined : setHasExpandedLinks}
+        onMentionPress={onMentionPress}
+      />
+    );
+  };
+
   return (
     <View onLayout={handleLayout} style={[styles.wrapper, containerStyle]}>
-      {containerWidth > 0 ? (
-        renderContent ? (
-          <AppText
-            onTextLayout={handleMeasureLayout}
-            style={[styles.text, textStyle, styles.hiddenMeasure]}
-            pointerEvents="none"
-          >
-            {content}
-          </AppText>
-        ) : shouldRenderPlainText ? (
-          <AppText
-            onTextLayout={handleMeasureLayout}
-            style={[styles.text, textStyle, styles.hiddenMeasure]}
-            pointerEvents="none"
-          >
-            {normalizedText}
-          </AppText>
-        ) : (
-          <RichText
-            text={normalizedText}
-            variant={variant}
-            onMentionPress={onMentionPress}
-            onTextLayout={handleMeasureLayout}
-            style={[styles.text, textStyle, styles.hiddenMeasure]}
-            pointerEvents="none"
-          />
-        )
-      ) : null}
+      {containerWidth > 0 ? renderBody(true) : null}
 
       <InstantPressable
+        // Plain text is its own name; custom and rich content name themselves.
+        accessibilityLabel={shouldRenderPlainText ? normalizedText : undefined}
         accessibilityRole={isExpandable && !usesRichText ? 'button' : undefined}
         accessibilityState={
           isExpandable && !usesRichText ? { expanded: resolvedExpanded } : undefined
         }
-        onPress={(event) => {
-          event.stopPropagation?.();
-          handleToggleExpanded();
-        }}
+        onPress={handlePress}
         disabled={!isExpandable || usesRichText}
         style={styles.pressable}
       >
         <View style={styles.contentWrap}>
-          {renderContent ? (
-            <AppText
-              numberOfLines={contentExpanded ? undefined : resolvedCollapsedLines}
-              ellipsizeMode="tail"
-              style={[
-                styles.text,
-                textStyle,
-                isExpandable && showIndicator ? styles.textWithIndicator : null,
-              ]}
-            >
-              {content}
-            </AppText>
-          ) : shouldRenderPlainText ? (
-            <AppText
-              numberOfLines={contentExpanded ? undefined : resolvedCollapsedLines}
-              ellipsizeMode="tail"
-              style={[
-                styles.text,
-                textStyle,
-                isExpandable && showIndicator ? styles.textWithIndicator : null,
-              ]}
-            >
-              {normalizedText}
-            </AppText>
-          ) : (
-            <RichText
-              text={normalizedText}
-              variant={variant}
-              numberOfLines={contentExpanded ? undefined : resolvedCollapsedLines}
-              onExpandedLinksChange={setHasExpandedLinks}
-              onMentionPress={onMentionPress}
-              ellipsizeMode="tail"
-              style={[
-                styles.text,
-                textStyle,
-                isExpandable && showIndicator ? styles.textWithIndicator : null,
-              ]}
-            />
-          )}
+          {renderBody(false)}
 
-          {isExpandable && showIndicator ? (
-            usesRichText ? (
-              <InstantPressable
-                accessibilityLabel={
-                  contentExpanded ? tr.common.collapseLink : tr.common.expandLink
-                }
-                accessibilityRole="button"
-                accessibilityState={{ expanded: contentExpanded }}
-                hitSlop={EXPAND_ICON_HIT_SLOP}
-                onPress={(event) => {
-                  event.stopPropagation?.();
-                  handleToggleExpanded();
-                }}
-                style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
-              >
-                <ChevronRight color={iconColor} size={iconSize.sm} />
-              </InstantPressable>
-            ) : (
-              <View
-                accessible={false}
-                style={[styles.iconWrap, contentExpanded ? styles.iconWrapExpanded : null]}
-              >
-                <ChevronRight color={iconColor} size={iconSize.sm} />
-              </View>
-            )
+          {showsIndicator && usesRichText ? (
+            // Links inside rich text take the taps, so the chevron is its own button.
+            <InstantPressable
+              accessibilityLabel={contentExpanded ? tr.common.collapseLink : tr.common.expandLink}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: contentExpanded }}
+              hitSlop={EXPAND_ICON_HIT_SLOP}
+              onPress={handlePress}
+              style={indicatorStyle}
+            >
+              <ChevronRight color={iconColor} size={iconSize.sm} />
+            </InstantPressable>
+          ) : null}
+          {showsIndicator && !usesRichText ? (
+            <View accessible={false} style={indicatorStyle}>
+              <ChevronRight color={iconColor} size={iconSize.sm} />
+            </View>
           ) : null}
         </View>
       </InstantPressable>

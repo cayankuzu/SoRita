@@ -10,6 +10,7 @@ import { getMarkerAggregationKey, type LocationPlaceStat } from '@/mobile/app/sh
 import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
 type ListDetailPlaceItemProps = {
+  autoOpenComments?: boolean;
   highlighted: boolean;
   isOwner: boolean;
   listCoverImage?: string;
@@ -28,6 +29,7 @@ type ListDetailPlaceItemProps = {
 };
 
 export function ListDetailPlaceItem({
+  autoOpenComments = false,
   highlighted,
   isOwner,
   listCoverImage,
@@ -67,6 +69,7 @@ export function ListDetailPlaceItem({
       ) : null}
 
       <PlaceCard
+        autoOpenComments={autoOpenComments}
         context="list-detail"
         place={place}
         owner={owner}

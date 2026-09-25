@@ -63,7 +63,7 @@ export function PlaceFeedScreen({
 }: PlaceFeedScreenProps) {
   const { height, width } = useWindowDimensions();
   const appLayout = useAppLayout();
-  const feed = useAnchoredFeed({ items, startIndex });
+  const feed = useAnchoredFeed({ items, startIndex, viewOffset: spacing.md });
   // The feed is a view inside its tab, not a screen of its own: without this
   // the back key left the tab for Home instead of returning to the grid.
   useAndroidBackHandler(true, onBack);
@@ -95,10 +95,15 @@ export function PlaceFeedScreen({
 
       <FlatList
         {...listProps}
+        ref={feed.listRef}
         data={feed.data}
         keyExtractor={(item) => item.key}
         maintainVisibleContentPosition={feed.maintainVisibleContentPosition}
         onContentSizeChange={feed.onContentSizeChange}
+        onScroll={feed.onScroll}
+        onScrollBeginDrag={feed.onScrollBeginDrag}
+        onScrollToIndexFailed={feed.onScrollToIndexFailed}
+        scrollEventThrottle={16}
         renderItem={({ item }) => (
           <PlaceCard
             place={item.place}

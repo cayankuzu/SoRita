@@ -36,7 +36,12 @@ export function SettingsPrivacyView({
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh} variant="settings">
       <SettingsHeader title={tr.settings.privacy.title} onBack={onBack} />
+      {/* Who sees the profile, then what the app measures: the two account
+          choices sat on either side of the analytics ones. */}
       <View style={styles.form}>
+        <AppText accessibilityRole="header" style={styles.sectionTitle}>
+          {tr.settings.privacy.visibilityTitle}
+        </AppText>
         <PrivacyOption
           active={isPublicAccount}
           disabled={isSavingPrivacy}
@@ -45,6 +50,16 @@ export function SettingsPrivacyView({
           description={tr.settings.privacy.publicDescription}
           onPress={() => {
             onSavePrivacy(true);
+          }}
+        />
+        <PrivacyOption
+          active={!isPublicAccount}
+          disabled={isSavingPrivacy}
+          icon={<LockKeyhole color={!isPublicAccount ? colors.primary : colors.textMuted} size={iconSize.md} />}
+          title={tr.settings.privacy.private}
+          description={tr.settings.privacy.privateDescription}
+          onPress={() => {
+            onSavePrivacy(false);
           }}
         />
         <AppText accessibilityRole="header" style={styles.sectionTitle}>
@@ -68,16 +83,6 @@ export function SettingsPrivacyView({
           description={tr.settings.privacy.analyticsDisabledDescription}
           onPress={() => {
             onSaveAnalyticsConsent(false);
-          }}
-        />
-        <PrivacyOption
-          active={!isPublicAccount}
-          disabled={isSavingPrivacy}
-          icon={<LockKeyhole color={!isPublicAccount ? colors.primary : colors.textMuted} size={iconSize.md} />}
-          title={tr.settings.privacy.private}
-          description={tr.settings.privacy.privateDescription}
-          onPress={() => {
-            onSavePrivacy(false);
           }}
         />
         {isSavingPrivacy || isSavingAnalyticsConsent ? (

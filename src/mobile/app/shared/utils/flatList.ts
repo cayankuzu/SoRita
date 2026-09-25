@@ -46,8 +46,12 @@ export function buildAdaptiveFlatListProps<ItemT>({
     keyboardDismissMode,
     keyboardShouldPersistTaps: 'handled',
     maxToRenderPerBatch,
-    removeClippedSubviews:
-      platformOS === 'android' && !containsNativeMaps && itemCount > initialNumToRender,
+    // Never on, and above all never switched as the item count changes: on
+    // Android's new architecture, turning clipping off as a search emptied a
+    // grid left its empty message undrawn, and switching it while rows came
+    // and went made Fabric insert a view at a missing index and tear down the
+    // app. Windowing already unmounts rows far off screen.
+    removeClippedSubviews: false,
     updateCellsBatchingPeriod: containsNativeMaps ? 80 : isTabletLike ? 40 : 50,
     windowSize,
   };

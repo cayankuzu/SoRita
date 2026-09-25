@@ -63,15 +63,6 @@ export const placeEditorModalStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  cancelButton: {
-    minHeight: minTouchSize,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  cancelButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   headerText: {
     flex: 1,
     paddingRight: spacing.md,

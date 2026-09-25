@@ -1,18 +1,15 @@
 import React from 'react';
 
 import type { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
-import {
-  AddressPanel,
-  CommentPanel,
-  LikersPanel,
-} from '@/mobile/app/features/social/ui/components/FeedActionPanels';
+import { AddressPanel } from '@/mobile/app/features/social/ui/components/AddressPanel';
+import { CommentPanel } from '@/mobile/app/features/social/ui/components/CommentPanel';
+import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPanel';
 import type {
   FeedActionComment,
   FeedActionLiker,
   FeedActionLocation,
 } from '@/mobile/app/features/social/ui/components/FeedActionTypes';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
-import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
 type FeedActionState = ReturnType<typeof useFeedActionBarState>;
@@ -30,8 +27,6 @@ type FeedActionOverlaysProps = {
   location?: FeedActionLocation;
   onAddressCopied?: () => void;
   onCommentsLoadMore?: () => Promise<void> | void;
-  reportDescription?: string;
-  reportTitle?: string;
   state: FeedActionState;
 };
 
@@ -48,8 +43,6 @@ export function FeedActionOverlays({
   location,
   onAddressCopied,
   onCommentsLoadMore,
-  reportDescription = tr.cards.reportContentDescription,
-  reportTitle = tr.cards.reportContentTitle,
   state,
 }: FeedActionOverlaysProps) {
   return (
@@ -109,25 +102,6 @@ export function FeedActionOverlays({
           refreshing={state.likersRefreshing}
           onRefresh={() => void state.handleRefreshLikers()}
           onUserPress={state.handleUserPress}
-        />
-      ) : null}
-
-      {state.showReportSheet ? (
-        <ReportActionSheet
-          visible
-          targetType="place"
-          title={reportTitle}
-          description={reportDescription}
-          reportDetails={state.itemReportDetails}
-          reportReason={state.itemReportReason}
-          onReportDetailsChange={state.setItemReportDetails}
-          onReportReasonChange={state.setItemReportReason}
-          onClose={() => {
-            state.setShowReportSheet(false);
-            state.setItemReportDetails('');
-            state.setItemReportReason('');
-          }}
-          onSubmit={state.handleItemReport}
         />
       ) : null}
 

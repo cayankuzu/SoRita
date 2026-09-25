@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppState, Modal, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { AppState, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,9 +44,9 @@ import {
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 const PAGE_SIZE = 33;
 export function MediaLibrarySelectionHost() {
@@ -342,16 +342,11 @@ export function MediaLibrarySelectionHost() {
   }, [selectedAssets]);
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
+      coverNavigationBar={false}
       onRequestClose={() => resolveMediaLibrarySelection(null)}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
@@ -436,7 +431,7 @@ export function MediaLibrarySelectionHost() {
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

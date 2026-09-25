@@ -64,6 +64,7 @@ type PlaceCardMap = {
 
 type PlaceCardSocial = {
   allowAddToList: boolean;
+  autoOpenComments?: boolean;
   comments: FeedActionComment[];
   commentsErrorMessage?: string | null;
   commentsInitialLoading?: boolean;
@@ -95,7 +96,6 @@ type PlaceCardActions = {
   onPress?: () => void;
   onPressIn?: () => void;
   onRefresh?: () => void;
-  onReportPlace: (reason: string, details?: string) => Promise<void> | void;
   onSourcePress?: () => void;
   onUserPress: (userId: string) => void;
   onCommentsVisibilityChange?: (visible: boolean) => void;
@@ -145,6 +145,7 @@ export function PlaceCardFull({
   } = map;
   const {
     allowAddToList,
+    autoOpenComments = false,
     comments,
     commentsErrorMessage = null,
     commentsInitialLoading = false,
@@ -176,7 +177,6 @@ export function PlaceCardFull({
     onPress,
     onPressIn,
     onRefresh,
-    onReportPlace,
     onSharePress,
     onSourcePress,
     onUserPress,
@@ -326,6 +326,7 @@ export function PlaceCardFull({
       />
 
       <FeedActionBar
+        autoOpenComments={autoOpenComments}
         currentUserName={currentUserName}
         currentUserPhoto={currentUserPhoto}
         liked={isLiked}
@@ -358,10 +359,6 @@ export function PlaceCardFull({
         onCommentsVisibilityChange={onCommentsVisibilityChange}
         onLikersVisibilityChange={onLikersVisibilityChange}
         contentActions={contentActions}
-        showReportAction={false}
-        reportTitle={tr.cards.reportContentTitle}
-        reportDescription={tr.cards.reportContentDescription}
-        onReportSubmit={onReportPlace}
         onUserPress={onUserPress}
       />
     </View>

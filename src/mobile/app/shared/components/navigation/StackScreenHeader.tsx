@@ -10,6 +10,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type StackScreenHeaderProps = {
+  // Inside a screen that already pads for the status bar and the edges, and
+  // scrolls with its content (Settings); otherwise a fixed bar with a rule.
+  inline?: boolean;
   onBack: () => void;
   rightAction?: React.ReactNode;
   subtitle?: string;
@@ -17,6 +20,7 @@ type StackScreenHeaderProps = {
 };
 
 export function StackScreenHeader({
+  inline = false,
   onBack,
   rightAction,
   subtitle,
@@ -27,10 +31,15 @@ export function StackScreenHeader({
 
   return (
     <View
-      style={[
-        styles.header,
-        { paddingHorizontal: screenPadding, paddingTop: insets.top + spacing.sm },
-      ]}
+      style={
+        inline
+          ? [styles.headerRow, styles.inline]
+          : [
+              styles.headerRow,
+              styles.bar,
+              { paddingHorizontal: screenPadding, paddingTop: insets.top + spacing.sm },
+            ]
+      }
     >
       <IconButton accessibilityLabel={tr.common.back} onPress={onBack}>
         <ArrowLeft color={colors.text} size={iconSize.md} />
@@ -51,11 +60,17 @@ export function StackScreenHeader({
 }
 
 const styles = StyleSheet.create({
-  header: {
-    minHeight: 64,
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  inline: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  bar: {
+    minHeight: 64,
     paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,

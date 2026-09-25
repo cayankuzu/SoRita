@@ -29,7 +29,6 @@ import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { Badge } from '@/mobile/app/shared/components/ui/Badge';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { avatarSize, colors, controlSize, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -156,12 +155,9 @@ export function PlaceListBar({
       <View style={styles.linkBarBody}>
         <View style={styles.linkBarTitleRow}>
           <ListIcon color={colors.primary} size={iconSize.xs} />
-          <ExpandableText
-            text={emoji ? `${emoji} ${name}` : name}
-            collapsedLines={1}
-            textStyle={styles.linkBarTitle}
-            showIndicator={false}
-          />
+          <AppText numberOfLines={1} style={[styles.linkBarTitle, styles.linkBarTitleText]}>
+            {emoji ? `${emoji} ${name}` : name}
+          </AppText>
         </View>
         <View style={styles.linkBarMetaRow}>
           {isPublic ? (
@@ -242,14 +238,20 @@ export function PlacePrimaryMedia({
               onPress={() => onPress(index)}
               style={[styles.mediaCarouselPage, { width: carouselWidth }]}
             >
-              <MediaThumbnailView
-                item={item}
-                priority={index === 0 ? 'high' : 'normal'}
-                style={styles.mediaCarouselMedia}
-                accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
-                fallbackToVideoPreview={false}
-                showDuration
-              />
+              {/* Only the photo on show and its neighbours are decoded, so a card
+                  with many photos mounts as cheaply as one with a single photo. */}
+              {Math.abs(index - activeIndex) <= 1 ? (
+                <MediaThumbnailView
+                  item={item}
+                  priority={index === 0 ? 'high' : 'normal'}
+                  style={styles.mediaCarouselMedia}
+                  accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
+                  fallbackToVideoPreview={false}
+                  showDuration
+                />
+              ) : (
+                <View style={styles.mediaCarouselMedia} />
+              )}
             </InstantPressable>
           ))}
         </ScrollView>

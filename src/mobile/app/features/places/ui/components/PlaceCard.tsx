@@ -1,18 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Share2 } from 'lucide-react-native';
-
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { useUpdateListsMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/public/types';
-import { deleteOwnedPlaceWithFeedback } from '@/mobile/app/features/places/application/deleteOwnedPlaceWithFeedback';
-import { buildPlaceAddToListDraft } from '@/mobile/app/features/places/application/placeAddToListDraft';
-import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
+import {
+  deleteOwnedPlaceWithFeedback,
+} from '@/mobile/app/features/places/application/deleteOwnedPlaceWithFeedback';
+import {
+  buildPlaceAddToListDraft,
+} from '@/mobile/app/features/places/application/placeAddToListDraft';
+import {
+  buildOwnedPlaceListUpdates,
+} from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
-import { shouldShowPlaceCardMiniMap } from '@/mobile/app/features/places/ui/components/place-card/placeCardMapVisibility';
+import {
+  shouldShowPlaceCardMiniMap,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardMapVisibility';
 import {
   buildPlaceActionItems,
   createFallbackOwnedList,
@@ -21,7 +28,12 @@ import {
   resolveOptionalPressHandler,
 } from '@/mobile/app/features/places/ui/components/place-card/placeCardModel';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+import {
+  DeferredActionMenuSheet,
+  DeferredConfirmActionModal,
+  DeferredMediaLightbox,
+  DeferredReportActionSheet,
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
@@ -30,9 +42,17 @@ import { formatPlaceCardLocation, formatPrice } from '@/mobile/app/shared/utils/
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
+import {
+  DeferredPlaceEditorModal,
+  DeferredSourcePlaceCardModal,
+  type PlaceCardOverlay,
+  renderWhen,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardOverlays';
 
 type PlaceCardProps = {
   place: Place;
+  // Opens the comments when this turns true, e.g. from a comment notification.
+  autoOpenComments?: boolean;
   context?: 'default' | 'list-detail';
   owner?: User | null;
   ownerId?: string | null;
@@ -55,70 +75,9 @@ type PlaceCardProps = {
   onPlaceNamePress?: (() => void) | null;
 };
 
-type ConfirmActionModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
->;
-type MediaLightboxProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/MediaLightbox')['MediaLightbox']
->;
-type PlaceEditorModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/map/public/components')['PlaceEditorModal']
->;
-type ReportActionSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
->;
-type SourcePlaceCardModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal')['SourcePlaceCardModal']
->;
-type PlaceCardOverlay =
-  | { type: 'none' }
-  | { type: 'add-to-list' }
-  | { type: 'lightbox'; index: number }
-  | { type: 'owned-delete' }
-  | { type: 'owned-editor' }
-  | { type: 'report' }
-  | { type: 'share-menu' }
-  | { type: 'source-place' };
-
-function renderWhen(
-  visible: boolean,
-  render: () => React.ReactNode,
-) {
-  return visible ? render() : null;
-}
-
-function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
-  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
-    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
-  return <ConfirmActionModal {...props} />;
-}
-
-function DeferredMediaLightbox(props: MediaLightboxProps) {
-  const { MediaLightbox } = require('@/mobile/app/shared/components/feedback/MediaLightbox') as
-    typeof import('@/mobile/app/shared/components/feedback/MediaLightbox');
-  return <MediaLightbox {...props} />;
-}
-
-function DeferredPlaceEditorModal(props: PlaceEditorModalProps) {
-  const { PlaceEditorModal } = require('@/mobile/app/features/map/public/components') as
-    typeof import('@/mobile/app/features/map/public/components');
-  return <PlaceEditorModal {...props} />;
-}
-
-function DeferredReportActionSheet(props: ReportActionSheetProps) {
-  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
-    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
-  return <ReportActionSheet {...props} />;
-}
-
-function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {
-  const { SourcePlaceCardModal } = require('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal') as
-    typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal');
-  return <SourcePlaceCardModal {...props} />;
-}
-
 function PlaceCardComponent({
   place,
+  autoOpenComments = false,
   context,
   owner,
   ownerId,
@@ -181,6 +140,8 @@ function PlaceCardComponent({
   });
 
   const priceLabel = formatPrice(place) ?? undefined;
+  // Adding to a list needs someone signed in to own the list.
+  const canAddToList = allowAddToList && Boolean(user);
   const shareUrl = useMemo(() => buildListContentUrl(listId, place.id), [listId, place.id]);
   const shareDescription = useMemo(
     () =>
@@ -363,12 +324,11 @@ function PlaceCardComponent({
     }
   };
 
-  const mediaOwnerUserId =
-    place.sourceAttribution?.userId ||
-    place.addedBy?.userId ||
-    resolvedOwnerId ||
-    initialResolvedOwnerId;
-  const canDownloadOwnedPlaceMedia = Boolean(user && mediaOwnerUserId === user.id);
+  const canDownloadOwnedPlaceMedia = Boolean(
+    user &&
+      [place.sourceAttribution?.userId, place.addedBy?.userId, resolvedOwnerId, initialResolvedOwnerId]
+        .find(Boolean) === user.id,
+  );
 
   const handleOwnedPlaceSave = async (
     placeData: Omit<Place, 'id' | 'addedAt'>,
@@ -518,7 +478,6 @@ function PlaceCardComponent({
       onPress,
       onPressIn,
       onRefresh,
-      onReportPlace: handleReportPlace,
       onUserPress: openUserProfile,
       onCommentsVisibilityChange: (visible) => {
         if (visible) {
@@ -561,7 +520,8 @@ function PlaceCardComponent({
       visible: isMapVisible,
     },
     social: {
-      allowAddToList: allowAddToList && Boolean(user),
+      allowAddToList: canAddToList,
+      autoOpenComments,
       comments,
       commentsErrorMessage,
       commentsInitialLoading,
@@ -599,7 +559,7 @@ function PlaceCardComponent({
         />
       ))}
 
-      {renderWhen(Boolean(allowAddToList && user && showAddToList), () => (
+      {renderWhen(canAddToList && showAddToList, () => (
         <DeferredPlaceEditorModal
           visible={showAddToList}
           lat={place.lat}
@@ -660,7 +620,7 @@ function PlaceCardComponent({
         >
           {sourceAttributionPlace && sourceAttributionList ? (
             <PlaceCard
-              allowAddToList={allowAddToList && Boolean(user)}
+              allowAddToList={canAddToList}
               listCoverImage={sourceAttributionList.coverImage}
               listEmoji={sourceAttributionList.emoji}
               listId={sourceAttributionList.id}

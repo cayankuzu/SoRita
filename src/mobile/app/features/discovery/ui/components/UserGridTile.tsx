@@ -1,22 +1,25 @@
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { User } from '@/mobile/app/data/contracts/entities';
-import { discoveryTileStyles as styles } from '@/mobile/app/features/discovery/ui/components/discoveryTileStyles';
-import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { AvatarView } from '@/mobile/app/shared/components/ui/AvatarView';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { HighlightedText } from '@/mobile/app/shared/components/ui/HighlightedText';
-import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { avatarSize, colors } from '@/mobile/app/shared/theme/tokens';
-import { getResponsiveDiscoveryTileWidth } from '@/mobile/app/shared/utils/layout';
+import {
+  avatarSize,
+  colors,
+  controlSize,
+  fontWeight,
+  hitSlopFor,
+  radius,
+  spacing,
+  textStyle,
+} from '@/mobile/app/shared/theme/tokens';
 
 export type UserGridTileProps = {
   user: User;
-  fillWidth?: boolean;
-  compact?: boolean;
   isFollowing: boolean;
   isPending?: boolean;
   onPress: () => void;
@@ -25,10 +28,13 @@ export type UserGridTileProps = {
   searchQuery?: string;
 };
 
+/**
+ * A suggested person in Explore's three-column grid, like the other tabs:
+ * photo, name and username centred over a compact Follow, the way
+ * Instagram's suggestion cards stack them. The tile fills its grid cell.
+ */
 function UserGridTileComponent({
   user,
-  fillWidth = false,
-  compact = false,
   isFollowing,
   isPending = false,
   onPress,
@@ -36,8 +42,6 @@ function UserGridTileComponent({
   onFollowPress,
   searchQuery,
 }: UserGridTileProps) {
-  const { columnGap, height, width } = useAppLayout();
-  const tileWidth = getResponsiveDiscoveryTileWidth(width, height, columnGap);
   const followStatus = isFollowing
     ? tr.cards.following
     : isPending
@@ -46,49 +50,22 @@ function UserGridTileComponent({
   const followActionLabel = isFollowing ? tr.profile.actions.unfollow : followStatus;
 
   return (
-    <View
-      style={[
-        styles.tile,
-        styles.userTile,
-        compact ? styles.tileCompact : null,
-        fillWidth ? styles.tileFullWidth : { width: tileWidth },
-      ]}
-    >
+    <View style={styles.tile}>
       <InstantPressable
         accessibilityLabel={`${user.name}, @${user.username}`}
         accessibilityRole="button"
         onPress={onPress}
         onPressIn={onPressIn}
-        style={styles.userTileMainAction}
+        style={styles.identity}
       >
-        <View style={styles.userCover}>
-          {user.coverPhoto ? (
-            <AppImage
-              uri={user.coverPhoto}
-              style={styles.userCover}
-              accessibilityLabel={tr.cards.listCoverImageLabel(user.name)}
-            />
-          ) : null}
-        </View>
-
-        <View style={styles.userAvatarWrap}>
-          <View style={styles.userAvatarFrame}>
-            <AvatarView uri={user.profilePhoto} name={user.name} size={avatarSize.md} />
-          </View>
-        </View>
-
-        <View style={[styles.userTileBody, styles.userTileBodyMain]}>
-          <AppText numberOfLines={1} style={styles.tileTitle}>
+        <AvatarView uri={user.profilePhoto} name={user.name} size={avatarSize.lg} />
+        <View style={styles.copy}>
+          <AppText numberOfLines={1} style={styles.name}>
             <HighlightedText query={searchQuery} text={user.name} />
           </AppText>
-          <AppText numberOfLines={1} style={styles.ownerUsername}>
+          <AppText numberOfLines={1} style={styles.username}>
             <HighlightedText query={searchQuery} text={`@${user.username}`} />
           </AppText>
-          {user.bio && !compact ? (
-            <AppText numberOfLines={1} style={styles.tileDescription}>
-              <HighlightedText query={searchQuery} text={user.bio} />
-            </AppText>
-          ) : null}
         </View>
       </InstantPressable>
 
@@ -98,6 +75,7 @@ function UserGridTileComponent({
         accessibilityState={{ disabled: isPending, selected: isFollowing }}
         disabled={isPending}
         hapticFeedback="light"
+        hitSlop={hitSlopFor(controlSize.compact)}
         onPress={() => onFollowPress()}
         style={({ busy }) => [
           styles.followButton,
@@ -109,6 +87,7 @@ function UserGridTileComponent({
             {busy ? <ActivityIndicator color={colors.textMuted} size="small" /> : null}
             <AppText
               accessibilityLiveRegion={busy ? 'polite' : 'none'}
+              numberOfLines={1}
               style={[
                 styles.followButtonText,
                 isFollowing || isPending || busy ? styles.followButtonTextPassive : null,
@@ -129,8 +108,6 @@ function areUserGridTilePropsEqual(
 ) {
   return (
     previous.user === next.user &&
-    previous.fillWidth === next.fillWidth &&
-    previous.compact === next.compact &&
     previous.isFollowing === next.isFollowing &&
     previous.isPending === next.isPending
     && previous.searchQuery === next.searchQuery &&
@@ -144,3 +121,44 @@ export const UserGridTile = React.memo(
   UserGridTileComponent,
   areUserGridTilePropsEqual,
 );
+
+const styles = StyleSheet.create({
+  tile: {
+    width: '100%',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  identity: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  copy: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  name: textStyle('labelText', colors.text, fontWeight.strong),
+  username: textStyle('metadataText', colors.textSoft),
+  followButton: {
+    minHeight: controlSize.compact,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  followButtonPassive: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  followButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  followButtonText: textStyle('metadataText', colors.onPrimary, fontWeight.strong),
+  followButtonTextPassive: {
+    color: colors.text,
+  },
+});

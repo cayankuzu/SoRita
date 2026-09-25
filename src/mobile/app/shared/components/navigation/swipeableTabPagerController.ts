@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
 
-export const PAGE_SELECTION_SYNC_THRESHOLD = 0.08;
+const PAGE_SELECTION_SYNC_THRESHOLD = 0.08;
 export const PROGRAMMATIC_SCROLL_GUARD_MS = 700;
-export const LAZY_RENDER_RADIUS = 1;
+const LAZY_RENDER_RADIUS = 1;
 
 export function clampPageIndex(index: number, total: number) {
   if (!Number.isFinite(index) || total <= 0) {

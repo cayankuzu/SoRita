@@ -11,6 +11,18 @@ export type GeocodingSearchResult = {
   lng: number;
 };
 
+// Where the map is looking; results near it come first.
+export type GeocodingSearchNear = {
+  latitude: number;
+  longitude: number;
+};
+
+// About a kilometre: enough to rank nearby places, without sending the exact
+// spot the map is on.
+function roundForSearchBias(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 export type ReverseGeocodingResult = {
   name?: string;
   address?: string;
@@ -36,7 +48,10 @@ async function getAccessToken() {
   return session.access_token;
 }
 
-export async function searchPlacesByText(query: string): Promise<GeocodingSearchResult[]> {
+export async function searchPlacesByText(
+  query: string,
+  near?: GeocodingSearchNear | null,
+): Promise<GeocodingSearchResult[]> {
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery) {
@@ -48,6 +63,14 @@ export async function searchPlacesByText(query: string): Promise<GeocodingSearch
     env.supabaseMapsFunctionName,
     {
       action: 'search',
+      ...(near
+        ? {
+            near: {
+              latitude: roundForSearchBias(near.latitude),
+              longitude: roundForSearchBias(near.longitude),
+            },
+          }
+        : {}),
       query: trimmedQuery,
     },
     { accessToken },

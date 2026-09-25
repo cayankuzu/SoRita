@@ -1,6 +1,5 @@
 import React from 'react';
 
-export const MINI_MAP_RESET_LONG_PRESS_MS = 500;
 const MINI_MAP_HINT_DURATION_MS = 3000;
 const coordinatorListeners = new Set<() => void>();
 let activeMiniMapOwner: string | null = null;

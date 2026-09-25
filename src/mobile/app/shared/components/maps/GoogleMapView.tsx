@@ -8,6 +8,7 @@ import MapView, {
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import type { SharedMapProps } from '@/mobile/app/shared/components/maps/SharedMapTypes';
+import { normalizeMapLabelName } from '@/mobile/app/shared/utils/mapLabelName';
 import {
   clusterMapMarkers,
   type MapMarkerCluster,
@@ -205,6 +206,8 @@ function GoogleMapViewComponent({
   onMarkerPress,
   onPoiPress,
   onMapPress,
+  onCenterChange,
+  bottomPadding,
 }: SharedMapProps) {
   const mapRef = useRef<MapView>(null);
   const lastSelectionPressAt = useRef(0);
@@ -396,6 +399,9 @@ function GoogleMapViewComponent({
         cacheEnabled={!interactive}
         mapType="standard"
         initialRegion={initialRegion}
+        mapPadding={
+          bottomPadding ? { bottom: bottomPadding, left: 0, right: 0, top: 0 } : undefined
+        }
         showsUserLocation={showUserLocation}
         showsMyLocationButton={false}
         toolbarEnabled={false}
@@ -413,7 +419,10 @@ function GoogleMapViewComponent({
           onMapGesture?.();
         }}
         onMapReady={() => setIsReady(true)}
-        onRegionChangeComplete={setVisibleRegion}
+        onRegionChangeComplete={(region) => {
+          setVisibleRegion(region);
+          onCenterChange?.({ latitude: region.latitude, longitude: region.longitude });
+        }}
         onPoiClick={(event) => {
           if (!interactive || !onPoiPress) {
             return;
@@ -423,7 +432,7 @@ function GoogleMapViewComponent({
           onPoiPress({
             lat: event.nativeEvent.coordinate.latitude,
             lng: event.nativeEvent.coordinate.longitude,
-            name: event.nativeEvent.name,
+            name: normalizeMapLabelName(event.nativeEvent.name),
             placeId: event.nativeEvent.placeId,
           });
         }}

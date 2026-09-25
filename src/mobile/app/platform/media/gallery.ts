@@ -3,6 +3,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { NativeModules, Platform } from 'react-native';
 
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { createUuid } from '@/shared/utils/id';
 
 const GALLERY_DOWNLOAD_DIR = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}gallery-downloads/`;
 
@@ -115,8 +116,7 @@ function getNativeAndroidGallerySaver() {
 
 function buildDownloadTargetPath(uri: string, fileName?: string | null, mimeType?: string | null) {
   const extension = resolveFileExtension({ fileName, mimeType, uri });
-  const uniqueKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${GALLERY_DOWNLOAD_DIR}${uniqueKey}.${extension}`;
+  return `${GALLERY_DOWNLOAD_DIR}${createUuid()}.${extension}`;
 }
 
 export async function saveUriToGallery(params: {

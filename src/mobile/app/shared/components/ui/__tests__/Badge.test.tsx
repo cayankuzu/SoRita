@@ -30,6 +30,11 @@ describe('Badge', () => {
     expect(badgeContentColor('overlay')).toBe(colors.onPrimary);
   });
 
+  it('lets touches through to what it sits on', () => {
+    const { root } = render(<Badge label="Kapağı aç" tone="overlay" />);
+    expect(root.props.pointerEvents).toBe('none');
+  });
+
   it('keeps digits equal-width when asked to', () => {
     const { renderer } = render(<Badge label="12" numeric />);
     const text = renderer.root.find((node) => String(node.type) === 'Text');

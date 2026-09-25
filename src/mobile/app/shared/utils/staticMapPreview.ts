@@ -121,7 +121,3 @@ export function buildStaticMapUrl(places: MapMarkerItem[], height: number, width
   return url;
 }
 
-export const staticMapPreviewInternals = {
-  MAX_STATIC_MAP_URL_CACHE_ENTRIES,
-  STATIC_MAP_URL_CACHE,
-};

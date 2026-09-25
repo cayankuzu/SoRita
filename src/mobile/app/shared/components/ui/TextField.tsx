@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   StyleSheet,
   TextInput,
   TextInputProps,
@@ -21,6 +22,59 @@ import {
 } from '@/mobile/app/shared/validation/contentLimits';
 
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+
+// Android scrolls a one-line field to its cursor, which it puts after the
+// last character: a filled address read "…bağlar, Tüt Sk. 9/B" from the
+// middle. Until the field is focused, hold the cursor at the start.
+const START_OF_TEXT = { end: 0, start: 0 } as const;
+
+function resolveSelection(
+  selection: TextInputProps['selection'],
+  { focused, multiline }: { focused: boolean; multiline: boolean },
+) {
+  return Platform.OS === 'android' && !multiline && !focused && selection === undefined
+    ? START_OF_TEXT
+    : selection;
+}
+
+// The line under the field: the caller's helper, otherwise how much of the
+// character limit is used; its colour follows the field's status.
+function describeHelper({
+  helper,
+  helperTone,
+  maxLength,
+  status,
+  value,
+}: {
+  helper?: string;
+  helperTone: 'danger' | 'muted' | 'success';
+  maxLength?: number;
+  status: 'default' | 'error' | 'success';
+  value?: string;
+}) {
+  const hasLimit = typeof maxLength === 'number' && typeof value === 'string';
+
+  return {
+    isNearLimit: hasLimit && value.length >= maxLength * 0.8,
+    text: helper || (hasLimit ? buildCharacterLimitLabel(value, maxLength) : undefined),
+    tone: status === 'error' ? 'danger' : status === 'success' ? 'success' : helperTone,
+  };
+}
+
+// A multi-line field keeps the keyboard up on return and scrolls inside
+// itself, unless the caller says otherwise.
+function keyboardBehaviour(
+  isMultiline: boolean,
+  { blurOnSubmit, returnKeyType, scrollEnabled }: TextInputProps,
+) {
+  return isMultiline
+    ? {
+        blurOnSubmit: blurOnSubmit ?? false,
+        returnKeyType: returnKeyType ?? 'default',
+        scrollEnabled: scrollEnabled ?? true,
+      }
+    : { blurOnSubmit, returnKeyType, scrollEnabled };
+}
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -56,17 +110,13 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
   const accessibilityLabel = providedAccessibilityLabel || label || props.placeholder;
   const autoCorrect = providedAutoCorrect ?? !(autoCapitalize === 'none');
 
-  const valueLengthHelper =
-    typeof props.maxLength === 'number' && typeof props.value === 'string'
-      ? buildCharacterLimitLabel(props.value, props.maxLength)
-      : null;
-  const resolvedHelper = helper || valueLengthHelper || undefined;
-  const valueLength = typeof props.value === 'string' ? props.value.length : 0;
-  const isNearCharacterLimit =
-    typeof props.maxLength === 'number' && valueLength >= props.maxLength * 0.8;
-  const resolvedTone =
-    status === 'error' ? 'danger' : status === 'success' ? 'success' : helperTone;
+  const {
+    isNearLimit: isNearCharacterLimit,
+    text: resolvedHelper,
+    tone: resolvedTone,
+  } = describeHelper({ helper, helperTone, maxLength: props.maxLength, status, value: props.value });
   const isMultiline = Boolean(multilineRows);
+  const selection = resolveSelection(props.selection, { focused, multiline: isMultiline });
   const handleChangeText = React.useCallback(
     (value: string) => {
       onChangeText?.(isMultiline ? normalizeLineBreaks(value) : value);
@@ -101,15 +151,14 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
         allowFontScaling
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
-        blurOnSubmit={isMultiline ? props.blurOnSubmit ?? false : props.blurOnSubmit}
+        {...keyboardBehaviour(isMultiline, props)}
         multiline={isMultiline}
         numberOfLines={multilineRows}
         onBlur={handleBlur}
         onChangeText={handleChangeText}
         onFocus={handleFocus}
         placeholderTextColor={colors.textMuted}
-        returnKeyType={isMultiline ? props.returnKeyType ?? 'default' : props.returnKeyType}
-        scrollEnabled={isMultiline ? props.scrollEnabled ?? true : props.scrollEnabled}
+        selection={selection}
         style={[
           styles.input,
           focused ? styles.inputFocused : null,

@@ -30,8 +30,3 @@ export function primePersistedStartupData() {
   return primeInFlight;
 }
 
-export const primePersistedStartupDataInternals = {
-  reset() {
-    primeInFlight = null;
-  },
-};

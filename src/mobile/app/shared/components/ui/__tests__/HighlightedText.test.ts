@@ -14,6 +14,22 @@ describe('HighlightedText', () => {
     expect(segments.map((segment) => segment.text).join('')).toBe('SoRita ile sorita');
   });
 
+  it('marks what search matched: Turkish letters, a Latin capital I, an @ before a username', () => {
+    expect(splitHighlightedText('Şükrü Saraçoğlu', 'sukru')).toEqual([
+      { highlighted: true, text: 'Şükrü' },
+      { highlighted: false, text: ' Saraçoğlu' },
+    ]);
+    expect(splitHighlightedText('Istanbul Modern', 'ist')).toEqual([
+      { highlighted: true, text: 'Ist' },
+      { highlighted: false, text: 'anbul Modern' },
+    ]);
+    expect(splitHighlightedText('@ayse_k', '@ayse')).toEqual([
+      { highlighted: false, text: '@' },
+      { highlighted: true, text: 'ayse' },
+      { highlighted: false, text: '_k' },
+    ]);
+  });
+
   it('keeps text intact when the search is empty', () => {
     expect(splitHighlightedText('Kadıköy', ' ')).toEqual([
       { highlighted: false, text: 'Kadıköy' },

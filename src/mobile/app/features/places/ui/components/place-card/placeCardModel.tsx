@@ -2,7 +2,7 @@ import { Flag, Pencil, Trash2 } from 'lucide-react-native';
 
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceList, User } from '@/mobile/app/data/contracts/entities';
-import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
 

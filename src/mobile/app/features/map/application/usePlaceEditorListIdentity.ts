@@ -2,8 +2,10 @@ import { useMemo } from 'react';
 
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import {
+  countPendingListAdditions,
   filterSafeSelectedLists,
   getDuplicateListIds,
+  getInitialSelectedLists,
   normalizePersistablePlaceIdentity,
 } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 
@@ -29,14 +31,7 @@ export function usePlaceEditorListIdentity({
   selectedLists,
 }: UsePlaceEditorListIdentityParams) {
   const currentMembershipListIds = useMemo(
-    () =>
-      new Set(
-        existingPlace
-          ? lists
-              .filter((list) => list.places.some((place) => place.id === existingPlace.id))
-              .map((list) => list.id)
-          : [],
-      ),
+    () => new Set(getInitialSelectedLists(existingPlace, lists)),
     [existingPlace, lists],
   );
   const duplicateListIds = useMemo(
@@ -66,7 +61,7 @@ export function usePlaceEditorListIdentity({
     [availableListIds, currentMembershipListIds, duplicateListIds, selectedLists],
   );
   const pendingAddedListCount = useMemo(
-    () => safeSelectedLists.filter((listId) => !currentMembershipListIds.has(listId)).length,
+    () => countPendingListAdditions(safeSelectedLists, currentMembershipListIds),
     [currentMembershipListIds, safeSelectedLists],
   );
 

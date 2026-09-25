@@ -237,6 +237,41 @@ describe('PlaceEditorModal accessibility dismissal', () => {
     ).toHaveLength(0);
   });
 
+  it('asks before closing a reopened draft, which is itself unsaved work', () => {
+    editorState.step = 0;
+    editorState.isCreatingList = false;
+    const reopenedDraft = initialDraft('Taslak');
+    editorState.buildDraft.mockReturnValue(buildPlaceEditorDraft(reopenedDraft));
+    const onClose = vi.fn();
+    const renderModal = () => (
+      <PlaceEditorModal
+        visible
+        draft={reopenedDraft}
+        lat={41}
+        lng={29}
+        lists={[]}
+        onClose={onClose}
+        onSave={vi.fn()}
+      />
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderModal());
+    });
+    act(() => renderer.update(renderModal()));
+    act(() => {
+      renderer.root.find(
+        (node) => String(node.type) === 'KeyboardAvoidingView',
+      ).props.onAccessibilityEscape();
+    });
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAll((node) => String(node.type) === 'ConfirmActionModal'),
+    ).toHaveLength(1);
+  });
+
   it('keeps dirty confirmation and creation lock on accessibility escape', () => {
     editorState.step = 2;
     editorState.isCreatingList = false;

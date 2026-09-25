@@ -3,12 +3,11 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Platform,
-  ScrollView,
   TextInput,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import { ChevronUp, LocateFixed, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react-native';
+import { LocateFixed, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
@@ -21,13 +20,18 @@ import {
   MapPriorityNotice,
   MapVisibilityLegend,
 } from '@/mobile/app/features/map/ui/components/MapScreenOverlays';
+import {
+  MapReopenPill,
+  MapSearchResults,
+} from '@/mobile/app/features/map/ui/components/MapScreenControls';
 import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/storage/uiHints';
 import { env } from '@/mobile/app/platform/config/env';
-import { AppMapView } from '@/mobile/app/shared/components/maps/AppMapView';
+import { GoogleMapView } from '@/mobile/app/shared/components/maps/GoogleMapView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -108,6 +112,45 @@ function MapFilterMenu({
   );
 }
 
+// The filter is remembered between visits, so an empty map says when the
+// filter, not the user's data, is what hides the pins.
+function MapFilterNotice({
+  filterHidesEveryPin,
+  hasPriorityNotice,
+  markerFilter,
+  onShowAll,
+  showSearchFeedback,
+}: {
+  filterHidesEveryPin: boolean;
+  hasPriorityNotice: boolean;
+  markerFilter: MarkerFilterOption;
+  onShowAll: () => void;
+  showSearchFeedback: boolean;
+}) {
+  if (!filterHidesEveryPin || hasPriorityNotice || showSearchFeedback) {
+    return null;
+  }
+
+  const hidesAll = markerFilter === 'none';
+  const filterLabel = MARKER_FILTER_OPTIONS.find((option) => option.value === markerFilter)?.label;
+
+  return (
+    <InlineNotice
+      title={hidesAll ? tr.map.filterHiddenTitle : tr.map.filterEmptyTitle}
+      description={
+        hidesAll
+          ? tr.map.filterHiddenDescription
+          : tr.map.filterEmptyDescription(filterLabel ?? tr.map.filterAll)
+      }
+      actionLabel={tr.map.filterShowAll}
+      onAction={onShowAll}
+    />
+  );
+}
+
+// The bottom row of controls over the map: a 44dp button and a little air.
+const MAP_CONTROL_ROW_HEIGHT = 52;
+
 function MapSecondaryOverlays({
   bottom,
   hasEditor,
@@ -165,8 +208,10 @@ export function MapScreen() {
     editorDraft,
     editorFocusTrigger,
     effectiveViewport,
+    filterHidesEveryPin,
     handleDeletePlace,
     handleLocateUser,
+    handleMapCenterChange,
     handleMapPress,
     handleMarkerPress,
     handlePoiPress,
@@ -227,6 +272,15 @@ export function MapScreen() {
     visibleDataErrorMessage || searchErrorMessage || locationErrorMessage || env.isExpoGo,
   );
   const showSearchFeedback = !isFilterMenuOpen && !hasPriorityNotice && !isSearching && hasSearched;
+  // Back closes what is open over the map before it leaves the tab: it used
+  // to switch to the previous tab and leave the pin menu open for the return.
+  useAndroidBackHandler(isFilterMenuOpen || showSearchFeedback, () => {
+    if (isFilterMenuOpen) {
+      setIsFilterMenuOpen(false);
+    } else {
+      clearSearch();
+    }
+  });
   const activeFilterLabel = MARKER_FILTER_OPTIONS.find(
     (option) => option.value === markerFilter,
   )?.label;
@@ -401,75 +455,29 @@ export function MapScreen() {
                 onClose={() => setIsFilterMenuOpen(false)}
                 onFilterChange={setMarkerFilter}
               />
-            ) : null}
+            ) : (
+              <MapFilterNotice
+                filterHidesEveryPin={filterHidesEveryPin}
+                hasPriorityNotice={hasPriorityNotice}
+                markerFilter={markerFilter}
+                onShowAll={() => setMarkerFilter('all')}
+                showSearchFeedback={showSearchFeedback}
+              />
+            )}
 
           </View>
 
           {showSearchFeedback ? (
-            <View
-              pointerEvents="box-none"
-              style={[
-                styles.resultsLayer,
-                mapOverlayLayout.isShort ? styles.resultsLayerShort : null,
-                mapOverlayLayout.resultsTop == null ? null : { top: mapOverlayLayout.resultsTop },
-                mapOverlayLayout.resultsBottom == null
-                  ? null
-                  : { bottom: mapOverlayLayout.resultsBottom },
-              ]}
-            >
-              {searchResults.length > 0 ? (
-                <View style={[styles.resultsCard, { maxHeight: mapOverlayLayout.resultsMaxHeight }]}>
-                  <View style={styles.resultsHeader}>
-                    <AppText style={styles.resultsHeaderText}>
-                      {tr.map.searchResultCount(searchResults.length)}
-                    </AppText>
-                  </View>
-                  <ScrollView
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                    style={styles.resultsScroll}
-                    contentContainerStyle={styles.resultsScrollContent}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    {searchResults.map((item, index) => (
-                      <InstantPressable
-                        accessibilityLabel={`${item.name}. ${item.address}`}
-                        accessibilityRole="button"
-                        key={item.placeId}
-                        style={[
-                          styles.resultRow,
-                          index === searchResults.length - 1 ? styles.resultRowLast : null,
-                        ]}
-                        onPress={() => handleSearchResultPress(item)}
-                      >
-                        <ExpandableText
-                          text={item.name}
-                          collapsedLines={1}
-                          textStyle={styles.resultTitle}
-                          showIndicator={false}
-                        />
-                        <ExpandableText
-                          text={item.address}
-                          collapsedLines={2}
-                          textStyle={styles.resultAddress}
-                          showIndicator={false}
-                        />
-                      </InstantPressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.emptyResultsCard}>
-                  <AppText style={styles.emptyResultsTitle}>{tr.map.noResultsTitle}</AppText>
-                  <AppText style={styles.emptyResultsDescription}>{tr.map.noResultsDescription}</AppText>
-                </View>
-              )}
-            </View>
+            <MapSearchResults
+              layout={mapOverlayLayout}
+              onResultPress={handleSearchResultPress}
+              results={searchResults}
+            />
           ) : null}
 
           <View style={styles.map}>
             {isFocused ? (
-              <AppMapView
+              <GoogleMapView
                 places={mapPlaces}
                 interactive
                 showUserLocation
@@ -481,6 +489,10 @@ export function MapScreen() {
                 onMapPress={handleInteractiveMapPress}
                 onPoiPress={handleInteractivePoiPress}
                 onMarkerPress={handleInteractiveMarkerPress}
+                onCenterChange={handleMapCenterChange}
+                // The locate button, the reopen pill and the first-run hint
+                // share the bottom row; Google's logo sits above it.
+                bottomPadding={locateButtonBottomOffset + MAP_CONTROL_ROW_HEIGHT}
               />
             ) : (
               <View style={styles.mapPlaceholder} />
@@ -518,49 +530,14 @@ export function MapScreen() {
             )}
           </InstantPressable>
 
-          {minimizedEditor ? (
-            <InstantPressable
-              accessibilityLabel={tr.map.reopenPanel}
-              accessibilityRole="button"
-              hitSlop={hitSlopFor(46)}
-              style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
-              onPress={reopenMinimizedEditor}
-            >
-              <View style={styles.reopenEditorBody}>
-                <ExpandableText
-                  text={minimizedEditor.panel.name || tr.placeEditor.minimizedNewTitle}
-                  collapsedLines={1}
-                  textStyle={styles.reopenEditorTitle}
-                  showIndicator={false}
-                />
-                <AppText style={styles.reopenEditorSubtitle}>
-                  {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
-                </AppText>
-              </View>
-              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
-            </InstantPressable>
-          ) : null}
-
-          {!minimizedEditor && minimizedExistingPlace ? (
-            <InstantPressable
-              accessibilityLabel={tr.map.reopenPreview}
-              accessibilityRole="button"
-              hitSlop={hitSlopFor(46)}
-              style={[styles.reopenEditorButton, { bottom: locateButtonBottomOffset }]}
-              onPress={reopenMinimizedExistingPlace}
-            >
-              <View style={styles.reopenEditorBody}>
-                <ExpandableText
-                  text={tr.map.placeCardLabel}
-                  collapsedLines={1}
-                  textStyle={styles.reopenEditorTitle}
-                  showIndicator={false}
-                />
-                <AppText style={styles.reopenEditorSubtitle}>{tr.map.reopenPreview}</AppText>
-              </View>
-              <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
-            </InstantPressable>
-          ) : null}
+          <MapReopenPill
+            bottom={locateButtonBottomOffset}
+            editor={minimizedEditor}
+            hasMinimizedPlace={Boolean(minimizedExistingPlace)}
+            isSaving={isEditorInteractionLocked}
+            onReopenEditor={reopenMinimizedEditor}
+            onReopenPlace={reopenMinimizedExistingPlace}
+          />
         </View>
       </Screen>
 

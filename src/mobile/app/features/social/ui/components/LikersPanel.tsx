@@ -29,7 +29,7 @@ import {
 } from '@/mobile/app/shared/theme/tokens';
 import { formatRelativeDateTime } from '@/mobile/app/shared/utils/dateTime';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
-import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
+import { normalizeSearchQuery, normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
 type LikersPanelProps = {
   likeCount: number;
@@ -57,7 +57,7 @@ export function LikersPanel({
 }: LikersPanelProps) {
   const { height, width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
-  const q = normalizeSearchText(searchQuery);
+  const q = normalizeSearchQuery(searchQuery);
   const filteredLikers = useMemo(
     () => (q ? likers.filter((liker) => matchesLiker(liker, q)) : likers),
     [likers, q],

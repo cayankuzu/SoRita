@@ -1,8 +1,6 @@
 import React, { startTransition, useCallback, useMemo, useState } from 'react';
-import { useScrollToTop } from '@react-navigation/native';
-import { Animated, StyleSheet, View } from 'react-native';
-import type { FlatList } from 'react-native';
-import { Image as ImageIcon, MapPin } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
+import { MapPin } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -30,20 +28,27 @@ import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { MosaicGridSkeleton, ProfileSkeleton } from '@/mobile/app/shared/components/ui/SkeletonPlaceholder';
+import { useTabReselect } from '@/mobile/app/shared/hooks/useTabReselect';
+import {
+  useProfileTabPager,
+  useProfileTabState,
+} from '@/mobile/app/features/profile/ui/components/useProfileTabPager';
+import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
+import {
+  profileConnectionsCopy,
+  type ProfileConnectionMode,
+} from '@/mobile/app/features/profile/ui/components/profileConnectionsCopy';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
 import { ProfileConnectionsModal } from '@/mobile/app/features/profile/ui/components/ProfileConnectionsModal';
+import { ProfileFilteredEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileFilteredEmptyState';
 import {
   ProfileTabs,
-  type ProfileTabOption,
   type ProfileVisibilityFilter,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
-import {
-  buildProfileTabOptions,
-  resolveProfileTabCount,
-} from '@/mobile/app/features/profile/ui/components/profileTabOptions';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
+import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 
 type ProfileTab = ProfileContentTab;
 const PROFILE_VISIBILITY_OPTIONS: Array<{
@@ -69,10 +74,8 @@ function matchesVisibilityFilter(
 export function ProfileScreen() {
   const navigation = useAppNavigation();
   const { user } = useAuth();
-  const profileListRef = React.useRef<FlatList<ProfileGridItem> | null>(null);
-  const pagerProgress = React.useRef(new Animated.Value(0)).current;
-  const [activeTab, setActiveTab] = useState<ProfileTab>('lists');
-  const [visibleTab, setVisibleTab] = useState<ProfileTab>('lists');
+  const tabState = useProfileTabState();
+  const { activeTab, pagerProgress, profileListRef, visibleTab } = tabState;
   const [visibilityFilter, setVisibilityFilter] =
     useState<ProfileVisibilityFilter>('all');
   const [showVisibilityFilterMenu, setShowVisibilityFilterMenu] =
@@ -83,9 +86,7 @@ export function ProfileScreen() {
     startIndex: number;
     kind: 'gallery' | 'places';
   } | null>(null);
-  const [connectionMode, setConnectionMode] = useState<
-    'followers' | 'following' | null
-  >(null);
+  const [connectionMode, setConnectionMode] = useState<ProfileConnectionMode | null>(null);
   const [editingPlaceTarget, setEditingPlaceTarget] = useState<{
     list: PlaceList;
     place: Place;
@@ -157,90 +158,41 @@ export function ProfileScreen() {
     places: filteredPlaces,
   } satisfies Record<ProfileTab, ProfileGridItem[]>;
 
-  const tabs = useMemo<ProfileTabOption[]>(
-    () =>
-      buildProfileTabOptions({
-        gallery: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPhotos.length,
-          total: visibilityFilter !== 'all' ? undefined : tabTotals.gallery,
-        }),
-        lists: resolveProfileTabCount({
-          complete: isContentComplete.lists,
-          loaded: filteredLists.length,
-          total: visibilityFilter !== 'all' ? undefined : tabTotals.lists,
-        }),
-        places: resolveProfileTabCount({
-          complete: isContentComplete.places,
-          loaded: filteredPlaces.length,
-          total: visibilityFilter !== 'all' ? undefined : tabTotals.places,
-        }),
-      }),
-    [
-      filteredLists.length,
-      filteredPhotos.length,
-      filteredPlaces.length,
-      isContentComplete.lists,
-      isContentComplete.places,
-      tabTotals.gallery,
-      tabTotals.lists,
-      tabTotals.places,
-      visibilityFilter,
-    ],
-  );
-  const pagerTabs = useMemo(
-    () => tabs.map((tab) => ({ key: tab.key as ProfileTab, label: tab.label })),
-    [tabs],
-  );
-  useScrollToTop(profileListRef as React.RefObject<FlatList>);
-
-  const scrollProfileToTop = useCallback(() => {
-    profileListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  const closeVisibilityFilterMenu = useCallback(() => {
+    setShowVisibilityFilterMenu(false);
   }, []);
-
-  const setPagerProgressForTab = useCallback(
-    (tab: ProfileTab) => {
-      const nextIndex = Math.max(
-        0,
-        pagerTabs.findIndex((pagerTab) => pagerTab.key === tab),
-      );
-      pagerProgress.setValue(nextIndex);
+  // Back closes the visibility menu before it leaves the tab.
+  useAndroidBackHandler(showVisibilityFilterMenu, closeVisibilityFilterMenu);
+  const {
+    handlePageProgressChange,
+    handleProfileEndReached,
+    handleTabChange,
+    handleTabPreviewChange,
+    pagerTabs,
+    tabs,
+  } = useProfileTabPager({
+    counts: {
+      gallery: {
+        complete: isContentComplete.places,
+        loaded: filteredPhotos.length,
+        total: visibilityFilter !== 'all' ? undefined : tabTotals.gallery,
+      },
+      lists: {
+        complete: isContentComplete.lists,
+        loaded: filteredLists.length,
+        total: visibilityFilter !== 'all' ? undefined : tabTotals.lists,
+      },
+      places: {
+        complete: isContentComplete.places,
+        loaded: filteredPlaces.length,
+        total: visibilityFilter !== 'all' ? undefined : tabTotals.places,
+      },
     },
-    [pagerProgress, pagerTabs],
-  );
-  const handlePageProgressChange = useCallback(
-    (pageOffset: number) => {
-      pagerProgress.setValue(pageOffset);
-    },
-    [pagerProgress],
-  );
-  const handleTabChange = useCallback(
-    (key: string) => {
-      const nextTab = key as ProfileTab;
-      setPagerProgressForTab(nextTab);
-
-      if (nextTab === activeTab) {
-        scrollProfileToTop();
-        setShowVisibilityFilterMenu(false);
-        return;
-      }
-
-      setVisibleTab(nextTab);
-      setActiveTab(nextTab);
-      setShowVisibilityFilterMenu(false);
-    },
-    [activeTab, scrollProfileToTop, setPagerProgressForTab],
-  );
-  const handleTabPreviewChange = useCallback((key: ProfileTab) => {
-    setVisibleTab(key);
-  }, []);
-  const handleProfileEndReached = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) {
-      return;
-    }
-
-    void fetchNextPage?.();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+    onTabPress: closeVisibilityFilterMenu,
+    pagination: { fetchNextPage, hasNextPage, isFetchingNextPage },
+    tabState,
+  });
+  useTabReselect(Boolean(feedMode), () => setFeedMode(null));
 
   if (isInitialLoading) {
     return (
@@ -379,33 +331,17 @@ export function ProfileScreen() {
       );
     }
 
-    if (tab === 'lists') {
+    if (visibilityFilter !== 'all') {
       return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.myNoList}
-          description={tr.profile.empty.myNoListDescription}
+        <ProfileFilteredEmptyState
+          onShowAll={() => setVisibilityFilter('all')}
+          tab={tab}
+          visibility={visibilityFilter}
         />
       );
     }
 
-    if (tab === 'places') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.myNoPlace}
-          description={tr.profile.empty.myNoPlaceDescription}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
-        title={tr.profile.empty.myNoPhoto}
-        description={tr.profile.empty.myNoPhotoDescription}
-      />
-    );
+    return <ProfileTabEmptyState tab={tab} whose="own" />;
   };
 
   const renderProfileHero = () => (
@@ -560,19 +496,8 @@ export function ProfileScreen() {
       {connectionMode ? (
         <ProfileConnectionsModal
           visible
-          title={
-            connectionMode === 'followers'
-              ? tr.profile.connections.followers
-              : tr.profile.connections.following
-          }
-          users={
-            connectionMode === 'followers' ? followerUsers : followingUsers
-          }
-          emptyTitle={
-            connectionMode === 'followers'
-              ? tr.profile.connections.emptyFollowers
-              : tr.profile.connections.emptyFollowing
-          }
+          {...profileConnectionsCopy(connectionMode)}
+          users={connectionMode === 'followers' ? followerUsers : followingUsers}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onClose={() => setConnectionMode(null)}

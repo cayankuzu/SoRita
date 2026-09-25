@@ -31,7 +31,7 @@ export type PushPayload = {
 };
 
 export type VerifiedPushNavigationTarget =
-  | { screen: 'ListDetail'; params: { listId: string; placeId?: string } }
+  | { screen: 'ListDetail'; params: { listId: string; openComments?: boolean; placeId?: string } }
   | { screen: 'Notifications'; params?: undefined }
   | { screen: 'UserProfile'; params: { userId: string } };
 
@@ -68,6 +68,13 @@ export function payloadMatchesVerifiedPushNotification(
   );
 }
 
+// A push about a comment opens the place's comments, like its in-app row.
+const COMMENT_PUSH_TYPES: readonly MobileNotification['type'][] = [
+  'comment',
+  'comment_like',
+  'comment_reply',
+];
+
 export function resolveVerifiedPushNavigationTarget(
   notification: VerifiedPushNotificationTarget,
 ): VerifiedPushNavigationTarget {
@@ -75,6 +82,9 @@ export function resolveVerifiedPushNavigationTarget(
     return {
       params: {
         listId: notification.listId,
+        ...(notification.placeId && COMMENT_PUSH_TYPES.includes(notification.type)
+          ? { openComments: true }
+          : {}),
         placeId: notification.placeId || undefined,
       },
       screen: 'ListDetail',

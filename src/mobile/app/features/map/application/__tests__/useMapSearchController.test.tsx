@@ -61,7 +61,9 @@ describe('useMapSearchController', () => {
       }),
     );
 
+    // The map settled somewhere: the search ranks places near it first.
     act(() => {
+      hook.result.current.handleMapCenterChange({ latitude: 39.93, longitude: 32.86 });
       hook.result.current.handleSearchQueryChange('kahve');
     });
 
@@ -70,6 +72,7 @@ describe('useMapSearchController', () => {
     await waitFor(() => {
       expect(hook.result.current.searchResults).toHaveLength(1);
     });
+    expect(searchPlacesByTextMock).toHaveBeenCalledWith('kahve', { latitude: 39.93, longitude: 32.86 });
 
     act(() => {
       hook.result.current.handleSearchResultPress({

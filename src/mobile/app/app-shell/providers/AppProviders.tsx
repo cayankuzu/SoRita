@@ -1,13 +1,17 @@
 import React, { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import * as NativeSplashScreen from 'expo-splash-screen';
 import { AppState, StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { AppProgressBannerProvider } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
-import { AppSystemBarsProvider } from '@/mobile/app/app-shell/chrome/AppSystemBars';
+import { AppSystemBarsProvider } from '@/mobile/app/shared/components/chrome/AppSystemBars';
 import { DeferredRuntimeHosts } from '@/mobile/app/app-shell/providers/DeferredRuntimeHosts';
 import { StartupQueryCacheController } from '@/mobile/app/app-shell/providers/StartupQueryCacheController';
 import { env } from '@/mobile/app/platform/config/env';
@@ -109,14 +113,16 @@ export function AppProviders({ children }: AppProvidersProps) {
       typeof import('@/mobile/app/app-shell/startup/AppConfigErrorScreen');
 
     return (
-      <SafeAreaProvider>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <AppConfigErrorScreen missingEnvVars={env.missingRequiredStartupEnvVars} />
       </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaProvider>
+    // Measured at launch, so the first frame lays out around the status bar
+    // and navigation bar instead of under them.
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <AppSystemBarsProvider>

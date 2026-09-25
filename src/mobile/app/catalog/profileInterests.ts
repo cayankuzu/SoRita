@@ -1,5 +1,3 @@
-import { uniqueStrings } from '@/mobile/app/shared/utils/format';
-
 export type ProfileInterestOption = {
   value: string;
   label: string;
@@ -76,71 +74,3 @@ export const PROFILE_INTEREST_META = Object.fromEntries(
   PROFILE_INTEREST_OPTIONS.map((item) => [item.value, item]),
 ) as Record<string, ProfileInterestOption>;
 
-const LEGACY_INTEREST_MAP: Record<string, string[]> = {
-  aquarium: ['family_time'],
-  amusementcenter: ['family_time', 'festivals'],
-  artcenter: ['art_design'],
-  artgallery: ['art_design', 'museums'],
-  bakery: ['dessert', 'coffee'],
-  bar: ['cocktails', 'nightlife'],
-  bazaar: ['shopping', 'hidden_gems'],
-  beach: ['beach', 'travel'],
-  beachclub: ['beach', 'nightlife'],
-  bookstore: ['books', 'coffee'],
-  breakfast: ['brunch'],
-  brunchspot: ['brunch'],
-  cafe: ['coffee', 'third_wave_coffee'],
-  camping: ['nature', 'travel'],
-  cinema: ['cinema_series'],
-  cocktailbar: ['cocktails', 'nightlife'],
-  concerthall: ['live_music'],
-  coworking: ['remote_work', 'startup_networking'],
-  dessert: ['dessert'],
-  eventvenue: ['festivals'],
-  forest: ['nature'],
-  gelato: ['dessert'],
-  gym: ['fitness'],
-  historicsite: ['history', 'travel'],
-  hotel: ['travel'],
-  icecream: ['dessert'],
-  library: ['books'],
-  market: ['shopping', 'local_markets'],
-  museum: ['museums', 'history'],
-  musicvenue: ['live_music', 'nightlife'],
-  nightclub: ['nightlife'],
-  nightlife: ['nightlife'],
-  park: ['nature', 'family_time'],
-  petfriendlycafe: ['pet_friendly', 'coffee'],
-  pilatesstudio: ['mindfulness', 'fitness'],
-  restaurant: ['new_tastes', 'world_cuisine'],
-  rooftop: ['cocktails', 'hidden_gems'],
-  shopping: ['shopping'],
-  spa: ['wellness'],
-  sport: ['fitness'],
-  streetfood: ['street_food', 'new_tastes'],
-  studycafe: ['study_dates', 'books'],
-  teahouse: ['books'],
-  theater: ['art_design'],
-  veganrestaurant: ['vegan'],
-  viewpoint: ['photography', 'travel'],
-  vintageStore: ['fashion', 'shopping'],
-  watersports: ['beach', 'fitness'],
-  workshop: ['art_design', 'technology'],
-  yoga: ['mindfulness', 'wellness'],
-};
-
-export function normalizeProfileInterests(values: string[]) {
-  return uniqueStrings(
-    values.flatMap((value) => {
-      if (PROFILE_INTEREST_META[value]) {
-        return [value];
-      }
-
-      return LEGACY_INTEREST_MAP[value] || [];
-    }),
-  );
-}
-
-export function inferProfileInterestsFromCategories(values: string[]) {
-  return normalizeProfileInterests(values).slice(0, 8);
-}

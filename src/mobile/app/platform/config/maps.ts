@@ -1,9 +1,3 @@
-import { env } from '@/mobile/app/platform/config/env';
-
-export const mapConfig = {
-  googleMapsApiKey: env.googleMapsApiKey,
-};
-
 type ExternalMapUrlOptions = {
   name?: string;
   address?: string;

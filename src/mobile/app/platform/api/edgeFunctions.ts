@@ -71,7 +71,7 @@ function normalizeErrorText(value?: string) {
   return value?.trim().toLowerCase() ?? '';
 }
 
-export function isEdgeFunctionError(error: unknown): error is EdgeFunctionError {
+function isEdgeFunctionError(error: unknown): error is EdgeFunctionError {
   return error instanceof EdgeFunctionError;
 }
 

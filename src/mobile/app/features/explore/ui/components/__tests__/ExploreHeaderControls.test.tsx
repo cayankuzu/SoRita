@@ -68,4 +68,26 @@ describe('ExploreHeaderControls', () => {
     );
     expect(tabRail.props.keyboardShouldPersistTaps).toBe('handled');
   });
+
+  it('shows no count for one or two letters, keeping the line in place', () => {
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <ExploreHeaderControls
+          activeTab="lists"
+          resultCount={0}
+          resultsHidden
+          searchQuery="ka"
+          onSearchQueryChange={vi.fn()}
+          onTabChange={vi.fn()}
+        />,
+      );
+    });
+
+    const status = renderer.root.find(
+      (node) => node.props.accessibilityLiveRegion === 'polite',
+    );
+    expect(status.props.children).toBe('\u00A0');
+  });
 });

@@ -226,6 +226,45 @@ describe('maps-geocoding handler', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('ranks results near the map first and keeps searches in Turkey', async () => {
+    const { handler } = createDeps();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ places: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ places: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const near = { latitude: 41.0, longitude: 29.0 };
+    const response = await handler(await signedRequest({ action: 'search', near, query: 'Kahve' }));
+    expect(response.status).toBe(200);
+
+    const placesBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(placesBody).toMatchObject({
+      locationBias: { circle: { center: near, radius: 50_000 } },
+      regionCode: 'TR',
+      textQuery: 'Kahve',
+    });
+    const geocodingUrl = String(fetchMock.mock.calls[1]?.[0]);
+    expect(geocodingUrl).toContain('region=tr');
+    expect(geocodingUrl).toContain(`bounds=${encodeURIComponent('40.5,28.5|41.5,29.5')}`);
+
+    // Without a map position the search still stays in Turkey.
+    await handler(await signedRequest({ action: 'search', query: 'Kahve' }));
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).not.toHaveProperty('locationBias');
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).toMatchObject({ regionCode: 'TR' });
+    expect(String(fetchMock.mock.calls[3]?.[0])).not.toContain('bounds=');
+  });
+
+  it('rejects a map position outside the globe', async () => {
+    const { handler } = createDeps();
+    vi.stubGlobal('fetch', vi.fn());
+    const response = await handler(
+      await signedRequest({ action: 'search', near: { latitude: 95, longitude: 0 }, query: 'Moda' }),
+    );
+    expect(response.status).toBe(400);
+  });
+
   it('returns 429 when the geocoding rate limit is exceeded', async () => {
     const { handler } = createDeps({ rateLimited: true });
     const fetchMock = vi.fn();

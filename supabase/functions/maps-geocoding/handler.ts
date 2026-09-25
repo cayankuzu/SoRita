@@ -91,6 +91,13 @@ type GoogleForwardGeocodingResponse = GoogleReverseGeocodingResponse;
 const geocodingPayloadSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('search'),
+    // Where the map is looking: results near it come first.
+    near: z
+      .object({
+        latitude: z.number().gte(-90).lte(90),
+        longitude: z.number().gte(-180).lte(180),
+      })
+      .optional(),
     query: z.string().trim().min(1).max(120),
   }),
   z.object({
@@ -104,6 +111,15 @@ const GOOGLE_GEOCODING_ENDPOINT = 'https://maps.googleapis.com/maps/api/geocode/
 const GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT = 'https://places.googleapis.com/v1/places:searchText';
 const GEOCODING_TIMEOUT_MS = 8000;
 const SEARCH_LIMIT = 20;
+// Results within about a city of the map come first; farther matches still
+// appear after them.
+const SEARCH_BIAS_RADIUS_METERS = 50_000;
+const SEARCH_BIAS_BOUNDS_DEGREES = 0.5;
+// Without a region, Google biases by the edge server's location, which is not
+// where people using the app are.
+const SEARCH_REGION_CODE = 'TR';
+
+type SearchNear = { latitude: number; longitude: number };
 
 function sanitizeText(value?: string | null) {
   const normalized = value?.trim();
@@ -128,7 +144,11 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   }
 }
 
-async function searchPlacesByGoogleText(apiKey: string, rawQuery: string): Promise<GeocodingSearchResult[]> {
+async function searchPlacesByGoogleText(
+  apiKey: string,
+  rawQuery: string,
+  near?: SearchNear,
+): Promise<GeocodingSearchResult[]> {
   const response = await fetchWithTimeout(GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -138,8 +158,16 @@ async function searchPlacesByGoogleText(apiKey: string, rawQuery: string): Promi
     },
     body: JSON.stringify({
       languageCode: 'tr',
+      ...(near
+        ? {
+            locationBias: {
+              circle: { center: near, radius: SEARCH_BIAS_RADIUS_METERS },
+            },
+          }
+        : {}),
       pageSize: SEARCH_LIMIT,
       rankPreference: 'RELEVANCE',
+      regionCode: SEARCH_REGION_CODE,
       textQuery: rawQuery,
     }),
   });
@@ -170,9 +198,25 @@ async function searchPlacesByGoogleText(apiKey: string, rawQuery: string): Promi
     .filter((item): item is GeocodingSearchResult => Boolean(item));
 }
 
-async function searchPlacesByGoogleGeocoding(apiKey: string, rawQuery: string): Promise<GeocodingSearchResult[]> {
+function geocodingBoundsParam(near?: SearchNear) {
+  if (!near) {
+    return '';
+  }
+
+  const south = Math.max(-90, near.latitude - SEARCH_BIAS_BOUNDS_DEGREES);
+  const north = Math.min(90, near.latitude + SEARCH_BIAS_BOUNDS_DEGREES);
+  const west = Math.max(-180, near.longitude - SEARCH_BIAS_BOUNDS_DEGREES);
+  const east = Math.min(180, near.longitude + SEARCH_BIAS_BOUNDS_DEGREES);
+  return `&bounds=${encodeURIComponent(`${south},${west}|${north},${east}`)}`;
+}
+
+async function searchPlacesByGoogleGeocoding(
+  apiKey: string,
+  rawQuery: string,
+  near?: SearchNear,
+): Promise<GeocodingSearchResult[]> {
   const response = await fetchWithTimeout(
-    `${GOOGLE_GEOCODING_ENDPOINT}?address=${encodeURIComponent(rawQuery)}&language=tr&key=${encodeURIComponent(apiKey)}`,
+    `${GOOGLE_GEOCODING_ENDPOINT}?address=${encodeURIComponent(rawQuery)}${geocodingBoundsParam(near)}&language=tr&region=${SEARCH_REGION_CODE.toLowerCase()}&key=${encodeURIComponent(apiKey)}`,
     {},
   );
 
@@ -265,12 +309,8 @@ function mergeSearchResults(rawQuery: string, ...groups: GeocodingSearchResult[]
 
   return Array.from(merged.values())
     .sort((left, right) => {
-      const scoreDifference = scoreSearchResult(rawQuery, left) - scoreSearchResult(rawQuery, right);
-      if (scoreDifference !== 0) {
-        return scoreDifference;
-      }
-
-      return left.name.trim().length - right.name.trim().length;
+      // Equal matches keep Google's order, which puts nearby places first.
+      return scoreSearchResult(rawQuery, left) - scoreSearchResult(rawQuery, right);
     })
     .slice(0, SEARCH_LIMIT);
 }
@@ -469,8 +509,16 @@ export function createMapsGeocodingHandler({
 
       if (parsedPayload.data.action === 'search') {
         const [placesResults, addressResults] = await Promise.allSettled([
-          searchPlacesByGoogleText(googleMapsServicesApiKey, parsedPayload.data.query),
-          searchPlacesByGoogleGeocoding(googleMapsServicesApiKey, parsedPayload.data.query),
+          searchPlacesByGoogleText(
+            googleMapsServicesApiKey,
+            parsedPayload.data.query,
+            parsedPayload.data.near,
+          ),
+          searchPlacesByGoogleGeocoding(
+            googleMapsServicesApiKey,
+            parsedPayload.data.query,
+            parsedPayload.data.near,
+          ),
         ]);
         const results = mergeSearchResults(
           parsedPayload.data.query,

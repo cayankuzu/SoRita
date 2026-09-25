@@ -39,6 +39,32 @@ describe('richText', () => {
     ]);
   });
 
+  it('leaves addresses and times that only look like links as text', () => {
+    for (const text of [
+      'Katip Mustafa Çelebi, Küçük Parmakkapı Sk. No:2/B, 34430 Beyoğlu',
+      'Bağdat Cd.No:12 Kadıköy',
+      'Saat:10:00, kahvaltı vs.Ama erken gel',
+    ]) {
+      expect(parseRichTextSegments(text)).toEqual([{ type: 'text', text }]);
+    }
+  });
+
+  it('still links shared domains and flags schemes that open other apps', () => {
+    expect(parseRichTextSegments('Menü: kafe.com.tr/menu')).toEqual([
+      { type: 'text', text: 'Menü: ' },
+      {
+        type: 'link',
+        displayText: 'kafe.com.tr/menu',
+        url: 'https://kafe.com.tr/menu',
+        safe: true,
+      },
+    ]);
+    expect(parseRichTextSegments('bak intent://scan')).toEqual([
+      { type: 'text', text: 'bak ' },
+      { type: 'link', displayText: 'intent://scan', url: 'intent://scan', safe: false },
+    ]);
+  });
+
   it('keeps mentions as plain text outside comment mode', () => {
     expect(parseRichTextSegments('Merhaba @ada', { variant: 'default' })).toEqual([
       { type: 'text', text: 'Merhaba @ada' },

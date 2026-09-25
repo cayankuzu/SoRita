@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image as ImageIcon, List, MapPin } from 'lucide-react-native';
 
+import type { ProfileContentTab } from '@/mobile/app/features/profile/ui/components/ProfileContentPager';
 import type { ProfileTabOption } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
@@ -30,6 +31,13 @@ export function resolveProfileTabCount({
   return complete ? loaded : total;
 }
 
+// Each tab keeps one icon, in the tab bar and on its empty state.
+export const PROFILE_TAB_ICONS = {
+  gallery: ImageIcon,
+  lists: List,
+  places: MapPin,
+} satisfies Record<ProfileContentTab, typeof List>;
+
 function tabIconColor(active: boolean) {
   return active ? colors.primary : colors.textSoft;
 }
@@ -40,19 +48,19 @@ export function buildProfileTabOptions(counts: ProfileTabCounts): ProfileTabOpti
       key: 'lists',
       label: tr.profile.tabs.lists,
       count: counts.lists,
-      renderIcon: (active) => <List color={tabIconColor(active)} size={iconSize.xs} />,
+      renderIcon: (active) => <PROFILE_TAB_ICONS.lists color={tabIconColor(active)} size={iconSize.xs} />,
     },
     {
       key: 'places',
       label: tr.profile.tabs.places,
       count: counts.places,
-      renderIcon: (active) => <MapPin color={tabIconColor(active)} size={iconSize.xs} />,
+      renderIcon: (active) => <PROFILE_TAB_ICONS.places color={tabIconColor(active)} size={iconSize.xs} />,
     },
     {
       key: 'gallery',
       label: tr.profile.tabs.gallery,
       count: counts.gallery,
-      renderIcon: (active) => <ImageIcon color={tabIconColor(active)} size={iconSize.xs} />,
+      renderIcon: (active) => <PROFILE_TAB_ICONS.gallery color={tabIconColor(active)} size={iconSize.xs} />,
     },
   ];
 }

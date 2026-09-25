@@ -9,7 +9,7 @@ type ReactNativePerformance = Performance & {
 };
 
 /** Earliest JavaScript timestamp, imported before the React application graph. */
-export const APP_JAVASCRIPT_STARTED_AT = Date.now();
+const APP_JAVASCRIPT_STARTED_AT = Date.now();
 const APP_JAVASCRIPT_STARTED_AT_HIGH_RESOLUTION = globalThis.performance?.now?.();
 
 function getReactNativeStartupTiming() {

@@ -38,6 +38,26 @@ describe('resolveNotificationTarget', () => {
     ).toEqual({ screen: 'UserProfile', params: { userId: 'profile-1' } });
   });
 
+  it('opens the comments for a notification about a comment, and only then', () => {
+    for (const type of ['comment', 'comment_like', 'comment_reply'] as const) {
+      expect(
+        resolveNotificationTarget(
+          notification({ type, linkTo: { type: 'list', listId: 'list-1', placeId: 'place-1' } }),
+        ),
+      ).toEqual({
+        screen: 'ListDetail',
+        params: { listId: 'list-1', openComments: true, placeId: 'place-1' },
+      });
+    }
+
+    // Without a place there are no comments to open.
+    expect(
+      resolveNotificationTarget(
+        notification({ type: 'comment', linkTo: { type: 'list', listId: 'list-1' } }),
+      ),
+    ).toEqual({ screen: 'ListDetail', params: { listId: 'list-1', placeId: undefined } });
+  });
+
   it('never routes actorless announcements or malformed actor fallbacks', () => {
     expect(
       resolveNotificationTarget(

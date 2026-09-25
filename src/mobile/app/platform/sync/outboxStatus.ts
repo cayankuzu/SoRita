@@ -76,7 +76,7 @@ export function setOutboxSyncing(userId: string, syncing: boolean) {
   }
 }
 
-export function subscribeToOutboxStatus(listener: () => void) {
+function subscribeToOutboxStatus(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }

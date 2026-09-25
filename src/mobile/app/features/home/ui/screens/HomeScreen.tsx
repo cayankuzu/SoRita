@@ -12,7 +12,6 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { AppHeader } from '@/mobile/app/app-shell/chrome/AppHeader';
@@ -51,6 +50,7 @@ import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggrega
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { useScrollAwayHeader } from '@/mobile/app/shared/hooks/useScrollAwayHeader';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
+import { useTopInset } from '@/mobile/app/shared/hooks/useTopInset';
 import { getAppLaunchElapsedMs } from '@/mobile/app/shared/performance/appLaunch';
 
 function getFeedMediaPreviewUris(item: PlaceFeedCardItem) {
@@ -91,6 +91,7 @@ export function HomeScreen() {
   const { height, width } = useWindowDimensions();
   // The bars run edge to edge and pad themselves; only the cards are inset.
   const { screenPadding } = useAppLayout();
+  const topInset = useTopInset();
   const insetStyle = React.useMemo(() => ({ paddingHorizontal: screenPadding }), [screenPadding]);
   // The brand bar slides away while reading down the feed and returns on the
   // first scroll up. An opaque strip keeps the status bar clear of the feed.
@@ -237,7 +238,7 @@ export function HomeScreen() {
           return item ? [item.key] : [];
         }),
       );
-      visibilityStoreRef.current.replace(nextVisibleKeys);
+      visibilityStoreRef.current.markSeen(nextVisibleKeys);
 
       if (visibleIndex == null) {
         return;
@@ -359,9 +360,7 @@ export function HomeScreen() {
       <ScrollAwayHeader controller={topBar} testID="home-top-bar">
         <AppHeader />
       </ScrollAwayHeader>
-      {/* Sized by the native safe area: inside the tab navigator the insets
-          hook reported no top inset, and a zero-height strip hid nothing. */}
-      <SafeAreaView edges={['top']} pointerEvents="none" style={styles.statusBarStrip} />
+      <View pointerEvents="none" style={[styles.statusBarStrip, { height: topInset }]} />
     </Screen>
   );
 }

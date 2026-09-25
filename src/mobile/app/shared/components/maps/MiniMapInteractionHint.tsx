@@ -6,10 +6,12 @@ import { t } from '@/mobile/app/shared/i18n';
 import { colors, fontWeight, radius, spacing, textStyle, typography } from '@/mobile/app/shared/theme/tokens';
 
 type MiniMapInteractionHintProps = {
+  // How to lock the map again where it is not the card's Focus button.
+  description?: string;
   visible: boolean;
 };
 
-export function MiniMapInteractionHint({ visible }: MiniMapInteractionHintProps) {
+export function MiniMapInteractionHint({ description, visible }: MiniMapInteractionHintProps) {
   if (!visible) {
     return null;
   }
@@ -17,7 +19,7 @@ export function MiniMapInteractionHint({ visible }: MiniMapInteractionHintProps)
   return (
     <View pointerEvents="none" style={styles.container}>
       <AppText style={styles.title}>{t.map.interactiveHintTitle}</AppText>
-      <AppText style={styles.description}>{t.map.interactiveHintDescription}</AppText>
+      <AppText style={styles.description}>{description ?? t.map.interactiveHintDescription}</AppText>
     </View>
   );
 }

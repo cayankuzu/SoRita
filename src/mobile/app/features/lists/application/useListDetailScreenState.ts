@@ -17,6 +17,21 @@ type UseListDetailScreenStateParams = {
   user: User | null;
 };
 
+// The server's count while the places are still arriving, or more pages
+// remain; the header read "0 mekân" until the first page landed. Once all
+// are here the loaded places count, so a deleted one leaves at once.
+function resolvePlaceTotal({
+  loaded,
+  serverCount,
+  stillArriving,
+}: {
+  loaded: number;
+  serverCount?: number;
+  stillArriving: boolean;
+}) {
+  return stillArriving ? Math.max(serverCount ?? 0, loaded) : loaded;
+}
+
 export function useListDetailScreenState({ listId, user }: UseListDetailScreenStateParams) {
   const userId = user?.id;
   const listDetailQuery = useListDetailQuery(listId, userId);
@@ -47,6 +62,11 @@ export function useListDetailScreenState({ listId, user }: UseListDetailScreenSt
   const isOwner = Boolean(list && userId && list.userId === userId);
   const canReportList = Boolean(list && userId && list.userId !== userId);
   const displayPlaces = useMemo(() => list?.places || [], [list?.places]);
+  const placeTotal = resolvePlaceTotal({
+    loaded: displayPlaces.length,
+    serverCount: list?.placeCount,
+    stillArriving: listDetailQuery.isLoading || Boolean(listDetailQuery.hasNextPage),
+  });
   const mapPlaces = useMemo(
     () =>
       list
@@ -107,6 +127,7 @@ export function useListDetailScreenState({ listId, user }: UseListDetailScreenSt
     onRefresh,
     owner,
     placeMarkerColorsById,
+    placeTotal,
     refreshing,
     reportList,
     retry: loadList,

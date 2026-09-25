@@ -1,5 +1,5 @@
-export type AppWindowClass = 'compact' | 'medium' | 'expanded';
-export type AppHeightClass = 'short' | 'regular' | 'tall';
+type AppWindowClass = 'compact' | 'medium' | 'expanded';
+type AppHeightClass = 'short' | 'regular' | 'tall';
 export type ResponsiveGridStrategy = 'discovery' | 'gallery' | 'mosaic';
 
 // The hairline between cells of a mosaic grid, as Instagram draws it.
@@ -19,7 +19,7 @@ export type AppLayoutMetrics = {
   windowClass: AppWindowClass;
 };
 
-export function getWindowClass(usableWidth: number): AppWindowClass {
+function getWindowClass(usableWidth: number): AppWindowClass {
   if (usableWidth >= 840) {
     return 'expanded';
   }
@@ -31,7 +31,7 @@ export function getWindowClass(usableWidth: number): AppWindowClass {
   return 'compact';
 }
 
-export function getHeightClass(usableHeight: number): AppHeightClass {
+function getHeightClass(usableHeight: number): AppHeightClass {
   if (usableHeight < 560) {
     return 'short';
   }

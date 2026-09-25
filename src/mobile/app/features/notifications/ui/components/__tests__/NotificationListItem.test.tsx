@@ -27,6 +27,38 @@ const followRequest = {
 } as MobileNotification;
 
 describe('NotificationListItem', () => {
+  it('opens the person from the avatar and the content from the rest of the row', () => {
+    const onPress = vi.fn();
+    const onActorPress = vi.fn();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <NotificationListItem
+          notification={{ ...followRequest, type: 'comment' } as MobileNotification}
+          onActorPress={onActorPress}
+          onPress={onPress}
+        />,
+      );
+    });
+
+    const avatar = renderer.root.find(
+      (node) =>
+        String(node.type) === 'InstantPressable' &&
+        node.props.accessibilityLabel === tr.notifications.openProfile('Ada'),
+    );
+    avatar.props.onPress();
+    expect(onActorPress).toHaveBeenCalledOnce();
+    expect(onPress).not.toHaveBeenCalled();
+
+    // Screen readers reach the same shortcut as an action on the row.
+    const row = renderer.root.find(
+      (node) => String(node.type) === 'InstantPressable' && Boolean(node.props.accessibilityActions),
+    );
+    row.props.onAccessibilityAction({ nativeEvent: { actionName: 'openProfile' } });
+    expect(onActorPress).toHaveBeenCalledTimes(2);
+  });
+
   it('announces complete context and exposes follow decisions as separate controls', () => {
     const onDecision = vi.fn();
     let renderer!: TestRenderer.ReactTestRenderer;

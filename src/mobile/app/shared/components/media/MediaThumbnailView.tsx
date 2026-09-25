@@ -8,10 +8,10 @@ import {
 import { Image as ImageIcon, Play } from 'lucide-react-native';
 
 import type { PlaceMedia } from '@/mobile/app/contracts/placeMedia';
+import { VideoBadges } from '@/mobile/app/shared/components/media/VideoBadges';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 
-import { Badge } from '@/mobile/app/shared/components/ui/Badge';
-import { colors, iconSize, radius, spacing } from '@/mobile/app/shared/theme/tokens';
+import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type MediaThumbnailViewProps = {
   accessibilityLabel?: string;
@@ -162,18 +162,11 @@ export function MediaThumbnailView(props: MediaThumbnailViewProps) {
         showPlayOverlay={showPlayOverlay}
       />
 
-      {props.item.type === 'video' && !shouldUseVideoSurface && showPlayOverlay ? (
-        <View pointerEvents="none" style={styles.playOverlay}>
-          <View style={styles.playBadge}>
-            <Play color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.xs} />
-          </View>
-        </View>
-      ) : null}
-
-      {props.item.type === 'video' && showDuration && props.durationLabel ? (
-        <View pointerEvents="none" style={styles.durationBadge}>
-          <Badge label={props.durationLabel} numeric tone="overlay" />
-        </View>
+      {props.item.type === 'video' ? (
+        <VideoBadges
+          durationLabel={showDuration ? props.durationLabel : null}
+          showPlay={!shouldUseVideoSurface && showPlayOverlay}
+        />
       ) : null}
     </View>
   );
@@ -188,23 +181,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  playOverlay: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-  },
-  playBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-  },
-  durationBadge: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
   },
 });

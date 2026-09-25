@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Camera, Images, Video, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,7 +14,6 @@ import type {
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
-import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAccessibilityFocus';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -28,10 +27,10 @@ import {
   textStyle,
 } from '@/mobile/app/shared/theme/tokens';
 import {
-  getAndroidModalWindowProps,
   getModalContentMaxHeight,
   getModalSafeAreaPadding,
 } from '@/mobile/app/shared/utils/modalLayout';
+import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
 
 type MediaPickerOptionCardProps = {
   accentColor: string;
@@ -94,6 +93,9 @@ export function MediaPickerPromptHost() {
     maxHeightRatio: 0.88,
     minHeight: 276,
   });
+  // The sheet meets the bottom edge and keeps the system bar's inset inside
+  // it; padding the overlay instead left a band of dimmed screen under it.
+  const sheetBottomPadding = insets.bottom + spacing.md;
   const availableSources = React.useMemo(
     () => options.availableSources || ['camera', 'library'],
     [options.availableSources],
@@ -148,23 +150,16 @@ export function MediaPickerPromptHost() {
   );
 
   return (
-    <Modal
-      {...getAndroidModalWindowProps({
-        navigationBarTranslucent: true,
-        statusBarTranslucent: true,
-      })}
-      visible={visible}
-      transparent
+    <AppModal
       animationType={animationType}
-      hardwareAccelerated
       onRequestClose={() => resolveMediaPickerPrompt(null)}
-      presentationStyle="overFullScreen"
+      visible={visible}
     >
       <View
         accessibilityViewIsModal
         importantForAccessibility="yes"
         onAccessibilityEscape={() => resolveMediaPickerPrompt(null)}
-        style={[styles.overlay, { paddingTop, paddingBottom }]}
+        style={[styles.overlay, { paddingTop }]}
       >
         <InstantPressable
           disableFeedback
@@ -173,7 +168,7 @@ export function MediaPickerPromptHost() {
           onPress={() => resolveMediaPickerPrompt(null)}
         />
 
-        <View style={[styles.sheet, { maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: sheetBottomPadding }]}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -235,15 +230,11 @@ export function MediaPickerPromptHost() {
               />
             ) : null}
           </View>
-
-          <PrimaryButton
-            title={tr.common.cancel}
-            variant="secondary"
-            onPress={() => resolveMediaPickerPrompt(null)}
-          />
+          {/* Closed by the X, the back button or a tap outside, like every
+              other sheet; a second "İptal" under the choices did the same. */}
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 

@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { createUuid } from '@/shared/utils/id';
 
 const TEMP_UPLOAD_DIR = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}media-upload-cache/`;
 
@@ -49,8 +50,7 @@ async function ensureTempUploadDirectory() {
 
 function buildTempUploadPath(uri: string) {
   const extension = getFileExtension(uri);
-  const uniqueKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${TEMP_UPLOAD_DIR}${uniqueKey}.${extension}`;
+  return `${TEMP_UPLOAD_DIR}${createUuid()}.${extension}`;
 }
 
 async function copyToReadableUploadPath(uri: string) {
@@ -66,32 +66,6 @@ async function copyToReadableUploadPath(uri: string) {
     to: tempPath,
   });
   return tempPath;
-}
-
-export async function readLocalMediaAsBase64(uri: string) {
-  try {
-    return await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-  } catch (readError) {
-    let tempPath: string | null = null;
-
-    try {
-      tempPath = await copyToReadableUploadPath(uri);
-
-      if (!tempPath) {
-        throw readError;
-      }
-
-      return await FileSystem.readAsStringAsync(tempPath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-    } finally {
-      if (tempPath) {
-        await FileSystem.deleteAsync(tempPath, { idempotent: true }).catch(() => undefined);
-      }
-    }
-  }
 }
 
 export async function readLocalMediaSize(uri: string) {

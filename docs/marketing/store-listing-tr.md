@@ -106,6 +106,9 @@ Beyan gerçek veri akışıyla eşleşmek zorundadır. Doğrulanan durum:
 | Konum | Toplanıyor (uygulama işlevi) | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` |
 | Fotoğraf/video | Toplanıyor (kullanıcı içeriği) | `CAMERA`, medya seçici |
 | Kişisel bilgi | E-posta, kullanıcı adı, profil | Supabase Auth |
+| Cihaz kimliği | Push bildirim token'ı ve platform adı sunucuda saklanıyor (uygulama işlevi); çıkışta ve hesap silinince kaldırılıyor. Play'de "Device or other IDs" | `upsert_user_push_token`, `remove_all_user_push_tokens` RPC'leri |
+| Kullanıcı içeriği ve etkileşimler | Listeler, mekân kartları, yorumlar, beğeniler ve takipler (uygulama işlevi). Play'de "Other user-generated content" ve "Other actions" | Supabase tabloları, RLS |
+| Arama | Harita araması Google'a hizmet sağlayıcı olarak iletiliyor; sorgu sunucuda saklanmıyor ve loglanmıyor (geçici işleme) | `maps-geocoding` Edge Function |
 | Silme | Uygulama içinden hesap silme var | `delete-user` Edge Function (C4) |
 | Şifreleme | Aktarımda TLS | Supabase/HTTPS |
 

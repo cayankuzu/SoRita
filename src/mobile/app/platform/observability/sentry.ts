@@ -2,13 +2,14 @@ import type { ComponentType } from 'react';
 import * as Sentry from '@sentry/react-native';
 
 import { env } from '@/mobile/app/platform/config/env';
+import { redactBreadcrumb, redactEvent } from '@/mobile/app/platform/observability/redaction';
 
 const sentryEnabled = Boolean(env.sentryDsn);
 const isDevMode = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 const sentryTracingEnabled = sentryEnabled && !isDevMode;
 type SentryRootComponent = ComponentType<Record<string, unknown>>;
 
-export const sentryReactNavigationIntegration = sentryTracingEnabled
+const sentryReactNavigationIntegration = sentryTracingEnabled
   ? Sentry.reactNavigationIntegration({
       enableTimeToInitialDisplay: true,
     })
@@ -23,6 +24,8 @@ Sentry.init({
   sendDefaultPii: false,
   tracesSampleRate: sentryTracingEnabled ? 0.1 : 0,
   integrations: sentryReactNavigationIntegration ? [sentryReactNavigationIntegration] : [],
+  beforeBreadcrumb: redactBreadcrumb,
+  beforeSend: redactEvent,
 });
 
 export function wrapWithSentry<TComponent extends ComponentType<object>>(Component: TComponent): TComponent {

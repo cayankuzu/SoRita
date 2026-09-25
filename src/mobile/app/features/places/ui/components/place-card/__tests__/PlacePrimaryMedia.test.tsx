@@ -84,6 +84,37 @@ describe('PlacePrimaryMedia', () => {
     expect(onPress).toHaveBeenCalledWith(1);
   });
 
+  it('decodes only the photo on show and its neighbours', () => {
+    let renderer!: TestRenderer.ReactTestRenderer;
+    const media = [1, 2, 3, 4, 5].map((index) => ({
+      id: `photo-${index}`,
+      type: 'photo' as const,
+      url: `https://example.com/${index}.jpg`,
+    }));
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <PlacePrimaryMedia media={media} onPress={vi.fn()} placeName="Test mekânı" />,
+      );
+    });
+
+    const renderedPhotos = () =>
+      renderer.root
+        .findAll((node) => node.type === ('MediaThumbnailView' as unknown as React.ElementType))
+        .map((node) => (node.props.item as { id: string }).id);
+    expect(renderedPhotos()).toEqual(['photo-1', 'photo-2']);
+
+    const pager = renderer.root.find((node) => node.props.pagingEnabled === true);
+    act(() => {
+      pager.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
+    act(() => {
+      pager.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 640 } } });
+    });
+
+    expect(renderedPhotos()).toEqual(['photo-2', 'photo-3', 'photo-4']);
+  });
+
   it('sizes pages from the pager and keeps the inset off the aspect-ratio frame', () => {
     let renderer!: TestRenderer.ReactTestRenderer;
 

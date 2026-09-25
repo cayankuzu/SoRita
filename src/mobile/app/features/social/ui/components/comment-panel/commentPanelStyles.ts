@@ -19,6 +19,13 @@ export const commentPanelStyles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: colors.overlay,
   },
+  bottomFill: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.background,
+  },
   sheetKeyboard: {
     flex: 1,
     justifyContent: 'flex-end',

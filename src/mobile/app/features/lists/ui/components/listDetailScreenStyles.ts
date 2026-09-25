@@ -37,17 +37,23 @@ export const listDetailScreenStyles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.surface,
   },
+  listArea: {
+    flex: 1,
+  },
   scrollTopButton: {
     position: 'absolute',
-    right: spacing.md,
-    width: minTouchSize,
-    height: minTouchSize,
-    borderRadius: radius.pill,
+    top: spacing.sm,
+    alignSelf: 'center',
+    height: 36,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
     backgroundColor: colors.text,
     ...elevation.floating,
   },
+  scrollTopLabel: textStyle('labelText', colors.onPrimary, fontWeight.strong),
   header: {
     paddingHorizontal: spacing.md,
   },
@@ -157,16 +163,15 @@ export const listDetailScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  mapCardEyebrow: textStyle('labelText', colors.textSoft),
-  mapCardTitle: {
-    marginTop: spacing.xxs,
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  mapCardTitle: textStyle('bodyText', colors.text, fontWeight.strong),
+  // Solid, like the Map tab's controls: a translucent pill blurred into the
+  // streets underneath it.
   mapDoneButton: {
+    ...elevation.floating,
     alignItems: 'center',
-    backgroundColor: colors.glassSurface,
+    backgroundColor: colors.surface,
+    borderColor: colors.cardBorder,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.pill,
     justifyContent: 'center',
     minHeight: minTouchSize,
@@ -175,7 +180,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     right: spacing.sm,
     top: spacing.sm,
   },
-  mapDoneLabel: textStyle('labelText', colors.text),
+  mapDoneLabel: textStyle('labelText', colors.primary, fontWeight.strong),
   mapFrame: {
     overflow: 'hidden',
     borderRadius: radius.lg,
@@ -198,17 +203,7 @@ export const listDetailScreenStyles = StyleSheet.create({
   sectionHeaderCopy: {
     flex: 1,
   },
-  sectionEyebrow: textStyle('labelText', colors.textSoft),
-  sectionTitle: {
-    marginTop: spacing.xxs,
-    ...typography.section,
-    color: colors.text,
-  },
-  sectionSubtitle: {
-    marginTop: spacing.xs,
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  sectionTitle: textStyle('section', colors.text),
   feed: {
     gap: spacing.md,
   },

@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { Crosshair, Flag, ListPlus, MapPin, MapPinOff } from 'lucide-react-native';
+import { Crosshair, ListPlus, MapPin, MapPinOff } from 'lucide-react-native';
 
 import { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
 import { FeedActionButtons } from '@/mobile/app/features/social/ui/components/FeedActionButtons';
 import {
   DeferredActionMenuSheet,
   type DeferredActionMenuSheetProps,
-} from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+} from '@/mobile/app/shared/components/feedback/DeferredFeedback';
 import type {
   FeedActionComment,
   FeedActionLiker,
@@ -16,6 +16,8 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
 
 export type FeedActionBarProps = {
+  // Opens the comments when this turns true, e.g. from a comment notification.
+  autoOpenComments?: boolean;
   comments?: FeedActionComment[];
   commentsErrorMessage?: string | null;
   commentsInitialLoading?: boolean;
@@ -44,14 +46,10 @@ export type FeedActionBarProps = {
   onLikePress?: () => Promise<void> | void;
   onLikersVisibilityChange?: (visible: boolean) => void;
   onRefresh?: () => Promise<void> | void;
-  onReportSubmit?: (reason: string, details?: string) => Promise<void> | void;
   onSharePress?: () => void;
   onUserPress?: (userId: string) => void;
-  reportDescription?: string;
-  reportTitle?: string;
   showAddToList?: boolean;
   showCommentAction?: boolean;
-  showReportAction?: boolean;
   // The card's own actions (edit, delete, report). They join this menu as rows;
   // they used to sit behind a row that opened a second sheet on top of it.
   contentActions?: Array<DeferredActionMenuSheetProps['items'][number]>;
@@ -81,6 +79,7 @@ export function FeedActionBar(props: FeedActionBarProps) {
   const likers = props.likers ?? EMPTY_LIKERS;
   const [showSecondaryActions, setShowSecondaryActions] = React.useState(false);
   const state = useFeedActionBarState({
+    autoOpenComments: props.autoOpenComments,
     comments,
     commentCountOverride: props.commentCount,
     onCommentDelete: props.onCommentDelete,
@@ -91,7 +90,6 @@ export function FeedActionBar(props: FeedActionBarProps) {
     onLikePress: props.onLikePress,
     onCommentsRefresh: props.onCommentsRefresh,
     onRefresh: props.onRefresh,
-    onReportSubmit: props.onReportSubmit,
     onUserPress: props.onUserPress,
   });
 
@@ -107,7 +105,6 @@ export function FeedActionBar(props: FeedActionBarProps) {
     state.showComments ||
     state.showAddress ||
     state.showLikers ||
-    state.showReportSheet ||
     state.confirmDeleteCommentId,
   );
   const closeSecondaryActions = () => setShowSecondaryActions(false);
@@ -168,19 +165,6 @@ export function FeedActionBar(props: FeedActionBarProps) {
     });
   }
 
-  if (props.showReportAction && props.onReportSubmit) {
-    secondaryActions.push({
-      key: 'report',
-      label: tr.cards.reportAction,
-      tone: 'danger',
-      renderIcon: (color) => <Flag color={color} size={iconSize.sm} />,
-      onPress: () => {
-        closeSecondaryActions();
-        state.setShowReportSheet(true);
-      },
-    });
-  }
-
   return (
     <>
       <FeedActionButtons
@@ -227,8 +211,6 @@ export function FeedActionBar(props: FeedActionBarProps) {
           location={props.location}
           onAddressCopied={props.onAddressCopied}
           onCommentsLoadMore={props.onCommentsLoadMore}
-          reportDescription={props.reportDescription}
-          reportTitle={props.reportTitle}
           state={state}
         />
       ) : null}

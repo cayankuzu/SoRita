@@ -5,6 +5,39 @@ Tum onemli degisiklikler bu dosyada belgelenir.
 Format [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) ve
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) kurallarini takip eder.
 
+## [Yayinlanmamis] - Eylul 2026 (OTA 1.0.108 runtime, native 1.0.110 paketi hazir)
+
+Eylul 2026'daki guncellemeler kablosuz (EAS Update) teslim edildi; ayrintili
+kayit `docs/release/audit-60-checklist.md` icinde.
+
+### Eklenen
+- Kesfet ve profil icerigi uc sutunlu izgarada; karoya dokununca akis o kartta acilir
+- Kesfet aramasi alaka sirasina gore: takip edilenler once, kendi icerigin arama sonucunda yok
+- Harita aramasi haritanin baktigi yere yakin sonuclari once getirir
+- Uygulama acikken gelen bildirim uygulama ici bant olarak gorunur; bildirim ayar yardimi
+- Buyutulen fotograflarda iki parmakla yakinlastirma, kaydirma, cift dokunma
+- Herkese acik liste paylasimi; yer paylasim baglantilari tiklanabilir web adresi
+- Ayarlar'da "Yasal" grubu: Kullanim Kosullari, Topluluk Kurallari, Gizlilik Politikasi, KVKK
+- Ayarlar'da yuklu surum etiketi
+
+### Degistirilen
+- Yorumlar zincir halinde (YouTube/Reddit duzeni), gercek begeni sayilariyla
+- Takibi birakma once onay soruyor; buton "Takiptesin" durumunu gosteriyor
+- Liste sayfasi ve duzenleyicilerde tekrar eden bilgiler kaldirildi
+- Hata raporlari loglarla ayni temizligi goruyor (e-posta, oturum anahtari, imzali adres gonderilmez)
+- Android geri tusu once acik menuyu kapatiyor
+
+### Duzeltilen
+- Kucultulup yeniden acilan yer taslagi sorusuz kapanip kayboluyordu
+- Harita kontrolleri Google logosunu ortuyordu
+- Kaydedilen satir sonlari kutu olarak gorunuyordu
+- Listelerde kirpma degisince sayfalarin bosalmasi ve cokme
+- Bildirimden acilan yerin gorunur konuma gelmemesi ve yorumlarin acilmamasi
+
+### Native paket (native/faz-4, 1.0.110 (116); Play yuklemesi bekliyor)
+- Tek acilis ekrani, dikey kilit, tema ikonu
+- Bildirim cubugunda beyaz kare yerine SoRita isareti
+
 ## [1.0.51] - 2026-06-27
 
 ### Eklenen

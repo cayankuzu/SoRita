@@ -63,8 +63,17 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
-| 4: Native paket #1 | ⏸ | Atlandı: `android/` altındaki native dosyalar bu oturumun sandbox'ında okumaya ve yazmaya kapalı; yükleme de Cayan'ın adımı. Tek renkli ikon adayı hazır |
+| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
+| 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Harita durumları: hata, izin ve arama zaten vardı; filtre bütün pinleri gizleyince uyarı ve "Tümünü göster" eklendi (OTA 39). Kart ailesi tek dil (Full kart + mozaik karo). Kalan: filtre uyarısının cihaz kontrolü, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
+| 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
+| 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
+| 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
+| 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
+| 21: Veri, durum, ağ | 🔶 | Kodda doğrulandı: arama yarışları (F35), durum koduna göre yeniden deneme (F36), zaman gösterimi (F40). Kalan: uçak modu tablosu (sistem ayarı, Cayan onayı), outbox ve optimistik geri alma testleri (test hesapları) |
+| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), arka planda konum/alarm/wakelock yok, harita ziyaretlerinde bellek çöp toplamadan sonra düz (20 ziyaret, 273 → 278 MB). Kaydırma: profil %3,7 (bütçe %5); ana sayfa ölçümden ölçüme %6–11, kaynağı kart kurulumu. 2. tur düzeltmesi OTA 38'de (aşağıda), cihaz ölçümü bekliyor. iOS ölçümü (Cayan) |
+| 24: CI/CD, sürüm, belgeleme | 🔶 | Quality iş akışı yeniden yeşil (Gitleaks). CI'daki kırmızı yalnız kapalı EAS build değişkenlerinden. Geri alma gerçek olayla prova edildi (OTA 33 → 32). `npm audit` üretim bulgusu azaltıldı (OTA 40). CHANGELOG ve API sözleşmesi güncel. Kalan: branch koruması, zorunlu güncelleme kararı, uptime URL'si (Cayan), temiz klon provası |
+| 25: Native paket #2, store, yasal | 🔶 | Ayarlar'da "Yasal" grubu (OTA 36) ve "Hesap gizliliği" adı (OTA 37) cihazda. Bildirim ikonu `native/faz-4` dalında. Kalan: store formları, hukuk onayı, build yüklemeleri (Cayan), iOS gizlilik manifesti ve Data Safety karşılaştırması |
 
 ---
 
@@ -81,12 +90,12 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ✅ | 3 | Token sistemi kalanı + bekleyen teslimat | B10 (cihaz ölçümü bir sonraki OTA'da) | Migration'ı uygulamak (1 dk) |
 | ⏸ | 4 | Native paket #1 + iOS OTA açılışı | B13, Faz 1 | İkon onayı, AAB → Play, TestFlight kurulumu (~30 dk); native dosyalara izin |
 | 🔶 | 5 | Component sistemi I: primitive'ler, durum bileşenleri, form standardı | — | Supabase `db push` (P0) |
-| ⬜ | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
-| ⬜ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
-| ⬜ | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
+| 🔶 | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
+| ✅ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
+| 🔶 | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
 | ⬜ | 9A | Durum matrisi, motion, cila, "ışık hızı" hissi | A4, B14, B15, B16 | — |
 | ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
-| ⬜ | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
+| 🔶 | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
 | ⬜ | 11 | İşlem matrisi I: hesap yaşam döngüsü (İ01–İ13) | A1, A8 | Doğrulama e-postasındaki linke dokunmak (10 dk) |
 | ⬜ | 12 | İşlem matrisi II: profil ve ayarlar (İ14–İ23) | — | — |
 | ⬜ | 13 | İşlem matrisi III: sosyal graf (İ24–İ31) | — | B hesabı ikinci cihazda açık |
@@ -96,12 +105,12 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ⬜ | 17 | İşlem matrisi VII: yorum ve beğeni (İ58–İ65) | A5 | — |
 | ⬜ | 18 | İşlem matrisi VIII: akış, keşfet, harita, navigasyon, kesinti (İ66–İ75) | A2 | — |
 | ⬜ | 19 | İşlem matrisi IX: bildirim, push, deep link (İ76–İ84) | A6 | App link dosyalarının yayında olduğunu teyit (5 dk) |
-| ⬜ | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
-| ⬜ | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
-| ⬜ | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
+| 🔶 | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
+| 🔶 | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
+| 🔶 | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
 | ⬜ | 23 | Backend ve gözlemlenebilirlik | H47, H48, H49, H50 | Sentry / Supabase / PostHog erişimi (15 dk) |
-| ⬜ | 24 | CI/CD, sürüm, bağımlılık, belgeleme | E33, H51, H52, H53, H54 | Branch koruması, zorunlu güncelleme kararı (10 dk) |
-| ⬜ | 25 | Native paket #2 + store + yasal | G45, I55, I56, I58 | Konsol formları, hukuk onayı, build yüklemeleri (1–2 sa) |
+| 🔶 | 24 | CI/CD, sürüm, bağımlılık, belgeleme | E33, H51, H52, H53, H54 | Branch koruması, zorunlu güncelleme kararı (10 dk) |
+| 🔶 | 25 | Native paket #2 + store + yasal | G45, I55, I56, I58 | Konsol formları, hukuk onayı, build yüklemeleri (1–2 sa) |
 | ⬜ | 26 | iOS cihaz turu | A3, A7, C17, C18, C19, C20, I57 | iPhone'da senaryo + ekran kaydı (2–3 sa, 2 oturum) |
 | ⬜ | 27 | Olgunluk, due diligence, J-Sosyal | I59, I60, J-Sosyal | 3 soru: ekip, yol haritası, bütçe (10 dk) |
 | ⬜ | 28 | Final denetim (temiz oturum, tek commit) | puanlanır | Promptu yeni oturuma yapıştırmak (2 dk) |
@@ -341,7 +350,106 @@ teslimi (iOS token'larından hiç onay yok; iOS cihaz yok); web sitesi önizleme
 etiketleri; tek splash (native build, Faz 4); uygulama kapalıyken ekrana
 düşme cihaz ayarına bağlı (Kayan bildirimler, Kilit ekranında).
 
-### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
+### Faz 4 ve Faz 5–19 birleşik tur 2 (2026-09-24)
+
+Cayan `android/` erişimini ve veritabanı iznini verdi, fazların birlikte
+ilerlemesini istedi. Geri alınamaz işlem (silme, düzenleme, hesap) yapılmadı.
+
+**Teslim:** OTA grupları 316d8a0a … 2bdd36bc (önceki tur), 13b `2cd0ae21`, 14 `bf01f42b`, 15 `88cda775`, 16 `77b26b31` (geri alındı → `07f4c7fd`), 17 `6acad2b7`, 18 `47e02bb6`, 19 `118e6da7`; her biri iki soğuk başlatmayla cihazda
+doğrulandı.
+
+**Faz 4, native paket #1** (dal `native/faz-4`, main'e alınmadı; OTA'lar
+main'den sürmeye devam ediyor):
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| N1 | Tek splash: Android 12+ sistem splash'i ikon göstermiyor, düz zemin doğrudan logolu ve telif yazılı JS splash'ine geçiyor. iOS'ta açılış görseli zaten telif yazılı | cihaz: soğuk açılış karelerinde yuvarlak logo yok |
+| N2 | Dikey kilit native'de: manifest `screenOrientation="portrait"`, iOS için `app.config.ts` `orientation: 'portrait'` | config testi |
+| N3 | Tema ikonu: logonun silüetinden, 66dp güvenli daireye oturtulmuş tek renkli katman (Android 13+) | önizleme |
+| N4 | 1.0.110 (116), iOS 95. Runtime 1.0.108'de kaldı: değişiklikler kaynak dosyası, native modül değil; Play'deki kurulu taban OTA almaya devam eder | native-parity, config testi |
+| N5 | Yerel release AAB (`bundleRelease`) üretildi; bundletool ile evrensel APK olarak, veriler korunarak cihaza kuruldu (1.0.110/116); OTA'lar bu kurulumda da iniyor | cihaz: `dumpsys package`, `dev.expo.updates` |
+
+**Düzeltmeler:**
+
+| # | Değişiklik | Kanıt |
+|---|---|---|
+| G1 | İlk kare: güvenli alan sağlayıcı açılış ölçüleriyle başlıyor; üst bar ve Ana Sayfa şeridi ilk karede saatin altında (önceden bir kare saatin üstüne biniyordu) | cihaz: açılış kare dizisi; birim testi |
+| G2 | Önceden dolu tek satırlık alanlar Android'de baştan görünüyor (adres ortasından okunuyordu) | cihaz: mekân düzenleyicisi |
+| G3 | Açık akıştayken Profil/Keşfet sekmesine ikinci dokunuş ızgaraya döndürüyor, ızgara yerinde kalıyor | cihaz; birim testi |
+| G4 | Gizlilik: "Herkese açık" ile "Gizli hesap" araya analitik girmeden "Profil görünürlüğü" altında | cihaz |
+| G5 | Liste haritası ipucu "Bitince Bitti'ye dokun" diyor (olmayan Odakla düğmesini anlatıyordu); Bitti düz beyaz hap | cihaz: etkinleştir, Bitti ile kilitle |
+| G6 | Harita önizleme sheet'i alt kenara oturuyor (altında sekme çubuğu şeridi kalıyordu) | cihaz |
+| G7 | Uzak karttan açılan akış: Android bazen önceki kartları eklerken başa atıyordu (13. kartta 4'te 2). Ekleme kart oturduktan sonra yapılıyor; liste hâlâ en üstteyse dokunulan karta geri götürülüyor | cihaz: tekrarlı açılış; birim testi (5) |
+| G8 | Liste başlığı yerler gelmeden "0 mekân" yerine sunucunun sayısını gösteriyor | cihaz: ilk kareden "2 mekân" |
+| G9 | Yorum paneli alt kenara kadar iniyor (yorum kutusunun altında soluk şerit vardı) | cihaz: piksel taraması |
+| G10 | Keşfet sayacı aramada "N sonuç", aramasız "N öneri" (haritanın "öneri" metnini ödünç alıyordu) | cihaz: "20 öneri" / "5 sonuç" |
+| G11 | Keşfet Kişiler 3'lü ızgarada (Cayan'ın isteği): ortalanmış fotoğraf, ad, kullanıcı adı, küçük Takip et. Keşfet sekme çipleri küçük boy (32dp, 12pt) | cihaz |
+| G12 | Haritada POI'ye dokunarak eklenen mekânda iki satırlık etiket boşluksuz birleşiyordu ("StadyumuFenerbahçe"); satır sonu artık boşluk | birim testi |
+| G13 | Yorum yazar migration'ı (`20260924010000`) production'da: fonksiyon yazar sütunlarını döndürüyor, anon çalıştıramıyor | production sorgusu |
+| G14 | Keşfet araması (Cayan'ın bildirdiği "arama yapamıyorum"): arama alanı sonuç yüklenirken yeniden kurulmuyor (üç harfte klavye kapanıyordu); 1–2 harfte "Biraz daha yaz", sayaç boş; sekme ilk sayfası gelirken iskelet | cihaz: "ka" / "kah"; birim testleri |
+| G15 | Keşfet kuralı (Cayan onayladı): arama kutusu boşken yalnız takip edilmeyenlerin önerileri; aramada takip edilenler ve gizli hesaplar da bulunuyor, kendi içeriğin çıkmıyor; alaka katmanı (ad başı > ad içi > diğer alan), eşit eşleşmede takip edilen önde; kategori Türkçe etiketiyle ("kafe") bulunuyor. Migration `20260924020000` + 14 pgTAP | yerel doğrulama PASS; production'a Cayan uygulayacak |
+| G16 | Harita araması konuma göre: "kahve" Almanya'dan sonuç getiriyordu (sunucu Frankfurt'ta). Uygulama harita merkezini ~1 km'ye yuvarlayıp gönderiyor; fonksiyon 50 km yanlılık, bölge TR, eşit eşleşmede Google sırası. Eski fonksiyon yeni alanı yok sayıyor | cihaz: Almanya sonuçları görüldü; fonksiyon testleri (17); deploy Cayan'da |
+| G17 | Uzun ad dokunulabilir satırda (harita sonucu, liste seçici, kart liste çubuğu, sahip kartı, takipçi/engelli biyografisi) dokunuşu yutup metni açıyordu; artık satır açılıyor | kod incelemesi, cihaz |
+| G18 | "@kullanıcı" aramaları (Keşfet Kişiler, takipçiler, beğenenler) @'yi atıyor; vurgu aramayla aynı harf katlamasını kullanıyor ("ist" → "Istanbul", "sukru" → "Şükrü") | cihaz: "@fin"; birim testleri |
+| G19 | Adres ve saatler bağlantıya dönüşmüyor: "No:2/B", "Saat:10:00", "Cd.No:12", "vs.Ama" üstü çizili güvensiz bağlantı görünüyordu; şema yalnız "//" veya tehlikeli şemalarda, çıplak alan adı bilinen uzantılarda | cihaz: harita sonucu adresi; birim testleri |
+| G20 | Bildirime dokununca mekân görünüme geliyor (liste en üstte kalıyordu: altı hızlı deneme uzun başlıkta bitiyordu); yorum, yorum beğenisi ve yanıt bildirimleri (uygulama içi ve push) yorumları bir kez açıyor; yeniden açılışta tekrar açılmıyor | cihaz: Deniz → Kloft yorumları; birim testleri |
+| G21 | Genel liste paylaşılabiliyor (Paylaş, Bağlantıyı kopyala); gizli liste bağlantı sunmuyor; üst bar liste adını gösteriyor; vurgulu kart rozeti "Seçili mekân" | birim testleri |
+| G22 | Yeni oturum Ana Sayfa'da açılıyor: ekran yığını 24 saat yerine 30 dk geri yükleniyor | cihaz: soğuk açılış |
+| G24 | Çok satırlı notlar Android'de satır sonu yerine kutu çiziyordu: satır sonları U+2028 olarak yazılıyor, Ana Sayfa/liste/profil/Keşfet okuma modelleri çözmüyordu. Dördü de çözüyor; `ExpandableText` ayrıca güvenlik ağı | cihaz: KargArt notu; birim testi |
+| G25 | Profil görünürlük filtresi sekmeyi boşaltınca "Henüz listen yok · Yeni liste oluştur" yerine "Özel listen yok" ve "Tümünü göster" | cihaz; birim testi |
+| G26 | Ayarlar sonunda kurulu sürüm ("SoRita 1.0.110 (116)"); aynı konum ekranında her kartta tekrar eden, bir yere gitmeyen "Bu konumda 2 kart" satırı kalktı | birim testleri |
+| G23 | Listeler kırpmayı (`removeClippedSubviews`) öğe sayısına göre açıp kapatıyordu: Keşfet'te arama ızgarayı boşaltınca boş mesaj çizilmiyordu, satırlar değişirken Fabric "addViewAt index" hatasıyla React'i düşürüp ekranı boşaltabiliyordu. Artık hep kapalı | cihaz: logcat; birim testi |
+
+**Olay:** OTA 16 (`77b26b31`) G23'ün yanlış teşhisiyle ızgaranın konum
+korumasını açıp kapatıyordu; cihazda Keşfet aramasında React'i düşürdü.
+Aynı dakikada `eas update:rollback` ile OTA 15 içeriğine dönüldü
+(`07f4c7fd`), değişiklik geri alındı, kök neden (G23) OTA 17'de düzeltildi.
+
+**Açık kalan (Cayan):** `npx supabase db push --linked` (G15) ve
+`npx supabase functions deploy maps-geocoding` (G16); ikisi de bu oturumda
+"Production Deploy" olarak reddedildi. Cayan'ın "Chobani
+StadyumuFenerbahçe Şükrü…" mekânının adı sahibince düzeltilmeli; iOS push
+teslimi (iOS cihaz yok); web sitesi önizleme etiketleri. **Karar bekleyen:**
+Ayarlar'a "Yasal" grubu (Kullanım Koşulları, Topluluk Kuralları, Gizlilik,
+KVKK; kayıttaki belge sayfası yeniden kullanılıyor) hazırlandı ama
+dondurulmuş ürün yüzeyini (3 grup) aştığı için geri alındı. Apple 5.1.1(i)
+gizlilik politikasının uygulama içinden erişilebilir olmasını istiyor;
+Cayan onaylarsa `quality/feature-surface.snapshot.json` güncellenip eklenir.
+
+### Faz 5–7 birleşik tur 3 (2026-09-25)
+
+Cayan fazların birlikte ilerlemesini ve gözünden kaçan tekrarların
+kaldırılmasını istedi; testler yalnız bağlı telefonda (emülatör yok).
+
+**Teslim:** OTA grupları 20 `6c47041f`, 21 `6952424f`, 22 `36f82599`,
+23 `a668f3ca`, 24 `001bf52d`, 25 `ad151fb2`, 26 `d8509424`, 27 `d80cdaf7`;
+her biri iki başlatmayla cihazda doğrulandı.
+
+| # | Faz | Değişiklik | Kanıt |
+|---|---|---|---|
+| H1 | 5 | Tek pencere primitive'i: 10 dosya react-native `Modal`'ını aynı ayarlarla yazıyordu; hepsi `AppModal` (kamera opak, medya seçici sistem çubuğunu korur). eslint başka dosyada `Modal` import'unu reddediyor | deneme dosyasıyla guard kanıtı; cihaz: kart menüsü, yer ve liste düzenleyici, yorumlar, harita önizleme, görüntüleyici |
+| H2 | 7 (E28) | İki görüntüleyici tek: `ImageLightbox` 330 satırlık ikinci bir görüntüleyiciydi, artık `MediaLightbox`'a veren ince bir adaptör; profil, kapak ve liste kapağı da yakınlaştırılıyor | cihaz: profil fotoğrafı, liste kapağı |
+| H3 | 7 (E27) | `tr.ts` (1098 satır) özellik başına 11 dosyaya bölündü; çözümlenen `tr` nesnesinin anlık görüntüsü önce ve sonra bayt bayt aynı; source-health istisnası kalktı | anlık görüntü karşılaştırması; tüm testler |
+| H4 | 6 | Haritanın ilk açılış ipucu Google logosunun üstünde; ipucu görünürken renk açıklaması kenara çekiliyor | kod |
+| H5 | 9A | Görüntüleyici zemini %40'tan %90 koyuya: açık durum çubuğu simgeleri açık ekranda kayboluyordu | cihaz |
+| H6 | 9B | Liste düzenleyici ve kamera/galeri seçimi alt kenara oturuyor (Kaydet altında karartılmış şerit vardı) | cihaz: piksel örneği |
+| H7 | 9B | Yer düzenleyici başlığında "İptal" ile X aynı işi yapıyordu; seçim sayfasında da alttaki "İptal" ile X; tek çıkış | cihaz |
+| H8 | 9B | "Bağlantı URL'sini kopyala" → "Bağlantıyı kopyala" | cihaz: toast |
+| H9 | 5 | `Badge` dokunuşu geçiriyor: kapak üstündeki "Kapağı aç" rozeti dokunuşu yutuyordu | cihaz: rozete dokununca kapak açıldı |
+| H10 | 13 | Takibi bırakma onaylı (profil ve Keşfet karosu): düğme "Takiptesin", dokununca "@kullanıcı takibini bırak?"; gizli hesapta yeniden istek gerektiği yazıyor. Takip etme tek dokunuş | birim testleri; gerçek kullanıcıyı etkileyeceği için cihazda basılmadı |
+| H11 | 19 | Bildirimde avatar kişinin profilini, satırın geri kalanı içeriği açıyor; ekran okuyucuya satır eylemi | birim testi |
+| H12 | 9B | Liste sayfası tekrarları (Cayan): ad ve mekân sayısı yalnız üst çubukta; kartta görünürlük ve tarihler; "Harita" tek etiket; "Mekânlar" üstündeki üçüncü sayı ve tekrar eden ipucu kalktı | cihaz |
+| H13 | 9B | Düzenleyici tekrarları: yer düzenleyicide "Şu anda … listesinde" iki kez; liste düzenleyicide başlıkta görünürlük rozeti + görünürlük bölümü; "Seçilen konum" kartı adres alanını tekrar ediyordu (artık adres boşken görünür) | cihaz, kod |
+| H14 | 9B | Liste sayfasında "başa dön" düğmesi kartların "…" menüsünü örtüyordu; artık listenin üstünde küçük hap | cihaz: menü açıkta, hap başa kaydırıyor |
+
+**Faz 5 kalanı:** form standardı (auth alanı ile `TextField` birleşmesi;
+giriş ekranları hesaptan çıkmadan cihazda test edilemediği için Cayan'la
+birlikte), `SettingsHeader`/`StackScreenHeader` birleşmesi, durum
+bileşenleri denetimi. **Faz 6 kalanı:** kart varyantlarının tek meta ızgarası,
+harita durumları (boş/hata/izin). **Faz 7 kalanı:** en büyük 5 dosyanın
+bölünmesi, ölü kod taraması.
+
+### 🔶 Faz 6: Component sistemi II, PlaceCard ve harita
 
 Claude:
 1. PlaceCard tek görsel dil: Full, Compact ve Grid varyantları aynı meta
@@ -359,7 +467,15 @@ Cayan: Google Cloud Console'da Maps SDK anahtarının "Uygulama kısıtı" (pake
 adı + SHA-1 / bundle id) ve "API kısıtı" ekranlarının görüntüsünü gönder.
 Anahtar değerini paylaşma.
 
-### ⬜ Faz 7: KISS ve mimari
+### Faz 6 kaydı (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| Harita UI durumları (madde 2) | 🔶 | Veri hatası ve kayıtlı veriyle gösterim, arama hatası ve sonuç yok, konum izni reddedildi (tekrar iste ya da Ayarları aç), konum alınamadı: hepsi `MapPriorityNotice` içinde vardı. Eksik olan boş durumdu: pin filtresi ziyaretler arasında hatırlanıyor, bu yüzden "Tüm pinleri gizle"de ya da pini olmayan bir türde bırakılan harita boş ve açıklamasız açılıyordu. Artık "Pinler gizli" ya da "Bu filtrede pin yok" uyarısı ve "Tümünü göster" eylemi çıkıyor (`7f4ae26`, OTA 39). Cihaz kontrolü telefon bağlanınca |
+| Madde 3, 4, 5 | ✅ | Liste haritası dokununca etkinleşiyor, keşif karoları statik harita kullanıyor, ilk açılış ipucu Google logosunu örtmüyor (Faz 5 3. tur, cihazda) |
+| Madde 1: ortak görsel dil | ✅ | Kart ailesi ikiye indi: akış ve liste detayında tek `PlaceCardFull`, ızgaralarda tek `MosaicTileFrame` (liste ve mekân karosu aynı çerçeve: görsel, alt geçişte ad, köşede tür işareti). Compact varyant kodda yok (`grep` ile doğrulandı), yeni alan eklenmedi |
+
+### ✅ Faz 7: KISS ve mimari
 
 Claude:
 1. E26: katman ihlali taraması (UI → application → data → platform), döngüsel
@@ -379,7 +495,142 @@ Claude:
 Kapanır: **E26, E27, E28, E29, E32**
 Cayan: —
 
-### ⬜ Faz 8: Kod kalitesi II ve E2E altyapısı
+### Faz 7 kaydı: KISS ve mimari (2026-09-25)
+
+**Teslim:** OTA 29 `edba5f19`, 30 `f3b2f409`, 31 `6361be1f`, 32 `1d82a56d`;
+her biri iki başlatmayla cihazda doğrulandı (`isUpdatePending` true → false).
+Her OTA'da `check:release` yeşil; son grup 1386 test, dal kapsamı %90,31.
+
+**E26 Mimari.** Katman yönü tarandı:
+
+| Yön | İhlal | Koruma |
+|---|---|---|
+| platform → data / features / app-shell | 0 | tarama |
+| data → features / app-shell | 0 | tarama |
+| feature UI → repository ya da Supabase | 0 | `architecture:check` |
+| özellik → başka özelliğin iç dosyası | 0, hepsi `public/` üzerinden | `architecture:check` |
+| shared → features / data | 0 | `architecture:check` |
+| shared → app-shell | 1 → 0 | `MediaLightbox` durum çubuğu hook'unu app-shell'den alıyordu. `AppSystemBars` yalnız token'a bağlı olduğu için `shared/components/chrome` altına taşındı. Guard'a kural eklendi; deneme dosyası reddedildi (`5473eed`) |
+| döngüsel bağımlılık | 0 | `source-health:check` |
+
+Özellikten app-shell'e 21 dosya gidiyor: navigasyon tipleri, oturum
+context'i, ilerleme bandı ve auth yönlendirmesi. Bunlar uygulama çapında
+sözleşmeler; kabul edildi.
+
+"Bir özelliği silince kaç dosya kırılır" (onu dışarıdan kullanan dosya,
+hepsi `public/` üzerinden): auth 2, discovery 2, explore 1, home 1, lists 1,
+map 6, notifications 1, places 7, profile 1, settings 1, social 2.
+
+**E27 Büyük dosyalar.** Bölünenler:
+
+| Dosya | Önce | Sonra | Ayrılan |
+|---|---|---|---|
+| `tr.ts` | 1098 | 36 | özellik başına 11 dosya; çözümlenen nesne bayt bayt aynı |
+| `usePlaceEditorState` | 929 (tek hook 795) | 397 (hook < 300) | `usePlaceEditorListSelection`, `usePlaceEditorSave`, başlangıç durumu `placeEditorStateUtils`'te |
+| `useMapScreenState` | 855 (hook 800) | 525 (hook 482) | `useMapEditorSession`, `useMapPlaceSave`, `useMapScreenPersistence` |
+| `listsRepository` | 886 | 670 | `listPersistencePayload` |
+| `optimisticSocialCache` | 872 | 379 | `optimisticCacheTransforms` |
+| `media.ts` | 856 | 625 | `mediaFunctionClient` |
+| `images.ts` | 810 | 652 | `pickedMediaFiles` (720p boyutlandırma, küçük görsel) |
+| `UserProfileScreen` | 793 | 667 | `useProfileTabPager`, `userProfileOverlays`, `ProfileTabEmptyState` |
+| `PlaceCard` | 724 | 678 | `placeCardOverlays`, paylaşılan `DeferredFeedback` |
+
+`source-health` dosya istisnası kalmadı (`HOTSPOT_LIMITS` boş). Fonksiyon
+istisnaları yeni boyutlara indirildi: `useMapScreenState` 800 → 490,
+`UserProfileScreen` 700 → 560, `ProfileScreen` 590 → 485.
+
+500+ satırlık 32 dosyanın her biri için karar:
+
+| Dosya | Satır | Karar |
+|---|---|---|
+| `supabase/functions/media-assets/handler.ts` | 2095 | Kalıyor. Edge function tek dosya deploy ediliyor; imza, doğrulama ve yükleme adımları sırayla okunuyor. Bölmek deploy gerektirir (Faz 23, Cayan) |
+| `auth-gateway/handler.ts` | 925 | Aynı gerekçe (Faz 23) |
+| `moderation-reports/handler.ts` | 762 | Aynı gerekçe (Faz 23) |
+| `maps-geocoding/handler.ts` | 588 | Aynı gerekçe |
+| `delete-user/handler.ts` | 540 | Aynı gerekçe |
+| `useAuthScreenState` | 679 | Faz 5 form standardıyla birlikte; giriş ekranları hesaptan çıkmadan cihazda denenemiyor (Cayan) |
+| `PlaceCard` | 678 | Kalıyor: bölümleri zaten `place-card/` altında; kalan gövde kartın durum makinesi |
+| `listsRepository` | 670 | Kalıyor: listelerin yazma yolu (oluştur, güncelle, toplu güncelle, sil, şikâyet); yük hazırlama bu turda ayrıldı |
+| `ListDetailScreen` | 669 | Faz 9B'de başlık/harita bölümüyle bölünür |
+| `UserProfileScreen` | 667 | Kalıyor: bu turda 793'ten indi |
+| `ProfileContentPager` | 655 | Kalıyor: üç sekmenin sayfalayıcısı ve başlık kaydırma eşitlemesi |
+| `useAuthActions` | 655 | Faz 20 (oturum güvenliği) ile birlikte |
+| `images.ts` | 652 | Kalıyor: bu turda 810'dan indi; kalan kısım seçici akışı |
+| `CommentPanel` | 634 | Faz 9B (yorum paneli görsel turu) |
+| `media.ts` | 625 | Kalıyor: depolama işlemleri (yükleme, özel alana taşıma, silme, imzalı okuma); istemci kısmı bu turda ayrıldı |
+| `authSessionLifecycleRuntime` | 609 | Faz 20 |
+| `usePlaceCardState` | 582 | Kalıyor: tek kartın durum hook'u |
+| `MediaLightbox` | 576 | Kalıyor: tek görüntüleyici (iki görüntüleyici birleşti) |
+| `GoogleMapView` | 570 | Kalıyor: native harita sarmalayıcısı |
+| `SwipeableTabPager` | 555 | Kalıyor: genel kaydırmalı sekme bileşeni |
+| `edgeFunctions.ts` | 554 | Kalıyor: edge function istemcisi (imzalı başlıklar, adres, hata ayrımı); güvenlik kodu tek yerde |
+| `AppImage` | 534 | Kalıyor: görüntü bileşeni ve ön yükleme kuyruğu |
+| `authSessionSupport` | 534 | Faz 20 |
+| `MapScreen` | 527 | Kalıyor: bu turda 603'ten indi |
+| `ProfileScreen` | 525 | Kalıyor: bu turda 616'dan indi |
+| `useMapScreenState` | 525 | Kalıyor: bu turda 855'ten indi |
+| `PlaceEditorModal` | 519 | Kalıyor: bu turda 598'den indi |
+| `optimisticCacheTransforms` | 518 | Kalıyor: saf dönüşümler, testli |
+| `useSettingsScreenState` | 510 | Faz 12 (ayarlar işlem matrisi) |
+| `PlaceEditorFinalStep` | 509 | Kalıyor: son adımın alanları |
+| `SettingsScreen` | 502 | Faz 12 |
+| `AuthRegisterFlow` | 501 | Faz 5 form standardı |
+
+**E28 DRY.** Birleştirilenler:
+
+| Tekrar | Kopya | Şimdi |
+|---|---|---|
+| Görüntüleyici | 2 | `MediaLightbox` |
+| react-native `Modal` ayarları | 10 | `AppModal` (eslint başka dosyada reddediyor) |
+| Video rozetleri | 2 | `VideoBadges` |
+| Yığın başlığı | 2 | `StackScreenHeader` (`inline`) |
+| Kapak seçici | 2 | `useCoverImagePicker` |
+| Liste paylaşım menüsü | 2 | `listShareMenuItems` |
+| Akış kartı eşleyici (ana sayfa, Keşfet, profil) | 3 | `mapPlaceFeedCard`; `toNumber` ve `parseMedia` 4 depoda kopyaydı. Depolardan net 430 satır çıktı |
+| Profil sekme ve pager mantığı | 2 | `useProfileTabState` + `useProfileTabPager` |
+| Profil boş sekme durumları | 2 | `ProfileTabEmptyState` |
+| Takipçi/takip metinleri | 2 | `profileConnectionsCopy` |
+| Ertelenmiş onay, şikâyet ve görüntüleyici | 2 | `DeferredFeedback` |
+| Haritadaki "yeniden aç" hapları | 2 | `MapReopenPill` |
+| Yer editörü başlangıç durumu (editör + değişiklik kontrolü) | 2 | `createInitialPlaceEditorFields` |
+| Büyük dosya uyarısı | 2 | `OVERSIZED_MEDIA_NOTICE` |
+| Nokta adresi arama (harita dokunuşu, POI) | 2 | `lookUpPoint` |
+| "Editörü kapat" durum sıfırlama | 5 | `clearEditor` |
+| JPEG yeniden kodlama ve temizlik | 2 | `writeJpeg` |
+| Aynı gövdeli iki kırpma kontrolü | 2 | `shouldUseNativeEditing` |
+
+**E29 KISS.** Kaldırılanlar: tek satırlık harita sarmalayıcısı `AppMapView`;
+FeedActionBar'da açılmayan şikâyet yolu; editörde hiçbir ekranın çağırmadığı
+"medyayı değiştir" ve video kapağı düzenleme durumu; yalnız testlerin
+kullandığı `photos`/`handleAddPhoto` takma adları; üç kat yeniden dışa
+aktarılan `PlaceEditorDraft` ve `mapScreenTypes`; tek kullanıcılı
+`FeedActionPanels` barrel'ı; kaydedilip hiç okunmayan bekleyen kayıt
+taslağı; iki dalı aynı işi yapan abort kontrolü; iki tarafı da 20 veren
+ternary. Editörün 21 `useState`'i tek alan nesnesi oldu.
+
+**E32 Ölü kod.** knip (dosya, bağımlılık, listelenmemiş, binary) temiz; 7
+istisnanın hepsi gerekçeli. Yorum satırına alınmış kod: 0. TODO/FIXME: 0.
+`assets/` altındaki iki ikon klasörü (96 dosya) main'de referanssız ama
+`native/faz-4` dalında `app.config.ts` ve `brandAssets.ts` kullanıyor;
+dal main'e alınınca devreye giriyor, silinmedi.
+
+**Bu fazda bulunan ve düzeltilen hatalar:**
+
+| Hata | Kanıt |
+|---|---|
+| Küçültülüp yeniden açılan yer taslağı X ile sorusuz kapanıyor, yazılanlar kayboluyordu | cihazda görüldü; yeni test düzeltmesiz kırmızı, düzeltmeyle yeşil; OTA 31'de cihazda soru çıkıyor |
+| Küçültülmüş editör hapı yazılan adı değil "Yeni mekân" gösteriyordu | cihaz: hap "Taslak" gösteriyor |
+| Harita altındaki hap Google logosunu örtüyordu | cihaz: logo hapın üstünde |
+| Profilde boş Listeler sekmesi harita iğnesi gösteriyordu | kod: sekme ikonuyla aynı |
+
+**Cihaz:** yer editörü (aç, yaz, adımlar, liste seçimi, çoklu liste ipucu,
+dokunulmamış editör sorusuz kapanır, değişmiş editör sorar, küçült ve
+yeniden aç), kart menüsü ve silme onayı (geri tuşuyla kapatıldı), profil
+sekmeleri, filtre menüsü, açık sekmeye dokununca başa dönüş, başka
+kullanıcının profili ve "…" menüsü, takip listesi, harita araması, Keşfet
+mekânları, açıklama genişletme. Hiçbir şey kaydedilmedi, silinmedi.
+
+### 🔶 Faz 8: Kod kalitesi II ve E2E altyapısı
 
 Claude:
 1. E30: ortam sınıfı (URL, timeout, sürüm) ve iş mantığı sınıfı (sayfa boyutu,
@@ -400,6 +651,22 @@ Cayan: 3 test hesabı aç: **A** (açık), **B** (gizli hesap olacak),
 **C** (Faz 11'de silinecek). Şifreleri bana yazma, kendi terminalinde
 `MAESTRO_*` ortam değişkeni olarak tanımla (komutları fazda veririm). İkinci
 bir Android cihaz varsa bağla; yoksa bu makineye emülatör kurulmasına onay ver.
+
+### Faz 8 kaydı, 1. tur (2026-09-25)
+
+Test hesabı gerektirmeyen kalemler yapıldı; teslim OTA 32 `1d82a56d`.
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| E30 hardcode | 🔶 | Uygulama kodunda sayı yazılmış `setTimeout`/`setInterval` gecikmesi yok (yalnız test yardımcıları); `staleTime`/`gcTime` sabitlerde; modül düzeyinde 189 adlandırılmış sayısal sabit. Stil dosyalarında token dışı 38 boşluk değeri var, çoğu 0 ve ±1–2 px optik düzeltme: Faz 9A'daki 4pt ızgara ölçümüne (B12) bırakıldı. Kalan: ortam/iş kuralı sabitlerinin sınıflandırma tablosu ve guard |
+| E31 isimlendirme ve karmaşıklık | 🔶 | Karmaşıklık > 10 olan fonksiyon 186 → 184; en yüksek 35 → 30. En yoğun altısı sadeleşti: `ExpandableText` 35 → 23, `TextField` 32 → 18, `MapScreen` 34 → 24, `PlaceEditorModal` 33 → < 25, `UserProfileScreen` 34 → < 25, `PlaceCard` 31 → 27. ESLint sınırı 35 → 30 (`0b0bf74`). TODO/FIXME: 0. `max-depth` 5 kuralı zaten var. Kalan: 21–30 arasındaki 37 fonksiyon; boolean önekleri ve parametre sayısı ölçülmedi |
+| E33 hazırlığı | 🔶 | Uygulama kodunda `Math.random` yalnız `withRetryJitter`'da ve enjekte edilebilir (üç push denetleyicisindeki kopyalar birleşti); dört dosya adı üreticisi `createUuid` kullanıyor (`4a857ea`). `Date.now` (74 kullanım, çoğu zaman damgası) enjekte edilmedi: birim testlerinde Vitest sahte saati zaten kontrol ediyor, Maestro ise çalışan uygulamaya saat enjekte edemiyor; göreli zaman fonksiyonu `now` parametresi alıyor. Kalan: yok, karar kaydı bu |
+| E34 şema dayanıklılığı | 🔶 | Akış kartı eşleyicisinin testi: sayı yerine metin, null, bozuk medya JSON'u, bilinmeyen alan, sahipsiz satır, izleyicisiz beğeni; hiçbiri çökmüyor. Sözleşme belgesi: `docs/api-contracts.md` (6 edge function, 18 RPC, ortak imza/hata kuralları, alan değiştirme kuralı). Kalan: diğer eşleyicilerin şema testleri |
+| Maestro altyapısı | ⏸ | Test hesapları (A, B, C) Cayan'dan bekleniyor |
+
+Yeni doğrudan testler: `ExpandableText` (5), `TextField` (5),
+`placeFeedCardMapper` (5). İkisi yeniden düzenlemeden önce eski koda karşı
+yazıldı.
 
 ### ⬜ Faz 9A ve 9B: durum matrisi, motion, cila / premium görsel tur
 
@@ -426,7 +693,7 @@ Claude:
 Kapanır: **A4, B12, B14, B15, B16**
 Cayan: ekran kayıtlarını izleyip görsel onay ver (10 dk).
 
-### ⬜ Faz 10: Android cihaz uyumu ve erişilebilirlik
+### 🔶 Faz 10: Android cihaz uyumu ve erişilebilirlik
 
 Claude:
 1. C17: aynı telefonda `wm size`/`wm density` ile 360, 393, 411 ve 480dp
@@ -445,6 +712,13 @@ Claude:
 
 Kapanır: — (C17–C20, A3 ve A7'nin Android satırları; iOS satırları Faz 26'da)
 Cayan: —
+
+### Faz 10 kaydı, 1. tur (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| A3 donanım geri tuşu | 🔶 | Haritada pin menüsü açıkken geri tuşu önceki sekmeye geçiyor, dönüşte menü açık kalıyordu. Artık önce menüyü, sonra açık arama sonuçlarını kapatıyor; profildeki görünürlük menüsü de öyle (`useAndroidBackHandler`, OTA 34, cihazda iki ekranda denendi). Değiştirilmiş yer editöründe geri tuşu önce klavyeyi kapatıyor, sonra "Değişiklikler iptal edilsin mi?" diye soruyor (cihazda). Kalan: bütün ekran, sheet ve modal matrisi |
+| C17, C19, C20 | ⏸ | Ekran boyutu (`wm size/density`), yazı ölçeği ve TalkBack telefonun sistem ayarını değiştiriyor; Cayan onay verirse yapılır, sonra ayarlar geri alınır |
 
 ### ⬜ Faz 11–19: İşlem matrisi
 
@@ -478,7 +752,7 @@ her kontrolü tek tek geçti ve kaydı var. Bu da **bilinen sıfır hata** demek
 Faz 11–19'da Cayan'dan beklenenler faz listesinde yazıyor. Ben şifre girmem,
 hesap açmam, hesap silme onayı vermem. Bu adımlar senindir.
 
-### ⬜ Faz 20: Güvenlik ve kötüye kullanım
+### 🔶 Faz 20: Güvenlik ve kötüye kullanım
 
 Claude:
 1. G41: refresh token tek uçuşta mı, kilit mekanizması, çıkışta sunucu
@@ -502,7 +776,15 @@ Kapanır: **G41, G42, G43, G44, G46**
 Cayan: SSL pinning kararı (önerimi gerekçesiyle yazarım). Şikâyetlere kimin,
 ne kadar sürede bakacağı.
 
-### ⬜ Faz 21: Veri, durum, ağ
+### Faz 20 kaydı, 1. tur: kodda doğrulananlar (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| G42 log ve yedek | 🔶 | Android manifest: `allowBackup="false"`, SecureStore için yedek ve veri çıkarma dışlama kuralları. Sentry `sendDefaultPii: false`; bu turda `beforeSend` ve `beforeBreadcrumb` eklendi: e-posta, oturum token'ı (JWT) ve URL sorgusundaki gizli değerler (imzalı depolama adresinin `token`'ı) gönderilmeden temizleniyor. Uygulama logger'ı ile aynı modül (`8f9da5c`, OTA 35). Kalan: iOS yedekleme dışlaması (Faz 26) |
+| G44 release sertleştirme | 🔶 | `android.enableMinifyInReleaseBuilds=true` (`gradle.properties`) ile release'de R8 açık; APK üzerinde doğrulama Faz 25'te. Pano: uygulama yalnız kullanıcının "kopyala" eylemiyle yazıyor (paylaşım bağlantısı, adres, yorum), panodan okumuyor. Ekran görüntüsü engeli gerektiren ekran bulunmadı: uygulama ödeme, kimlik belgesi ya da tek kullanımlık kod göstermiyor |
+| G41, G43, G46 | ⬜ | Test hesapları ve yerel Supabase persona matrisi gerekiyor (Faz 8 hesapları, Cayan) |
+
+### 🔶 Faz 21: Veri, durum, ağ
 
 Claude:
 1. F35: race condition (eski yanıtın yeniyi ezmesi), stale data, cache
@@ -521,7 +803,17 @@ Claude:
 Kapanır: **F35, F36, F37, F38, F40**
 Cayan: —
 
-### ⬜ Faz 22: Performans
+### Faz 21 kaydı, 1. tur: kodda doğrulananlar (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| F35 eski yanıtın yeniyi ezmesi | 🔶 | Harita araması her isteğe artan kimlik veriyor ve yalnız son isteğin sonucunu yazıyor (`useMapSearchController`). Keşfet araması (300 ms debounce) ve kullanıcı adı kontrolü React Query anahtarında sorguyu taşıyor, geç gelen eski yanıt başka anahtara yazılıyor. Kalan: cache invalidation haritası |
+| F36 hata ve yeniden deneme | 🔶 | `queryClient`: 400, 401, 403, 404, 409 ve 422 yeniden denenmiyor; 429 ve 5xx iki kez, diğerleri bir kez; `Retry-After` başlığına uyuluyor. Kullanıcı mesajı zaman aşımı ve bağlantı hatasını ayrı tanıyor, gerisinde ekranın kendi metni. Kalan: aynı anda 5 istekte tek token yenileme kanıtı (test hesabı) |
+| F37 çevrimdışı | ⏸ | Çevrimdışı göstergesi ve outbox var. 12 ekranın uçak modu tablosu telefonun sistem ayarını değiştirmeyi gerektiriyor (Cayan onayı) |
+| F38 idempotency ve geri alma | ⏸ | Test hesaplarıyla (Faz 11–19 işlem matrisinde T3, T4) |
+| F40 zaman | 🔶 | Sunucu ISO/UTC gönderiyor, gösterim cihazın yerel saatinde; hesap epoch milisaniyesiyle yapıldığı için yaz saati kayması etkilemiyor. Cihaz saati sunucunun gerisindeyse gelecekteki zaman "şimdi" okunuyor, eksi değer çıkmıyor. 7 günden eskisi takvim tarihi (`gg.aa.yyyy`). Göreli etiketler canlı saymıyor, ekran yenilenince güncelleniyor; MVP için yeterli |
+
+### 🔶 Faz 22: Performans
 
 Claude:
 1. D21: Android cold start, `am start -W` ile 10 ölçüm (medyan ve p90).
@@ -542,6 +834,103 @@ Cayan: iPhone'da uygulamayı 10 kez tamamen kapatıp aç.
 ⚠ Risk: Redmi Note 9 Pro orta-alt segment bir telefon. 2 saniyenin altı
 tutmazsa yapılacak işleri ve dürüst puanı yazarım.
 
+### Faz 22 kaydı, 1. tur: Android ölçümleri (2026-09-25)
+
+Cihaz: Redmi Note 9 Pro (orta-alt segment), release build, OTA 32/33.
+Bütçeler `shared/performance/budgets.ts` içinde (p75).
+
+**D21 soğuk açılış.** `am start -W -S` ile 10 ölçüm; aynı açılışların
+logcat damgaları:
+
+| Aşama | Medyan | p90 | Bütçe |
+|---|---|---|---|
+| Süreç → JS `Running "main"` | 695 ms | 738 ms | — |
+| İlk kare (`Displayed`, `TotalTime`) | 792 ms | 844 ms | 2500 ms |
+| Arayüz ağacı kuruldu (ilk RNScreens satırı) | 995 ms | 1096 ms | 2000 ms (ilk içerik) |
+
+Önbellek soğukken ilk açılış 1114 ms. Hermes ve bridgeless açık. İzde
+`expo-updates` başlangıç kontrolü 160 ms sürüyor ve JS paketi ondan ~40 ms
+sonra yüklenmeye başlıyor; `fallbackToCacheTimeout: 0` ağın beklenmemesi
+demek, bu gecikmenin kontrole bağlı olup olmadığı 2. turda ayrı izle
+bakılacak. iOS ölçümü Faz 26'da (Cayan'ın iPhone'u).
+
+**D22 kaydırma.** `gfxinfo` (sentetik `adb` kaydırması):
+
+| Ekran | Kare | Takılan | p50 | p90 | p99 |
+|---|---|---|---|---|---|
+| Ana sayfa akışı | 1253 | %5,83 | 10 ms | 13 ms | 42 ms |
+| Keşfet | 327 | %2,45 | 7 ms | 9 ms | 23 ms |
+| Profil | 841 | %7,61 | 14 ms | 16 ms | 24 ms |
+
+`framestats` ile kare aşamaları (son 120 kare, medyan/p90): toplam 9–11 /
+11–14 ms; UI thread hiç yavaş değil, en büyük pay GPU komutları (2,6–4,1
+ms). Sürekli kaydırma 16,6 ms'nin altında; takılan karelerin çoğu sekmenin
+ilk açılışında ve görsellerin ilk çözülmesinde. Ana sayfa ve profil %5
+bütçesinin biraz üstünde: Faz 22 2. turda ızgara küçük görselleri ve ilk
+görüntülemede görsel sayısı ele alınacak.
+
+**D23 bellek.** Aynı rotada tur başına `meminfo`:
+
+| Durum | Toplam PSS |
+|---|---|
+| Başlangıç (birkaç sekme gezildikten sonra) | 584 MB |
+| 6 tur (Ana sayfa, Keşfet, Profil, Harita) | 821 MB |
+| Haritasız 4 tur | 830 → 778 MB (düz) |
+| Haritaya 6 kez gidip dönmek | 778 → 986 MB |
+
+Büyüme haritada: her harita ziyareti yaklaşık 96 native görünüm, 25 MB native,
+10 MB Java ve 13 MB grafik belleği ekliyor; görünümler pencereye bağlı değil
+(`dumpsys activity top` değişmiyor), yani bırakılmamış nesneler.
+
+Denenen düzeltme (OTA 33 `495c1851`): harita ilk ziyarette kurulup
+tutuldu. Sızıntı durmadı (241 → 571 MB, 6 ziyaret) ve daha kötüsü, sekmeden
+dönünce haritadaki bütün pinler kayboldu. OTA 32 yeniden yayınlanarak geri
+alındı (`e076ba6f`, cihazda pinler geri geldi), kod da geri çevrildi
+(`f26f4be`).
+
+**Sonuç: sızıntı yok.** Her ölçümden önce çöp toplama zorlanınca
+(`am dumpheap`) 20 harita ziyaretinde bellek düz kaldı: toplam PSS 273 →
+278 MB, görünüm sayısı 593 sabit, grafik belleği değişmedi, uygulama
+çökmedi. Önceki büyüme toplanmamış çöptü; `meminfo` henüz toplanmamış
+nesneleri de sayıyor. OTA 33 denemesi bu yüzden gereksizdi ve geri alındı;
+harita kodu OTA 32'deki gibi.
+
+**D25 arka plan.** Harita dışındayken uygulamanın konum isteği, alarmı ve
+wakelock'u yok (`dumpsys location/alarm/power`).
+
+### Faz 22 kaydı, 2. tur: ana sayfa kaydırması (2026-09-25)
+
+**Ölçüm yöntemi düzeltildi.** Aynı ekranda art arda ölçümler çok oynuyor:
+ana sayfa bir oturumda %6,1, diğerinde %8,9 ve %11,4. İki tuzak bulundu:
+
+- `uiautomator dump` (ekranda ne olduğunu okumak için) bir erişilebilirlik
+  istemcisi bağlıyor ve bir süre bütün kareleri yavaşlatıyor: profil aynı
+  kaydırmada %3,7 yerine %40,9 çıktı. Ölçümden hemen önce kullanılmıyor.
+- `adb input` ile gönderilen dokunuşlar neredeyse her karede "High input
+  latency" sayılıyor; bu sütun yok sayılıyor.
+
+Temiz ölçüm (ısınma kaydırmasından sonra, OTA 37):
+
+| Ekran | Kare | Takılan | p90 | p99 | Yavaş UI thread | Yavaş görsel yükleme |
+|---|---|---|---|---|---|---|
+| Profil | 1032 | %3,68 | 12 ms | 20 ms | 1 | — |
+| Ana sayfa | 739–781 | %8,9–11,4 | 15–18 ms | 38–40 ms | 12 | 4–5 |
+
+**Kaynak.** Ana sayfa kartı büyük: sahip başlığı, kaynak ve liste çubukları,
+fotoğraf karuseli, mini harita. İki gereksiz iş vardı:
+
+1. Kart görünür alandan çıkınca statik haritasını bırakıyordu. Bu bütün kartı
+   yeniden çizdiriyor, geri dönüşte harita görseli yeniden çözülüyordu.
+2. Karusel, kart kurulur kurulmaz bütün fotoğrafları çözüyordu.
+
+**Düzeltme** (`8028a69`, OTA 38): görünürlük deposu artık görülen kartı
+hatırlıyor, bu yüzden her satır görünürlük için en fazla bir kez yeniden
+çiziliyor ve harita bir kez yükleniyor. Karusel yalnız gösterilen fotoğrafı ve
+iki komşusunu çözüyor; diğer sayfalar aynı boyutta boş.
+
+**Sonuç:** cihaz ölçümü telefon yeniden bağlanınca (telefon bu oturumda USB'den
+düştü).
+
 ### ⬜ Faz 23: Backend ve gözlemlenebilirlik
 
 Claude:
@@ -560,7 +949,7 @@ Kapanır: **H47, H48, H49, H50**
 Cayan: Sentry salt-okur API token'ı ya da alarm ekranlarının görüntüsü,
 Supabase Reports ekranı, PostHog olay listesi.
 
-### ⬜ Faz 24: CI/CD, sürüm, bağımlılık, belgeleme
+### 🔶 Faz 24: CI/CD, sürüm, bağımlılık, belgeleme
 
 Claude:
 1. H51: CI hattı, ortam ayrımı (dev, preview ve prod config; ayrı bundle id
@@ -581,7 +970,17 @@ Kapanır: **E33, H51, H52, H53, H54**
 Cayan: GitHub'da main için branch korumasını aç. Zorunlu güncelleme için
 evet/hayır kararı.
 
-### ⬜ Faz 25: Native paket #2, store ve yasal
+### Faz 24 kaydı, 1. tur (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| H51 CI | 🔶 | GitHub'da main'e her push'ta iki iş akışı koşuyor. **Quality** (`check:release` + bütün geçmişte Gitleaks) `8f9da5c`'den beri kırmızıydı: redaksiyon testindeki JWT biçimli sabit yakalanıyordu. Parmak izi `.gitleaksignore`'a eklendi, token artık çalışma anında kuruluyor, ignore sayısını sabitleyen test 5'e çıktı (`668018d`, `2b3afd7`); Quality yeşil. **CI**'nin son işi ("Release gates green") main'de kırmızı, çünkü EAS build ve cihaz benchmark işleri `ENABLE_EAS_PREVIEW_BUILDS` / `ENABLE_ANDROID_DEVICE_BENCHMARKS` depo değişkenleri kapalı olduğu için atlanıyor. Bu bir kod hatası değil, EAS kredisi kararı (Cayan). Zamanlanmış **Uptime SLO Probe** `SORITA_UPTIME_HEALTH_URL` tanımlı olmadığı için her gün kırmızı (Cayan). Branch koruması Cayan'da |
+| H52 güncelleme ve geri alma | 🔶 | Geri alma gerçek bir olayla prova edildi: OTA 33 dönüşte haritadaki pinleri kaybettirdi, OTA 32 yeniden yayınlanarak geri alındı (`e076ba6f`), cihazda pinler geri geldi. Her yayın `ota:publish` üzerinden `check:release` geçerek çıkıyor ve geri alma komutunu yazıyor. Zorunlu güncelleme / minimum sürüm kararı Cayan'da |
+| H53 bağımlılıklar | 🔶 | `npm audit --omit=dev`: 4 orta bulgu, hepsi aynı kayıt (GHSA-vcc3-ghjq-m6fr: React Navigation 6 → query-string 7 → `decode-uri-component` 0.2.2, bozuk %-kaçışında üstel süre). Düzeltilmiş sürüm yalnız ESM olduğu için zorla konamıyor. Bağlantı yapılandırması artık `decodeURIComponent`'in reddettiği yolları açmıyor; yavaş yola ulaşan tek girdi buydu (`bdb8fd8`, OTA 40). Kalıcı çözüm React Navigation 7 yükseltmesi (MVP sonrası). Geliştirme bağımlılıklarında 1 yüksek (`smol-toml`, knip'in; yalnız depodaki TOML'u okuyor) ve 2 orta: `npm audit fix` onaylanmamış kurulum betikli paketleri yeniden kuracağı için dokunulmadı |
+| H54 belgeler | 🔶 | CHANGELOG Eylül OTA'larını kapsıyor (`e27c131`), API sözleşmesi `docs/api-contracts.md` (E34). Kalan: temiz klonda kurulum provası |
+| E33 Maestro | ⬜ | Test hesapları gerekiyor (Faz 8, Cayan) |
+
+### 🔶 Faz 25: Native paket #2, store ve yasal
 
 Claude:
 1. Native: predictive back (A3 doğrulandıktan sonra), Android 15+
@@ -607,6 +1006,14 @@ içerik derecelendirmesi) formlarını taslağımla doldur. KVKK ve şartlar
 metnini hukukçuya ya da kendine onaylat. Gizlilik URL'ini yayınla. Review
 notlarına test hesabını gir. Yeni AAB'yi Play'e, iOS build'ini App Store
 Connect'e yükle.
+
+### Faz 25 kaydı, 1. tur (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| I58 yasal metinler uygulamada | 🔶 | Ayarlar'da "Yasal" grubu: Kullanım Koşulları, Topluluk Kuralları, Gizlilik Politikası, KVKK Aydınlatma Metni. Kayıtta onaylanan metinlerin aynısı açılıyor, geri tuşu kapatıyor (OTA 36, cihazda). Cayan 2026-09-25'te MVP gereği olarak onayladı; feature-surface 4 grup / 26 eylem. Ayarlar'daki "Gizlilik" satırı politika ile karışmasın diye "Hesap gizliliği" oldu (OTA 37, cihazda). Kalan: hukuk onayı ve store'da aynı URL (Cayan) |
+| Android bildirim ikonu | 🔶 | Dal `native/faz-4` (`d750488`): durum çubuğunda beyaz kare yerine tek renkli SoRita işareti (5 yoğunluk), vurgu rengi `#2563eb`, Firebase ve expo-notifications varsayılanları manifestte. Kalan: Play yüklemesi (Cayan) |
+| Diğer maddeler | ⬜ | iOS gizlilik manifesti ve Data Safety karşılaştırması, store taslağı, predictive back, edge-to-edge |
 
 ### ⬜ Faz 26: iOS cihaz turu
 

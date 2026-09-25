@@ -6,28 +6,13 @@ const ROOT = process.cwd();
 const SOURCE_ROOT = path.join(ROOT, 'src', 'mobile', 'app');
 const DEFAULT_MAX_LINES = 700;
 const DEFAULT_MAX_FUNCTION_LINES = 300;
-const HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/shared/i18n/tr.ts': 1_100,
-  'src/mobile/app/data/repositories/listsRepository.ts': 980,
-  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 930,
-  'src/mobile/app/platform/supabase/media.ts': 950,
-  'src/mobile/app/features/map/application/useMapScreenState.ts': 900,
-  'src/mobile/app/data/query/optimisticSocialCache.ts': 900,
-  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 860,
-  'src/mobile/app/features/places/ui/components/PlaceCard.tsx': 820,
-  'src/mobile/app/platform/media/images.ts': 820,
-  'src/mobile/app/features/lists/ui/components/ListEditorModal.tsx': 810,
-  'src/mobile/app/features/map/ui/screens/MapScreen.tsx': 790,
-  'src/mobile/app/platform/media/MediaLibrarySelectionHost.tsx': 770,
-  'src/mobile/app/features/auth/application/useAuthScreenState.ts': 730,
-}));
+const HOTSPOT_LIMITS = new Map(Object.entries({}));
 const FUNCTION_HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/features/map/application/usePlaceEditorState.ts': 815,
-  'src/mobile/app/features/map/application/useMapScreenState.ts': 800,
-  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 700,
+  'src/mobile/app/features/map/application/useMapScreenState.ts': 490,
+  'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 560,
   'src/mobile/app/features/auth/application/useAuthScreenState.ts': 620,
   'src/mobile/app/features/places/ui/components/PlaceCard.tsx': 630,
-  'src/mobile/app/features/profile/ui/screens/ProfileScreen.tsx': 590,
+  'src/mobile/app/features/profile/ui/screens/ProfileScreen.tsx': 485,
   'src/mobile/app/features/lists/ui/screens/ListDetailScreen.tsx': 560,
   'src/mobile/app/platform/media/MediaLibrarySelectionHost.tsx': 480,
   'src/mobile/app/features/map/ui/components/PlaceEditorModal.tsx': 480,

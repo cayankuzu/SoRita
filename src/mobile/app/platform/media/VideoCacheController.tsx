@@ -33,7 +33,3 @@ export function VideoCacheController() {
   return null;
 }
 
-export const videoCacheControllerInternals = {
-  getVideoCacheBudget,
-  LOW_MEMORY_THRESHOLD_BYTES,
-};
