@@ -50,11 +50,16 @@ export function PlaceEditorBasicsStep({
 }: PlaceEditorBasicsStepProps) {
   return (
     <View style={styles.stepContent}>
-      <View style={styles.coordCard}>
-        <AppText style={styles.coordTitle}>{tr.placeEditor.selectedLocation}</AppText>
-        <AppText style={styles.coordText}>{address || placeAddress || tr.placeEditor.locationFallback()}</AppText>
-        {/* Which list the place is in stays in the header, on every step. */}
-      </View>
+      {/* The address field below shows where the place is once it has one;
+          until then this card says where the pin was dropped. It used to
+          repeat the field word for word. Which list the place is in stays in
+          the header, on every step. */}
+      {address.trim() ? null : (
+        <View style={styles.coordCard}>
+          <AppText style={styles.coordTitle}>{tr.placeEditor.selectedLocation}</AppText>
+          <AppText style={styles.coordText}>{placeAddress || tr.placeEditor.locationFallback()}</AppText>
+        </View>
+      )}
 
       <View style={styles.requirementsCard}>
         <AppText style={styles.requirementsTitle}>{tr.placeEditor.requirementsTitle}</AppText>
