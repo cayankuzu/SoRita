@@ -28,6 +28,7 @@ import { hasSeenMapAddHint, markMapAddHintSeen } from '@/mobile/app/platform/sto
 import { env } from '@/mobile/app/platform/config/env';
 import { GoogleMapView } from '@/mobile/app/shared/components/maps/GoogleMapView';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
+import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
@@ -111,6 +112,42 @@ function MapFilterMenu({
   );
 }
 
+// The filter is remembered between visits, so an empty map says when the
+// filter, not the user's data, is what hides the pins.
+function MapFilterNotice({
+  filterHidesEveryPin,
+  hasPriorityNotice,
+  markerFilter,
+  onShowAll,
+  showSearchFeedback,
+}: {
+  filterHidesEveryPin: boolean;
+  hasPriorityNotice: boolean;
+  markerFilter: MarkerFilterOption;
+  onShowAll: () => void;
+  showSearchFeedback: boolean;
+}) {
+  if (!filterHidesEveryPin || hasPriorityNotice || showSearchFeedback) {
+    return null;
+  }
+
+  const hidesAll = markerFilter === 'none';
+  const filterLabel = MARKER_FILTER_OPTIONS.find((option) => option.value === markerFilter)?.label;
+
+  return (
+    <InlineNotice
+      title={hidesAll ? tr.map.filterHiddenTitle : tr.map.filterEmptyTitle}
+      description={
+        hidesAll
+          ? tr.map.filterHiddenDescription
+          : tr.map.filterEmptyDescription(filterLabel ?? tr.map.filterAll)
+      }
+      actionLabel={tr.map.filterShowAll}
+      onAction={onShowAll}
+    />
+  );
+}
+
 // The bottom row of controls over the map: a 44dp button and a little air.
 const MAP_CONTROL_ROW_HEIGHT = 52;
 
@@ -171,6 +208,7 @@ export function MapScreen() {
     editorDraft,
     editorFocusTrigger,
     effectiveViewport,
+    filterHidesEveryPin,
     handleDeletePlace,
     handleLocateUser,
     handleMapCenterChange,
@@ -417,7 +455,15 @@ export function MapScreen() {
                 onClose={() => setIsFilterMenuOpen(false)}
                 onFilterChange={setMarkerFilter}
               />
-            ) : null}
+            ) : (
+              <MapFilterNotice
+                filterHidesEveryPin={filterHidesEveryPin}
+                hasPriorityNotice={hasPriorityNotice}
+                markerFilter={markerFilter}
+                onShowAll={() => setMarkerFilter('all')}
+                showSearchFeedback={showSearchFeedback}
+              />
+            )}
 
           </View>
 

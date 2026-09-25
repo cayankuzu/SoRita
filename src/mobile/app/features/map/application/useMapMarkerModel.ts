@@ -124,19 +124,21 @@ export function useMapMarkerModel({
       ),
     [lists, placeEntriesByLocationKey],
   );
+  const availableSavedMarkers = savedMapMarkers.length > 0
+    ? savedMapMarkers
+    : fallbackSavedMarkers;
   const filteredSavedMapMarkers = useMemo(() => {
-    const availableMarkers = savedMapMarkers.length > 0
-      ? savedMapMarkers
-      : fallbackSavedMarkers;
-
     if (markerFilter === 'none') {
       return [];
     }
 
     return markerFilter === 'all'
-      ? availableMarkers
-      : availableMarkers.filter((marker) => marker.markerVisibility === markerFilter);
-  }, [fallbackSavedMarkers, markerFilter, savedMapMarkers]);
+      ? availableSavedMarkers
+      : availableSavedMarkers.filter((marker) => marker.markerVisibility === markerFilter);
+  }, [availableSavedMarkers, markerFilter]);
+  // The filter is remembered between visits, so a map left on "hide all" (or
+  // on a kind the user has no pins of) must say why it is empty.
+  const filterHidesEveryPin = availableSavedMarkers.length > 0 && filteredSavedMapMarkers.length === 0;
   const selectedSearchMarker = useMemo<InteractiveMapMarker | null>(() => {
     const marker = buildSelectedSearchMarker(selectedSearchResult, allPlaces, colors.markerDraft);
     return marker ? { ...marker, markerKind: 'search' } : null;
@@ -208,6 +210,7 @@ export function useMapMarkerModel({
   return {
     activeEditorMarkerIndex,
     activeEditorMatchesSearchMarker,
+    filterHidesEveryPin,
     interactiveMapMarkers,
     mapPlaces: interactiveMapMarkers as MapMarkerItem[],
     selectedExistingMarkerColor,

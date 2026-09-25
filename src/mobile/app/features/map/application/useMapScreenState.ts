@@ -157,6 +157,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
   const activeEditorPanel = editorData ?? minimizedEditor?.panel ?? null;
   const {
     activeEditorMarkerIndex,
+    filterHidesEveryPin,
     interactiveMapMarkers,
     mapPlaces,
     selectedExistingMarkerColor,
@@ -484,6 +485,7 @@ export function useMapScreenState({ user }: UseMapScreenStateParams) {
     handleSavePlace,
     handleSearchQueryChange,
     handleSearchResultPress,
+    filterHidesEveryPin,
     hasMapDataPartialError:
       hasVisibleDataPartialError ||
       Boolean(markerError && mapPlaces.length > 0),

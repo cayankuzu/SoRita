@@ -865,21 +865,25 @@ describe('useMapScreenState', () => {
 
     expect(hook.result.current.mapPlaces[0]?.markerColor).toBe(colors.primary);
     expect(hook.result.current.mapPlaces[0]?.markerVisibility).toBe('mixed');
+    expect(hook.result.current.filterHidesEveryPin).toBe(false);
 
     act(() => {
       hook.result.current.setMarkerFilter('public');
     });
     expect(hook.result.current.mapPlaces).toHaveLength(0);
+    expect(hook.result.current.filterHidesEveryPin).toBe(true);
 
     act(() => {
       hook.result.current.setMarkerFilter('mixed');
     });
     expect(hook.result.current.mapPlaces).toHaveLength(1);
+    expect(hook.result.current.filterHidesEveryPin).toBe(false);
 
     act(() => {
       hook.result.current.setMarkerFilter('none');
     });
     expect(hook.result.current.mapPlaces).toHaveLength(0);
+    expect(hook.result.current.filterHidesEveryPin).toBe(true);
   });
 
   it('restores durable map state and guards search, save, filter, and location edge paths', async () => {
