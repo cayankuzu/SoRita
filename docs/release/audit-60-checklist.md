@@ -68,6 +68,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Kalan: kart varyantlarının tek meta ızgarası, harita boş/hata/izin durumları, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
+| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), kaydırma karesi p90 11–14 ms, arka planda konum/alarm/wakelock yok. Açık: harita ziyareti başına ~40 MB bellek sızıntısı (bir düzeltme denendi, pinleri kaybettirdiği için geri alındı), ana sayfa ve profilde takılan kare %5,8 ve %7,6 (bütçe %5), iOS ölçümü (Cayan) |
 
 ---
 
@@ -101,7 +102,7 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ⬜ | 19 | İşlem matrisi IX: bildirim, push, deep link (İ76–İ84) | A6 | App link dosyalarının yayında olduğunu teyit (5 dk) |
 | ⬜ | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
 | ⬜ | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
-| ⬜ | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
+| 🔶 | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
 | ⬜ | 23 | Backend ve gözlemlenebilirlik | H47, H48, H49, H50 | Sentry / Supabase / PostHog erişimi (15 dk) |
 | ⬜ | 24 | CI/CD, sürüm, bağımlılık, belgeleme | E33, H51, H52, H53, H54 | Branch koruması, zorunlu güncelleme kararı (10 dk) |
 | ⬜ | 25 | Native paket #2 + store + yasal | G45, I55, I56, I58 | Konsol formları, hukuk onayı, build yüklemeleri (1–2 sa) |
@@ -774,7 +775,7 @@ Claude:
 Kapanır: **F35, F36, F37, F38, F40**
 Cayan: —
 
-### ⬜ Faz 22: Performans
+### 🔶 Faz 22: Performans
 
 Claude:
 1. D21: Android cold start, `am start -W` ile 10 ölçüm (medyan ve p90).
@@ -794,6 +795,66 @@ Kapanır: **D21, D22, D23, D24, D25**
 Cayan: iPhone'da uygulamayı 10 kez tamamen kapatıp aç.
 ⚠ Risk: Redmi Note 9 Pro orta-alt segment bir telefon. 2 saniyenin altı
 tutmazsa yapılacak işleri ve dürüst puanı yazarım.
+
+### Faz 22 kaydı, 1. tur: Android ölçümleri (2026-09-25)
+
+Cihaz: Redmi Note 9 Pro (orta-alt segment), release build, OTA 32/33.
+Bütçeler `shared/performance/budgets.ts` içinde (p75).
+
+**D21 soğuk açılış.** `am start -W -S` ile 10 ölçüm; aynı açılışların
+logcat damgaları:
+
+| Aşama | Medyan | p90 | Bütçe |
+|---|---|---|---|
+| Süreç → JS `Running "main"` | 695 ms | 738 ms | — |
+| İlk kare (`Displayed`, `TotalTime`) | 792 ms | 844 ms | 2500 ms |
+| Arayüz ağacı kuruldu (ilk RNScreens satırı) | 995 ms | 1096 ms | 2000 ms (ilk içerik) |
+
+Önbellek soğukken ilk açılış 1114 ms. Hermes ve bridgeless açık. İzde
+`expo-updates` başlangıç kontrolü 160 ms sürüyor ve JS paketi ondan ~40 ms
+sonra yüklenmeye başlıyor; `fallbackToCacheTimeout: 0` ağın beklenmemesi
+demek, bu gecikmenin kontrole bağlı olup olmadığı 2. turda ayrı izle
+bakılacak. iOS ölçümü Faz 26'da (Cayan'ın iPhone'u).
+
+**D22 kaydırma.** `gfxinfo` (sentetik `adb` kaydırması):
+
+| Ekran | Kare | Takılan | p50 | p90 | p99 |
+|---|---|---|---|---|---|
+| Ana sayfa akışı | 1253 | %5,83 | 10 ms | 13 ms | 42 ms |
+| Keşfet | 327 | %2,45 | 7 ms | 9 ms | 23 ms |
+| Profil | 841 | %7,61 | 14 ms | 16 ms | 24 ms |
+
+`framestats` ile kare aşamaları (son 120 kare, medyan/p90): toplam 9–11 /
+11–14 ms; UI thread hiç yavaş değil, en büyük pay GPU komutları (2,6–4,1
+ms). Sürekli kaydırma 16,6 ms'nin altında; takılan karelerin çoğu sekmenin
+ilk açılışında ve görsellerin ilk çözülmesinde. Ana sayfa ve profil %5
+bütçesinin biraz üstünde: Faz 22 2. turda ızgara küçük görselleri ve ilk
+görüntülemede görsel sayısı ele alınacak.
+
+**D23 bellek.** Aynı rotada tur başına `meminfo`:
+
+| Durum | Toplam PSS |
+|---|---|
+| Başlangıç (birkaç sekme gezildikten sonra) | 584 MB |
+| 6 tur (Ana sayfa, Keşfet, Profil, Harita) | 821 MB |
+| Haritasız 4 tur | 830 → 778 MB (düz) |
+| Haritaya 6 kez gidip dönmek | 778 → 986 MB |
+
+Büyüme haritada: her harita ziyareti yaklaşık 96 native görünüm, 25 MB native,
+10 MB Java ve 13 MB grafik belleği ekliyor; görünümler pencereye bağlı değil
+(`dumpsys activity top` değişmiyor), yani bırakılmamış nesneler.
+
+Denenen düzeltme (OTA 33 `495c1851`): harita ilk ziyarette kurulup
+tutuldu. Sızıntı durmadı (241 → 571 MB, 6 ziyaret) ve daha kötüsü, sekmeden
+dönünce haritadaki bütün pinler kayboldu. OTA 32 yeniden yayınlanarak geri
+alındı (`e076ba6f`, cihazda pinler geri geldi), kod da geri çevrildi
+(`f26f4be`). Sızıntı açık: sıradaki şüpheli işaretçilerin özel React
+görünümleri (`MapMarkerGlyph`, SVG). Sonraki deneme görsel tabanlı
+işaretçilerle, yayından önce cihazda iki kontrolle: sekme gidiş-dönüşünde
+pinler görünüyor mu, 6 ziyarette `meminfo` düz mü.
+
+**D25 arka plan.** Harita dışındayken uygulamanın konum isteği, alarmı ve
+wakelock'u yok (`dumpsys location/alarm/power`).
 
 ### ⬜ Faz 23: Backend ve gözlemlenebilirlik
 
