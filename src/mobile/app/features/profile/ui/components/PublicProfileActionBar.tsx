@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { Ellipsis, UserCheck, UserPlus } from 'lucide-react-native';
 
-import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
+import { UnfollowConfirmModal } from '@/mobile/app/shared/components/feedback/UnfollowConfirmModal';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -128,16 +128,8 @@ export function PublicProfileActionBar({
         <Ellipsis color={colors.textMuted} size={iconSize.sm} />
       </IconButton>
 
-      <ConfirmActionModal
-        visible={confirmUnfollowVisible}
-        title={tr.profile.actions.unfollowConfirmTitle(username)}
-        description={
-          isPrivateAccount
-            ? tr.profile.actions.unfollowConfirmPrivate
-            : tr.profile.actions.unfollowConfirmPublic
-        }
-        confirmLabel={tr.profile.actions.unfollow}
-        confirmVariant="danger"
+      <UnfollowConfirmModal
+        target={confirmUnfollowVisible ? { isPrivateAccount, username } : null}
         onClose={() => setConfirmUnfollowVisible(false)}
         onConfirm={async () => {
           setConfirmUnfollowVisible(false);

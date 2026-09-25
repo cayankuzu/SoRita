@@ -22,6 +22,7 @@ vi.mock('@/mobile/app/shared/components/feedback/ConfirmActionModal', () => ({
     React.createElement('ConfirmActionModal', props),
 }));
 
+
 vi.mock('@/mobile/app/shared/components/ui/PrimaryButton', () => ({
   PrimaryButton: (props: Record<string, unknown>) => React.createElement('PrimaryButton', props),
 }));

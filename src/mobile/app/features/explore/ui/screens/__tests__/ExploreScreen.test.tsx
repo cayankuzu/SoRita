@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const useExploreScreenStateMock = vi.fn();
 
+vi.mock('@/mobile/app/shared/components/feedback/UnfollowConfirmModal', () => ({
+  UnfollowConfirmModal: () => null,
+}));
+
 vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ addListener: () => () => undefined, isFocused: () => true }),
   useScrollToTop: vi.fn(),

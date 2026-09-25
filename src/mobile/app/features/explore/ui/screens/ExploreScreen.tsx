@@ -8,6 +8,7 @@ import {
   openStackScreen,
   useAppNavigation,
 } from '@/mobile/app/app-shell/navigation/navigation';
+import { useExploreFollowToggle } from '@/mobile/app/features/explore/application/useExploreFollowToggle';
 import { useExploreScreenState } from '@/mobile/app/features/explore/application/useExploreScreenState';
 import {
   warmListDetailData,
@@ -25,7 +26,7 @@ import type {
   ExploreFeedMode,
   ExploreTabType,
 } from '@/mobile/app/features/explore/ui/components/exploreScreenTypes';
-import { showToast } from '@/mobile/app/platform/feedback/toast';
+import { UnfollowConfirmModal } from '@/mobile/app/shared/components/feedback/UnfollowConfirmModal';
 import { OverlayHost } from '@/mobile/app/shared/components/navigation/OverlayHost';
 import { SwipeableTabPager } from '@/mobile/app/shared/components/navigation/SwipeableTabPager';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
@@ -209,27 +210,8 @@ export function ExploreScreen() {
     void retry();
   }, [retry]);
 
-  const handleFollowUser = useCallback(
-    async (targetUserId: string) => {
-      try {
-        const result = await followUser(targetUserId);
-        showToast(
-          result === 'requested'
-            ? tr.explore.toast.followRequestSent
-            : result === 'following'
-              ? tr.explore.toast.userFollowed
-              : tr.explore.toast.followUpdated,
-          'success',
-        );
-      } catch (error) {
-        showToast(
-          error instanceof Error ? error.message : tr.profile.toast.followFailed,
-          'error',
-        );
-      }
-    },
-    [followUser],
-  );
+  const { cancelUnfollow, confirmUnfollow, requestFollowToggle, unfollowTarget } =
+    useExploreFollowToggle({ followUser, following, people: filteredUsers });
   const openUserProfile = useCallback(
     (userId: string) => {
       openStackScreen(navigation, 'UserProfile', { userId });
@@ -368,7 +350,7 @@ export function ExploreScreen() {
                     onContentReady={() => notifyTabContentReady(tab)}
                     onClearSearch={() => setSearchQuery('')}
                     onEndReached={() => handleEndReached(tab)}
-                    onFollowUser={handleFollowUser}
+                    onFollowUser={requestFollowToggle}
                     onListIntent={warmListIntent}
                     onListPress={openListDetail}
                     onOwnerIntent={warmOwnerIntent}
@@ -398,6 +380,11 @@ export function ExploreScreen() {
               }}
             />
           }
+        />
+        <UnfollowConfirmModal
+          target={unfollowTarget}
+          onClose={cancelUnfollow}
+          onConfirm={confirmUnfollow}
         />
       </Screen>
     </OverlayHost>
