@@ -9,7 +9,6 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -41,6 +40,7 @@ import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/Conf
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { ReportActionSheet } from '@/mobile/app/shared/components/feedback/ReportActionSheet';
 import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
+import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { EmptyState } from '@/mobile/app/shared/components/ui/EmptyState';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
@@ -50,7 +50,7 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useScrollToListRow } from '@/mobile/app/shared/hooks/useScrollToListRow';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
-import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { buildLocationPlaceStats } from '@/mobile/app/shared/utils/format';
 
@@ -106,7 +106,6 @@ function ListDetailScreenContent({
   placeId,
 }: ListDetailScreenContentProps) {
   const navigation = useAppNavigation();
-  const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
   const { user } = useAuth();
   const listRef = React.useRef<FlatList<Place> | null>(null);
@@ -423,6 +422,7 @@ function ListDetailScreenContent({
           ) : undefined}
         />
 
+        <View style={styles.listArea}>
         <FlatList
           {...listProps}
           ref={listRef}
@@ -530,16 +530,21 @@ function ListDetailScreenContent({
           onScrollToIndexFailed={rowScroll.onScrollToIndexFailed}
         />
 
+        {/* A pill at the top of the list, as on social feeds: in the corner
+            it sat on every card's "…" menu as the cards scrolled under it. */}
         {showScrollTopButton ? (
           <InstantPressable
             accessibilityLabel={tr.common.scrollToTop}
             accessibilityRole="button"
+            hitSlop={hitSlopFor(36)}
             onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
-            style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom, 18) + 16 }]}
+            style={styles.scrollTopButton}
           >
-            <ChevronUp color={colors.onPrimary} size={iconSize.md} />
+            <ChevronUp color={colors.onPrimary} size={iconSize.sm} />
+            <AppText style={styles.scrollTopLabel}>{tr.common.scrollToTop}</AppText>
           </InstantPressable>
         ) : null}
+        </View>
       </View>
 
       {deleteListVisible ? (
