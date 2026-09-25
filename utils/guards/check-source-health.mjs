@@ -9,7 +9,6 @@ const DEFAULT_MAX_FUNCTION_LINES = 300;
 const HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/features/map/application/useMapScreenState.ts': 860,
   'src/mobile/app/features/profile/ui/screens/UserProfileScreen.tsx': 800,
-  'src/mobile/app/platform/media/images.ts': 815,
 }));
 const FUNCTION_HOTSPOT_LIMITS = new Map(Object.entries({
   'src/mobile/app/features/map/application/useMapScreenState.ts': 800,
