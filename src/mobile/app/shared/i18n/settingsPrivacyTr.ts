@@ -27,6 +27,6 @@ export const settingsPrivacyTr = {
   publicQuestion: 'Herkes profilini görebilsin mi?',
   publicSaved: 'Hesap herkese açık yapıldı',
   saving: 'Gizlilik tercihin kaydediliyor',
-  title: 'Gizlilik',
+  title: 'Hesap gizliliği',
   visibilityTitle: 'Profil görünürlüğü',
 } as const;
