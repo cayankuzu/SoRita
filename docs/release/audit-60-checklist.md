@@ -63,16 +63,16 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
-| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). main bu dala birleştirildi (`21547e2`, `dd6298f`): 1.0.110 derlemesi güncel JS ile çıkar, çünkü Eylül OTA'ları (runtime 1.0.108) 1.0.110'a ulaşmaz. Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
+| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). main bu dala birleştirildi (`21547e2`, `dd6298f`), derlemenin gömülü paketi güncel. Düzeltme: runtime bu dalda da `1.0.108`'e sabit, yani 1.0.110 kurulu cihazlar OTA'ları alıyor (telefondaki 1.0.110 derlemesi OTA 38–43'ü aldı); birleştirme commit'indeki "ulaşmaz" gerekçesi yanlıştı. Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
 | 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Harita durumları: hata, izin ve arama zaten vardı; filtre bütün pinleri gizleyince uyarı ve "Tümünü göster" eklendi (OTA 39). Kart ailesi tek dil (Full kart + mozaik karo). Kalan: filtre uyarısının cihaz kontrolü, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
-| 9B: Premium görsel tur | 🔶 | Cayan uygulamayı telefonda büyük buldu: bütün boyut token'ları bir basamak küçüldü (yazı 12–28 → 11–26, ikon, avatar, buton 48 → 40, üst bar 56 → 48, sekme çubuğu 60 → 56), dokunma hedefleri 48 dp (OTA 41, `3836b1f`). Cihaz kontrolü telefon bağlanınca |
+| 9B: Premium görsel tur | 🔶 | Cayan uygulamayı telefonda büyük buldu: bütün boyut token'ları bir basamak küçüldü (yazı 12–28 → 11–26, ikon, avatar, buton 48 → 40, üst bar 56 → 48, sekme çubuğu 60 → 56), dokunma hedefleri 48 dp (OTA 41, `3836b1f`). 2. tur telefondaki görüntülerden: kontroller 40 dp boyanıyor, profil kapağı 144 / avatar 80, harita arama ve butonları 40, ayar satırları 48, harita filtre satırları 36 (OTA 42 `b32bfb6`, OTA 43 `beed7ac`); dört sekme, ayarlar ve liste detayı cihazda kontrol edildi |
 | 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
 | 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
 | 21: Veri, durum, ağ | 🔶 | Kodda doğrulandı: arama yarışları (F35), durum koduna göre yeniden deneme (F36), zaman gösterimi (F40). Kalan: uçak modu tablosu (sistem ayarı, Cayan onayı), outbox ve optimistik geri alma testleri (test hesapları) |
-| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), arka planda konum/alarm/wakelock yok, harita ziyaretlerinde bellek çöp toplamadan sonra düz (20 ziyaret, 273 → 278 MB). Kaydırma: profil %3,7 (bütçe %5); ana sayfa ölçümden ölçüme %6–11, kaynağı kart kurulumu. 2. tur düzeltmesi OTA 38'de (aşağıda), cihaz ölçümü bekliyor. iOS ölçümü (Cayan) |
+| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), arka planda konum/alarm/wakelock yok, harita ziyaretlerinde bellek çöp toplamadan sonra düz (20 ziyaret, 273 → 278 MB). Kaydırma (OTA 42, ısınmış): ana sayfa %2,3 ve %4,4, profil %0 (bütçe %5); düzeltmeden önce ana sayfa %9–11 idi. iOS ölçümü (Cayan) |
 | 24: CI/CD, sürüm, belgeleme | 🔶 | Quality iş akışı yeniden yeşil (Gitleaks). CI'daki kırmızı yalnız kapalı EAS build değişkenlerinden. Geri alma gerçek olayla prova edildi (OTA 33 → 32). `npm audit` üretim bulgusu azaltıldı (OTA 40). CHANGELOG ve API sözleşmesi güncel. Kalan: branch koruması, zorunlu güncelleme kararı, uptime URL'si (Cayan), temiz klon provası |
 | 25: Native paket #2, store, yasal | 🔶 | Ayarlar'da "Yasal" grubu (OTA 36) ve "Hesap gizliliği" adı (OTA 37) cihazda. Bildirim ikonu `native/faz-4` dalında. Kalan: store formları, hukuk onayı, build yüklemeleri (Cayan), iOS gizlilik manifesti ve Data Safety karşılaştırması |
 
@@ -472,7 +472,7 @@ Anahtar değerini paylaşma.
 
 | Kalem | Durum | Kanıt |
 |---|---|---|
-| Harita UI durumları (madde 2) | 🔶 | Veri hatası ve kayıtlı veriyle gösterim, arama hatası ve sonuç yok, konum izni reddedildi (tekrar iste ya da Ayarları aç), konum alınamadı: hepsi `MapPriorityNotice` içinde vardı. Eksik olan boş durumdu: pin filtresi ziyaretler arasında hatırlanıyor, bu yüzden "Tüm pinleri gizle"de ya da pini olmayan bir türde bırakılan harita boş ve açıklamasız açılıyordu. Artık "Pinler gizli" ya da "Bu filtrede pin yok" uyarısı ve "Tümünü göster" eylemi çıkıyor (`7f4ae26`, OTA 39). Cihaz kontrolü telefon bağlanınca |
+| Harita UI durumları (madde 2) | 🔶 | Veri hatası ve kayıtlı veriyle gösterim, arama hatası ve sonuç yok, konum izni reddedildi (tekrar iste ya da Ayarları aç), konum alınamadı: hepsi `MapPriorityNotice` içinde vardı. Eksik olan boş durumdu: pin filtresi ziyaretler arasında hatırlanıyor, bu yüzden "Tüm pinleri gizle"de ya da pini olmayan bir türde bırakılan harita boş ve açıklamasız açılıyordu. Artık "Pinler gizli" ya da "Bu filtrede pin yok" uyarısı ve "Tümünü göster" eylemi çıkıyor (`7f4ae26`, OTA 39). Cihazda: "Tüm pinleri gizle" seçilince uyarı çıktı, "Tümünü göster" pinleri geri getirdi |
 | Madde 3, 4, 5 | ✅ | Liste haritası dokununca etkinleşiyor, keşif karoları statik harita kullanıyor, ilk açılış ipucu Google logosunu örtmüyor (Faz 5 3. tur, cihazda) |
 | Madde 1: ortak görsel dil | ✅ | Kart ailesi ikiye indi: akış ve liste detayında tek `PlaceCardFull`, ızgaralarda tek `MosaicTileFrame` (liste ve mekân karosu aynı çerçeve: görsel, alt geçişte ad, köşede tür işareti). Compact varyant kodda yok (`grep` ile doğrulandı), yeni alan eklenmedi |
 
@@ -929,8 +929,15 @@ hatırlıyor, bu yüzden her satır görünürlük için en fazla bir kez yenide
 çiziliyor ve harita bir kez yükleniyor. Karusel yalnız gösterilen fotoğrafı ve
 iki komşusunu çözüyor; diğer sayfalar aynı boyutta boş.
 
-**Sonuç:** cihaz ölçümü telefon yeniden bağlanınca (telefon bu oturumda USB'den
-düştü).
+**Sonuç** (OTA 42 üzerinde, aynı yöntem):
+
+| Ekran | Kare | Takılan | p90 | p99 |
+|---|---|---|---|---|
+| Ana sayfa, 1. ölçüm | 794 | %2,27 | 9 ms | 36 ms |
+| Ana sayfa, 2. ölçüm | 772 | %4,40 | 10 ms | 42 ms |
+| Profil | 960 | %0 | 7 ms | 8 ms |
+
+İki ana sayfa ölçümü de %5 bütçesinin altında; önce %9–11 idi.
 
 ### ⬜ Faz 23: Backend ve gözlemlenebilirlik
 
@@ -977,7 +984,7 @@ evet/hayır kararı.
 |---|---|---|
 | H51 CI | 🔶 | GitHub'da main'e her push'ta iki iş akışı koşuyor. **Quality** (`check:release` + bütün geçmişte Gitleaks) `8f9da5c`'den beri kırmızıydı: redaksiyon testindeki JWT biçimli sabit yakalanıyordu. Parmak izi `.gitleaksignore`'a eklendi, token artık çalışma anında kuruluyor, ignore sayısını sabitleyen test 5'e çıktı (`668018d`, `2b3afd7`); Quality yeşil. **CI**'nin son işi ("Release gates green") main'de kırmızı, çünkü EAS build ve cihaz benchmark işleri `ENABLE_EAS_PREVIEW_BUILDS` / `ENABLE_ANDROID_DEVICE_BENCHMARKS` depo değişkenleri kapalı olduğu için atlanıyor. Bu bir kod hatası değil, EAS kredisi kararı (Cayan). Zamanlanmış **Uptime SLO Probe** `SORITA_UPTIME_HEALTH_URL` tanımlı olmadığı için her gün kırmızı (Cayan). Branch koruması Cayan'da |
 | H52 güncelleme ve geri alma | 🔶 | Geri alma gerçek bir olayla prova edildi: OTA 33 dönüşte haritadaki pinleri kaybettirdi, OTA 32 yeniden yayınlanarak geri alındı (`e076ba6f`), cihazda pinler geri geldi. Her yayın `ota:publish` üzerinden `check:release` geçerek çıkıyor ve geri alma komutunu yazıyor. Zorunlu güncelleme / minimum sürüm kararı Cayan'da |
-| H53 bağımlılıklar | 🔶 | `npm audit --omit=dev`: 4 orta bulgu, hepsi aynı kayıt (GHSA-vcc3-ghjq-m6fr: React Navigation 6 → query-string 7 → `decode-uri-component` 0.2.2, bozuk %-kaçışında üstel süre). Düzeltilmiş sürüm yalnız ESM olduğu için zorla konamıyor. Bağlantı yapılandırması artık `decodeURIComponent`'in reddettiği yolları açmıyor; yavaş yola ulaşan tek girdi buydu (`bdb8fd8`, OTA 40). Kalıcı çözüm React Navigation 7 yükseltmesi (MVP sonrası). Geliştirme bağımlılıklarında 1 yüksek (`smol-toml`, knip'in; yalnız depodaki TOML'u okuyor) ve 2 orta: `npm audit fix` onaylanmamış kurulum betikli paketleri yeniden kuracağı için dokunulmadı |
+| H53 bağımlılıklar | 🔶 | `npm audit --omit=dev`: 4 orta bulgu, hepsi aynı kayıt (GHSA-vcc3-ghjq-m6fr: React Navigation 6 → query-string 7 → `decode-uri-component` 0.2.2, bozuk %-kaçışında üstel süre). Düzeltilmiş sürüm yalnız ESM olduğu için zorla konamıyor. Bağlantı yapılandırması artık `decodeURIComponent`'in reddettiği yolları açmıyor; yavaş yola ulaşan tek girdi buydu (`bdb8fd8`, OTA 40). Cihazda: bozuk kaçışlı `sorita://lists/…?x=%E0%A4%A` hiçbir ekran açmadı ve çökme yok; geçerli `sorita://lists/<id>` liste detayını açtı. Kalıcı çözüm React Navigation 7 yükseltmesi (MVP sonrası). Geliştirme bağımlılıklarında 1 yüksek (`smol-toml`, knip'in; yalnız depodaki TOML'u okuyor) ve 2 orta: `npm audit fix` onaylanmamış kurulum betikli paketleri yeniden kuracağı için dokunulmadı |
 | H54 belgeler | 🔶 | CHANGELOG Eylül OTA'larını kapsıyor (`e27c131`), API sözleşmesi `docs/api-contracts.md` (E34). Kalan: temiz klonda kurulum provası |
 | E33 Maestro | ⬜ | Test hesapları gerekiyor (Faz 8, Cayan) |
 
