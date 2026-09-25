@@ -1,8 +1,10 @@
-import type { Place, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
+import type { PlaceMedia } from '@/mobile/app/data/contracts/entities';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { supabase } from '@/mobile/app/platform/supabase/client';
-import { normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
-import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
+import {
+  mapPlaceFeedCard,
+  type PlaceFeedCardPayload,
+} from '@/mobile/app/data/mappers/placeFeedCardMapper';
 
 export type HomeFeedCursor = {
   id: string;
@@ -60,36 +62,6 @@ type CompleteHomeFeedRow = {
 
 const HOME_FEED_PAGE_SIZE = 20;
 
-function toNumber(value: number | string | null | undefined) {
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  return undefined;
-}
-
-function parseMedia(value: HomeFeedRow['media']) {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return normalizePlaceMedia(value);
-  }
-
-  try {
-    const parsed = JSON.parse(value) as PlaceMedia[];
-    return normalizePlaceMedia(parsed);
-  } catch {
-    return [];
-  }
-}
-
 function parseFeedRow(value: CompleteHomeFeedRow | HomeFeedRow): HomeFeedRow | null {
   const payload = Object.prototype.hasOwnProperty.call(value, 'item')
     ? (value as CompleteHomeFeedRow).item
@@ -110,73 +82,44 @@ function parseFeedRow(value: CompleteHomeFeedRow | HomeFeedRow): HomeFeedRow | n
   return payload;
 }
 
-function mapFeedRow(row: HomeFeedRow, viewerId: string): PlaceFeedCardItem {
-  const owner: User = {
-    id: row.owner_id,
-    email: '',
-    name: row.owner_name,
-    username: row.owner_username,
-    profilePhoto: row.owner_profile_photo_url || undefined,
-  };
-  const media = parseMedia(row.media);
-  const likes = toNumber(row.like_count) || 0;
-  const commentCount = toNumber(row.comment_count) || 0;
-  const place: Place = {
-    id: row.place_id,
-    name: row.place_name,
-    title: normalizeOptionalMultilineText(row.place_title),
-    menuUrl: row.menu_url || undefined,
-    lat: row.lat,
-    lng: row.lng,
-    address: row.address || undefined,
-    notes: normalizeOptionalMultilineText(row.notes),
-    rating: toNumber(row.rating),
-    category: row.category || undefined,
-    categories: row.categories?.length ? row.categories : undefined,
-    studentDiscount: Boolean(row.student_discount),
-    priceRange: toNumber(row.price_range),
-    priceMin: toNumber(row.price_min),
-    priceMax: toNumber(row.price_max),
-    bestTime: row.best_time || undefined,
-    bestTimes: row.best_times?.length ? row.best_times : undefined,
-    atmosphere: row.atmosphere?.length ? row.atmosphere : undefined,
-    specialFeatures: row.special_features?.length ? row.special_features : undefined,
-    media,
-    photos: media.filter((item) => item.type === 'photo').map((item) => item.url),
-    likes,
-    likedBy: row.viewer_has_liked ? [viewerId] : undefined,
-    commentCount,
-    addedAt: row.added_at,
-    updatedAt: row.updated_at,
-    addedBy: {
-      userId: row.owner_id,
-      userName: row.owner_name,
-      userAvatar: row.owner_profile_photo_url || undefined,
-    },
-  };
-
+function toFeedCardPayload(row: HomeFeedRow): PlaceFeedCardPayload {
   return {
-    key: `${row.list_id}:${row.place_id}`,
-    place,
-    owner,
-    ownerId: row.owner_id,
+    address: row.address,
+    addedAt: row.added_at,
+    atmosphere: row.atmosphere,
+    bestTime: row.best_time,
+    bestTimes: row.best_times,
+    category: row.category,
+    categories: row.categories,
+    commentCount: row.comment_count,
+    lat: row.lat,
+    likeCount: row.like_count,
+    listCoverImageUrl: row.list_cover_image_url,
+    listEmoji: row.list_emoji,
     listId: row.list_id,
-    listName: row.list_name,
-    listEmoji: row.list_emoji || undefined,
     listIsPublic: row.list_is_public,
-    listCoverImage: row.list_cover_image_url || undefined,
-    memberships: [
-      {
-        listId: row.list_id,
-        listName: row.list_name,
-        listEmoji: row.list_emoji || undefined,
-        listIsPublic: row.list_is_public,
-        listCoverImage: row.list_cover_image_url || undefined,
-        updatedAt: row.updated_at,
-      },
-    ],
-    locationPlaceCardsCount: toNumber(row.location_place_cards_count) || 1,
-    sortTime: new Date(row.published_at || row.updated_at).getTime(),
+    listName: row.list_name,
+    locationPlaceCardsCount: row.location_place_cards_count,
+    lng: row.lng,
+    media: row.media,
+    menuUrl: row.menu_url,
+    notes: row.notes,
+    ownerId: row.owner_id,
+    ownerName: row.owner_name,
+    ownerProfilePhotoUrl: row.owner_profile_photo_url,
+    ownerUsername: row.owner_username,
+    placeId: row.place_id,
+    placeName: row.place_name,
+    placeTitle: row.place_title,
+    priceMax: row.price_max,
+    priceMin: row.price_min,
+    priceRange: row.price_range,
+    publishedAt: row.published_at,
+    rating: row.rating,
+    specialFeatures: row.special_features,
+    studentDiscount: row.student_discount,
+    updatedAt: row.updated_at,
+    viewerHasLiked: row.viewer_has_liked,
   };
 }
 
@@ -205,7 +148,7 @@ export async function fetchHomeFeedPage(params: {
   const rows = (((data || []) as unknown) as Array<CompleteHomeFeedRow | HomeFeedRow>)
     .map(parseFeedRow)
     .filter((row): row is HomeFeedRow => Boolean(row));
-  const items = rows.map((row) => mapFeedRow(row, params.viewerId));
+  const items = rows.map((row) => mapPlaceFeedCard(toFeedCardPayload(row), params.viewerId));
   const lastRow = rows[rows.length - 1];
 
   return {

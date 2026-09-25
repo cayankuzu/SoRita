@@ -1,8 +1,12 @@
-import type { Place, PlaceList, PlaceMedia, User } from '@/mobile/app/data/contracts/entities';
+import type { PlaceList, User } from '@/mobile/app/data/contracts/entities';
 import type { PlaceFeedCardItem } from '@/mobile/app/data/selectors/placeAggregation';
 import { supabase } from '@/mobile/app/platform/supabase/client';
-import { normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/contentLimits';
+import {
+  mapPlaceFeedCard,
+  toNumber,
+  type PlaceFeedCardPayload,
+} from '@/mobile/app/data/mappers/placeFeedCardMapper';
 
 export type ProfileContentTab = 'gallery' | 'lists' | 'places';
 
@@ -74,64 +78,13 @@ type ProfileListPayload = {
   viewerHasLiked?: boolean | null;
 };
 
-type ProfilePlacePayload = {
-  address?: string | null;
-  addedAt: string;
-  atmosphere?: string[] | null;
-  bestTime?: string | null;
-  bestTimes?: string[] | null;
-  category?: string | null;
-  categories?: string[] | null;
-  commentCount?: number | string | null;
-  lat: number;
-  likeCount?: number | string | null;
-  listCoverImageUrl?: string | null;
-  listEmoji?: string | null;
-  listId: string;
-  listIsPublic?: boolean | null;
-  listName: string;
-  listUpdatedAt?: string | null;
-  locationPlaceCardsCount?: number | string | null;
-  lng: number;
-  media?: PlaceMedia[] | string | null;
-  menuUrl?: string | null;
-  notes?: string | null;
-  ownerId: string;
-  ownerName?: string | null;
-  ownerProfilePhotoUrl?: string | null;
-  ownerUsername?: string | null;
-  placeId: string;
-  placeName: string;
-  placeTitle?: string | null;
-  priceMax?: number | string | null;
-  priceMin?: number | string | null;
-  priceRange?: number | string | null;
-  rating?: number | string | null;
-  specialFeatures?: string[] | null;
-  studentDiscount?: boolean | null;
-  type?: string;
-  updatedAt: string;
-  viewerHasLiked?: boolean | null;
-};
+type ProfilePlacePayload = PlaceFeedCardPayload & { type?: string };
 
 type ProfileContentPayload = ProfileListPayload & ProfilePlacePayload & {
   type?: 'list' | 'place';
 };
 
 const PROFILE_CONTENT_PAGE_SIZE = 24;
-
-function toNumber(value: number | string | null | undefined) {
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  return undefined;
-}
 
 function parseItem<TPayload>(value: unknown): TPayload | null {
   if (!value) {
@@ -147,32 +100,6 @@ function parseItem<TPayload>(value: unknown): TPayload | null {
   }
 
   return value as TPayload;
-}
-
-function parseMedia(value: ProfilePlacePayload['media']) {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return normalizePlaceMedia(value);
-  }
-
-  try {
-    return normalizePlaceMedia(JSON.parse(value) as PlaceMedia[]);
-  } catch {
-    return [];
-  }
-}
-
-function mapOwner(payload: ProfilePlacePayload): User {
-  return {
-    id: payload.ownerId,
-    email: '',
-    name: payload.ownerName || '',
-    username: payload.ownerUsername || '',
-    profilePhoto: payload.ownerProfilePhotoUrl || undefined,
-  };
 }
 
 function mapList(payload: ProfileListPayload, viewerId?: string | null): PlaceList {
@@ -192,69 +119,6 @@ function mapList(payload: ProfileListPayload, viewerId?: string | null): PlaceLi
     likedBy: payload.viewerHasLiked && viewerId ? [viewerId] : undefined,
     createdAt: payload.createdAt || updatedAt,
     updatedAt,
-  };
-}
-
-function mapPlace(payload: ProfilePlacePayload, viewerId?: string | null): PlaceFeedCardItem {
-  const media = parseMedia(payload.media);
-  const owner = mapOwner(payload);
-  const listIsPublic = payload.listIsPublic !== false;
-  const place: Place = {
-    id: payload.placeId,
-    name: payload.placeName,
-    title: normalizeOptionalMultilineText(payload.placeTitle),
-    menuUrl: payload.menuUrl || undefined,
-    lat: payload.lat,
-    lng: payload.lng,
-    address: payload.address || undefined,
-    notes: normalizeOptionalMultilineText(payload.notes),
-    rating: toNumber(payload.rating),
-    category: payload.category || undefined,
-    categories: payload.categories?.length ? payload.categories : undefined,
-    studentDiscount: Boolean(payload.studentDiscount),
-    priceRange: toNumber(payload.priceRange),
-    priceMin: toNumber(payload.priceMin),
-    priceMax: toNumber(payload.priceMax),
-    bestTime: payload.bestTime || undefined,
-    bestTimes: payload.bestTimes?.length ? payload.bestTimes : undefined,
-    atmosphere: payload.atmosphere?.length ? payload.atmosphere : undefined,
-    specialFeatures: payload.specialFeatures?.length ? payload.specialFeatures : undefined,
-    media,
-    photos: media.filter((item) => item.type === 'photo').map((item) => item.url),
-    likes: toNumber(payload.likeCount) || 0,
-    likedBy: payload.viewerHasLiked && viewerId ? [viewerId] : undefined,
-    commentCount: toNumber(payload.commentCount) || 0,
-    addedAt: payload.addedAt,
-    updatedAt: payload.updatedAt,
-    addedBy: {
-      userId: owner.id,
-      userName: owner.name,
-      userAvatar: owner.profilePhoto,
-    },
-  };
-
-  return {
-    key: `${payload.listId}:${payload.placeId}`,
-    place,
-    owner,
-    ownerId: owner.id,
-    listId: payload.listId,
-    listName: payload.listName,
-    listEmoji: payload.listEmoji || undefined,
-    listIsPublic,
-    listCoverImage: payload.listCoverImageUrl || undefined,
-    memberships: [
-      {
-        listId: payload.listId,
-        listName: payload.listName,
-        listEmoji: payload.listEmoji || undefined,
-        listIsPublic,
-        listCoverImage: payload.listCoverImageUrl || undefined,
-        updatedAt: payload.listUpdatedAt || payload.updatedAt,
-      },
-    ],
-    locationPlaceCardsCount: toNumber(payload.locationPlaceCardsCount) || 1,
-    sortTime: new Date(payload.updatedAt).getTime(),
   };
 }
 
@@ -348,7 +212,7 @@ export async function fetchProfileContentPage(params: {
     if (item.type === 'list') {
       lists.push(mapList(item, params.viewerId));
     } else if (item.type === 'place') {
-      places.push(mapPlace(item, params.viewerId));
+      places.push(mapPlaceFeedCard(item, params.viewerId));
     }
   });
 
