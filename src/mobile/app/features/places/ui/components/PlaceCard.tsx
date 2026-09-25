@@ -1,18 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Share2 } from 'lucide-react-native';
-
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { openStackScreen, useAppNavigation } from '@/mobile/app/app-shell/navigation/navigation';
 import type { Place, User } from '@/mobile/app/data/contracts/entities';
 import { useUpdateListsMutation } from '@/mobile/app/data/hooks/useListMutations';
 import { useDeletePlaceMutation } from '@/mobile/app/data/hooks/usePlaceMutations';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/public/types';
-import { deleteOwnedPlaceWithFeedback } from '@/mobile/app/features/places/application/deleteOwnedPlaceWithFeedback';
-import { buildPlaceAddToListDraft } from '@/mobile/app/features/places/application/placeAddToListDraft';
-import { buildOwnedPlaceListUpdates } from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
+import {
+  deleteOwnedPlaceWithFeedback,
+} from '@/mobile/app/features/places/application/deleteOwnedPlaceWithFeedback';
+import {
+  buildPlaceAddToListDraft,
+} from '@/mobile/app/features/places/application/placeAddToListDraft';
+import {
+  buildOwnedPlaceListUpdates,
+} from '@/mobile/app/features/places/application/ownedPlaceListUpdates';
 import { usePlaceCardState } from '@/mobile/app/features/places/application/usePlaceCardState';
 import { PlaceCardFull } from '@/mobile/app/features/places/ui/components/place-card/PlaceCardFull';
-import { shouldShowPlaceCardMiniMap } from '@/mobile/app/features/places/ui/components/place-card/placeCardMapVisibility';
+import {
+  shouldShowPlaceCardMiniMap,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardMapVisibility';
 import {
   buildPlaceActionItems,
   createFallbackOwnedList,
@@ -21,7 +28,9 @@ import {
   resolveOptionalPressHandler,
 } from '@/mobile/app/features/places/ui/components/place-card/placeCardModel';
 import { showToast } from '@/mobile/app/platform/feedback/toast';
-import { DeferredActionMenuSheet } from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
+import {
+  DeferredActionMenuSheet,
+} from '@/mobile/app/shared/components/feedback/DeferredActionMenuSheet';
 import { useMiniMapInteraction } from '@/mobile/app/shared/components/maps/useMiniMapInteraction';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getCreatedUpdatedLabels } from '@/mobile/app/shared/utils/dateTime';
@@ -30,6 +39,15 @@ import { formatPlaceCardLocation, formatPrice } from '@/mobile/app/shared/utils/
 import { getListMarkerColor } from '@/mobile/app/shared/utils/markerColors';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { iconSize } from '@/mobile/app/shared/theme/tokens';
+import {
+  DeferredConfirmActionModal,
+  DeferredMediaLightbox,
+  DeferredPlaceEditorModal,
+  DeferredReportActionSheet,
+  DeferredSourcePlaceCardModal,
+  type PlaceCardOverlay,
+  renderWhen,
+} from '@/mobile/app/features/places/ui/components/place-card/placeCardOverlays';
 
 type PlaceCardProps = {
   place: Place;
@@ -56,68 +74,6 @@ type PlaceCardProps = {
   onRefresh?: () => void;
   onPlaceNamePress?: (() => void) | null;
 };
-
-type ConfirmActionModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal')['ConfirmActionModal']
->;
-type MediaLightboxProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/MediaLightbox')['MediaLightbox']
->;
-type PlaceEditorModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/map/public/components')['PlaceEditorModal']
->;
-type ReportActionSheetProps = React.ComponentProps<
-  typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet')['ReportActionSheet']
->;
-type SourcePlaceCardModalProps = React.ComponentProps<
-  typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal')['SourcePlaceCardModal']
->;
-type PlaceCardOverlay =
-  | { type: 'none' }
-  | { type: 'add-to-list' }
-  | { type: 'lightbox'; index: number }
-  | { type: 'owned-delete' }
-  | { type: 'owned-editor' }
-  | { type: 'report' }
-  | { type: 'share-menu' }
-  | { type: 'source-place' };
-
-function renderWhen(
-  visible: boolean,
-  render: () => React.ReactNode,
-) {
-  return visible ? render() : null;
-}
-
-function DeferredConfirmActionModal(props: ConfirmActionModalProps) {
-  const { ConfirmActionModal } = require('@/mobile/app/shared/components/feedback/ConfirmActionModal') as
-    typeof import('@/mobile/app/shared/components/feedback/ConfirmActionModal');
-  return <ConfirmActionModal {...props} />;
-}
-
-function DeferredMediaLightbox(props: MediaLightboxProps) {
-  const { MediaLightbox } = require('@/mobile/app/shared/components/feedback/MediaLightbox') as
-    typeof import('@/mobile/app/shared/components/feedback/MediaLightbox');
-  return <MediaLightbox {...props} />;
-}
-
-function DeferredPlaceEditorModal(props: PlaceEditorModalProps) {
-  const { PlaceEditorModal } = require('@/mobile/app/features/map/public/components') as
-    typeof import('@/mobile/app/features/map/public/components');
-  return <PlaceEditorModal {...props} />;
-}
-
-function DeferredReportActionSheet(props: ReportActionSheetProps) {
-  const { ReportActionSheet } = require('@/mobile/app/shared/components/feedback/ReportActionSheet') as
-    typeof import('@/mobile/app/shared/components/feedback/ReportActionSheet');
-  return <ReportActionSheet {...props} />;
-}
-
-function DeferredSourcePlaceCardModal(props: SourcePlaceCardModalProps) {
-  const { SourcePlaceCardModal } = require('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal') as
-    typeof import('@/mobile/app/features/places/ui/components/place-card/SourcePlaceCardModal');
-  return <SourcePlaceCardModal {...props} />;
-}
 
 function PlaceCardComponent({
   place,
