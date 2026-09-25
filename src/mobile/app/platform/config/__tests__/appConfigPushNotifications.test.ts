@@ -77,10 +77,14 @@ describe('app.config push notification extras', () => {
       (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
     );
 
+    // Android paints the status-bar icon from alpha only, so it has to be a
+    // white glyph on transparency; the full-colour app icon shows as a square.
     expect(notificationsPlugin).toEqual([
       'expo-notifications',
       {
+        color: '#2563eb',
         defaultChannel: androidNotificationChannelId,
+        icon: './assets/notifications/notification-icon-mono.png',
         mode: 'development',
       },
     ]);
@@ -91,6 +95,9 @@ describe('app.config push notification extras', () => {
     );
     expect(nativeManifest).toContain(
       `android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="${androidNotificationChannelId}"`,
+    );
+    expect(nativeManifest).toContain(
+      'android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/notification_icon"',
     );
     warnSpy.mockRestore();
   });
