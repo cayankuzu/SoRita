@@ -3,7 +3,7 @@ import { StatusBar } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import { describe, expect, it } from 'vitest';
 
-import { AppSystemBarsProvider, useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
+import { AppSystemBarsProvider, useSystemBarMode } from '@/mobile/app/shared/components/chrome/AppSystemBars';
 import { colors } from '@/mobile/app/shared/theme/tokens';
 
 function ModeConsumer({ active = true }: { active?: boolean }) {

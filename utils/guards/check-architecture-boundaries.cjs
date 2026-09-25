@@ -153,6 +153,9 @@ for (const sharedRoot of sharedRoots) {
       if (specifier.includes('/data/')) {
         failures.push(`${rel(filePath)} must not import data-layer code; shared must stay generic and dependency-free.`);
       }
+      if (specifier.includes('/app-shell/')) {
+        failures.push(`${rel(filePath)} must not import app-shell code; the shell composes shared, not the other way round.`);
+      }
     }
   }
 }

@@ -26,7 +26,7 @@ import { AppImage, prefetchAppImages } from '@/mobile/app/shared/components/ui/A
 import { AppText, type AppTextRef } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { triggerHaptic } from '@/mobile/app/shared/hooks/useHaptic';
-import { useSystemBarMode } from '@/mobile/app/app-shell/chrome/AppSystemBars';
+import { useSystemBarMode } from '@/mobile/app/shared/components/chrome/AppSystemBars';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {

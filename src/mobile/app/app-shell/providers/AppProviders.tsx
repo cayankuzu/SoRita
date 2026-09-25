@@ -11,7 +11,7 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { queryClient } from '@/mobile/app/data/query/queryClient';
 import { AppProgressBannerProvider } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
-import { AppSystemBarsProvider } from '@/mobile/app/app-shell/chrome/AppSystemBars';
+import { AppSystemBarsProvider } from '@/mobile/app/shared/components/chrome/AppSystemBars';
 import { DeferredRuntimeHosts } from '@/mobile/app/app-shell/providers/DeferredRuntimeHosts';
 import { StartupQueryCacheController } from '@/mobile/app/app-shell/providers/StartupQueryCacheController';
 import { env } from '@/mobile/app/platform/config/env';
