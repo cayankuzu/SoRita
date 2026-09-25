@@ -288,6 +288,11 @@ const config: SoRitaExpoConfig = {
     [
       'expo-notifications',
       {
+        // Android draws the status-bar icon from alpha alone: the colour logo
+        // on white showed as a white square. This is the monochrome glyph,
+        // tinted with the primary blue in the notification shade.
+        color: '#2563eb',
+        icon: './assets/notifications/notification-icon-mono.png',
         // Remote messages without an explicit channel use the same stable
         // channel as foreground/system notifications in new native builds.
         defaultChannel: 'sorita-alerts-v5',
