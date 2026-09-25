@@ -67,7 +67,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
 | 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Kalan: kart varyantlarının tek meta ızgarası, harita boş/hata/izin durumları, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
-| 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. Kalan: E30 sınıflandırma, E33, sözleşme belgesi, Maestro (test hesapları, Cayan) |
+| 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
 
 ---
 
@@ -646,8 +646,8 @@ Test hesabı gerektirmeyen kalemler yapıldı; teslim OTA 32 `1d82a56d`.
 |---|---|---|
 | E30 hardcode | 🔶 | Uygulama kodunda sayı yazılmış `setTimeout`/`setInterval` gecikmesi yok (yalnız test yardımcıları); `staleTime`/`gcTime` sabitlerde; modül düzeyinde 189 adlandırılmış sayısal sabit. Stil dosyalarında token dışı 38 boşluk değeri var, çoğu 0 ve ±1–2 px optik düzeltme: Faz 9A'daki 4pt ızgara ölçümüne (B12) bırakıldı. Kalan: ortam/iş kuralı sabitlerinin sınıflandırma tablosu ve guard |
 | E31 isimlendirme ve karmaşıklık | 🔶 | Karmaşıklık > 10 olan fonksiyon 186 → 184; en yüksek 35 → 30. En yoğun altısı sadeleşti: `ExpandableText` 35 → 23, `TextField` 32 → 18, `MapScreen` 34 → 24, `PlaceEditorModal` 33 → < 25, `UserProfileScreen` 34 → < 25, `PlaceCard` 31 → 27. ESLint sınırı 35 → 30 (`0b0bf74`). TODO/FIXME: 0. `max-depth` 5 kuralı zaten var. Kalan: 21–30 arasındaki 37 fonksiyon; boolean önekleri ve parametre sayısı ölçülmedi |
-| E33 hazırlığı | ⬜ | `Date.now`/`Math.random` enjeksiyonu yapılmadı |
-| E34 şema dayanıklılığı | 🔶 | Akış kartı eşleyicisinin testi: sayı yerine metin, null, bozuk medya JSON'u, bilinmeyen alan, sahipsiz satır, izleyicisiz beğeni; hiçbiri çökmüyor. Kalan: diğer eşleyiciler, RPC ve 6 edge function için sözleşme belgesi |
+| E33 hazırlığı | 🔶 | Uygulama kodunda `Math.random` yalnız `withRetryJitter`'da ve enjekte edilebilir (üç push denetleyicisindeki kopyalar birleşti); dört dosya adı üreticisi `createUuid` kullanıyor (`4a857ea`). Kalan: `Date.now` enjeksiyonu (74 kullanım, çoğu zaman damgası) |
+| E34 şema dayanıklılığı | 🔶 | Akış kartı eşleyicisinin testi: sayı yerine metin, null, bozuk medya JSON'u, bilinmeyen alan, sahipsiz satır, izleyicisiz beğeni; hiçbiri çökmüyor. Sözleşme belgesi: `docs/api-contracts.md` (6 edge function, 18 RPC, ortak imza/hata kuralları, alan değiştirme kuralı). Kalan: diğer eşleyicilerin şema testleri |
 | Maestro altyapısı | ⏸ | Test hesapları (A, B, C) Cayan'dan bekleniyor |
 
 Yeni doğrudan testler: `ExpandableText` (5), `TextField` (5),
