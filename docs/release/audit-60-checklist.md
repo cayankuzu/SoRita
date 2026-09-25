@@ -65,7 +65,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
 | 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
-| 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Harita durumları: hata, izin ve arama zaten vardı; filtre bütün pinleri gizleyince uyarı ve "Tümünü göster" eklendi (OTA 39). Kalan: kart varyantlarının tek meta ızgarası, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
+| 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Harita durumları: hata, izin ve arama zaten vardı; filtre bütün pinleri gizleyince uyarı ve "Tümünü göster" eklendi (OTA 39). Kart ailesi tek dil (Full kart + mozaik karo). Kalan: filtre uyarısının cihaz kontrolü, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
 | 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
@@ -472,7 +472,7 @@ Anahtar değerini paylaşma.
 |---|---|---|
 | Harita UI durumları (madde 2) | 🔶 | Veri hatası ve kayıtlı veriyle gösterim, arama hatası ve sonuç yok, konum izni reddedildi (tekrar iste ya da Ayarları aç), konum alınamadı: hepsi `MapPriorityNotice` içinde vardı. Eksik olan boş durumdu: pin filtresi ziyaretler arasında hatırlanıyor, bu yüzden "Tüm pinleri gizle"de ya da pini olmayan bir türde bırakılan harita boş ve açıklamasız açılıyordu. Artık "Pinler gizli" ya da "Bu filtrede pin yok" uyarısı ve "Tümünü göster" eylemi çıkıyor (`7f4ae26`, OTA 39). Cihaz kontrolü telefon bağlanınca |
 | Madde 3, 4, 5 | ✅ | Liste haritası dokununca etkinleşiyor, keşif karoları statik harita kullanıyor, ilk açılış ipucu Google logosunu örtmüyor (Faz 5 3. tur, cihazda) |
-| Madde 1: ortak meta ızgarası | ⬜ | Full, Compact ve Grid varyantlarının meta satırı henüz ortak değil |
+| Madde 1: ortak görsel dil | ✅ | Kart ailesi ikiye indi: akış ve liste detayında tek `PlaceCardFull`, ızgaralarda tek `MosaicTileFrame` (liste ve mekân karosu aynı çerçeve: görsel, alt geçişte ad, köşede tür işareti). Compact varyant kodda yok (`grep` ile doğrulandı), yeni alan eklenmedi |
 
 ### ✅ Faz 7: KISS ve mimari
 
