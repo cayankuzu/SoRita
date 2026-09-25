@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
-  Image as ImageIcon,
   Ban,
   MapPin,
   UserPlus,
@@ -44,6 +43,7 @@ import {
   DeferredImageLightbox,
   DeferredReportActionSheet,
 } from '@/mobile/app/shared/components/feedback/DeferredFeedback';
+import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -370,33 +370,7 @@ export function UserProfileScreen() {
       );
     }
 
-    if (tab === 'lists') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.publicNoList}
-          description={tr.profile.empty.publicNoListDescription}
-        />
-      );
-    }
-
-    if (tab === 'places') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.publicNoPlace}
-          description={tr.profile.empty.publicNoPlaceDescription}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
-        title={tr.profile.empty.publicNoPhoto}
-        description={tr.profile.empty.publicNoPhotoDescription}
-      />
-    );
+    return <ProfileTabEmptyState tab={tab} whose="other" />;
   };
 
   const renderProfileHero = () => (

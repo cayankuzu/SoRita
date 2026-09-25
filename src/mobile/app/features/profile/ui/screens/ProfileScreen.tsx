@@ -1,6 +1,6 @@
 import React, { startTransition, useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Image as ImageIcon, MapPin } from 'lucide-react-native';
+import { MapPin } from 'lucide-react-native';
 
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import {
@@ -33,6 +33,7 @@ import {
   useProfileTabPager,
   useProfileTabState,
 } from '@/mobile/app/features/profile/ui/components/useProfileTabPager';
+import { ProfileTabEmptyState } from '@/mobile/app/features/profile/ui/components/ProfileTabEmptyState';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, iconSize, spacing } from '@/mobile/app/shared/theme/tokens';
 import { ProfileHero } from '@/mobile/app/features/profile/ui/components/ProfileHero';
@@ -335,33 +336,7 @@ export function ProfileScreen() {
       );
     }
 
-    if (tab === 'lists') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.myNoList}
-          description={tr.profile.empty.myNoListDescription}
-        />
-      );
-    }
-
-    if (tab === 'places') {
-      return (
-        <EmptyState
-          icon={<MapPin color={colors.textSoft} size={iconSize.xl} />}
-          title={tr.profile.empty.myNoPlace}
-          description={tr.profile.empty.myNoPlaceDescription}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon={<ImageIcon color={colors.textSoft} size={iconSize.xl} />}
-        title={tr.profile.empty.myNoPhoto}
-        description={tr.profile.empty.myNoPhotoDescription}
-      />
-    );
+    return <ProfileTabEmptyState tab={tab} whose="own" />;
   };
 
   const renderProfileHero = () => (
