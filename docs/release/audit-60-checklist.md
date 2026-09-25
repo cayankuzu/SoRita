@@ -63,11 +63,12 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 1: iOS OTA | 🔶 | Build `25c05493` TestFlight'ta. Dal main'e alınmadı ve iOS binary'si kaydedilmedi; bu iş Faz 4'te kapanır |
 | 2: Design system envanteri, ekran incelemesi, duplicate analizi | ✅ | Cihaz kanıtı `audit-60-plan.md` içinde |
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
-| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
+| 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). main bu dala birleştirildi (`21547e2`, `dd6298f`): 1.0.110 derlemesi güncel JS ile çıkar, çünkü Eylül OTA'ları (runtime 1.0.108) 1.0.110'a ulaşmaz. Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
 | 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Harita durumları: hata, izin ve arama zaten vardı; filtre bütün pinleri gizleyince uyarı ve "Tümünü göster" eklendi (OTA 39). Kart ailesi tek dil (Full kart + mozaik karo). Kalan: filtre uyarısının cihaz kontrolü, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
+| 9B: Premium görsel tur | 🔶 | Cayan uygulamayı telefonda büyük buldu: bütün boyut token'ları bir basamak küçüldü (yazı 12–28 → 11–26, ikon, avatar, buton 48 → 40, üst bar 56 → 48, sekme çubuğu 60 → 56), dokunma hedefleri 48 dp (OTA 41, `3836b1f`). Cihaz kontrolü telefon bağlanınca |
 | 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
 | 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
 | 21: Veri, durum, ağ | 🔶 | Kodda doğrulandı: arama yarışları (F35), durum koduna göre yeniden deneme (F36), zaman gösterimi (F40). Kalan: uçak modu tablosu (sistem ayarı, Cayan onayı), outbox ve optimistik geri alma testleri (test hesapları) |
@@ -94,7 +95,7 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ✅ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
 | 🔶 | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
 | ⬜ | 9A | Durum matrisi, motion, cila, "ışık hızı" hissi | A4, B14, B15, B16 | — |
-| ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
+| 🔶 | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
 | 🔶 | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
 | ⬜ | 11 | İşlem matrisi I: hesap yaşam döngüsü (İ01–İ13) | A1, A8 | Doğrulama e-postasındaki linke dokunmak (10 dk) |
 | ⬜ | 12 | İşlem matrisi II: profil ve ayarlar (İ14–İ23) | — | — |
