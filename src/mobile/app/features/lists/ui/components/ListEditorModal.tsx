@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, useWindowDimensions, View } from 'react-native';
-import { Globe, Lock, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
@@ -16,7 +16,6 @@ import {
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { ImageLightbox } from '@/mobile/app/shared/components/feedback/ImageLightbox';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
-import { Badge } from '@/mobile/app/shared/components/ui/Badge';
 import { InlineNotice } from '@/mobile/app/shared/components/ui/InlineNotice';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
@@ -291,13 +290,7 @@ export function ListEditorModal({
             <View style={styles.headerText}>
               <AppText accessibilityRole="header" style={styles.title}>{t.listEditor.title}</AppText>
               <AppText style={styles.subtitle}>{t.listEditor.subtitle}</AppText>
-              <View style={styles.headerMetaRow}>
-                <Badge
-                  icon={isPublic ? Globe : Lock}
-                  label={isPublic ? t.listEditor.privacyPublic : t.listEditor.privacyPrivate}
-                  tone={isPublic ? 'success' : 'neutral'}
-                />
-              </View>
+              {/* Visibility is chosen in its own section below, where it shows. */}
             </View>
 
             <InstantPressable

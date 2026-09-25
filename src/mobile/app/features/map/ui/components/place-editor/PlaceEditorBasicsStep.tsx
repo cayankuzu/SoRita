@@ -27,7 +27,6 @@ import {
 
 type PlaceEditorBasicsStepProps = {
   address: string;
-  existingPlaceListName?: string;
   name: string;
   placeAddress?: string;
   rating: number;
@@ -40,7 +39,6 @@ type PlaceEditorBasicsStepProps = {
 
 export function PlaceEditorBasicsStep({
   address,
-  existingPlaceListName,
   name,
   placeAddress,
   rating,
@@ -55,9 +53,7 @@ export function PlaceEditorBasicsStep({
       <View style={styles.coordCard}>
         <AppText style={styles.coordTitle}>{tr.placeEditor.selectedLocation}</AppText>
         <AppText style={styles.coordText}>{address || placeAddress || tr.placeEditor.locationFallback()}</AppText>
-        {existingPlaceListName ? (
-          <AppText style={styles.coordMeta}>{tr.placeEditor.currentList(existingPlaceListName)}</AppText>
-        ) : null}
+        {/* Which list the place is in stays in the header, on every step. */}
       </View>
 
       <View style={styles.requirementsCard}>

@@ -372,7 +372,6 @@ export function PlaceEditorModal({
       return (
         <PlaceEditorBasicsStep
           address={address}
-          existingPlaceListName={existingPlaceListName}
           name={name}
           placeAddress={placeAddress}
           rating={rating}

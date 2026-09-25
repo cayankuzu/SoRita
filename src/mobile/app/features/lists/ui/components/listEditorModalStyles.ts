@@ -50,12 +50,6 @@ export const listEditorModalStyles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
-  headerMetaRow: {
-    marginTop: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   title: textStyle('section', colors.text),
   subtitle: {
     marginTop: spacing.xs,
