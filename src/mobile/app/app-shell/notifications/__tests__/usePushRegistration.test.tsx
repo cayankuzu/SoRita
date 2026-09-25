@@ -15,6 +15,7 @@ const unsubscribeOnlineMock = vi.fn();
 
 let pushTokenListener: ((token: DevicePushToken) => void) | null = null;
 let onlineListener: ((online: boolean) => void) | null = null;
+let online = true;
 
 vi.mock('@/mobile/app/data/repositories/pushNotificationRepository', () => ({
   flushPendingPushTokenCleanupTombstones: flushCleanupMock,
@@ -38,6 +39,7 @@ vi.mock('@/mobile/app/platform/notifications/runtime', () => ({
 
 vi.mock('@tanstack/react-query', () => ({
   onlineManager: {
+    isOnline: vi.fn(() => online),
     subscribe: vi.fn((listener: (online: boolean) => void) => {
       onlineListener = listener;
       return unsubscribeOnlineMock;
@@ -70,6 +72,7 @@ describe('usePushRegistration', () => {
     vi.clearAllMocks();
     pushTokenListener = null;
     onlineListener = null;
+    online = true;
     flushCleanupMock.mockResolvedValue({ attempted: 0, pending: 0, revoked: 0 });
     prepareCleanupMock.mockResolvedValue(null);
     registerPushMock.mockResolvedValue('ExponentPushToken[current]');
@@ -105,6 +108,33 @@ describe('usePushRegistration', () => {
     });
     expect(registerPushMock).toHaveBeenCalledTimes(2);
 
+    hook.unmount();
+  });
+
+  it('makes no attempts while offline and registers as soon as the connection returns', async () => {
+    // Offline, attempts failed at once and repeated several times a second.
+    online = false;
+    const { usePushRegistration } = await import(
+      '@/mobile/app/app-shell/notifications/usePushRegistration'
+    );
+    const hook = renderHook(() => usePushRegistration({ booted: true, userId: 'account-a' }));
+    await flushEffects();
+
+    await act(async () => {
+      await hook.result.current.recoverPushRegistration();
+      await hook.result.current.syncPushRegistration();
+    });
+    expect(registerPushMock).not.toHaveBeenCalled();
+    expect(loggerWarnMock).not.toHaveBeenCalled();
+
+    online = true;
+    await act(async () => {
+      onlineListener?.(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(registerPushMock).toHaveBeenCalledTimes(1));
     hook.unmount();
   });
 

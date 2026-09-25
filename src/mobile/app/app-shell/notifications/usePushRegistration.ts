@@ -123,6 +123,13 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
 
     const targetUserId = userId;
 
+    // Offline, every attempt fails at once, and on the phone that became a
+    // stream of attempts several times a second (2026-09-25). The online
+    // subscription below retries the moment the connection returns.
+    if (!onlineManager.isOnline()) {
+      return;
+    }
+
     if (
       registeredUserIdRef.current === targetUserId
       && (
@@ -248,6 +255,13 @@ export function usePushRegistration(params: { booted: boolean; userId?: string }
         subscription = Notifications.addPushTokenListener((devicePushToken) => {
           const targetUserId = userId;
           resetRegistrationRetryBudget();
+
+          if (!onlineManager.isOnline()) {
+            // Keep the rotation: the reconnect recovery registers afresh.
+            registeredUserIdRef.current = null;
+            registeredAtRef.current = 0;
+            return;
+          }
 
           if (registrationInFlightUserIdRef.current) {
             pendingTokenRefreshUserIdRef.current = targetUserId;
