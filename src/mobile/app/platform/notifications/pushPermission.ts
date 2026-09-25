@@ -59,7 +59,7 @@ function allowsIosInterruptions(
   );
 }
 
-export function normalizePushPermissionState(
+function normalizePushPermissionState(
   permissions: NotificationPermissionsStatus,
   Notifications: Awaited<ReturnType<typeof loadNotificationsModule>>,
 ): PushPermissionState {

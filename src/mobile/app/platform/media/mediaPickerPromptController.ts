@@ -6,7 +6,6 @@ import type {
 
 const controller = createPromptController<MediaPickerPromptOptions, MediaPickerPromptSelection>({});
 
-export const subscribeToMediaPickerPrompt = controller.subscribe;
 export const getMediaPickerPromptSnapshot = controller.getSnapshot;
 export const useMediaPickerPromptState = controller.useControllerState;
 export const openMediaPickerPrompt = controller.open;

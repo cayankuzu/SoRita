@@ -208,8 +208,6 @@ export function VideoPreview({
   );
 }
 
-export const videoPreviewInternals = { inferVideoContentType };
-
 const styles = StyleSheet.create({
   container: {
     position: 'relative',

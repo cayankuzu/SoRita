@@ -22,7 +22,7 @@ export const LEGAL_DOCUMENT_IDS: LegalDocumentId[] = [
   'kvkk',
 ];
 
-export const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocument> = {
+const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocument> = {
   terms: {
     id: 'terms',
     buttonLabel: 'Kullanım Koşulları',

@@ -5,7 +5,7 @@ import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { compareLocalizedText, normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
-export function normalizePlaceIdentity(value?: string) {
+function normalizePlaceIdentity(value?: string) {
   return normalizeSearchText(value);
 }
 

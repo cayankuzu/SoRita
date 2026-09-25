@@ -37,9 +37,9 @@ type ExploreTabQueryState = {
 const EXPLORE_TABS: ExploreTabKey[] = ['lists', 'places', 'photos', 'people'];
 // The server's trigram search needs three characters; shorter input asks for
 // one more letter instead of reporting that nothing matched.
-export const EXPLORE_MIN_QUERY_LENGTH = 3;
+const EXPLORE_MIN_QUERY_LENGTH = 3;
 
-export function isExploreQueryTooShort(query: string) {
+function isExploreQueryTooShort(query: string) {
   const length = normalizeSearchQuery(query).length;
   return length > 0 && length < EXPLORE_MIN_QUERY_LENGTH;
 }

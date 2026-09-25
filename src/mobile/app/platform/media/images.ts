@@ -493,7 +493,7 @@ async function capturePlaceVideoWithInAppCamera(
   };
 }
 
-export async function pickImages(
+async function pickImages(
   source: PickedImageSource = 'library',
   options: PickImagesOptions = {},
 ) {
@@ -558,7 +558,7 @@ export async function pickSingleImage(
   return firstImage;
 }
 
-export async function pickImagesFromPrompt(options: MediaPickerPromptOptions = {}) {
+async function pickImagesFromPrompt(options: MediaPickerPromptOptions = {}) {
   const selection = await promptForImageSource(options);
 
   if (!selection) {
@@ -605,7 +605,7 @@ export async function pickSingleImageFromPrompt(options: MediaPickerPromptOption
   return firstImage;
 }
 
-export async function pickPlaceMedia(
+async function pickPlaceMedia(
   source: PickedImageSource = 'library',
   options: PickImagesOptions = {},
 ): Promise<PickPlaceMediaResult> {

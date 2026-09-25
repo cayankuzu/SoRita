@@ -35,7 +35,7 @@ export function formatAbsoluteDateTime(value?: string | null) {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function formatAbsoluteDate(value?: string | null) {
+function formatAbsoluteDate(value?: string | null) {
   const date = toDate(value);
 
   if (!date) {

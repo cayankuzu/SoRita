@@ -15,7 +15,7 @@ export type AuthPasswordRequirement = {
   met: boolean;
 };
 
-export function getAuthPasswordRequirements(password: string): AuthPasswordRequirement[] {
+function getAuthPasswordRequirements(password: string): AuthPasswordRequirement[] {
   return [
     { id: 'minimumLength', met: password.length >= PASSWORD_MIN_LENGTH },
     { id: 'lowercase', met: /[a-z]/.test(password) },

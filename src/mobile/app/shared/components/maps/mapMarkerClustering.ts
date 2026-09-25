@@ -38,7 +38,7 @@ function toSingleMarker(place: MapMarkerItem, index: number): MapMarkerCluster {
 // be tapped. From that zoom out, a 12-cell grid (about 30dp a cell on a phone)
 // merges them into one counted marker, which zooms in when tapped. Closer in,
 // every place keeps its own pin.
-export const PROXIMITY_CLUSTER_LATITUDE_DELTA = 0.05;
+const PROXIMITY_CLUSTER_LATITUDE_DELTA = 0.05;
 const PROXIMITY_GRID_SIDE = 12;
 
 /**

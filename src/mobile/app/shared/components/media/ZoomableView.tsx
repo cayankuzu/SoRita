@@ -11,7 +11,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { motion } from '@/mobile/app/shared/theme/tokens';
 
 export const MAX_ZOOM_SCALE = 4;
-export const DOUBLE_TAP_ZOOM_SCALE = 2.5;
+const DOUBLE_TAP_ZOOM_SCALE = 2.5;
 // A pinch may overshoot a little either way and springs back on release.
 const PINCH_UNDERSHOOT = 0.8;
 const PINCH_OVERSHOOT = 1.25;

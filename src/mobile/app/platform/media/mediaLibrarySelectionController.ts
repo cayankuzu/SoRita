@@ -8,9 +8,6 @@ const controller = createPromptController<MediaLibrarySelectionOptions, MediaLib
   {},
 );
 
-export const subscribeToMediaLibrarySelection = controller.subscribe;
-export const getMediaLibrarySelectionSnapshot = controller.getSnapshot;
 export const useMediaLibrarySelectionState = controller.useControllerState;
 export const openMediaLibrarySelection = controller.open;
 export const resolveMediaLibrarySelection = controller.resolve;
-export const resetMediaLibrarySelectionForTests = controller.resetForTests;

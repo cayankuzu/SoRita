@@ -2,7 +2,7 @@ import type { FeatureFlagValue } from '@posthog/core';
 
 export type RemoteKillSwitch = 'productAnalytics';
 
-export const remoteKillSwitchFlagKeys: Record<RemoteKillSwitch, string> = {
+const remoteKillSwitchFlagKeys: Record<RemoteKillSwitch, string> = {
   productAnalytics: 'sorita_kill_product_analytics',
 };
 
@@ -54,20 +54,6 @@ export function failClosedRemoteKillSwitches() {
 
 export function isRemoteCapabilityEnabled(capability: RemoteKillSwitch) {
   return remoteConfigReady && Date.now() < remoteConfigExpiresAt && !activeKillSwitches[capability];
-}
-
-export function getRemoteKillSwitchState() {
-  return {
-    ...activeKillSwitches,
-    ready: remoteConfigReady && Date.now() < remoteConfigExpiresAt,
-  };
-}
-
-export function subscribeToRemoteKillSwitches(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
 }
 
 export const remoteKillSwitchInternals = {

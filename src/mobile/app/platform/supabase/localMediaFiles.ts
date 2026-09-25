@@ -68,32 +68,6 @@ async function copyToReadableUploadPath(uri: string) {
   return tempPath;
 }
 
-export async function readLocalMediaAsBase64(uri: string) {
-  try {
-    return await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-  } catch (readError) {
-    let tempPath: string | null = null;
-
-    try {
-      tempPath = await copyToReadableUploadPath(uri);
-
-      if (!tempPath) {
-        throw readError;
-      }
-
-      return await FileSystem.readAsStringAsync(tempPath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-    } finally {
-      if (tempPath) {
-        await FileSystem.deleteAsync(tempPath, { idempotent: true }).catch(() => undefined);
-      }
-    }
-  }
-}
-
 export async function readLocalMediaSize(uri: string) {
   try {
     const fileInfo = await FileSystem.getInfoAsync(uri);

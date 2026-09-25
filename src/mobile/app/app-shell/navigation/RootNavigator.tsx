@@ -105,7 +105,6 @@ function getActiveRouteName(state?: InitialState) {
   return routeName;
 }
 
-
 export function RootNavigator() {
   const { booted, user } = useAuth();
   const navigationOwnerUserId = user?.id ?? null;
@@ -418,7 +417,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export const rootNavigatorInternals = {
-  getActiveRouteName,
-  getWarmupStageForRoute,
-};

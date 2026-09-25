@@ -4,7 +4,7 @@ export type ConnectionStatus =
   | 'offline'
   | 'constrained';
 
-export const SLOW_THRESHOLD_MS = 3000;
+const SLOW_THRESHOLD_MS = 3000;
 let currentConnectionStatus: ConnectionStatus = 'unknown';
 
 export function setCurrentConnectionStatus(status: ConnectionStatus) {

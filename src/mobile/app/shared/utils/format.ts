@@ -210,46 +210,7 @@ export function formatPlaceCardLocation(address?: string) {
   return `${city} · ${district}`;
 }
 
-export function formatListStats(list: PlaceListLike) {
-  const likes = list.likes || 0;
-  return tr.cards.listStats(list.places.length, likes);
-}
-
 export function uniqueStrings(values?: Array<string | undefined>) {
   return [...new Set((values || []).filter(Boolean) as string[])];
 }
 
-export function getListAverageRating(list: PlaceListLike) {
-  const ratedPlaces = list.places.filter((place) => place.rating);
-  if (ratedPlaces.length === 0) {
-    return null;
-  }
-
-  return ratedPlaces.reduce((sum, place) => sum + (place.rating || 0), 0) / ratedPlaces.length;
-}
-
-export function hasStudentDiscount(list: PlaceListLike) {
-  return list.places.some((place) => place.studentDiscount);
-}
-
-export function getListCategories(list: PlaceListLike) {
-  return uniqueStrings(
-    list.places.flatMap((place) => (place.categories?.length ? place.categories : place.category ? [place.category] : [])),
-  ).slice(0, 5);
-}
-
-export function getListAtmosphere(list: PlaceListLike) {
-  return uniqueStrings(list.places.flatMap((place) => place.atmosphere || [])).slice(0, 5);
-}
-
-export function getListFeatures(list: PlaceListLike) {
-  return uniqueStrings(list.places.flatMap((place) => place.specialFeatures || [])).slice(0, 5);
-}
-
-export function getListBestTimes(list: PlaceListLike) {
-  return uniqueStrings(
-    list.places.flatMap((place) =>
-      place.bestTimes?.length ? place.bestTimes : place.bestTime ? [place.bestTime] : [],
-    ),
-  ).slice(0, 4);
-}

@@ -1,14 +1,14 @@
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
-export const localeCatalogs = {
+const localeCatalogs = {
   tr,
 } as const;
 
 export type SupportedLocale = keyof typeof localeCatalogs;
 
-export const defaultLocale: SupportedLocale = 'tr';
+const defaultLocale: SupportedLocale = 'tr';
 
-export function getLocaleCatalog(locale: SupportedLocale = defaultLocale) {
+function getLocaleCatalog(locale: SupportedLocale = defaultLocale) {
   return localeCatalogs[locale];
 }
 

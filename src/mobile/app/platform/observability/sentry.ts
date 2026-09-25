@@ -8,7 +8,7 @@ const isDevMode = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 const sentryTracingEnabled = sentryEnabled && !isDevMode;
 type SentryRootComponent = ComponentType<Record<string, unknown>>;
 
-export const sentryReactNavigationIntegration = sentryTracingEnabled
+const sentryReactNavigationIntegration = sentryTracingEnabled
   ? Sentry.reactNavigationIntegration({
       enableTimeToInitialDisplay: true,
     })

@@ -47,10 +47,3 @@ export function markScreenVisible(screen: string, routeKey: string) {
   });
 }
 
-export const navigationPerformanceInternals = {
-  pendingNavigations,
-  reset() {
-    lastVisibleRouteKey = null;
-    pendingNavigations.clear();
-  },
-};

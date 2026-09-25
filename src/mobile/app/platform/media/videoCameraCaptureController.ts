@@ -11,7 +11,6 @@ export type VideoCameraCaptureResult = {
 
 const controller = createPromptController<VideoCameraCaptureOptions, VideoCameraCaptureResult>({});
 
-export const subscribeToVideoCameraCapture = controller.subscribe;
 export const getVideoCameraCaptureSnapshot = controller.getSnapshot;
 export const useVideoCameraCaptureState = controller.useControllerState;
 export const openVideoCameraCapture = controller.open;

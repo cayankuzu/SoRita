@@ -1,4 +1,4 @@
-export function createAbortError(message = 'Operation cancelled') {
+function createAbortError(message = 'Operation cancelled') {
   if (typeof DOMException === 'function') {
     return new DOMException(message, 'AbortError');
   }
