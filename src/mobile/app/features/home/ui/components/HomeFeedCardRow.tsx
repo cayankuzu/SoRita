@@ -34,10 +34,10 @@ export const HomeFeedCardRow = React.memo(function HomeFeedCardRow({
     [item.key, visibilityStore],
   );
   const getSnapshot = useCallback(
-    () => visibilityStore.isVisible(item.key),
+    () => visibilityStore.hasBeenSeen(item.key),
     [item.key, visibilityStore],
   );
-  const isVisible = useSyncExternalStore(subscribe, getSnapshot, () => false);
+  const hasBeenSeen = useSyncExternalStore(subscribe, getSnapshot, () => false);
   const handleListIntent = useCallback(() => {
     void warmListDetailData({
       listId: item.listId,
@@ -84,7 +84,7 @@ export const HomeFeedCardRow = React.memo(function HomeFeedCardRow({
           locationPlaceCardsCount={getPlaceFeedLocationCardCount(item)}
           locationOriginalPlaceName={item.place.name}
           markerColor={getMarkerColorForMemberships(item.memberships, item.listIsPublic)}
-          isVisible={isVisible}
+          isVisible={hasBeenSeen}
           onPressIn={handleListIntent}
           onPress={handleListPress}
           onOwnerPress={handleOwnerPress}

@@ -238,14 +238,20 @@ export function PlacePrimaryMedia({
               onPress={() => onPress(index)}
               style={[styles.mediaCarouselPage, { width: carouselWidth }]}
             >
-              <MediaThumbnailView
-                item={item}
-                priority={index === 0 ? 'high' : 'normal'}
-                style={styles.mediaCarouselMedia}
-                accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
-                fallbackToVideoPreview={false}
-                showDuration
-              />
+              {/* Only the photo on show and its neighbours are decoded, so a card
+                  with many photos mounts as cheaply as one with a single photo. */}
+              {Math.abs(index - activeIndex) <= 1 ? (
+                <MediaThumbnailView
+                  item={item}
+                  priority={index === 0 ? 'high' : 'normal'}
+                  style={styles.mediaCarouselMedia}
+                  accessibilityLabel={tr.placeEditor.placePhotoLabel(placeName, index + 1)}
+                  fallbackToVideoPreview={false}
+                  showDuration
+                />
+              ) : (
+                <View style={styles.mediaCarouselMedia} />
+              )}
             </InstantPressable>
           ))}
         </ScrollView>

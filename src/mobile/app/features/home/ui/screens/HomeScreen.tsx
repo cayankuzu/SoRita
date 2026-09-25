@@ -238,7 +238,7 @@ export function HomeScreen() {
           return item ? [item.key] : [];
         }),
       );
-      visibilityStoreRef.current.replace(nextVisibleKeys);
+      visibilityStoreRef.current.markSeen(nextVisibleKeys);
 
       if (visibleIndex == null) {
         return;
