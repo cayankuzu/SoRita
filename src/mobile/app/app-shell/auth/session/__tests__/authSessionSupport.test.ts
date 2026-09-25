@@ -1,3 +1,4 @@
+import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/mobile/app/data/query/queryKeys';
 
@@ -132,7 +133,10 @@ describe('authSessionSupport', () => {
   it('restores and persists sessions through storage helpers', async () => {
     const session = { access_token: 'token', refresh_token: 'refresh' };
     getPersistedAuthSessionMock.mockResolvedValueOnce(null).mockResolvedValueOnce(session);
-    setSessionMock.mockResolvedValueOnce({ data: { session: null }, error: new Error('invalid') });
+    setSessionMock.mockResolvedValueOnce({
+      data: { session: null },
+      error: new AuthApiError('Invalid Refresh Token: Refresh Token Not Found', 400, 'refresh_token_not_found'),
+    });
     getSessionMock.mockResolvedValueOnce({ data: { session } }).mockResolvedValueOnce({ data: { session: null } });
 
     const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
@@ -401,6 +405,31 @@ describe('authSessionSupport', () => {
     await expect(support.syncAuthenticatedUser(authUser as never)).rejects.toThrow(
       'Authenticated account no longer exists.',
     );
+  });
+
+  it('keeps the stored session when Supabase cannot be reached', async () => {
+    // Opening the app in airplane mode once wiped the only copy of the
+    // session (the client does not persist its own) and signed people out.
+    const support = await import('@/mobile/app/app-shell/auth/session/authSessionSupport');
+    const persisted = { access_token: 'persisted-token', refresh_token: 'persisted-refresh' };
+    getPersistedAuthSessionMock.mockResolvedValue(persisted);
+
+    for (const error of [
+      new AuthRetryableFetchError('Network request failed', 0),
+      new TypeError('Network request failed'),
+      new AuthApiError('Request rate limit reached', 429, 'over_request_rate_limit'),
+      new AuthApiError('Internal error', 500, undefined),
+    ]) {
+      setSessionMock.mockResolvedValueOnce({ data: { session: null }, error });
+      const restore = support.restorePersistedSession();
+      await expect(restore).rejects.toBeInstanceOf(support.SessionRestoreDeferredError);
+      await expect(restore).rejects.toSatisfy((deferred: { reason: unknown }) => deferred.reason === error);
+    }
+
+    expect(clearPersistedAuthSessionMock).not.toHaveBeenCalled();
+    expect(support.isTransientAuthError(new AuthRetryableFetchError('Network request failed', 0))).toBe(true);
+    expect(support.isTransientAuthError(new support.SessionRestoreDeferredError(null))).toBe(true);
+    expect(support.isTransientAuthError(new AuthApiError('Invalid Refresh Token', 400, 'refresh_token_not_found'))).toBe(false);
   });
 
   it('restores valid persisted sessions and falls back when there is no active session', async () => {

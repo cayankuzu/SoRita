@@ -11,6 +11,7 @@ const clearCurrentUserStateMock = vi.fn();
 const getActiveOrPersistedSessionMock = vi.fn();
 const getVerifiedAuthUserMock = vi.fn();
 const isMissingAuthenticatedAccountErrorMock = vi.fn();
+const isTransientAuthErrorMock = vi.fn();
 const getPersistedAuthUserSnapshotMock = vi.fn();
 const persistAuthSessionMock = vi.fn();
 const persistResolvedAuthUserMock = vi.fn();
@@ -55,6 +56,7 @@ vi.mock('@/mobile/app/app-shell/auth/session/authSessionSupport', () => ({
   getActiveOrPersistedSession: getActiveOrPersistedSessionMock,
   getVerifiedAuthUser: getVerifiedAuthUserMock,
   isMissingAuthenticatedAccountError: isMissingAuthenticatedAccountErrorMock,
+  isTransientAuthError: isTransientAuthErrorMock,
   getPersistedAuthUserSnapshot: getPersistedAuthUserSnapshotMock,
   persistAuthSession: persistAuthSessionMock,
   persistResolvedAuthUser: persistResolvedAuthUserMock,
@@ -99,6 +101,8 @@ describe('useAuthSessionLifecycle', () => {
     getActiveOrPersistedSessionMock.mockReset();
     getVerifiedAuthUserMock.mockReset();
     isMissingAuthenticatedAccountErrorMock.mockReset();
+    isTransientAuthErrorMock.mockReset();
+    isTransientAuthErrorMock.mockReturnValue(false);
     getPersistedAuthUserSnapshotMock.mockReset();
     persistAuthSessionMock.mockReset();
     persistResolvedAuthUserMock.mockReset();
@@ -812,6 +816,43 @@ describe('useAuthSessionLifecycle', () => {
       expect(setUser).toHaveBeenLastCalledWith(null);
       expect(setBooted).toHaveBeenCalledWith(true);
     });
+
+    hook.unmount();
+  });
+
+  it('keeps the persisted user when bootstrap cannot reach Supabase', async () => {
+    // Airplane mode at launch used to end here in a sign-out.
+    const setBooted = vi.fn();
+    const setUser = vi.fn();
+    const networkError = new TypeError('Network request failed');
+    const persistedUser = {
+      id: 'persisted-user',
+      email: 'persisted@example.com',
+      name: 'Persisted',
+      username: 'persisted',
+    };
+
+    getPersistedAuthUserSnapshotMock.mockResolvedValue(persistedUser);
+    getActiveOrPersistedSessionMock.mockRejectedValue(networkError);
+    isTransientAuthErrorMock.mockImplementation((error) => error === networkError);
+    onAuthStateChangeMock.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    const hooks = await import('@/mobile/app/app-shell/auth/session/useAuthSessionLifecycle');
+    const hook = renderHook(() => hooks.useAuthSessionLifecycle({ setBooted, setUser }));
+
+    await waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'auth',
+        'Auth bootstrap could not reach Supabase; keeping the session',
+        networkError,
+      );
+      expect(setBooted).toHaveBeenCalledWith(true);
+    });
+    expect(persistAuthSessionMock).not.toHaveBeenCalledWith(null);
+    expect(setUser).toHaveBeenLastCalledWith(persistedUser);
+    expect(loggerErrorMock).not.toHaveBeenCalled();
 
     hook.unmount();
   });

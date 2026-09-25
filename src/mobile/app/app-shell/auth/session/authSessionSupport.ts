@@ -1,6 +1,7 @@
 import type { InfiniteData } from '@tanstack/react-query';
 import {
   isAuthApiError,
+  isAuthRetryableFetchError,
   isAuthSessionMissingError,
   type Session,
   type User as SupabaseAuthUser,
@@ -22,6 +23,7 @@ import {
   savePersistedAuthSession,
   savePersistedAuthUser,
 } from '@/mobile/app/platform/storage/authSession';
+import { isLikelyNetworkError, isLikelyTimeoutError } from '@/mobile/app/platform/feedback/errorMessage';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { tr } from '@/mobile/app/shared/i18n/tr';
@@ -88,6 +90,41 @@ async function loadPendingSignupMediaStorage() {
   return import('@/mobile/app/platform/storage/pendingSignupMedia');
 }
 
+/** The stored session could not be checked yet; it is kept, never ended. */
+export class SessionRestoreDeferredError extends Error {
+  constructor(readonly reason: unknown) {
+    super('The stored session could not be restored yet');
+    this.name = 'SessionRestoreDeferredError';
+  }
+}
+
+/**
+ * Supabase could not be reached - no network, a timeout, a 502-504 - as
+ * opposed to Supabase answering that the session is no longer valid.
+ */
+export function isTransientAuthError(error: unknown) {
+  return (
+    error instanceof SessionRestoreDeferredError
+    || isAuthRetryableFetchError(error)
+    || isLikelyNetworkError(error)
+    || isLikelyTimeoutError(error)
+  );
+}
+
+/**
+ * Supabase itself refused the session: the only answer that may end it. A
+ * rate limit (429) or a request timeout (408) says nothing about the session.
+ */
+function isAuthRejection(error: unknown) {
+  return (
+    isAuthApiError(error)
+    && error.status >= 400
+    && error.status < 500
+    && error.status !== 408
+    && error.status !== 429
+  );
+}
+
 export async function restorePersistedSession(): Promise<Session | null> {
   const persistedSession = await getPersistedAuthSession();
 
@@ -96,6 +133,15 @@ export async function restorePersistedSession(): Promise<Session | null> {
   }
 
   const { data, error } = await supabase.auth.setSession(persistedSession);
+
+  // The client keeps no session of its own (persistSession: false), so the
+  // stored copy is the only one. Opening the app in airplane mode used to
+  // land here with a network error and wipe it, signing the person out for
+  // good (2026-09-25). Only Supabase refusing the session ends it now; any
+  // other failure keeps it, and the caller carries on with the stored user.
+  if (error && !isAuthRejection(error)) {
+    throw new SessionRestoreDeferredError(error);
+  }
 
   if (error || !data.session) {
     await clearPersistedAuthSession();

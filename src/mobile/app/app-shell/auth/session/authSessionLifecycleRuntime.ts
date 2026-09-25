@@ -17,6 +17,7 @@ import {
   getPersistedAuthUserSnapshot,
   getVerifiedAuthUser,
   isMissingAuthenticatedAccountError,
+  isTransientAuthError,
   persistAuthSession,
   persistResolvedAuthUser,
   resolveImmediateAuthUser,
@@ -27,6 +28,10 @@ import { purgeAuthenticatedUserState } from '@/mobile/app/app-shell/auth/session
 import { isPasswordRecoverySessionExchangeActive } from '@/mobile/app/app-shell/auth/session/passwordRecoverySessionGuard';
 import type { User } from '@/mobile/app/data/contracts/entities';
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import {
+  removeNetInfoSubscription,
+  subscribeToNetInfo,
+} from '@/mobile/app/platform/network/netInfoAdapter';
 import { supabase } from '@/mobile/app/platform/supabase/client';
 import { refreshSupabaseSession } from '@/mobile/app/platform/supabase/sessionRefresh';
 import { t } from '@/mobile/app/shared/i18n';
@@ -124,6 +129,18 @@ class AuthSessionLifecycleRuntime {
 
       this.sessionRevalidation.stop();
     });
+    // A session kept through an offline start is checked again the moment
+    // the connection returns, not a minute later.
+    let wasOffline = false;
+    const netInfoSubscription = subscribeToNetInfo((state) => {
+      const offline = state.isConnected === false || state.isInternetReachable === false;
+
+      if (wasOffline && !offline && AppState.currentState === 'active') {
+        void this.revalidateActiveSession({ refreshIfExpiring: true });
+      }
+
+      wasOffline = offline;
+    });
 
     return () => {
       this.mounted = false;
@@ -132,6 +149,7 @@ class AuthSessionLifecycleRuntime {
       this.sessionRevalidation.stop();
       subscription.unsubscribe();
       appStateSubscription.remove();
+      removeNetInfoSubscription(netInfoSubscription);
     };
   }
 
@@ -316,6 +334,11 @@ class AuthSessionLifecycleRuntime {
         return;
       }
 
+      if (isTransientAuthError(error)) {
+        // Offline: the person stays in the cached app; check again shortly.
+        this.sessionRevalidation.schedule(session, AUTH_SESSION_REVALIDATION_RETRY_DELAY_MS);
+      }
+
       logger.warn('auth', 'Failed to sync auth state', error);
     } finally {
       this.setBootedIfMounted();
@@ -386,6 +409,10 @@ class AuthSessionLifecycleRuntime {
         if (isMissingAuthenticatedAccountError(error)) {
           await this.handleMissingAuthenticatedAccount(operation);
           return;
+        }
+
+        if (isTransientAuthError(error)) {
+          this.sessionRevalidation.schedule(null, AUTH_SESSION_REVALIDATION_RETRY_DELAY_MS);
         }
 
         logger.warn('auth', 'Failed to revalidate auth session', error);
@@ -574,6 +601,15 @@ class AuthSessionLifecycleRuntime {
 
   private async handleBootstrapFailure(error: unknown, operation: AuthScopeOperation) {
     if (!this.authScopeOperations.isCurrent(operation)) {
+      return;
+    }
+
+    // Not reaching Supabase is not a reason to sign anyone out: keep the
+    // stored session and whatever the cache already shows, and retry.
+    if (isTransientAuthError(error)) {
+      logger.warn('auth', 'Auth bootstrap could not reach Supabase; keeping the session', error);
+      this.sessionRevalidation.schedule(null, AUTH_SESSION_REVALIDATION_RETRY_DELAY_MS);
+      this.setBootedIfMounted();
       return;
     }
 
