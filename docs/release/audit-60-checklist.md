@@ -68,6 +68,8 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Kalan: kart varyantlarının tek meta ızgarası, harita boş/hata/izin durumları, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
 | 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
+| 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
+| 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
 | 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), kaydırma karesi p90 11–14 ms, arka planda konum/alarm/wakelock yok. Açık: harita ziyareti başına ~40 MB bellek sızıntısı (bir düzeltme denendi, pinleri kaybettirdiği için geri alındı), ana sayfa ve profilde takılan kare %5,8 ve %7,6 (bütçe %5), iOS ölçümü (Cayan) |
 
 ---
@@ -90,7 +92,7 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | 🔶 | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
 | ⬜ | 9A | Durum matrisi, motion, cila, "ışık hızı" hissi | A4, B14, B15, B16 | — |
 | ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
-| ⬜ | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
+| 🔶 | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
 | ⬜ | 11 | İşlem matrisi I: hesap yaşam döngüsü (İ01–İ13) | A1, A8 | Doğrulama e-postasındaki linke dokunmak (10 dk) |
 | ⬜ | 12 | İşlem matrisi II: profil ve ayarlar (İ14–İ23) | — | — |
 | ⬜ | 13 | İşlem matrisi III: sosyal graf (İ24–İ31) | — | B hesabı ikinci cihazda açık |
@@ -100,7 +102,7 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ⬜ | 17 | İşlem matrisi VII: yorum ve beğeni (İ58–İ65) | A5 | — |
 | ⬜ | 18 | İşlem matrisi VIII: akış, keşfet, harita, navigasyon, kesinti (İ66–İ75) | A2 | — |
 | ⬜ | 19 | İşlem matrisi IX: bildirim, push, deep link (İ76–İ84) | A6 | App link dosyalarının yayında olduğunu teyit (5 dk) |
-| ⬜ | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
+| 🔶 | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
 | ⬜ | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
 | 🔶 | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
 | ⬜ | 23 | Backend ve gözlemlenebilirlik | H47, H48, H49, H50 | Sentry / Supabase / PostHog erişimi (15 dk) |
@@ -680,7 +682,7 @@ Claude:
 Kapanır: **A4, B12, B14, B15, B16**
 Cayan: ekran kayıtlarını izleyip görsel onay ver (10 dk).
 
-### ⬜ Faz 10: Android cihaz uyumu ve erişilebilirlik
+### 🔶 Faz 10: Android cihaz uyumu ve erişilebilirlik
 
 Claude:
 1. C17: aynı telefonda `wm size`/`wm density` ile 360, 393, 411 ve 480dp
@@ -699,6 +701,13 @@ Claude:
 
 Kapanır: — (C17–C20, A3 ve A7'nin Android satırları; iOS satırları Faz 26'da)
 Cayan: —
+
+### Faz 10 kaydı, 1. tur (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| A3 donanım geri tuşu | 🔶 | Haritada pin menüsü açıkken geri tuşu önceki sekmeye geçiyor, dönüşte menü açık kalıyordu. Artık önce menüyü, sonra açık arama sonuçlarını kapatıyor; profildeki görünürlük menüsü de öyle (`useAndroidBackHandler`, OTA 34, cihazda iki ekranda denendi). Değiştirilmiş yer editöründe geri tuşu önce klavyeyi kapatıyor, sonra "Değişiklikler iptal edilsin mi?" diye soruyor (cihazda). Kalan: bütün ekran, sheet ve modal matrisi |
+| C17, C19, C20 | ⏸ | Ekran boyutu (`wm size/density`), yazı ölçeği ve TalkBack telefonun sistem ayarını değiştiriyor; Cayan onay verirse yapılır, sonra ayarlar geri alınır |
 
 ### ⬜ Faz 11–19: İşlem matrisi
 
@@ -732,7 +741,7 @@ her kontrolü tek tek geçti ve kaydı var. Bu da **bilinen sıfır hata** demek
 Faz 11–19'da Cayan'dan beklenenler faz listesinde yazıyor. Ben şifre girmem,
 hesap açmam, hesap silme onayı vermem. Bu adımlar senindir.
 
-### ⬜ Faz 20: Güvenlik ve kötüye kullanım
+### 🔶 Faz 20: Güvenlik ve kötüye kullanım
 
 Claude:
 1. G41: refresh token tek uçuşta mı, kilit mekanizması, çıkışta sunucu
@@ -755,6 +764,14 @@ Claude:
 Kapanır: **G41, G42, G43, G44, G46**
 Cayan: SSL pinning kararı (önerimi gerekçesiyle yazarım). Şikâyetlere kimin,
 ne kadar sürede bakacağı.
+
+### Faz 20 kaydı, 1. tur: kodda doğrulananlar (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| G42 log ve yedek | 🔶 | Android manifest: `allowBackup="false"`, SecureStore için yedek ve veri çıkarma dışlama kuralları. Sentry `sendDefaultPii: false`; bu turda `beforeSend` ve `beforeBreadcrumb` eklendi: e-posta, oturum token'ı (JWT) ve URL sorgusundaki gizli değerler (imzalı depolama adresinin `token`'ı) gönderilmeden temizleniyor. Uygulama logger'ı ile aynı modül (`8f9da5c`, OTA 35). Kalan: iOS yedekleme dışlaması (Faz 26) |
+| G44 release sertleştirme | 🔶 | `android.enableMinifyInReleaseBuilds=true` (`gradle.properties`) ile release'de R8 açık; APK üzerinde doğrulama Faz 25'te. Pano: uygulama yalnız kullanıcının "kopyala" eylemiyle yazıyor (paylaşım bağlantısı, adres, yorum), panodan okumuyor. Ekran görüntüsü engeli gerektiren ekran bulunmadı: uygulama ödeme, kimlik belgesi ya da tek kullanımlık kod göstermiyor |
+| G41, G43, G46 | ⬜ | Test hesapları ve yerel Supabase persona matrisi gerekiyor (Faz 8 hesapları, Cayan) |
 
 ### ⬜ Faz 21: Veri, durum, ağ
 
