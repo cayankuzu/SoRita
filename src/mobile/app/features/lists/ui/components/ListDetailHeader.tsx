@@ -5,7 +5,6 @@ import {
   Heart,
   Image as ImageIcon,
   Lock,
-  MapPin,
 } from 'lucide-react-native';
 
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
@@ -21,13 +20,11 @@ import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
 type ListDetailHeaderProps = {
   list: PlaceList;
-  placeCount: number;
   onOpenCover: () => void;
 };
 
 export function ListDetailHeader({
   list,
-  placeCount,
   onOpenCover,
 }: ListDetailHeaderProps) {
   const timestampText = formatCreatedUpdatedInline(list.createdAt, list.updatedAt);
@@ -68,18 +65,15 @@ export function ListDetailHeader({
           ) : null}
         </View>
 
+        {/* The name and the place count are the screen's title bar; the
+            card keeps only what the bar does not say. */}
         <View style={styles.heroBody}>
-          <AppText accessibilityRole="header" numberOfLines={2} style={styles.title}>
-            {`${list.emoji ? `${list.emoji} ` : ''}${list.name}`}
-          </AppText>
-
           <View style={styles.heroMetaRow}>
             <Badge
               icon={list.isPublic ? Globe : Lock}
               label={list.isPublic ? tr.listDetail.public : tr.listDetail.private}
               tone={list.isPublic ? 'success' : 'neutral'}
             />
-            <Badge icon={MapPin} label={tr.cards.placesCount(placeCount)} numeric />
             {(list.likes || 0) > 0 ? (
               <Badge icon={Heart} iconFilled label={`${list.likes}`} numeric tone="danger" />
             ) : null}

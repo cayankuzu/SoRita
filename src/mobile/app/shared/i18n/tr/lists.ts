@@ -21,7 +21,6 @@ export const listDetailTr = {
   openCover: 'Kapağı aç',
   descriptionLabel: 'Liste açıklaması',
   placesSectionTitle: 'Mekânlar',
-  selectedPinHint: 'Haritadaki seçili pinin kartı burada vurgulanır.',
   notFoundDescription: 'Bu liste şu anda yüklenemiyor.',
   notFoundTitle: 'Liste bulunamadı',
   private: 'Özel',

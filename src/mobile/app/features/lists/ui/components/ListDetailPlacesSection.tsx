@@ -19,7 +19,6 @@ import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 type ListDetailPlacesSectionProps = {
   list: PlaceList;
   displayPlaces: Place[];
-  placeCount: number;
   mapPlaces: MapMarkerItem[];
   highlightedIndex: number | null;
   highlightedPlaceId: string | null;
@@ -32,7 +31,6 @@ type ListDetailPlacesSectionProps = {
 export function ListDetailPlacesSection({
   list,
   displayPlaces,
-  placeCount,
   mapPlaces,
   highlightedIndex,
   owner,
@@ -93,10 +91,7 @@ export function ListDetailPlacesSection({
       {displayPlaces.length > 0 ? (
         <View style={styles.mapSection}>
           <View style={styles.mapCardHeader}>
-            <View>
-              <AppText style={styles.mapCardEyebrow}>{tr.cards.map}</AppText>
-              <AppText accessibilityRole="header" style={styles.mapCardTitle}>{tr.listDetail.mapPlacesTitle}</AppText>
-            </View>
+            <AppText accessibilityRole="header" style={styles.mapCardTitle}>{tr.cards.map}</AppText>
           </View>
 
           <View style={styles.mapFrame}>
@@ -148,10 +143,10 @@ export function ListDetailPlacesSection({
 
       {displayPlaces.length > 0 ? (
         <View style={styles.sectionHeader}>
+          {/* The count is in the title bar and the map's own line says what
+              a pin does, so the section is named once. */}
           <View style={styles.sectionHeaderCopy}>
-            <AppText style={styles.sectionEyebrow}>{tr.cards.placesCount(placeCount)}</AppText>
             <AppText accessibilityRole="header" style={styles.sectionTitle}>{tr.listDetail.placesSectionTitle}</AppText>
-            <AppText style={styles.sectionSubtitle}>{tr.listDetail.selectedPinHint}</AppText>
           </View>
         </View>
       ) : null}

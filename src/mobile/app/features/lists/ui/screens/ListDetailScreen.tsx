@@ -456,13 +456,11 @@ function ListDetailScreenContent({
             <View style={styles.feed}>
               <ListDetailHeader
                 list={list}
-                placeCount={placeTotal}
                 onOpenCover={() => list.coverImage && setLightboxUri(list.coverImage)}
               />
               <ListDetailPlacesSection
                 list={list}
                 displayPlaces={displayPlaces}
-                placeCount={placeTotal}
                 mapPlaces={mapPlaces}
                 highlightedIndex={highlightedIndex}
                 highlightedPlaceId={highlightedPlaceId}

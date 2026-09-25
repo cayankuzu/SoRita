@@ -157,13 +157,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  mapCardEyebrow: textStyle('labelText', colors.textSoft),
-  mapCardTitle: {
-    marginTop: spacing.xxs,
-    ...typography.bodyText,
-    fontWeight: fontWeight.strong,
-    color: colors.text,
-  },
+  mapCardTitle: textStyle('bodyText', colors.text, fontWeight.strong),
   // Solid, like the Map tab's controls: a translucent pill blurred into the
   // streets underneath it.
   mapDoneButton: {
@@ -203,17 +197,7 @@ export const listDetailScreenStyles = StyleSheet.create({
   sectionHeaderCopy: {
     flex: 1,
   },
-  sectionEyebrow: textStyle('labelText', colors.textSoft),
-  sectionTitle: {
-    marginTop: spacing.xxs,
-    ...typography.section,
-    color: colors.text,
-  },
-  sectionSubtitle: {
-    marginTop: spacing.xs,
-    ...typography.captionText,
-    color: colors.textMuted,
-  },
+  sectionTitle: textStyle('section', colors.text),
   feed: {
     gap: spacing.md,
   },
