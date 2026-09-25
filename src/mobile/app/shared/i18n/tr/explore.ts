@@ -26,7 +26,7 @@ export const exploreTr = {
     noUserResult: 'Kullanıcı bulunamadı',
     keepTyping: 'Biraz daha yaz',
     keepTypingDescription: 'Aramak için en az 3 harf yaz.',
-    tryDifferentSearch: 'Farklı bir arama deneyin.',
+    tryDifferentSearch: 'Farklı bir arama dene.',
   },
   errorTitle: 'Keşfet şu anda açılamıyor',
   errorDescription: 'Keşfet içerikleri şu an yüklenemiyor. Lütfen tekrar dene.',

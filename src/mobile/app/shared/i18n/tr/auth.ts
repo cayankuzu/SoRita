@@ -97,7 +97,7 @@ export const authTr = {
     interestsTitle: 'İlgi alanları (isteğe bağlı)',
     login: 'Giriş yap',
     nameLabel: 'İsim soyisim',
-    namePlaceholder: 'Adınız Soyadınız',
+    namePlaceholder: 'Ad Soyad',
     nameRequired: 'Ad soyad en az 2 karakter olmalı',
     passwordLabel: 'Şifre',
     passwordPlaceholder: 'En az 8 karakter',

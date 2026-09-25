@@ -101,7 +101,7 @@ export const cardsTr = {
   reportDetailsPlaceholder:
     'İstersen kim, ne zaman, hangi içerik veya hangi davranış nedeniyle şikâyet ettiğini yaz.',
   reportReasons: ['Yanlış konum', 'Uygunsuz içerik', 'Spam', 'Diğer'],
-  reportSent: 'Bildiriminiz alındı',
+  reportSent: 'Bildirimin alındı',
   savedPlaceFallback: 'Kaydedilen mekân',
   share: 'Paylaş',
   shareDescription: (title: string) => `${title} — SoRita'da keşfet`,

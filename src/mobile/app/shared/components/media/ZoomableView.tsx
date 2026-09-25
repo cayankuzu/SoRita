@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import { motion } from '@/mobile/app/shared/theme/tokens';
 
 export const MAX_ZOOM_SCALE = 4;
@@ -103,6 +104,8 @@ export function ZoomableView({
   const onZoomChangeRef = React.useRef(onZoomChange);
   onZoomChangeRef.current = onZoomChange;
 
+  // With Reduce Motion on, a double tap or a release snaps instead of gliding.
+  const reduceMotion = useReduceMotion();
   const updateZoomed = React.useCallback((next: boolean) => {
     if (zoomedRef.current === next) return;
     zoomedRef.current = next;
@@ -126,7 +129,7 @@ export function ZoomableView({
       currentRef.current = next;
       updateZoomed(next.scale > 1);
 
-      if (!animated) {
+      if (!animated || reduceMotion) {
         apply(next);
         return;
       }
@@ -137,7 +140,7 @@ export function ZoomableView({
         Animated.timing(translateY, { duration: motion.standard, toValue: next.y, useNativeDriver: true }),
       ]).start();
     },
-    [apply, scale, translateX, translateY, updateZoomed],
+    [apply, reduceMotion, scale, translateX, translateY, updateZoomed],
   );
 
   React.useEffect(() => {

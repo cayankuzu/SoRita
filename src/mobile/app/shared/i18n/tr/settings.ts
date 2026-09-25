@@ -1,7 +1,7 @@
 import { settingsDataRightsTr, settingsPrivacyTr } from '@/mobile/app/shared/i18n/settingsPrivacyTr';
 
 export const settingsTr = {
-  accountDeleted: 'Hesabınız silindi',
+  accountDeleted: 'Hesabın silindi',
   blocked: {
     description: 'Engellediğin kişileri yönet.',
     emptyDescription: 'Engellediğin kişiler burada görünecek.',

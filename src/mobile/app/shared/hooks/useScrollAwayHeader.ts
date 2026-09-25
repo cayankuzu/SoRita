@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Animated, type LayoutChangeEvent } from 'react-native';
 
+import { useReduceMotion } from '@/mobile/app/shared/hooks/useReduceMotion';
 import { motion } from '@/mobile/app/shared/theme/tokens';
 
 export type ScrollAwayHeaderController = {
@@ -19,6 +20,7 @@ export type ScrollAwayHeaderController = {
  */
 export function useScrollAwayHeader(): ScrollAwayHeaderController {
   const translateY = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
   const [height, setHeight] = useState(0);
   const heightRef = useRef(0);
   const hiddenRef = useRef(0);
@@ -65,12 +67,17 @@ export function useScrollAwayHeader(): ScrollAwayHeaderController {
     }
 
     hiddenRef.current = 0;
+    if (reduceMotion) {
+      translateY.setValue(0);
+      return;
+    }
+
     Animated.timing(translateY, {
       duration: motion.standard,
       toValue: 0,
       useNativeDriver: true,
     }).start();
-  }, [translateY]);
+  }, [reduceMotion, translateY]);
 
   return { height, onLayout, onScrollOffset, reveal, translateY };
 }

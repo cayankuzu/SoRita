@@ -30,7 +30,7 @@ export const mapTr = {
   locationCardsEmptyDescription: 'Bu koordinata bağlı görünür bir mekân kartı şu an yok.',
   locationRetryDescription: 'Konum alınamadı. Lütfen tekrar dene.',
   locationUnavailableTitle: 'Konum şu an alınamıyor',
-  noResultsDescription: 'Farklı bir arama terimi deneyin.',
+  noResultsDescription: 'Farklı bir arama terimi dene.',
   noResultsTitle: 'Sonuç bulunamadı',
   newPlaceCard: 'Yeni mekân kartı',
   permissionRetry: 'İzni tekrar iste',
