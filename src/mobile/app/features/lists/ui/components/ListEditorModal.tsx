@@ -3,11 +3,10 @@ import { Platform, ScrollView, useWindowDimensions, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCoverImagePicker } from '@/mobile/app/platform/media/useCoverImagePicker';
 import type { PlaceList } from '@/mobile/app/data/contracts/entities';
 import { ListEditorForm } from '@/mobile/app/features/lists/ui/components/ListEditorForm';
 import { listEditorModalStyles as styles } from '@/mobile/app/features/lists/ui/components/listEditorModalStyles';
-import { pickSingleImageFromPrompt } from '@/mobile/app/platform/media/images';
-import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
 import {
   clearPersistedListEditorDraft,
   savePersistedListEditorDraft,
@@ -101,8 +100,6 @@ export function ListEditorModal({
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isPickingCover, setIsPickingCover] = useState(false);
-  const isPickingCoverRef = React.useRef(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const initialStateSourceRef = React.useRef<string | null>(null);
   const initialStateSignatureRef = React.useRef<string | null>(null);
@@ -208,31 +205,10 @@ export function ListEditorModal({
     onClose();
   };
 
-  const handlePickCover = async () => {
-    if (loading || isPickingCoverRef.current) {
-      return;
-    }
-
-    isPickingCoverRef.current = true;
-    setIsPickingCover(true);
-
-    try {
-      await waitForMediaPickerTransition();
-
-      const uri = await pickSingleImageFromPrompt({
-        cropAspect: [16, 9],
-        cropShape: 'rectangle',
-      });
-
-      if (uri) {
-        setCoverImage(uri);
-      }
-    } finally {
-      await waitForMediaPickerTransition();
-      isPickingCoverRef.current = false;
-      setIsPickingCover(false);
-    }
-  };
+  const { isPicking: isPickingCover, pickCover: handlePickCover } = useCoverImagePicker(
+    setCoverImage,
+    loading,
+  );
 
   const handleSave = async () => {
     if (!list || !name.trim() || loading) {

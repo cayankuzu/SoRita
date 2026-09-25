@@ -4,6 +4,7 @@ import {
   PLACE_DIETARY_OPTIONS,
   PLACE_FEATURE_OPTIONS,
 } from '@/mobile/app/catalog/placeOptions';
+import { useCoverImagePicker } from '@/mobile/app/platform/media/useCoverImagePicker';
 import type { Place, PlaceList, PlaceMedia } from '@/mobile/app/data/contracts/entities';
 import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 import type {
@@ -43,9 +44,7 @@ import { useAutoDismissingNotice } from '@/mobile/app/shared/hooks/useAutoDismis
 import { showToast } from '@/mobile/app/platform/feedback/toast';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import {
-  pickSingleImageFromPrompt,
 } from '@/mobile/app/platform/media/images';
-import { waitForMediaPickerTransition } from '@/mobile/app/platform/media/mediaPickerTransition';
 import {
   findFirstOversizedPlaceMedia,
   PLACE_MEDIA_MAX_FILE_SIZE_MB,
@@ -150,7 +149,6 @@ export function usePlaceEditorState({
   const [newListPublic, setNewListPublic] = useState(false);
   const [showNewListForm, setShowNewListForm] = useState(false);
   const [isCreatingList, setIsCreatingList] = useState(false);
-  const [isPickingListCover, setIsPickingListCover] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { beginProgress } = useAppProgressBanner();
 
@@ -582,29 +580,8 @@ export function usePlaceEditorState({
     ],
   );
 
-  const handlePickListCover = useCallback(async () => {
-    if (isPickingListCover) {
-      return;
-    }
-
-    setIsPickingListCover(true);
-
-    try {
-      await waitForMediaPickerTransition();
-
-      const uri = await pickSingleImageFromPrompt({
-        cropAspect: [16, 9],
-        cropShape: 'rectangle',
-      });
-
-      if (uri) {
-        setNewListCoverImage(uri);
-      }
-    } finally {
-      await waitForMediaPickerTransition();
-      setIsPickingListCover(false);
-    }
-  }, [isPickingListCover]);
+  const { isPicking: isPickingListCover, pickCover: handlePickListCover } =
+    useCoverImagePicker(setNewListCoverImage);
 
   const createPendingList = useCallback(async () => {
     if (isCreatingList || !onCreateList) {
