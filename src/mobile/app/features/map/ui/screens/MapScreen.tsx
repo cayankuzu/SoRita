@@ -107,8 +107,8 @@ function MapFilterMenu({
   );
 }
 
-// Google's logo sits in the map's bottom-left corner, about 28dp tall.
-const GOOGLE_LOGO_CLEARANCE = 36;
+// The bottom row of controls over the map: a 44dp button and a little air.
+const MAP_CONTROL_ROW_HEIGHT = 52;
 
 function MapSecondaryOverlays({
   bottom,
@@ -133,15 +133,17 @@ function MapSecondaryOverlays({
     return null;
   }
 
-  const hintVisible =
-    showHint && !hasPriorityNotice && !hasEditor && !hasMinimizedEditor && !hasMinimizedExistingPlace;
-
-  // The first-run hint sits above Google's logo, which the map's terms keep in
-  // view; while it shows, the colour legend it would run into steps aside.
-  return hintVisible ? (
-    <MapAddHint bottom={bottom + GOOGLE_LOGO_CLEARANCE} onClose={onDismissHint} />
-  ) : (
-    <MapVisibilityLegend bottom={bottom + 58} />
+  return (
+    <>
+      <MapVisibilityLegend bottom={bottom + 58} />
+      {showHint &&
+      !hasPriorityNotice &&
+      !hasEditor &&
+      !hasMinimizedEditor &&
+      !hasMinimizedExistingPlace ? (
+        <MapAddHint bottom={bottom + 8} onClose={onDismissHint} />
+      ) : null}
+    </>
   );
 }
 
@@ -479,6 +481,9 @@ export function MapScreen() {
                 onPoiPress={handleInteractivePoiPress}
                 onMarkerPress={handleInteractiveMarkerPress}
                 onCenterChange={handleMapCenterChange}
+                // The locate button, the reopen pill and the first-run hint
+                // share the bottom row; Google's logo sits above it.
+                bottomPadding={locateButtonBottomOffset + MAP_CONTROL_ROW_HEIGHT}
               />
             ) : (
               <View style={styles.mapPlaceholder} />

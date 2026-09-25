@@ -207,6 +207,7 @@ function GoogleMapViewComponent({
   onPoiPress,
   onMapPress,
   onCenterChange,
+  bottomPadding,
 }: SharedMapProps) {
   const mapRef = useRef<MapView>(null);
   const lastSelectionPressAt = useRef(0);
@@ -398,6 +399,9 @@ function GoogleMapViewComponent({
         cacheEnabled={!interactive}
         mapType="standard"
         initialRegion={initialRegion}
+        mapPadding={
+          bottomPadding ? { bottom: bottomPadding, left: 0, right: 0, top: 0 } : undefined
+        }
         showsUserLocation={showUserLocation}
         showsMyLocationButton={false}
         toolbarEnabled={false}

@@ -24,6 +24,9 @@ export type SharedMapProps = {
   onMarkerPress?: (index: number) => void;
   onPoiPress?: (poi: { lat: number; lng: number; name: string; placeId: string }) => void;
   onMapPress?: (coords: { lat: number; lng: number }) => void;
+  // Room kept clear at the bottom edge for controls drawn over the map; Google
+  // lifts its logo and attribution above it, as its terms require them seen.
+  bottomPadding?: number;
   // The centre of the map once it settles after a move.
   onCenterChange?: (center: { latitude: number; longitude: number }) => void;
 };
