@@ -125,6 +125,11 @@ vi.mock('@/mobile/app/features/settings/ui/components/SettingsPrivacyView', () =
     React.createElement('SettingsPrivacyView', props),
 }));
 
+vi.mock('@/mobile/app/features/auth/public/legal', () => ({
+  LegalDocumentSheet: (props: Record<string, unknown>) =>
+    React.createElement('LegalDocumentSheet', props),
+}));
+
 vi.mock('@/mobile/app/shared/components/feedback/ConfirmActionModal', () => ({
   ConfirmActionModal: (props: Record<string, unknown>) =>
     React.createElement('ConfirmActionModal', props),
@@ -141,12 +146,16 @@ vi.mock('@/mobile/app/shared/hooks/useAndroidBackHandler', () => ({
 vi.mock('lucide-react-native', () => ({
   Ban: () => null,
   Download: () => null,
+  FileText: () => null,
   Lock: () => null,
   LogOut: () => null,
   Palette: () => null,
+  Scale: () => null,
   Shield: () => null,
+  ShieldCheck: () => null,
   Trash2: () => null,
   User: () => null,
+  Users: () => null,
 }));
 
 describe('SettingsScreen', () => {
@@ -188,6 +197,35 @@ describe('SettingsScreen', () => {
 
     const menu = renderer.root.findByType('SettingsMainMenuView' as unknown as React.ElementType);
     expect(menu.props.versionLabel).toBe('1.0.110 (116)');
+    settingsState.view = 'editProfile';
+  });
+
+  it('opens each sign-up document again from the Yasal group', async () => {
+    settingsState.view = 'main';
+    const { SettingsScreen } = await import('../SettingsScreen');
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(<SettingsScreen />);
+    });
+
+    const menu = renderer.root.findByType('SettingsMainMenuView' as unknown as React.ElementType);
+    const legal = (menu.props.sections as Array<{ title: string; items: Array<{ label: string; action: () => void }> }>)
+      .find((section) => section.title === 'Yasal');
+    expect(legal?.items.map((item) => item.label)).toEqual([
+      'Kullanım Koşulları',
+      'Topluluk Kuralları',
+      'Gizlilik Politikası',
+      'KVKK Aydınlatma Metni',
+    ]);
+    expect(renderer.root.findAllByType('LegalDocumentSheet' as unknown as React.ElementType)).toHaveLength(0);
+
+    act(() => legal?.items[2]?.action());
+    const sheet = renderer.root.findByType('LegalDocumentSheet' as unknown as React.ElementType);
+    expect(sheet.props.documentId).toBe('privacy');
+
+    act(() => (sheet.props.onClose as () => void)());
+    expect(renderer.root.findAllByType('LegalDocumentSheet' as unknown as React.ElementType)).toHaveLength(0);
     settingsState.view = 'editProfile';
   });
 });

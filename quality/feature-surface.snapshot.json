@@ -232,10 +232,15 @@
     ],
     "visibleGroups": [
       "tr.settings.sections.account",
+      "tr.settings.sections.legal",
       "tr.settings.sections.other",
       "tr.uiCatalog.developerSection"
     ],
     "visibleCtas": [
+      "tr.auth.legalConsent.community",
+      "tr.auth.legalConsent.kvkk",
+      "tr.auth.legalConsent.privacy",
+      "tr.auth.legalConsent.terms",
       "tr.common.back",
       "tr.common.cancel",
       "tr.common.hidePassword",

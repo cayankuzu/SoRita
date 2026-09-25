@@ -81,6 +81,7 @@ export const settingsTr = {
   privacy: settingsPrivacyTr,
   sections: {
     account: 'Hesap',
+    legal: 'Yasal',
     other: 'Diğer',
   },
   version: (label: string) => `SoRita ${label}`,
