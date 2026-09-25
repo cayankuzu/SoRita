@@ -2,8 +2,8 @@ import { StyleSheet } from 'react-native';
 
 import {
   colors,
+  controlSize,
   fontWeight,
-  minTouchSize,
   radius,
   spacing,
   tabularNumbers,
@@ -58,8 +58,8 @@ export const listEditorModalStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   closeButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',

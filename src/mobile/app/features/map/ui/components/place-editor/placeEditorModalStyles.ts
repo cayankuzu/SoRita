@@ -2,8 +2,8 @@ import { StyleSheet } from 'react-native';
 
 import {
   colors,
+  controlSize,
   fontWeight,
-  minTouchSize,
   opacity,
   radius,
   spacing,
@@ -219,7 +219,7 @@ export const placeEditorModalStyles = StyleSheet.create({
     flexShrink: 0,
   },
   backButton: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surfaceMuted,
@@ -230,7 +230,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   },
   backButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   deleteButton: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.dangerBg,
@@ -242,7 +242,7 @@ export const placeEditorModalStyles = StyleSheet.create({
   deleteButtonText: textStyle('metadataText', colors.danger, fontWeight.strong),
   nextButton: {
     flex: 1,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     flexDirection: 'row',

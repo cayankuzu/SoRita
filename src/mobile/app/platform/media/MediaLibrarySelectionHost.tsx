@@ -35,9 +35,10 @@ import { useModalAccessibilityFocus } from '@/mobile/app/shared/hooks/useModalAc
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   opacity,
   radius,
   spacing,
@@ -406,6 +407,7 @@ export function MediaLibrarySelectionHost() {
             ]}
           >
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityRole="button"
               style={styles.footerSecondaryButton}
               onPress={() => resolveMediaLibrarySelection(null)}
@@ -413,6 +415,7 @@ export function MediaLibrarySelectionHost() {
               <AppText style={styles.footerSecondaryButtonText}>{tr.common.cancel}</AppText>
             </InstantPressable>
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityRole="button"
               accessibilityState={{ disabled: selectedIds.length === 0 }}
               disabled={selectedIds.length === 0}
@@ -465,7 +468,7 @@ const styles = StyleSheet.create({
   },
   footerSecondaryButton: {
     flex: 1,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
   footerSecondaryButtonText: textStyle('metadataText', colors.textMuted, fontWeight.strong),
   footerPrimaryButton: {
     flex: 1.3,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

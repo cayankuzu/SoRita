@@ -8,9 +8,10 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   typography,
@@ -75,6 +76,7 @@ export function RatingSelector({ value, onChange }: RatingSelectorProps) {
 
           return (
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityLabel={`${index + 1}. ${tr.placeEditor.rating}`}
               accessibilityHint={tr.placeEditor.ratingHelper}
               accessibilityRole="button"
@@ -133,8 +135,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   starButton: {
-    minWidth: minTouchSize,
-    minHeight: minTouchSize,
+    minWidth: controlSize.default,
+    minHeight: controlSize.default,
     alignItems: 'center',
     justifyContent: 'center',
   },

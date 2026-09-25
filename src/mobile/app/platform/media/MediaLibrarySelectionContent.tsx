@@ -16,9 +16,10 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -161,6 +162,7 @@ export const MediaLibrarySelectionContent = React.memo(
             <AppText style={styles.stateTitle}>{tr.map.searchUnavailableTitle}</AppText>
             <AppText style={styles.stateText}>{tr.system.connectionUnavailable}</AppText>
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityRole="button"
               style={styles.retryButton}
               onPress={() => void loadAssetsPage(true)}
@@ -179,6 +181,7 @@ export const MediaLibrarySelectionContent = React.memo(
                 : tr.mediaPicker.permissionBlockedDescription}
             </AppText>
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityLabel={
                 permissionCanAskAgain ? tr.common.retry : tr.mediaPicker.openSettings
               }
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg,

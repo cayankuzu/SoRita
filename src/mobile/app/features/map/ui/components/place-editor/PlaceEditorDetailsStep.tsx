@@ -10,8 +10,9 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
-  minTouchSize,
+  hitSlopFor,
   radius,
   spacing,
   textStyle,
@@ -55,6 +56,7 @@ export function PlaceEditorDetailsStep({
           style={styles.segmentedRow}
         >
           <InstantPressable
+            hitSlop={hitSlopFor(controlSize.default)}
             accessibilityRole="radio"
             accessibilityState={{ checked: studentFriendly }}
             style={[styles.segmentButton, studentFriendly ? styles.segmentButtonActive : null]}
@@ -65,6 +67,7 @@ export function PlaceEditorDetailsStep({
             </AppText>
           </InstantPressable>
           <InstantPressable
+            hitSlop={hitSlopFor(controlSize.default)}
             accessibilityRole="radio"
             accessibilityState={{ checked: !studentFriendly }}
             style={[styles.segmentButton, !studentFriendly ? styles.segmentButtonDark : null]}
@@ -161,7 +164,7 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',

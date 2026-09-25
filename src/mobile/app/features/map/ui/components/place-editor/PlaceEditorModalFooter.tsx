@@ -11,7 +11,7 @@ import { placeEditorModalStyles as styles } from '@/mobile/app/features/map/ui/c
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 
 type PlaceEditorModalFooterProps = {
   canContinue: boolean;
@@ -42,6 +42,7 @@ export function PlaceEditorModalFooter({
     <View style={[styles.footer, { paddingBottom }]}>
       {step > 0 ? (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityState={{ disabled: isBusy }}
           disabled={isBusy}
           style={styles.backButton}
@@ -52,6 +53,7 @@ export function PlaceEditorModalFooter({
         </InstantPressable>
       ) : onDelete ? (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityState={{ disabled: isBusy }}
           disabled={isBusy}
           hapticFeedback="warning"
@@ -65,6 +67,7 @@ export function PlaceEditorModalFooter({
 
       {!isLastStep ? (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityState={{ disabled: !canContinue || isBusy }}
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}
@@ -76,6 +79,7 @@ export function PlaceEditorModalFooter({
         </InstantPressable>
       ) : (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityState={{ disabled: !canContinue || isBusy }}
           disabled={!canContinue || isBusy}
           style={[styles.nextButton, !canContinue ? styles.disabledButton : null]}

@@ -11,9 +11,9 @@ import { formatRelativeDateTime } from '@/mobile/app/shared/utils/dateTime';
 import {
   avatarSize,
   colors,
+  controlSize,
   fontWeight,
   hitSlopFor,
-  minTouchSize,
   opacity,
   radius,
   spacing,
@@ -64,6 +64,7 @@ function NotificationListItemComponent({
   return (
     <View style={[styles.row, !notification.read ? styles.rowUnread : null]}>
       <InstantPressable
+        hitSlop={hitSlopFor(controlSize.default)}
         accessibilityHint={tr.notifications.openHint}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
@@ -133,6 +134,7 @@ function NotificationListItemComponent({
         ) : (
           <View style={styles.actionsRow}>
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityLabel={tr.notifications.reject}
               accessibilityRole="button"
               accessibilityState={{ disabled: followRequestPending }}
@@ -147,6 +149,7 @@ function NotificationListItemComponent({
               <AppText style={[styles.actionLabel, styles.rejectLabel]}>{tr.notifications.reject}</AppText>
             </InstantPressable>
             <InstantPressable
+              hitSlop={hitSlopFor(controlSize.default)}
               accessibilityLabel={tr.notifications.accept}
               accessibilityRole="button"
               accessibilityState={{ disabled: followRequestPending }}
@@ -182,7 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
   },
   rowUnread: {
     backgroundColor: colors.primaryBg,
@@ -219,7 +222,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     minWidth: 70,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
@@ -263,7 +266,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginLeft: 50,
     marginTop: spacing.sm,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
   },
   pendingLabel: textStyle('captionText', colors.textMuted),
 });
