@@ -123,10 +123,12 @@ describe('theme contrast tokens', () => {
     }
   });
 
-  it('ships no type token below the 12px readability floor', () => {
+  it('ships no type token below the 11px readability floor', () => {
+    // 11 is Material's label-small and iOS's caption 2: the smallest size
+    // either platform sets text at.
     const undersized = Object.entries(typography)
       .filter(([, value]) => typeof value === 'object' && value !== null)
-      .filter(([, value]) => (value as { fontSize: number }).fontSize < 12)
+      .filter(([, value]) => (value as { fontSize: number }).fontSize < 11)
       .map(([name]) => name);
 
     expect(undersized).toEqual([]);
@@ -151,17 +153,19 @@ describe('theme contrast tokens', () => {
       ),
     );
 
-    expect([...sizes].sort((a, b) => a - b)).toEqual([12, 14, 16, 18, 20, 24, 28]);
+    expect([...sizes].sort((a, b) => a - b)).toEqual([11, 13, 15, 17, 19, 22, 26]);
   });
 
-  it('puts spacing, radius and icon sizes on a 4pt grid', () => {
+  it('puts spacing and radius on a 4pt grid and icons on a 2pt grid', () => {
     const offGrid = [
       ...Object.entries(spacing).filter(([name]) => name !== 'xxs'),
       ...Object.entries(radius).filter(([name]) => name !== 'pill'),
-      ...Object.entries(iconSize),
     ].filter(([, value]) => value % 4 !== 0);
+    // Material draws glyphs at 18 and 22 as well as 16 and 24.
+    const offGridIcons = Object.entries(iconSize).filter(([, value]) => value % 2 !== 0);
 
     expect(offGrid).toEqual([]);
+    expect(offGridIcons).toEqual([]);
   });
 
   it('keeps compatibility font-size aliases tied to semantic styles', () => {
@@ -173,23 +177,23 @@ describe('theme contrast tokens', () => {
 
   it('preserves compact and headline roles without ad hoc screen metrics', () => {
     expect(typography.headlineText).toMatchObject({
-      fontSize: 24,
-      lineHeight: 30,
+      fontSize: 22,
+      lineHeight: 28,
       fontWeight: '700',
     });
     expect(typography.compactTitleText).toMatchObject({
-      fontSize: 16,
-      lineHeight: 22,
+      fontSize: 15,
+      lineHeight: 20,
       fontWeight: '700',
     });
     expect(typography.compactBodyText).toMatchObject({
-      fontSize: 12,
-      lineHeight: 18,
+      fontSize: 11,
+      lineHeight: 16,
       fontWeight: '400',
     });
     expect(typography.inputText).toMatchObject({
-      fontSize: 16,
-      lineHeight: 22,
+      fontSize: 15,
+      lineHeight: 20,
       fontWeight: '400',
     });
     expect(typography.readingBodyText.lineHeight).toBeGreaterThan(

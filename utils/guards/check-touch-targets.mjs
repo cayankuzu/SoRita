@@ -22,17 +22,17 @@ const ANDROID_MINIMUM_DP = 48;
 
 // Size tokens resolved to the Android value, because Android's is the floor
 // being enforced. `minTouchSize` is platform-derived and equals touch.android
-// there; `controlSize.large` is the 48dp control.
+// there; `controlSize.large` is the 44dp control.
 const SIZE_TOKENS = new Map([
   ['minTouchSize', 48],
   ['touch.android', 48],
   ['touch.ios', 44],
-  ['controlSize.large', 48],
-  ['controlSize.default', 44],
-  ['controlSize.badge', 24],
-  ['controlSize.compact', 32],
-  ['controlSize.chip', 36],
-  ['controlSize.icon', 36],
+  ['controlSize.large', 44],
+  ['controlSize.default', 40],
+  ['controlSize.badge', 20],
+  ['controlSize.compact', 28],
+  ['controlSize.chip', 32],
+  ['controlSize.icon', 32],
 ]);
 
 const PRESSABLE_NAMES = new Set([

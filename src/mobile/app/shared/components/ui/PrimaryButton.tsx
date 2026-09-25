@@ -16,7 +16,7 @@ import {
   colors,
   controlSize,
   fontWeight,
-  minTouchSize,
+  hitSlopFor,
   opacity,
   radius,
   spacing,
@@ -59,6 +59,7 @@ export function PrimaryButton({
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: isDisabled }}
       disabled={isDisabled}
+      hitSlop={hitSlopFor(controlSize.default)}
       hapticFeedback={
         hapticFeedback ??
         (variant === 'danger'
@@ -114,7 +115,8 @@ const palettes = {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: Math.max(controlSize.default, minTouchSize),
+    // Painted at 40 like a feed app's button; hit slop takes the target to 48.
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',

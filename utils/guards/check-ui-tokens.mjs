@@ -6,7 +6,9 @@ import { findTypographyViolations } from './ui-token-typography.mjs';
 
 const workspace = fileURLToPath(new URL('../..', import.meta.url));
 const sourceRoot = join(workspace, 'src/mobile/app');
-const MIN_FONT_SIZE = 12;
+// 11 is Material label-small and iOS caption 2, the smallest size either
+// platform sets text at; the type scale moved down one step on 2026-09-25.
+const MIN_FONT_SIZE = 11;
 const violations = [];
 
 async function collectFiles(directory) {

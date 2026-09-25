@@ -121,36 +121,37 @@ export const spacing = {
 
 export const layout = {
   screenPadding: spacing.screen,
-  headerHeight: 56,
-  tabBarHeight: 60,
-  tabBarPaddingTop: 6,
-  tabBarPaddingBottom: 6,
+  headerHeight: 48,
+  // 4 + a 48dp tab target + 4.
+  tabBarHeight: 56,
+  tabBarPaddingTop: 4,
+  tabBarPaddingBottom: 4,
   discoveryTileWidth: '48.5%' as const,
-  discoveryTileHeight: 132,
-  thumbnailSize: 56,
+  discoveryTileHeight: 120,
+  thumbnailSize: 48,
 };
 
 /**
- * Seven sizes: 12, 14, 16, 18, 20, 24, 28. The scale used to have ten,
- * including the in-between 13, 15 and 17 that make neighbouring text look
- * almost-but-not-quite the same. Secondary reading text (comments, place
- * descriptions, field helpers) moved from 13 to 14, the size it is read at in
- * every mature feed app.
+ * Seven sizes, two apart: 11, 13, 15, 17, 19, 22, 26. Equal steps keep
+ * neighbouring roles clearly different, as the older 13-beside-14 never did.
+ * The scale sat one step higher (12-28) until Cayan found the whole app
+ * oversized on the phone (2026-09-25); body text now reads at 13 and metadata
+ * at 11, the sizes dense feed apps use on Android.
  */
 const typographyStyles = {
-  display: { fontSize: 28, lineHeight: 36, fontWeight: '800' as const },
-  headlineText: { fontSize: 24, lineHeight: 30, fontWeight: '700' as const },
-  title: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const },
-  section: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
-  inputText: { fontSize: 16, lineHeight: 22, fontWeight: '400' as const },
-  compactTitleText: { fontSize: 16, lineHeight: 22, fontWeight: '700' as const },
-  bodyText: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
-  readingBodyText: { fontSize: 14, lineHeight: 22, fontWeight: '400' as const },
-  labelText: { fontSize: 14, lineHeight: 20, fontWeight: '700' as const },
-  captionText: { fontSize: 14, lineHeight: 20, fontWeight: '500' as const },
-  supportingLabelText: { fontSize: 14, lineHeight: 20, fontWeight: '600' as const },
-  metadataText: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const },
-  compactBodyText: { fontSize: 12, lineHeight: 18, fontWeight: '400' as const },
+  display: { fontSize: 26, lineHeight: 33, fontWeight: '800' as const },
+  headlineText: { fontSize: 22, lineHeight: 28, fontWeight: '700' as const },
+  title: { fontSize: 19, lineHeight: 24, fontWeight: '700' as const },
+  section: { fontSize: 17, lineHeight: 22, fontWeight: '700' as const },
+  inputText: { fontSize: 15, lineHeight: 20, fontWeight: '400' as const },
+  compactTitleText: { fontSize: 15, lineHeight: 20, fontWeight: '700' as const },
+  bodyText: { fontSize: 13, lineHeight: 18, fontWeight: '400' as const },
+  readingBodyText: { fontSize: 13, lineHeight: 20, fontWeight: '400' as const },
+  labelText: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
+  captionText: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
+  supportingLabelText: { fontSize: 13, lineHeight: 18, fontWeight: '600' as const },
+  metadataText: { fontSize: 11, lineHeight: 14, fontWeight: '600' as const },
+  compactBodyText: { fontSize: 11, lineHeight: 16, fontWeight: '400' as const },
 } as const;
 
 export const typography = {
@@ -254,16 +255,17 @@ export const hitSlopFor = (renderedSize: number, minimum: number = touch.android
 
 export const controlSize = {
   // A static badge; never a touch target on its own.
-  badge: 24,
-  compact: 32,
-  // An icon-only action in a row of them: a 20dp glyph with 8dp either side,
+  badge: 20,
+  compact: 28,
+  // An icon-only action in a row of them: an 18dp glyph with 7dp either side,
   // reaching the 48dp floor through hit slop.
-  icon: 36,
-  // A selectable chip: painted at 36 so a row of them stays light, reaching
+  icon: 32,
+  // A selectable chip: painted at 32 so a row of them stays light, reaching
   // the 48dp floor through hit slop.
-  chip: 36,
-  default: 44,
-  large: 48,
+  chip: 32,
+  // A text button: painted at 40, reaching the 48dp floor through hit slop.
+  default: 40,
+  large: 44,
 } as const;
 
 /**
@@ -294,14 +296,16 @@ export const zIndex = {
  * the same glyph rendered at 13, 14 and 16 on neighbouring screens. `xs` is
  * for glyphs inside a chip or badge, `sm` beside body text, `md` for a
  * control, `lg` for a primary action, `xl` and `xxl` for empty states.
+ * Each moved one step down with the type scale (2026-09-25); 18 and 22 are
+ * Material's own glyph sizes.
  */
 export const iconSize = {
   xs: 12,
-  sm: 16,
-  md: 20,
-  lg: 24,
-  xl: 32,
-  xxl: 40,
+  sm: 14,
+  md: 18,
+  lg: 22,
+  xl: 28,
+  xxl: 36,
 } as const;
 
 /**
@@ -310,11 +314,11 @@ export const iconSize = {
  * reply or the comment composer, `md` leads a list row or a comment.
  */
 export const avatarSize = {
-  xs: 24,
-  sm: 32,
-  md: 40,
+  xs: 20,
+  sm: 28,
+  md: 36,
   // A person as the subject of a tile, as in Explore's people grid.
-  lg: 56,
+  lg: 48,
 } as const;
 
 export const contentWidth = {
