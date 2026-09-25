@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppProgressBanner } from '@/mobile/app/app-shell/feedback/AppProgressBanner';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import { buildPlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorPreview';
 import type {
   PlaceEditorSaveOptions,
@@ -38,8 +38,6 @@ import {
 } from '@/mobile/app/shared/utils/modalLayout';
 import { dismissKeyboardAndRunAfterInteractions } from '@/mobile/app/shared/utils/interaction';
 import { AppModal } from '@/mobile/app/shared/components/feedback/AppModal';
-
-export type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
 
 type PlaceEditorModalProps = {
   visible: boolean;
@@ -232,25 +230,16 @@ export function PlaceEditorModal({
     () => serializePlaceEditorDraft(buildDraft()),
     [buildDraft],
   );
-  const initialDraftSource = React.useMemo(
-    () =>
-      draft
-        ? `draft:${existingPlace?.id || 'new'}:${draft.step}:${draft.name}:${draft.address}`
-        : `base:${existingPlace?.id || 'new'}:${lat}:${lng}:${placeName || ''}:${placeAddress || ''}`,
-    [draft, existingPlace?.id, lat, lng, placeAddress, placeName],
-  );
+  // Changes are measured against the place (or the tapped point) as it was,
+  // never against a reopened draft: a draft is itself unsaved work, and
+  // closing one without asking lost it.
+  const initialDraftSource = `base:${existingPlace?.id || 'new'}:${lat}:${lng}:${placeName || ''}:${placeAddress || ''}`;
   const buildInitialDraftSignature = React.useCallback(
     () =>
       serializePlaceEditorDraft(
-        createInitialPlaceEditorFields({
-          draft,
-          existingPlace,
-          lists,
-          placeAddress,
-          placeName,
-        }),
+        createInitialPlaceEditorFields({ existingPlace, lists, placeAddress, placeName }),
       ),
-    [draft, existingPlace, lists, placeAddress, placeName],
+    [existingPlace, lists, placeAddress, placeName],
   );
   const isDraftDirty =
     visible &&

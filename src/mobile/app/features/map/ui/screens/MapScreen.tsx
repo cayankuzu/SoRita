@@ -531,7 +531,9 @@ export function MapScreen() {
             >
               <View style={styles.reopenEditorBody}>
                 <AppText numberOfLines={1} style={styles.reopenEditorTitle}>
-                  {minimizedEditor.panel.name || tr.placeEditor.minimizedNewTitle}
+                  {minimizedEditor.draft.name.trim() ||
+                    minimizedEditor.panel.name ||
+                    tr.placeEditor.minimizedNewTitle}
                 </AppText>
                 <AppText style={styles.reopenEditorSubtitle}>
                   {isEditorInteractionLocked ? tr.placeEditor.saveProgressTitle : tr.map.reopenPanel}
