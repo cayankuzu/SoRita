@@ -70,7 +70,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
 | 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
 | 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
-| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), kaydırma karesi p90 11–14 ms, arka planda konum/alarm/wakelock yok. Açık: harita ziyareti başına ~40 MB bellek sızıntısı (bir düzeltme denendi, pinleri kaybettirdiği için geri alındı), ana sayfa ve profilde takılan kare %5,8 ve %7,6 (bütçe %5), iOS ölçümü (Cayan) |
+| 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), kaydırma karesi p90 11–14 ms, arka planda konum/alarm/wakelock yok. Harita ziyaretlerinde bellek çöp toplamadan sonra düz (20 ziyaret, 273 → 278 MB). Açık: ana sayfa ve profilde takılan kare %5,8 ve %7,6 (bütçe %5), iOS ölçümü (Cayan) |
 
 ---
 
@@ -867,14 +867,12 @@ dönünce haritadaki bütün pinler kayboldu. OTA 32 yeniden yayınlanarak geri
 alındı (`e076ba6f`, cihazda pinler geri geldi), kod da geri çevrildi
 (`f26f4be`).
 
-Teşhis: bütün pinler gizliyken de her ziyaret ~65 görünüm ve 35–40 MB
-ekliyor; yani asıl sızan native haritanın kendisi, pinler üstüne ~31
-görünüm ekliyor. Harita React tarafında tutulduğunda da büyüme sürdü; bu,
-dondurulan sekmenin native görünümlerinin dönüşte yeniden kurulduğunu
-gösteriyor (pinlerin kaybolmasını da bu açıklar). Sonraki deneme sekme
-ekranının nasıl ayrılıp yeniden bağlandığına (react-native-screens,
-`detachInactiveScreens`) bakacak; yayından önce cihazda iki kontrol: sekme
-gidiş-dönüşünde pinler görünüyor mu, 6 ziyarette `meminfo` düz mü.
+**Sonuç: sızıntı yok.** Her ölçümden önce çöp toplama zorlanınca
+(`am dumpheap`) 20 harita ziyaretinde bellek düz kaldı: toplam PSS 273 →
+278 MB, görünüm sayısı 593 sabit, grafik belleği değişmedi, uygulama
+çökmedi. Önceki büyüme toplanmamış çöptü; `meminfo` henüz toplanmamış
+nesneleri de sayıyor. OTA 33 denemesi bu yüzden gereksizdi ve geri alındı;
+harita kodu OTA 32'deki gibi.
 
 **D25 arka plan.** Harita dışındayken uygulamanın konum isteği, alarmı ve
 wakelock'u yok (`dumpsys location/alarm/power`).
