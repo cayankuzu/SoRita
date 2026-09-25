@@ -70,6 +70,7 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. E34 sözleşme belgesi `docs/api-contracts.md`. Kalan: E30 sınıflandırma, E33 saat enjeksiyonu, Maestro (test hesapları, Cayan) |
 | 10: Android uyumu, erişilebilirlik | 🔶 | A3: geri tuşu açık menüyü kapatıyor (harita, profil), editör değişiklik soruyor. Kalan: ekran/sheet matrisi; ekran boyutu, yazı ölçeği ve TalkBack sistem ayarı gerektiriyor (Cayan onayı) |
 | 20: Güvenlik | 🔶 | G42: Sentry olayları ve breadcrumb'lar redakte ediliyor, Android yedekleme kapalı. G44: release R8 açık, pano yalnız yazılıyor. Kalan: G41/G43/G46 test hesaplarıyla |
+| 21: Veri, durum, ağ | 🔶 | Kodda doğrulandı: arama yarışları (F35), durum koduna göre yeniden deneme (F36), zaman gösterimi (F40). Kalan: uçak modu tablosu (sistem ayarı, Cayan onayı), outbox ve optimistik geri alma testleri (test hesapları) |
 | 22: Performans | 🔶 | Android: soğuk açılış medyan 792 ms / p90 844 ms (bütçe 2500), arka planda konum/alarm/wakelock yok, harita ziyaretlerinde bellek çöp toplamadan sonra düz (20 ziyaret, 273 → 278 MB). Kaydırma: profil %3,7 (bütçe %5); ana sayfa ölçümden ölçüme %6–11, kaynağı kart kurulumu. 2. tur düzeltmesi OTA 38'de (aşağıda), cihaz ölçümü bekliyor. iOS ölçümü (Cayan) |
 | 24: CI/CD, sürüm, belgeleme | 🔶 | Quality iş akışı yeniden yeşil (Gitleaks). CI'daki kırmızı yalnız kapalı EAS build değişkenlerinden. Geri alma gerçek olayla prova edildi (OTA 33 → 32). `npm audit` üretim bulgusu azaltıldı (OTA 40). CHANGELOG ve API sözleşmesi güncel. Kalan: branch koruması, zorunlu güncelleme kararı, uptime URL'si (Cayan), temiz klon provası |
 | 25: Native paket #2, store, yasal | 🔶 | Ayarlar'da "Yasal" grubu (OTA 36) ve "Hesap gizliliği" adı (OTA 37) cihazda. Bildirim ikonu `native/faz-4` dalında. Kalan: store formları, hukuk onayı, build yüklemeleri (Cayan), iOS gizlilik manifesti ve Data Safety karşılaştırması |
@@ -105,7 +106,7 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ⬜ | 18 | İşlem matrisi VIII: akış, keşfet, harita, navigasyon, kesinti (İ66–İ75) | A2 | — |
 | ⬜ | 19 | İşlem matrisi IX: bildirim, push, deep link (İ76–İ84) | A6 | App link dosyalarının yayında olduğunu teyit (5 dk) |
 | 🔶 | 20 | Güvenlik ve kötüye kullanım | G41, G42, G43, G44, G46 | SSL pinning kararı, moderasyon sorumlusu (5 dk) |
-| ⬜ | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
+| 🔶 | 21 | Veri, durum, ağ | F35, F36, F37, F38, F40 | — |
 | 🔶 | 22 | Performans | D21, D22, D23, D24, D25 | iPhone'da 10 soğuk açılış (5 dk) |
 | ⬜ | 23 | Backend ve gözlemlenebilirlik | H47, H48, H49, H50 | Sentry / Supabase / PostHog erişimi (15 dk) |
 | 🔶 | 24 | CI/CD, sürüm, bağımlılık, belgeleme | E33, H51, H52, H53, H54 | Branch koruması, zorunlu güncelleme kararı (10 dk) |
@@ -659,7 +660,7 @@ Test hesabı gerektirmeyen kalemler yapıldı; teslim OTA 32 `1d82a56d`.
 |---|---|---|
 | E30 hardcode | 🔶 | Uygulama kodunda sayı yazılmış `setTimeout`/`setInterval` gecikmesi yok (yalnız test yardımcıları); `staleTime`/`gcTime` sabitlerde; modül düzeyinde 189 adlandırılmış sayısal sabit. Stil dosyalarında token dışı 38 boşluk değeri var, çoğu 0 ve ±1–2 px optik düzeltme: Faz 9A'daki 4pt ızgara ölçümüne (B12) bırakıldı. Kalan: ortam/iş kuralı sabitlerinin sınıflandırma tablosu ve guard |
 | E31 isimlendirme ve karmaşıklık | 🔶 | Karmaşıklık > 10 olan fonksiyon 186 → 184; en yüksek 35 → 30. En yoğun altısı sadeleşti: `ExpandableText` 35 → 23, `TextField` 32 → 18, `MapScreen` 34 → 24, `PlaceEditorModal` 33 → < 25, `UserProfileScreen` 34 → < 25, `PlaceCard` 31 → 27. ESLint sınırı 35 → 30 (`0b0bf74`). TODO/FIXME: 0. `max-depth` 5 kuralı zaten var. Kalan: 21–30 arasındaki 37 fonksiyon; boolean önekleri ve parametre sayısı ölçülmedi |
-| E33 hazırlığı | 🔶 | Uygulama kodunda `Math.random` yalnız `withRetryJitter`'da ve enjekte edilebilir (üç push denetleyicisindeki kopyalar birleşti); dört dosya adı üreticisi `createUuid` kullanıyor (`4a857ea`). Kalan: `Date.now` enjeksiyonu (74 kullanım, çoğu zaman damgası) |
+| E33 hazırlığı | 🔶 | Uygulama kodunda `Math.random` yalnız `withRetryJitter`'da ve enjekte edilebilir (üç push denetleyicisindeki kopyalar birleşti); dört dosya adı üreticisi `createUuid` kullanıyor (`4a857ea`). `Date.now` (74 kullanım, çoğu zaman damgası) enjekte edilmedi: birim testlerinde Vitest sahte saati zaten kontrol ediyor, Maestro ise çalışan uygulamaya saat enjekte edemiyor; göreli zaman fonksiyonu `now` parametresi alıyor. Kalan: yok, karar kaydı bu |
 | E34 şema dayanıklılığı | 🔶 | Akış kartı eşleyicisinin testi: sayı yerine metin, null, bozuk medya JSON'u, bilinmeyen alan, sahipsiz satır, izleyicisiz beğeni; hiçbiri çökmüyor. Sözleşme belgesi: `docs/api-contracts.md` (6 edge function, 18 RPC, ortak imza/hata kuralları, alan değiştirme kuralı). Kalan: diğer eşleyicilerin şema testleri |
 | Maestro altyapısı | ⏸ | Test hesapları (A, B, C) Cayan'dan bekleniyor |
 
@@ -783,7 +784,7 @@ ne kadar sürede bakacağı.
 | G44 release sertleştirme | 🔶 | `android.enableMinifyInReleaseBuilds=true` (`gradle.properties`) ile release'de R8 açık; APK üzerinde doğrulama Faz 25'te. Pano: uygulama yalnız kullanıcının "kopyala" eylemiyle yazıyor (paylaşım bağlantısı, adres, yorum), panodan okumuyor. Ekran görüntüsü engeli gerektiren ekran bulunmadı: uygulama ödeme, kimlik belgesi ya da tek kullanımlık kod göstermiyor |
 | G41, G43, G46 | ⬜ | Test hesapları ve yerel Supabase persona matrisi gerekiyor (Faz 8 hesapları, Cayan) |
 
-### ⬜ Faz 21: Veri, durum, ağ
+### 🔶 Faz 21: Veri, durum, ağ
 
 Claude:
 1. F35: race condition (eski yanıtın yeniyi ezmesi), stale data, cache
@@ -801,6 +802,16 @@ Claude:
 
 Kapanır: **F35, F36, F37, F38, F40**
 Cayan: —
+
+### Faz 21 kaydı, 1. tur: kodda doğrulananlar (2026-09-25)
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| F35 eski yanıtın yeniyi ezmesi | 🔶 | Harita araması her isteğe artan kimlik veriyor ve yalnız son isteğin sonucunu yazıyor (`useMapSearchController`). Keşfet araması (300 ms debounce) ve kullanıcı adı kontrolü React Query anahtarında sorguyu taşıyor, geç gelen eski yanıt başka anahtara yazılıyor. Kalan: cache invalidation haritası |
+| F36 hata ve yeniden deneme | 🔶 | `queryClient`: 400, 401, 403, 404, 409 ve 422 yeniden denenmiyor; 429 ve 5xx iki kez, diğerleri bir kez; `Retry-After` başlığına uyuluyor. Kullanıcı mesajı zaman aşımı ve bağlantı hatasını ayrı tanıyor, gerisinde ekranın kendi metni. Kalan: aynı anda 5 istekte tek token yenileme kanıtı (test hesabı) |
+| F37 çevrimdışı | ⏸ | Çevrimdışı göstergesi ve outbox var. 12 ekranın uçak modu tablosu telefonun sistem ayarını değiştirmeyi gerektiriyor (Cayan onayı) |
+| F38 idempotency ve geri alma | ⏸ | Test hesaplarıyla (Faz 11–19 işlem matrisinde T3, T4) |
+| F40 zaman | 🔶 | Sunucu ISO/UTC gönderiyor, gösterim cihazın yerel saatinde; hesap epoch milisaniyesiyle yapıldığı için yaz saati kayması etkilemiyor. Cihaz saati sunucunun gerisindeyse gelecekteki zaman "şimdi" okunuyor, eksi değer çıkmıyor. 7 günden eskisi takvim tarihi (`gg.aa.yyyy`). Göreli etiketler canlı saymıyor, ekran yenilenince güncelleniyor; MVP için yeterli |
 
 ### 🔶 Faz 22: Performans
 
