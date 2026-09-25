@@ -5,7 +5,7 @@ import type {
   MapPlaceEntry,
   MapViewport,
   PanelData,
-} from '@/mobile/app/features/map/application/mapScreenTypes';
+} from '@/mobile/app/contracts/mapScreenState';
 import {
   findExistingPlaceMatchByCoordinates,
   LIVE_SEARCH_DEBOUNCE_MS,

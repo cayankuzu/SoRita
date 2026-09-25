@@ -15,7 +15,7 @@ import type {
   MinimizedEditorState,
   MinimizedPlacePreviewState,
   PanelData,
-} from '@/mobile/app/features/map/application/mapScreenTypes';
+} from '@/mobile/app/contracts/mapScreenState';
 import {
   buildChangedListsForPlaceSave,
   defaultViewport,
@@ -28,7 +28,7 @@ import {
 import { useMapSearchController } from '@/mobile/app/features/map/application/useMapSearchController';
 import { useMapLocation } from '@/mobile/app/features/map/application/useMapLocation';
 import { useMapScreenData } from '@/mobile/app/features/map/application/useMapScreenData';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import type {
   PlaceEditorSaveOptions,
   PlaceEditorSaveSessionConfig,

@@ -5,7 +5,7 @@ import { normalizeOptionalMultilineText } from '@/mobile/app/shared/validation/c
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 import { normalizeSearchText } from '@/mobile/app/shared/utils/textSort';
 
-import type { MapPlaceEntry, PanelData, MapViewport } from './mapScreenTypes';
+import type { MapPlaceEntry, PanelData, MapViewport } from '@/mobile/app/contracts/mapScreenState';
 
 export const LIVE_SEARCH_MIN_LENGTH = 2;
 export const LIVE_SEARCH_DEBOUNCE_MS = 450;

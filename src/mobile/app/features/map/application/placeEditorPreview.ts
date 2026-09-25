@@ -1,6 +1,6 @@
 import { PLACE_DIETARY_OPTIONS } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceMedia } from '@/mobile/app/data/contracts/entities';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import { normalizePersistablePlaceIdentity } from '@/mobile/app/features/map/application/placeEditorStateUtils';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlacePhotoUrls, normalizePlaceMedia } from '@/mobile/app/shared/utils/placeMedia';

@@ -1,11 +1,9 @@
 import React from 'react';
 
 import type { useFeedActionBarState } from '@/mobile/app/features/social/application/useFeedActionBarState';
-import {
-  AddressPanel,
-  CommentPanel,
-  LikersPanel,
-} from '@/mobile/app/features/social/ui/components/FeedActionPanels';
+import { AddressPanel } from '@/mobile/app/features/social/ui/components/AddressPanel';
+import { CommentPanel } from '@/mobile/app/features/social/ui/components/CommentPanel';
+import { LikersPanel } from '@/mobile/app/features/social/ui/components/LikersPanel';
 import type {
   FeedActionComment,
   FeedActionLiker,

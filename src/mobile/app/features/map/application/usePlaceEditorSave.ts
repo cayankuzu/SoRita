@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Place } from '@/mobile/app/data/contracts/entities';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import { buildPlaceSavePayload } from '@/mobile/app/features/map/application/placeEditorPreview';
 import type {
   PlaceEditorSaveOptions,

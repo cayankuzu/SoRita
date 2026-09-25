@@ -6,7 +6,7 @@ import {
 } from '@/mobile/app/catalog/placeOptions';
 import { useCoverImagePicker } from '@/mobile/app/platform/media/useCoverImagePicker';
 import type { Place, PlaceList } from '@/mobile/app/data/contracts/entities';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import type {
   PlaceEditorSaveOptions,
   PlaceEditorSaveStartHandler,

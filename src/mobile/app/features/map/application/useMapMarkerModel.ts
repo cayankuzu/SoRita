@@ -5,7 +5,7 @@ import type {
   ExistingPlaceSelection,
   MarkerFilterOption,
   PanelData,
-} from '@/mobile/app/features/map/application/mapScreenTypes';
+} from '@/mobile/app/contracts/mapScreenState';
 import {
   buildActiveEditorMarker,
   buildSelectedSearchMarker,

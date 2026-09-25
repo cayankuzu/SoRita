@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { PLACE_CATEGORY_META } from '@/mobile/app/catalog/placeOptions';
 import type { Place, PlaceList, PlaceMedia } from '@/mobile/app/data/contracts/entities';
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { getPlaceMedia } from '@/mobile/app/shared/utils/placeMedia';
 import { compareLocalizedText, normalizeSearchText } from '@/mobile/app/shared/utils/textSort';

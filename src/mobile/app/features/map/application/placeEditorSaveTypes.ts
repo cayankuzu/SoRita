@@ -1,4 +1,4 @@
-import type { PlaceEditorDraft } from '@/mobile/app/features/map/application/placeEditorDraft';
+import type { PlaceEditorDraft } from '@/mobile/app/contracts/placeEditorDraft';
 
 export type PlaceEditorSaveOptions = {
   onProgress?: (progress: number) => void;
