@@ -65,6 +65,9 @@ düşülür. Her faz sonunda yine rapor yazılır.
 | 3: Token sistemi + bekleyen teslimat | ✅ | OTA `f81614b1` cihazda çalışıyor. Bildirim migration'ı (`20260923010000`) sonradan production'a uygulandı |
 | 4: Native paket #1 | 🔶 | Dal `native/faz-4`: tek splash, dikey kilit, tema ikonu, 1.0.110 (116). Cihazda doğrulandı (aşağıda). Kalan: Play yüklemesi ve iOS TestFlight (Cayan), yüklenince main'e alma ve `ota:record-binary` |
 | 5: Component sistemi I | 🔶 | 1. tur: basma primitive'i, Chip, Badge, SheetHeader, sheet'ler, tek seviyeli menü; P0 production'da kapandı. 2. tur: profil ve Keşfet kaydırma, yorumlar, bildirimler, paylaşım bağlantısı (aşağıda). Kalan: form standardı, durum bileşenleri, kendi `<Modal>`'ını yazan 4 sheet. 3. tur (Faz 5–9 birleşik, E1–E20): ızgara, akış, push bandı, düzenleyici; 8 OTA grubu cihazda |
+| 6: Component sistemi II | 🔶 | Harita logosu ve ipucu, liste haritası, keşif karoları tamam. Kalan: kart varyantlarının tek meta ızgarası, harita boş/hata/izin durumları, Maps anahtar kısıtı ekran görüntüsü (Cayan) |
+| 7: KISS ve mimari | ✅ | E26, E27, E28, E29, E32 kanıtlı (aşağıda Faz 7 kaydı). OTA 29–32 cihazda |
+| 8: Kod kalitesi II | 🔶 | E31 karmaşıklık sınırı 35 → 30, E34 akış kartı şema testi. Kalan: E30 sınıflandırma, E33, sözleşme belgesi, Maestro (test hesapları, Cayan) |
 
 ---
 
@@ -81,9 +84,9 @@ gösterir. **Cayan**, senin yapman gerekeni ve tahmini süreyi gösterir.
 | ✅ | 3 | Token sistemi kalanı + bekleyen teslimat | B10 (cihaz ölçümü bir sonraki OTA'da) | Migration'ı uygulamak (1 dk) |
 | ⏸ | 4 | Native paket #1 + iOS OTA açılışı | B13, Faz 1 | İkon onayı, AAB → Play, TestFlight kurulumu (~30 dk); native dosyalara izin |
 | 🔶 | 5 | Component sistemi I: primitive'ler, durum bileşenleri, form standardı | — | Supabase `db push` (P0) |
-| ⬜ | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
-| ⬜ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
-| ⬜ | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
+| 🔶 | 6 | Component sistemi II: PlaceCard varyantları, harita UI | B9 | Maps anahtar kısıtı ekran görüntüsü (5 dk) |
+| ✅ | 7 | KISS ve mimari | E26, E27, E28, E29, E32 | — |
+| 🔶 | 8 | Kod kalitesi II + E2E altyapısı | E30, E31, E34 | 3 test hesabı + ortam değişkeni (15 dk) |
 | ⬜ | 9A | Durum matrisi, motion, cila, "ışık hızı" hissi | A4, B14, B15, B16 | — |
 | ⬜ | 9B | Ekran ekran premium görsel tur, keşif amaçlı etkileşim turu, tutarlılık | B11, B12 | Görsel onay (10 dk) |
 | ⬜ | 10 | Android cihaz uyumu ve erişilebilirlik | Android satırları | — |
@@ -440,7 +443,7 @@ bileşenleri denetimi. **Faz 6 kalanı:** kart varyantlarının tek meta ızgara
 harita durumları (boş/hata/izin). **Faz 7 kalanı:** en büyük 5 dosyanın
 bölünmesi, ölü kod taraması.
 
-### ⬜ Faz 6: Component sistemi II, PlaceCard ve harita
+### 🔶 Faz 6: Component sistemi II, PlaceCard ve harita
 
 Claude:
 1. PlaceCard tek görsel dil: Full, Compact ve Grid varyantları aynı meta
@@ -458,7 +461,7 @@ Cayan: Google Cloud Console'da Maps SDK anahtarının "Uygulama kısıtı" (pake
 adı + SHA-1 / bundle id) ve "API kısıtı" ekranlarının görüntüsünü gönder.
 Anahtar değerini paylaşma.
 
-### ⬜ Faz 7: KISS ve mimari
+### ✅ Faz 7: KISS ve mimari
 
 Claude:
 1. E26: katman ihlali taraması (UI → application → data → platform), döngüsel
@@ -478,7 +481,142 @@ Claude:
 Kapanır: **E26, E27, E28, E29, E32**
 Cayan: —
 
-### ⬜ Faz 8: Kod kalitesi II ve E2E altyapısı
+### Faz 7 kaydı: KISS ve mimari (2026-09-25)
+
+**Teslim:** OTA 29 `edba5f19`, 30 `f3b2f409`, 31 `6361be1f`, 32 `1d82a56d`;
+her biri iki başlatmayla cihazda doğrulandı (`isUpdatePending` true → false).
+Her OTA'da `check:release` yeşil; son grup 1386 test, dal kapsamı %90,31.
+
+**E26 Mimari.** Katman yönü tarandı:
+
+| Yön | İhlal | Koruma |
+|---|---|---|
+| platform → data / features / app-shell | 0 | tarama |
+| data → features / app-shell | 0 | tarama |
+| feature UI → repository ya da Supabase | 0 | `architecture:check` |
+| özellik → başka özelliğin iç dosyası | 0, hepsi `public/` üzerinden | `architecture:check` |
+| shared → features / data | 0 | `architecture:check` |
+| shared → app-shell | 1 → 0 | `MediaLightbox` durum çubuğu hook'unu app-shell'den alıyordu. `AppSystemBars` yalnız token'a bağlı olduğu için `shared/components/chrome` altına taşındı. Guard'a kural eklendi; deneme dosyası reddedildi (`5473eed`) |
+| döngüsel bağımlılık | 0 | `source-health:check` |
+
+Özellikten app-shell'e 21 dosya gidiyor: navigasyon tipleri, oturum
+context'i, ilerleme bandı ve auth yönlendirmesi. Bunlar uygulama çapında
+sözleşmeler; kabul edildi.
+
+"Bir özelliği silince kaç dosya kırılır" (onu dışarıdan kullanan dosya,
+hepsi `public/` üzerinden): auth 2, discovery 2, explore 1, home 1, lists 1,
+map 6, notifications 1, places 7, profile 1, settings 1, social 2.
+
+**E27 Büyük dosyalar.** Bölünenler:
+
+| Dosya | Önce | Sonra | Ayrılan |
+|---|---|---|---|
+| `tr.ts` | 1098 | 36 | özellik başına 11 dosya; çözümlenen nesne bayt bayt aynı |
+| `usePlaceEditorState` | 929 (tek hook 795) | 397 (hook < 300) | `usePlaceEditorListSelection`, `usePlaceEditorSave`, başlangıç durumu `placeEditorStateUtils`'te |
+| `useMapScreenState` | 855 (hook 800) | 525 (hook 482) | `useMapEditorSession`, `useMapPlaceSave`, `useMapScreenPersistence` |
+| `listsRepository` | 886 | 670 | `listPersistencePayload` |
+| `optimisticSocialCache` | 872 | 379 | `optimisticCacheTransforms` |
+| `media.ts` | 856 | 625 | `mediaFunctionClient` |
+| `images.ts` | 810 | 652 | `pickedMediaFiles` (720p boyutlandırma, küçük görsel) |
+| `UserProfileScreen` | 793 | 667 | `useProfileTabPager`, `userProfileOverlays`, `ProfileTabEmptyState` |
+| `PlaceCard` | 724 | 678 | `placeCardOverlays`, paylaşılan `DeferredFeedback` |
+
+`source-health` dosya istisnası kalmadı (`HOTSPOT_LIMITS` boş). Fonksiyon
+istisnaları yeni boyutlara indirildi: `useMapScreenState` 800 → 490,
+`UserProfileScreen` 700 → 560, `ProfileScreen` 590 → 485.
+
+500+ satırlık 32 dosyanın her biri için karar:
+
+| Dosya | Satır | Karar |
+|---|---|---|
+| `supabase/functions/media-assets/handler.ts` | 2095 | Kalıyor. Edge function tek dosya deploy ediliyor; imza, doğrulama ve yükleme adımları sırayla okunuyor. Bölmek deploy gerektirir (Faz 23, Cayan) |
+| `auth-gateway/handler.ts` | 925 | Aynı gerekçe (Faz 23) |
+| `moderation-reports/handler.ts` | 762 | Aynı gerekçe (Faz 23) |
+| `maps-geocoding/handler.ts` | 588 | Aynı gerekçe |
+| `delete-user/handler.ts` | 540 | Aynı gerekçe |
+| `useAuthScreenState` | 679 | Faz 5 form standardıyla birlikte; giriş ekranları hesaptan çıkmadan cihazda denenemiyor (Cayan) |
+| `PlaceCard` | 678 | Kalıyor: bölümleri zaten `place-card/` altında; kalan gövde kartın durum makinesi |
+| `listsRepository` | 670 | Kalıyor: listelerin yazma yolu (oluştur, güncelle, toplu güncelle, sil, şikâyet); yük hazırlama bu turda ayrıldı |
+| `ListDetailScreen` | 669 | Faz 9B'de başlık/harita bölümüyle bölünür |
+| `UserProfileScreen` | 667 | Kalıyor: bu turda 793'ten indi |
+| `ProfileContentPager` | 655 | Kalıyor: üç sekmenin sayfalayıcısı ve başlık kaydırma eşitlemesi |
+| `useAuthActions` | 655 | Faz 20 (oturum güvenliği) ile birlikte |
+| `images.ts` | 652 | Kalıyor: bu turda 810'dan indi; kalan kısım seçici akışı |
+| `CommentPanel` | 634 | Faz 9B (yorum paneli görsel turu) |
+| `media.ts` | 625 | Kalıyor: depolama işlemleri (yükleme, özel alana taşıma, silme, imzalı okuma); istemci kısmı bu turda ayrıldı |
+| `authSessionLifecycleRuntime` | 609 | Faz 20 |
+| `usePlaceCardState` | 582 | Kalıyor: tek kartın durum hook'u |
+| `MediaLightbox` | 576 | Kalıyor: tek görüntüleyici (iki görüntüleyici birleşti) |
+| `GoogleMapView` | 570 | Kalıyor: native harita sarmalayıcısı |
+| `SwipeableTabPager` | 555 | Kalıyor: genel kaydırmalı sekme bileşeni |
+| `edgeFunctions.ts` | 554 | Kalıyor: edge function istemcisi (imzalı başlıklar, adres, hata ayrımı); güvenlik kodu tek yerde |
+| `AppImage` | 534 | Kalıyor: görüntü bileşeni ve ön yükleme kuyruğu |
+| `authSessionSupport` | 534 | Faz 20 |
+| `MapScreen` | 527 | Kalıyor: bu turda 603'ten indi |
+| `ProfileScreen` | 525 | Kalıyor: bu turda 616'dan indi |
+| `useMapScreenState` | 525 | Kalıyor: bu turda 855'ten indi |
+| `PlaceEditorModal` | 519 | Kalıyor: bu turda 598'den indi |
+| `optimisticCacheTransforms` | 518 | Kalıyor: saf dönüşümler, testli |
+| `useSettingsScreenState` | 510 | Faz 12 (ayarlar işlem matrisi) |
+| `PlaceEditorFinalStep` | 509 | Kalıyor: son adımın alanları |
+| `SettingsScreen` | 502 | Faz 12 |
+| `AuthRegisterFlow` | 501 | Faz 5 form standardı |
+
+**E28 DRY.** Birleştirilenler:
+
+| Tekrar | Kopya | Şimdi |
+|---|---|---|
+| Görüntüleyici | 2 | `MediaLightbox` |
+| react-native `Modal` ayarları | 10 | `AppModal` (eslint başka dosyada reddediyor) |
+| Video rozetleri | 2 | `VideoBadges` |
+| Yığın başlığı | 2 | `StackScreenHeader` (`inline`) |
+| Kapak seçici | 2 | `useCoverImagePicker` |
+| Liste paylaşım menüsü | 2 | `listShareMenuItems` |
+| Akış kartı eşleyici (ana sayfa, Keşfet, profil) | 3 | `mapPlaceFeedCard`; `toNumber` ve `parseMedia` 4 depoda kopyaydı. Depolardan net 430 satır çıktı |
+| Profil sekme ve pager mantığı | 2 | `useProfileTabState` + `useProfileTabPager` |
+| Profil boş sekme durumları | 2 | `ProfileTabEmptyState` |
+| Takipçi/takip metinleri | 2 | `profileConnectionsCopy` |
+| Ertelenmiş onay, şikâyet ve görüntüleyici | 2 | `DeferredFeedback` |
+| Haritadaki "yeniden aç" hapları | 2 | `MapReopenPill` |
+| Yer editörü başlangıç durumu (editör + değişiklik kontrolü) | 2 | `createInitialPlaceEditorFields` |
+| Büyük dosya uyarısı | 2 | `OVERSIZED_MEDIA_NOTICE` |
+| Nokta adresi arama (harita dokunuşu, POI) | 2 | `lookUpPoint` |
+| "Editörü kapat" durum sıfırlama | 5 | `clearEditor` |
+| JPEG yeniden kodlama ve temizlik | 2 | `writeJpeg` |
+| Aynı gövdeli iki kırpma kontrolü | 2 | `shouldUseNativeEditing` |
+
+**E29 KISS.** Kaldırılanlar: tek satırlık harita sarmalayıcısı `AppMapView`;
+FeedActionBar'da açılmayan şikâyet yolu; editörde hiçbir ekranın çağırmadığı
+"medyayı değiştir" ve video kapağı düzenleme durumu; yalnız testlerin
+kullandığı `photos`/`handleAddPhoto` takma adları; üç kat yeniden dışa
+aktarılan `PlaceEditorDraft` ve `mapScreenTypes`; tek kullanıcılı
+`FeedActionPanels` barrel'ı; kaydedilip hiç okunmayan bekleyen kayıt
+taslağı; iki dalı aynı işi yapan abort kontrolü; iki tarafı da 20 veren
+ternary. Editörün 21 `useState`'i tek alan nesnesi oldu.
+
+**E32 Ölü kod.** knip (dosya, bağımlılık, listelenmemiş, binary) temiz; 7
+istisnanın hepsi gerekçeli. Yorum satırına alınmış kod: 0. TODO/FIXME: 0.
+`assets/` altındaki iki ikon klasörü (96 dosya) main'de referanssız ama
+`native/faz-4` dalında `app.config.ts` ve `brandAssets.ts` kullanıyor;
+dal main'e alınınca devreye giriyor, silinmedi.
+
+**Bu fazda bulunan ve düzeltilen hatalar:**
+
+| Hata | Kanıt |
+|---|---|
+| Küçültülüp yeniden açılan yer taslağı X ile sorusuz kapanıyor, yazılanlar kayboluyordu | cihazda görüldü; yeni test düzeltmesiz kırmızı, düzeltmeyle yeşil; OTA 31'de cihazda soru çıkıyor |
+| Küçültülmüş editör hapı yazılan adı değil "Yeni mekân" gösteriyordu | cihaz: hap "Taslak" gösteriyor |
+| Harita altındaki hap Google logosunu örtüyordu | cihaz: logo hapın üstünde |
+| Profilde boş Listeler sekmesi harita iğnesi gösteriyordu | kod: sekme ikonuyla aynı |
+
+**Cihaz:** yer editörü (aç, yaz, adımlar, liste seçimi, çoklu liste ipucu,
+dokunulmamış editör sorusuz kapanır, değişmiş editör sorar, küçült ve
+yeniden aç), kart menüsü ve silme onayı (geri tuşuyla kapatıldı), profil
+sekmeleri, filtre menüsü, açık sekmeye dokununca başa dönüş, başka
+kullanıcının profili ve "…" menüsü, takip listesi, harita araması, Keşfet
+mekânları, açıklama genişletme. Hiçbir şey kaydedilmedi, silinmedi.
+
+### 🔶 Faz 8: Kod kalitesi II ve E2E altyapısı
 
 Claude:
 1. E30: ortam sınıfı (URL, timeout, sürüm) ve iş mantığı sınıfı (sayfa boyutu,
@@ -499,6 +637,22 @@ Cayan: 3 test hesabı aç: **A** (açık), **B** (gizli hesap olacak),
 **C** (Faz 11'de silinecek). Şifreleri bana yazma, kendi terminalinde
 `MAESTRO_*` ortam değişkeni olarak tanımla (komutları fazda veririm). İkinci
 bir Android cihaz varsa bağla; yoksa bu makineye emülatör kurulmasına onay ver.
+
+### Faz 8 kaydı, 1. tur (2026-09-25)
+
+Test hesabı gerektirmeyen kalemler yapıldı; teslim OTA 32 `1d82a56d`.
+
+| Kalem | Durum | Kanıt |
+|---|---|---|
+| E30 hardcode | 🔶 | Uygulama kodunda sayı yazılmış `setTimeout`/`setInterval` gecikmesi yok (yalnız test yardımcıları); `staleTime`/`gcTime` sabitlerde; modül düzeyinde 189 adlandırılmış sayısal sabit. Stil dosyalarında token dışı 38 boşluk değeri var, çoğu 0 ve ±1–2 px optik düzeltme: Faz 9A'daki 4pt ızgara ölçümüne (B12) bırakıldı. Kalan: ortam/iş kuralı sabitlerinin sınıflandırma tablosu ve guard |
+| E31 isimlendirme ve karmaşıklık | 🔶 | Karmaşıklık > 10 olan fonksiyon 186 → 184; en yüksek 35 → 30. En yoğun altısı sadeleşti: `ExpandableText` 35 → 23, `TextField` 32 → 18, `MapScreen` 34 → 24, `PlaceEditorModal` 33 → < 25, `UserProfileScreen` 34 → < 25, `PlaceCard` 31 → 27. ESLint sınırı 35 → 30 (`0b0bf74`). TODO/FIXME: 0. `max-depth` 5 kuralı zaten var. Kalan: 21–30 arasındaki 37 fonksiyon; boolean önekleri ve parametre sayısı ölçülmedi |
+| E33 hazırlığı | ⬜ | `Date.now`/`Math.random` enjeksiyonu yapılmadı |
+| E34 şema dayanıklılığı | 🔶 | Akış kartı eşleyicisinin testi: sayı yerine metin, null, bozuk medya JSON'u, bilinmeyen alan, sahipsiz satır, izleyicisiz beğeni; hiçbiri çökmüyor. Kalan: diğer eşleyiciler, RPC ve 6 edge function için sözleşme belgesi |
+| Maestro altyapısı | ⏸ | Test hesapları (A, B, C) Cayan'dan bekleniyor |
+
+Yeni doğrudan testler: `ExpandableText` (5), `TextField` (5),
+`placeFeedCardMapper` (5). İkisi yeniden düzenlemeden önce eski koda karşı
+yazıldı.
 
 ### ⬜ Faz 9A ve 9B: durum matrisi, motion, cila / premium görsel tur
 
