@@ -61,14 +61,14 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   menuGroup: {
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   menuRow: {
-    minHeight: 56,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -79,8 +79,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   menuIcon: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',

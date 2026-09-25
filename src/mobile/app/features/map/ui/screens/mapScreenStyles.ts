@@ -111,7 +111,7 @@ export const mapScreenStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   filterOption: {
-    minHeight: 44,
+    minHeight: 36,
     borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
     flexDirection: 'row',

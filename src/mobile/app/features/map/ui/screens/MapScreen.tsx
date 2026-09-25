@@ -86,7 +86,7 @@ function MapFilterMenu({
           <InstantPressable
             accessibilityRole="radio"
             accessibilityState={{ checked: isActive }}
-            hitSlop={hitSlopFor(40)}
+            hitSlop={hitSlopFor(36)}
             key={option.value}
             style={[styles.filterOption, isActive ? styles.filterOptionActive : null]}
             onPress={() => {

@@ -248,7 +248,9 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: radius.lg,
+    // Google prints "Map data ©…" 2-3dp from the bottom-right corner; a 16dp
+    // corner clipped its last characters, and the attribution must stay legible.
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.mapBackground,

@@ -38,7 +38,7 @@ export function ProfileConnectionsSummary({
       <ProfileInterestChips interestIds={interestIds} />
       <View style={styles.connectionsRow}>
         <InstantPressable
-          hitSlop={hitSlopFor(controlSize.default)}
+          hitSlop={hitSlopFor(controlSize.compact)}
           accessibilityLabel={`${tr.profile.connections.followers}: ${tr.profile.connections.resultCount(safeFollowerCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -48,7 +48,7 @@ export function ProfileConnectionsSummary({
           <AppText style={styles.connectionLabel}>{tr.profile.stats.follower}</AppText>
         </InstantPressable>
         <InstantPressable
-          hitSlop={hitSlopFor(controlSize.default)}
+          hitSlop={hitSlopFor(controlSize.compact)}
           accessibilityLabel={`${tr.profile.connections.following}: ${tr.profile.connections.resultCount(safeFollowingCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -74,8 +74,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   connectionButton: {
-    minWidth: controlSize.default,
-    minHeight: controlSize.default,
+    minWidth: controlSize.compact,
+    minHeight: controlSize.compact,
     flexDirection: 'row',
     gap: spacing.xs,
     alignItems: 'center',
