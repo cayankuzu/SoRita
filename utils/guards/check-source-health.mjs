@@ -7,7 +7,6 @@ const SOURCE_ROOT = path.join(ROOT, 'src', 'mobile', 'app');
 const DEFAULT_MAX_LINES = 700;
 const DEFAULT_MAX_FUNCTION_LINES = 300;
 const HOTSPOT_LIMITS = new Map(Object.entries({
-  'src/mobile/app/data/repositories/listsRepository.ts': 980,
   'src/mobile/app/features/map/application/usePlaceEditorState.ts': 930,
   'src/mobile/app/platform/supabase/media.ts': 950,
   'src/mobile/app/features/map/application/useMapScreenState.ts': 900,
