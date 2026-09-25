@@ -47,6 +47,7 @@ export function PlaceOwnerHeader({
 
   return (
     <InstantPressable
+      hitSlop={hitSlopFor(controlSize.default)}
       accessibilityLabel={`${owner.name}, @${owner.username}`}
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
@@ -79,6 +80,7 @@ export function PlaceSourceBar({
 
   return (
     <InstantPressable
+      hitSlop={hitSlopFor(controlSize.default)}
       accessibilityLabel={`${name}, ${tr.cards.quotedFromPlaceCard}`}
       accessibilityRole={onPress ? 'button' : undefined}
       style={styles.sourceBar}
@@ -134,6 +136,7 @@ export function PlaceListBar({
 
   return (
     <InstantPressable
+      hitSlop={hitSlopFor(controlSize.default)}
       accessibilityLabel={`${name}, ${isPublic ? tr.listDetail.public : tr.listDetail.private}`}
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}

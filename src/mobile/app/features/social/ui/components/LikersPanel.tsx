@@ -19,9 +19,10 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   avatarSize,
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -87,6 +88,7 @@ export function LikersPanel({
       keyboardShouldPersistTaps="handled"
       renderItem={({ item }) => (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityLabel={`${item.name}, @${item.username}`}
           accessibilityRole={onUserPress ? 'button' : undefined}
           style={styles.likerRow}
@@ -205,7 +207,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: textStyle('metadataText', colors.text, fontWeight.strong),
   searchWrap: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
@@ -233,7 +235,7 @@ const styles = StyleSheet.create({
     height: 8,
   },
   likerRow: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

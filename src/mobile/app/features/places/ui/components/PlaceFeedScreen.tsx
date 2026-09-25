@@ -21,7 +21,7 @@ import { useAnchoredFeed } from '@/mobile/app/shared/hooks/useAnchoredFeed';
 import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 import { buildAdaptiveFlatListProps } from '@/mobile/app/shared/utils/flatList';
 import { getMarkerColorForMemberships } from '@/mobile/app/shared/utils/markerColors';
 
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   backButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
   },
   title: {
     ...textStyle('compactTitleText', colors.text),

@@ -17,7 +17,6 @@ import {
   controlSize,
   hitSlopFor,
   iconSize,
-  minTouchSize,
   spacing,
   tabularNumbers,
   textStyle,
@@ -197,13 +196,13 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     width: ICON_ACTION_WIDTH,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWithCountButton: {
     minWidth: ICON_ACTION_WIDTH,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,7 +211,7 @@ const styles = StyleSheet.create({
   // Opens the likers. It tucks up against the heart so the pair reads as one.
   countButton: {
     minWidth: ICON_ACTION_WIDTH,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     marginLeft: -spacing.sm,
     paddingRight: spacing.sm,
     alignItems: 'flex-start',

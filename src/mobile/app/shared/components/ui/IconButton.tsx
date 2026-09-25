@@ -9,7 +9,7 @@ import {
 import type { GestureResponderEvent, AccessibilityRole } from 'react-native';
 
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, minTouchSize, opacity, radius } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, hitSlopFor, opacity, radius } from '@/mobile/app/shared/theme/tokens';
 
 type IconButtonProps = {
   accessibilityHint?: string;
@@ -60,7 +60,8 @@ export function IconButton({
         selected: selected || accessibilityState?.selected,
       }}
       disabled={isDisabled}
-      hitSlop={0}
+      // Painted small like a feed app's icon; the slop brings either size to 48.
+      hitSlop={hitSlopFor(controlSize.icon)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.frame,
@@ -85,15 +86,15 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   frame: {
-    minWidth: minTouchSize,
-    minHeight: minTouchSize,
+    minWidth: controlSize.default,
+    minHeight: controlSize.default,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   frameSmall: {
-    minWidth: minTouchSize,
-    minHeight: minTouchSize,
+    minWidth: controlSize.icon,
+    minHeight: controlSize.icon,
   },
   ghost: {
     backgroundColor: 'transparent',

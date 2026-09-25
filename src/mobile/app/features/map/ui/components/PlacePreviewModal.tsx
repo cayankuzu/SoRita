@@ -11,8 +11,9 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimationType';
 import {
   colors,
+  controlSize,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -99,6 +100,7 @@ export function PlacePreviewModal({
 
         <View style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: sheetBottomPadding }]}>
           <InstantPressable
+            hitSlop={hitSlopFor(controlSize.default)}
             accessibilityLabel={onMinimize ? tr.common.minimize : tr.common.close}
             accessibilityRole="button"
             style={styles.handleWrap}
@@ -119,6 +121,7 @@ export function PlacePreviewModal({
             <View style={styles.headerActions}>
               {onCreatePlaceCard ? (
                 <InstantPressable
+                  hitSlop={hitSlopFor(controlSize.default)}
                   accessibilityLabel={tr.map.newPlaceCard}
                   accessibilityRole="button"
                   onPress={onCreatePlaceCard}
@@ -129,6 +132,7 @@ export function PlacePreviewModal({
               ) : null}
               {onMinimize ? (
                 <InstantPressable
+                  hitSlop={hitSlopFor(controlSize.default)}
                   accessibilityLabel={tr.common.minimize}
                   accessibilityRole="button"
                   onPress={onMinimize}
@@ -138,6 +142,7 @@ export function PlacePreviewModal({
                 </InstantPressable>
               ) : null}
               <InstantPressable
+                hitSlop={hitSlopFor(controlSize.default)}
                 accessibilityLabel={tr.common.close}
                 accessibilityRole="button"
                 onPress={onClose}
@@ -205,7 +210,7 @@ const styles = StyleSheet.create({
   },
   handleWrap: {
     alignItems: 'center',
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxs,
   },
@@ -235,8 +240,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   headerButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

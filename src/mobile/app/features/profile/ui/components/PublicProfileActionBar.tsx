@@ -12,7 +12,7 @@ import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, minTouchSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, hitSlopFor, iconSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type PublicProfileActionBarProps = {
   hasPendingFollowRequest: boolean;
@@ -80,6 +80,7 @@ export function PublicProfileActionBar({
         />
       ) : (
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityHint={isFollowing ? tr.profile.actions.unfollowHint : undefined}
           accessibilityLabel={actionLabel}
           accessibilityRole="button"
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   followButton: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.primary,
@@ -163,13 +164,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   unblockButton: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.md,
   },
   unblockButtonText: textStyle('labelText', colors.textMuted),
   moreButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.md,
   },
 });

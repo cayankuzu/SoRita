@@ -6,9 +6,9 @@ import { PrimaryButton } from '@/mobile/app/shared/components/ui/PrimaryButton';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     minWidth: 96,
   },
   actionButton: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,

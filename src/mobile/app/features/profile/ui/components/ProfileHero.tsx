@@ -17,7 +17,7 @@ import { AvatarView } from "@/mobile/app/shared/components/ui/AvatarView";
 import { ExpandableText } from "@/mobile/app/shared/components/ui/ExpandableText";
 import { IconButton } from "@/mobile/app/shared/components/ui/IconButton";
 import { tr } from "@/mobile/app/shared/i18n/tr";
-import { colors, iconSize, minTouchSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
+import { colors, controlSize, iconSize, radius, spacing, textStyle, typography } from "@/mobile/app/shared/theme/tokens";
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 
 const PROFILE_HERO_MIN_COVER_HEIGHT = 112;
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: spacing.md,
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.pill,
   },
   body: {

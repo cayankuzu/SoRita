@@ -31,9 +31,9 @@ import { useModalAnimationType } from '@/mobile/app/shared/hooks/useModalAnimati
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -506,8 +506,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   topActionButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -516,8 +516,8 @@ const styles = StyleSheet.create({
     borderColor: colors.controlsBorder,
   },
   topActionSpacer: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
   },
   topBarCopy: {
     flex: 1,

@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import { StackScreenHeader } from '@/mobile/app/shared/components/navigation/StackScreenHeader';
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
-import { colors, minTouchSize, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, hitSlopFor, radius, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type SettingsHeaderProps = {
   title: string;
@@ -29,6 +29,7 @@ export function SettingsHeader({
       rightAction={
         actionLabel && onAction ? (
           <InstantPressable
+            hitSlop={hitSlopFor(controlSize.default)}
             accessibilityLabel={actionLabel}
             accessibilityRole="button"
             style={styles.headerAction}
@@ -44,8 +45,8 @@ export function SettingsHeader({
 
 const styles = StyleSheet.create({
   headerAction: {
-    minHeight: minTouchSize,
-    minWidth: minTouchSize,
+    minHeight: controlSize.default,
+    minWidth: controlSize.default,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',

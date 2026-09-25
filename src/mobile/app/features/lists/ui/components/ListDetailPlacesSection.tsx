@@ -12,7 +12,7 @@ import { ExpandableText } from '@/mobile/app/shared/components/ui/ExpandableText
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
-import { avatarSize } from '@/mobile/app/shared/theme/tokens';
+import { avatarSize, controlSize, hitSlopFor } from '@/mobile/app/shared/theme/tokens';
 
 import { listDetailScreenStyles as styles } from './listDetailScreenStyles';
 
@@ -116,6 +116,7 @@ export function ListDetailPlacesSection({
                   visible={showInteractionHint}
                 />
                 <InstantPressable
+                  hitSlop={hitSlopFor(controlSize.default)}
                   accessibilityLabel={tr.listDetail.mapDone}
                   accessibilityRole="button"
                   onPress={deactivateMap}

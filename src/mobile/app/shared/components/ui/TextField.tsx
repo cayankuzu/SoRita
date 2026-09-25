@@ -9,8 +9,8 @@ import {
 
 import {
   colors,
+  controlSize,
   fontWeight,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -201,14 +201,14 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   input: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.surface,
     color: colors.text,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     ...typography.bodyText,
     includeFontPadding: false,
   },
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.strong,
   },
   multiline: {
-    minHeight: 82,
+    minHeight: 72,
     maxHeight: 154,
     textAlignVertical: 'top',
   },

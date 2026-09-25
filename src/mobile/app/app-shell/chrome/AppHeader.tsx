@@ -14,10 +14,10 @@ import { logger } from '@/mobile/app/platform/feedback/logger';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
   iconSize,
   layout,
-  minTouchSize,
   radius,
   spacing,
   tabularNumbers,
@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   notificationButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
   },
   notificationBadge: {
     position: 'absolute',

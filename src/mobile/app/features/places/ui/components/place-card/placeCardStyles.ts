@@ -4,7 +4,6 @@ import {
   colors,
   controlSize,
   fontWeight,
-  minTouchSize,
   opacity,
   radius,
   spacing,
@@ -23,7 +22,7 @@ export const placeCardStyles = StyleSheet.create({
     position: 'relative',
   },
   userHeader: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -42,7 +41,7 @@ export const placeCardStyles = StyleSheet.create({
     color: colors.textSoft,
   },
   sourceBar: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     borderRadius: radius.lg,
@@ -98,7 +97,7 @@ export const placeCardStyles = StyleSheet.create({
   // The list is the post's context line, not a card inside the card: no fill,
   // no border, aligned to the content edge.
   linkBar: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',

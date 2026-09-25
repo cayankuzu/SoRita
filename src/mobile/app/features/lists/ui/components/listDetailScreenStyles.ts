@@ -2,9 +2,9 @@ import { StyleSheet } from 'react-native';
 
 import {
   colors,
+  controlSize,
   elevation,
   fontWeight,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -174,7 +174,7 @@ export const listDetailScreenStyles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.pill,
     justifyContent: 'center',
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     paddingHorizontal: spacing.lg,
     position: 'absolute',
     right: spacing.sm,

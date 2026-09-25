@@ -7,7 +7,7 @@ import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { IconButton } from '@/mobile/app/shared/components/ui/IconButton';
 import { useAppLayout } from '@/mobile/app/shared/hooks/useAppLayout';
 import { tr } from '@/mobile/app/shared/i18n/tr';
-import { colors, iconSize, minTouchSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
+import { colors, controlSize, iconSize, spacing, textStyle } from '@/mobile/app/shared/theme/tokens';
 
 type StackScreenHeaderProps = {
   // Inside a screen that already pads for the status bar and the edges, and
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   title: textStyle('section', colors.text),
   subtitle: textStyle('captionText', colors.textSoft),
   spacer: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
   },
 });

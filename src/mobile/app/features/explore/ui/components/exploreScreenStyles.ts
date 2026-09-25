@@ -11,7 +11,7 @@ export const exploreScreenStyles = StyleSheet.create({
     gap: spacing.sm,
   },
   searchWrap: {
-    minHeight: 44,
+    minHeight: 40,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -25,7 +25,7 @@ export const exploreScreenStyles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     ...typography.bodyText,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   searchClearButton: {
     width: 28,

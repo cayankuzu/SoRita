@@ -38,9 +38,10 @@ import {
 } from '@/mobile/app/shared/performance/budgets';
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -422,7 +423,7 @@ function HomeFeedEmptyState({
           title={tr.home.noFollowingTitle}
           description={tr.home.noFollowingDescription}
         />
-        <InstantPressable style={styles.primaryCta} onPress={onExplore}>
+        <InstantPressable hitSlop={hitSlopFor(controlSize.default)} style={styles.primaryCta} onPress={onExplore}>
           <MapPin color={colors.onPrimary} size={iconSize.sm} />
           <AppText style={styles.primaryCtaText}>{tr.home.exploreCta}</AppText>
         </InstantPressable>
@@ -462,7 +463,7 @@ const styles = StyleSheet.create({
   },
   primaryCta: {
     alignSelf: 'center',
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.md,
     paddingHorizontal: spacing.xl,
     backgroundColor: colors.primary,

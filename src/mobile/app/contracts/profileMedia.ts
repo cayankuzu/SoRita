@@ -1,5 +1,5 @@
-export const PROFILE_HERO_COVER_HEIGHT = 168;
-export const PROFILE_HERO_AVATAR_SIZE = 96;
+export const PROFILE_HERO_COVER_HEIGHT = 144;
+export const PROFILE_HERO_AVATAR_SIZE = 80;
 export const PROFILE_MEDIA_COVER_SOURCE_ASPECT_RATIO = 21 / 9;
 
 export function getProfileHeroCoverViewportHeight(previewWidth: number, screenWidth: number) {

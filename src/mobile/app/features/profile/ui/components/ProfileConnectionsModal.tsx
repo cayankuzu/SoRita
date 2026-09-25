@@ -22,8 +22,8 @@ import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   avatarSize,
   colors,
+  controlSize,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   textStyle,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   searchWrap: {
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     marginBottom: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   // A plain row, as in every people list: the avatar and name carry it, not a card.
   userRow: {
-    minHeight: minTouchSize + spacing.md,
+    minHeight: controlSize.default + spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,

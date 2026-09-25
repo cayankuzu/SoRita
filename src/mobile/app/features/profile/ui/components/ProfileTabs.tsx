@@ -9,9 +9,10 @@ import { shouldUseCompactProfileTabs } from "@/mobile/app/features/profile/ui/co
 import { tr } from "@/mobile/app/shared/i18n/tr";
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   radius,
   spacing,
   tabularNumbers,
@@ -93,6 +94,7 @@ export function ProfileTabs({
 
             return (
               <InstantPressable
+                hitSlop={hitSlopFor(controlSize.default)}
                 accessibilityLabel={
                   typeof tab.count === "number"
                     ? tr.profile.tabAccessibilityLabel(tab.label, tab.count)
@@ -151,6 +153,7 @@ export function ProfileTabs({
         </View>
         {showFilterControls ? (
           <InstantPressable
+            hitSlop={hitSlopFor(controlSize.default)}
             accessibilityLabel={`${tr.profile.visibilityFilter}: ${activeFilterLabel}`}
             accessibilityRole="button"
             accessibilityState={{ expanded: filterOpen }}
@@ -221,7 +224,7 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -278,8 +281,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   filterToggle: {
-    minWidth: minTouchSize,
-    minHeight: minTouchSize,
+    minWidth: controlSize.default,
+    minHeight: controlSize.default,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

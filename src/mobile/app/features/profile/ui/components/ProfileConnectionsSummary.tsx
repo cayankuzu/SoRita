@@ -7,8 +7,9 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
-  minTouchSize,
+  hitSlopFor,
   spacing,
   tabularNumbers,
   textStyle,
@@ -37,6 +38,7 @@ export function ProfileConnectionsSummary({
       <ProfileInterestChips interestIds={interestIds} />
       <View style={styles.connectionsRow}>
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityLabel={`${tr.profile.connections.followers}: ${tr.profile.connections.resultCount(safeFollowerCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -46,6 +48,7 @@ export function ProfileConnectionsSummary({
           <AppText style={styles.connectionLabel}>{tr.profile.stats.follower}</AppText>
         </InstantPressable>
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityLabel={`${tr.profile.connections.following}: ${tr.profile.connections.resultCount(safeFollowingCount)}`}
           accessibilityRole="button"
           style={styles.connectionButton}
@@ -71,8 +74,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   connectionButton: {
-    minWidth: minTouchSize,
-    minHeight: minTouchSize,
+    minWidth: controlSize.default,
+    minHeight: controlSize.default,
     flexDirection: 'row',
     gap: spacing.xs,
     alignItems: 'center',

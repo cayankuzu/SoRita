@@ -13,9 +13,10 @@ import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPress
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import {
   colors,
+  controlSize,
   fontWeight,
+  hitSlopFor,
   iconSize,
-  minTouchSize,
   opacity,
   radius,
   spacing,
@@ -72,6 +73,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
       <AppText accessibilityRole="header" style={styles.panelTitle}>{location.name}</AppText>
       <View style={styles.addressCard}>
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityLabel={`${location.name}, ${addressText}`}
           accessibilityHint={tr.cards.openInMaps}
           accessibilityRole="link"
@@ -108,6 +110,7 @@ export function AddressPanel({ location, onCopied }: AddressPanelProps) {
       </View>
       <View style={styles.panelActions}>
         <InstantPressable
+          hitSlop={hitSlopFor(controlSize.default)}
           accessibilityLabel={tr.cards.copy}
           accessibilityRole="button"
           accessibilityState={{ busy: isCopying, disabled: isCopying }}
@@ -145,7 +148,7 @@ const styles = StyleSheet.create({
   addressLinkButton: {
     flex: 1,
     minWidth: 0,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     gap: spacing.xs,
   },
   addressLabel: textStyle('metadataText', colors.textSoft, fontWeight.strong),
@@ -156,8 +159,8 @@ const styles = StyleSheet.create({
     textDecorationColor: colors.primary,
   },
   addressToggleButton: {
-    width: minTouchSize,
-    height: minTouchSize,
+    width: controlSize.default,
+    height: controlSize.default,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: minTouchSize,
+    minHeight: controlSize.default,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
