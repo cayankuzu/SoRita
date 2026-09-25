@@ -462,9 +462,7 @@ export async function rehomePublicPlaceMediaAssetToPrivate(params: {
   }
 
   const extension = getFileExtension(source.path);
-  const temporaryPath = `${PRIVATE_COVER_REHOME_DIRECTORY}${Date.now()}-${Math.random()
-    .toString(16)
-    .slice(2)}.${extension}`;
+  const temporaryPath = `${PRIVATE_COVER_REHOME_DIRECTORY}${createUuid()}.${extension}`;
   const { data } = supabase.storage.from(source.bucket).getPublicUrl(source.path);
   assertAllowedMediaUri(data.publicUrl);
 

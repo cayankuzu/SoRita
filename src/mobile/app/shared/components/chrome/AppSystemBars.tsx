@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { StatusBar } from 'react-native';
 
 import { colors } from '@/mobile/app/shared/theme/tokens';
+import { createUuid } from '@/shared/utils/id';
 
 export type SystemBarMode = 'darkOverlay' | 'default' | 'media' | 'modal';
 
@@ -44,7 +45,7 @@ export function AppSystemBarsProvider({ children }: { children: React.ReactNode 
   const statusBarProps = getStatusBarProps(activeMode);
 
   const pushMode = useCallback((mode: SystemBarMode) => {
-    const id = `${mode}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    const id = `${mode}:${createUuid()}`;
     setStack((current) => [...current, { id, mode }]);
     return id;
   }, []);

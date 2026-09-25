@@ -22,6 +22,7 @@ import { supabase } from '@/mobile/app/platform/supabase/client';
 import { normalizePushPayload } from '@/mobile/app/app-shell/notifications/pushNavigation';
 import { usePushRegistration } from '@/mobile/app/app-shell/notifications/usePushRegistration';
 import { useVerifiedPushTapNavigation } from '@/mobile/app/app-shell/notifications/useVerifiedPushTapNavigation';
+import { withRetryJitter } from '@/mobile/app/shared/utils/retryJitter';
 
 let notificationsModulePromise: Promise<typeof import('expo-notifications')> | null = null;
 
@@ -101,7 +102,6 @@ function useNotificationsRealtimeSubscription(params: {
       clearRealtimeBackoff();
       const attempt = realtimeBackoffAttemptRef.current;
       const baseDelay = REALTIME_BACKOFF_MS[Math.min(attempt, REALTIME_BACKOFF_MS.length - 1)];
-      const jitter = Math.round(baseDelay * 0.2 * Math.random());
 
       realtimeBackoffAttemptRef.current = Math.min(attempt + 1, REALTIME_BACKOFF_MS.length - 1);
       realtimeBackoffTimeoutRef.current = setTimeout(() => {
@@ -110,7 +110,7 @@ function useNotificationsRealtimeSubscription(params: {
           force: true,
           reason: 'realtime-backoff',
         });
-      }, baseDelay + jitter);
+      }, withRetryJitter(baseDelay));
     };
 
     const channel = supabase

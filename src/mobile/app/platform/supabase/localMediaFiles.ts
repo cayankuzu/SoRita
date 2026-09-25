@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { createUuid } from '@/shared/utils/id';
 
 const TEMP_UPLOAD_DIR = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}media-upload-cache/`;
 
@@ -49,8 +50,7 @@ async function ensureTempUploadDirectory() {
 
 function buildTempUploadPath(uri: string) {
   const extension = getFileExtension(uri);
-  const uniqueKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${TEMP_UPLOAD_DIR}${uniqueKey}.${extension}`;
+  return `${TEMP_UPLOAD_DIR}${createUuid()}.${extension}`;
 }
 
 async function copyToReadableUploadPath(uri: string) {

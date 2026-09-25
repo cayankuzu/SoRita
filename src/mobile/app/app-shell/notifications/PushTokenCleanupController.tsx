@@ -4,16 +4,11 @@ import { AppState } from 'react-native';
 import { useAuth } from '@/mobile/app/app-shell/auth/AuthSessionProvider';
 import { flushPendingPushTokenCleanupTombstones } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import { logger } from '@/mobile/app/platform/feedback/logger';
+import { withRetryJitter } from '@/mobile/app/shared/utils/retryJitter';
 
 const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 300_000] as const;
 const MAX_RETRY_ATTEMPTS = 8;
 const RETRY_WINDOW_MS = 30 * 60 * 1000;
-const RETRY_JITTER_RATIO = 0.2;
-
-function withRetryJitter(delayMs: number) {
-  const multiplier = 1 - RETRY_JITTER_RATIO + Math.random() * RETRY_JITTER_RATIO * 2;
-  return Math.max(1, Math.round(delayMs * multiplier));
-}
 
 /**
  * Runs even while signed out. The revocation capability is intentionally

@@ -9,18 +9,12 @@ import {
 } from '@/mobile/app/data/repositories/pushNotificationRepository';
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { notificationRuntime } from '@/mobile/app/platform/notifications/runtime';
+import { withRetryJitter } from '@/mobile/app/shared/utils/retryJitter';
 
 const PUSH_REGISTRATION_RETRY_MS = [5000, 15000, 60000, 300000] as const;
 const PUSH_REGISTRATION_MAX_RETRY_ATTEMPTS = 8;
 const PUSH_REGISTRATION_RETRY_WINDOW_MS = 30 * 60 * 1000;
-const PUSH_REGISTRATION_JITTER_RATIO = 0.2;
 const PUSH_REGISTRATION_HEARTBEAT_MS = 15 * 60 * 1000;
-
-function withRetryJitter(delayMs: number) {
-  const multiplier = 1 - PUSH_REGISTRATION_JITTER_RATIO
-    + Math.random() * PUSH_REGISTRATION_JITTER_RATIO * 2;
-  return Math.max(1, Math.round(delayMs * multiplier));
-}
 
 async function loadNotificationsModule() {
   return import('expo-notifications');

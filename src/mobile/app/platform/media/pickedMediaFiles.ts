@@ -7,6 +7,7 @@ import {
   getLocalMediaFileExtension,
   persistLocalUriToFile,
 } from '@/mobile/app/platform/media/localFiles';
+import { createUuid } from '@/shared/utils/id';
 
 // Where picked photos and videos are kept until they are uploaded, and how
 // photos are sized for upload: at most 720p, and a lighter copy for grids.
@@ -20,8 +21,7 @@ const PLACE_MEDIA_THUMBNAIL_LONG_EDGE_PX = 640;
 const PLACE_MEDIA_THUMBNAIL_COMPRESSION = 0.76;
 
 function pickedMediaPath(extension: string) {
-  const uniqueKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${PICKED_MEDIA_DIR}${uniqueKey}.${extension}`;
+  return `${PICKED_MEDIA_DIR}${createUuid()}.${extension}`;
 }
 
 export function buildPickedMediaPath(uri: string, fileName?: string | null) {
