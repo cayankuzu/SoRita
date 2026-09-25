@@ -54,7 +54,9 @@ test("quality runs release, Worker, SAST and full-history secret gates", () => {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("#"));
-  assert.equal(reviewedFingerprints.length, 4);
+  // Four values from the reset history, plus the redaction test's fake JWT
+  // fixture (8f9da5c). Each new entry is reviewed and counted here.
+  assert.equal(reviewedFingerprints.length, 5);
   for (const fingerprint of reviewedFingerprints) {
     assert.match(fingerprint, /^[0-9a-f]{40}:[^:]+:[a-z0-9-]+:\d+$/u);
   }
