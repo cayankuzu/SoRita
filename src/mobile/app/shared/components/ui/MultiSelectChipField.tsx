@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Chip } from '@/mobile/app/shared/components/ui/Chip';
 import { spacing } from '@/mobile/app/shared/theme/tokens';
 
-export type MultiSelectChipOption = {
+type MultiSelectChipOption = {
   value: string;
   label: string;
 };

@@ -1,5 +1,5 @@
-export type AppWindowClass = 'compact' | 'medium' | 'expanded';
-export type AppHeightClass = 'short' | 'regular' | 'tall';
+type AppWindowClass = 'compact' | 'medium' | 'expanded';
+type AppHeightClass = 'short' | 'regular' | 'tall';
 export type ResponsiveGridStrategy = 'discovery' | 'gallery' | 'mosaic';
 
 // The hairline between cells of a mosaic grid, as Instagram draws it.

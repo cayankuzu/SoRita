@@ -15,7 +15,7 @@ export type OutboxEntryState =
   | 'pending'
   | 'running';
 
-export type OutboxEntryKind =
+type OutboxEntryKind =
   | 'comment-create'
   | 'lists-update'
   | 'media-cleanup'
@@ -25,7 +25,7 @@ export type OutboxEntryKind =
   | 'user-follow-state'
   | 'user-block-state';
 
-export type JsonPrimitive = boolean | null | number | string;
+type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
 export type OutboxEntry<TPayload extends JsonValue = JsonValue> = {

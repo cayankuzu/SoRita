@@ -1,10 +1,10 @@
 import { createPromptController } from '@/mobile/app/platform/media/createPromptController';
 
-export type VideoCameraCaptureOptions = {
+type VideoCameraCaptureOptions = {
   maxDurationSeconds?: number;
 };
 
-export type VideoCameraCaptureResult = {
+type VideoCameraCaptureResult = {
   durationMs: number;
   uri: string;
 };

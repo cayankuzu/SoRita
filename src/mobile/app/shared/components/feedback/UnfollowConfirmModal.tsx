@@ -3,7 +3,7 @@ import React from 'react';
 import { ConfirmActionModal } from '@/mobile/app/shared/components/feedback/ConfirmActionModal';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 
-export type UnfollowTarget = {
+type UnfollowTarget = {
   isPrivateAccount: boolean;
   username: string;
 };

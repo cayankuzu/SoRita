@@ -8,7 +8,7 @@ export type MoreRepliesRow = {
   rootId: string;
 };
 
-export type VisibleCommentRow = {
+type VisibleCommentRow = {
   comment: FeedActionComment;
   depth: number;
   moreReplies: MoreRepliesRow | null;

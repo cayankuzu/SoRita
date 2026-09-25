@@ -1,6 +1,6 @@
 import type { MapMarkerItem } from '@/mobile/app/shared/utils/markerColors';
 
-export type SharedMapViewport = {
+type SharedMapViewport = {
   latitude: number;
   longitude: number;
   zoom?: number;

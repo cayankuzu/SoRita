@@ -33,25 +33,9 @@ export type ListLikeRow = {
   created_at: string;
 };
 
-export type ListReportRow = {
-  id: string;
-  list_id: string;
-  reporter_user_id: string;
-  reason: string;
-  created_at: string;
-};
-
 export type ListPlaceLikeRow = {
   list_place_id: string;
   user_id: string;
-  created_at: string;
-};
-
-export type ListPlaceReportRow = {
-  id: string;
-  list_place_id: string;
-  reporter_user_id: string;
-  reason: string;
   created_at: string;
 };
 
@@ -73,14 +57,6 @@ export type FollowRequestRow = {
 export type UserBlockRow = {
   blocker_user_id: string;
   blocked_user_id: string;
-  created_at: string;
-};
-
-export type UserReportRow = {
-  id: string;
-  reporter_user_id: string;
-  target_user_id: string;
-  reason: string;
   created_at: string;
 };
 
@@ -148,14 +124,6 @@ export type ListPlaceCommentRow = {
 export type ListPlaceCommentLikeRow = {
   comment_id: string;
   user_id: string;
-  created_at: string;
-};
-
-export type ListPlaceCommentReportRow = {
-  id: string;
-  comment_id: string;
-  reporter_user_id: string;
-  reason: string;
   created_at: string;
 };
 

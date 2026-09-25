@@ -7,7 +7,7 @@ type LegalDocumentSection = {
   body: string[];
 };
 
-export type LegalDocument = {
+type LegalDocument = {
   id: LegalDocumentId;
   buttonLabel: string;
   title: string;
