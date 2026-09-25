@@ -154,6 +154,16 @@ export function MapScreen() {
   const navigation = useAppNavigation();
   const { user } = useAuth();
   const isFocused = useIsFocused();
+  // The native map is created on the first visit and then kept. Rebuilding it
+  // on every visit leaked its GL surfaces: about 40 MB per visit on the Redmi
+  // Note 9 Pro, 778 -> 986 MB after six visits. Off screen it stops following
+  // the location.
+  const [isMapCreated, setIsMapCreated] = React.useState(isFocused);
+  React.useEffect(() => {
+    if (isFocused) {
+      setIsMapCreated(true);
+    }
+  }, [isFocused]);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false);
   const [mapSceneHeight, setMapSceneHeight] = React.useState(0);
   const [searchChromeHeight, setSearchChromeHeight] = React.useState(0);
@@ -420,11 +430,11 @@ export function MapScreen() {
           ) : null}
 
           <View style={styles.map}>
-            {isFocused ? (
+            {isMapCreated ? (
               <GoogleMapView
                 places={mapPlaces}
                 interactive
-                showUserLocation
+                showUserLocation={isFocused}
                 focusBehavior="none"
                 viewport={effectiveViewport}
                 highlightedIndex={activeEditorMarkerIndex}
