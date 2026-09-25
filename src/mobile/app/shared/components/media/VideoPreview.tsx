@@ -7,7 +7,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Play } from 'lucide-react-native';
 import {
   VideoView,
   useVideoPlayer,
@@ -17,14 +16,14 @@ import {
 
 import { logger } from '@/mobile/app/platform/feedback/logger';
 import { resolveStorageAssetUrl } from '@/mobile/app/platform/supabase/media';
+import { VideoBadges } from '@/mobile/app/shared/components/media/VideoBadges';
 import { AppImage } from '@/mobile/app/shared/components/ui/AppImage';
 import {
   VIDEO_FORWARD_BUFFER_SECONDS,
   VIDEO_START_BUFFER_SECONDS,
 } from '@/mobile/app/shared/performance/budgets';
 
-import { Badge } from '@/mobile/app/shared/components/ui/Badge';
-import { colors, iconSize, radius, spacing } from '@/mobile/app/shared/theme/tokens';
+import { colors } from '@/mobile/app/shared/theme/tokens';
 
 type VideoPreviewProps = {
   autoPlay?: boolean;
@@ -192,18 +191,7 @@ export function VideoPreview({
           transition={0}
         />
       ) : null}
-      {showPlayOverlay && !nativeControls ? (
-        <View pointerEvents="none" style={styles.playOverlay}>
-          <View style={styles.playBadge}>
-            <Play color={colors.onPrimary} fill={colors.onPrimary} size={iconSize.xs} />
-          </View>
-        </View>
-      ) : null}
-      {durationLabel ? (
-        <View pointerEvents="none" style={styles.durationBadge}>
-          <Badge label={durationLabel} numeric tone="overlay" />
-        </View>
-      ) : null}
+      <VideoBadges durationLabel={durationLabel} showPlay={showPlayOverlay && !nativeControls} />
     </View>
   );
 }
@@ -212,23 +200,5 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-  },
-  playOverlay: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-  },
-  playBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.darkOverlay,
-  },
-  durationBadge: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
   },
 });
