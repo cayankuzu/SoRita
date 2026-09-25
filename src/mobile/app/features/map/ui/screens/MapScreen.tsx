@@ -30,6 +30,7 @@ import { GoogleMapView } from '@/mobile/app/shared/components/maps/GoogleMapView
 import { AppText } from '@/mobile/app/shared/components/ui/AppText';
 import { InstantPressable } from '@/mobile/app/shared/components/ui/InstantPressable';
 import { Screen } from '@/mobile/app/shared/components/ui/Screen';
+import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 import { tr } from '@/mobile/app/shared/i18n/tr';
 import { colors, hitSlopFor, iconSize } from '@/mobile/app/shared/theme/tokens';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
@@ -233,6 +234,15 @@ export function MapScreen() {
     visibleDataErrorMessage || searchErrorMessage || locationErrorMessage || env.isExpoGo,
   );
   const showSearchFeedback = !isFilterMenuOpen && !hasPriorityNotice && !isSearching && hasSearched;
+  // Back closes what is open over the map before it leaves the tab: it used
+  // to switch to the previous tab and leave the pin menu open for the return.
+  useAndroidBackHandler(isFilterMenuOpen || showSearchFeedback, () => {
+    if (isFilterMenuOpen) {
+      setIsFilterMenuOpen(false);
+    } else {
+      clearSearch();
+    }
+  });
   const activeFilterLabel = MARKER_FILTER_OPTIONS.find(
     (option) => option.value === markerFilter,
   )?.label;

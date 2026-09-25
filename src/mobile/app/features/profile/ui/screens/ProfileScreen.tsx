@@ -48,6 +48,7 @@ import {
   type ProfileVisibilityFilter,
 } from '@/mobile/app/features/profile/ui/components/ProfileTabs';
 import { useScreenPerformanceMetric } from '@/mobile/app/shared/performance/useScreenPerformanceMetric';
+import { useAndroidBackHandler } from '@/mobile/app/shared/hooks/useAndroidBackHandler';
 
 type ProfileTab = ProfileContentTab;
 const PROFILE_VISIBILITY_OPTIONS: Array<{
@@ -160,6 +161,8 @@ export function ProfileScreen() {
   const closeVisibilityFilterMenu = useCallback(() => {
     setShowVisibilityFilterMenu(false);
   }, []);
+  // Back closes the visibility menu before it leaves the tab.
+  useAndroidBackHandler(showVisibilityFilterMenu, closeVisibilityFilterMenu);
   const {
     handlePageProgressChange,
     handleProfileEndReached,
